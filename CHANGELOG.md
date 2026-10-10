@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Staging (ADR-0006): Scaleway fr-par — managed PostgreSQL 16 + pgvector with verified TLS (`DATABASE_CA_CERT`), private Object Storage bucket for artefacts, worker host (Docker sandbox, systemd, unprivileged user, firewall); Vercel project in cdg1 with `software.turbineh.com` (IONOS CNAME). Infrastructure as code in `infra/staging` (idempotent).
+
 - WP14: `apps/web` (software.turbineh.com) — prompt-first home with GitHub sign-in and prompt resume, live build trace over SSE, result view (file tree, docs, zip, Push to my GitHub), catalog, API docs, TurbineH design system.
 - WP13 (part 2): public API `/v1` in the web app (builds, events SSE with Last-Event-ID, components, deliver, OpenAPI 3.1, RFC 9457 errors, quotas, idempotency, cost cap); `pnpm catalog:sync`.
 - WP12 (channel B): deliveries queue; the worker creates a private repo in the user's account and pushes the bundle with one git push; user tokens AES-256-GCM encrypted and erased after use; `repo` scope requested only when pushing.
