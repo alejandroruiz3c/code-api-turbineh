@@ -169,3 +169,18 @@ export const PARTS = {
 } as const;
 
 export type PartName = keyof typeof PARTS;
+
+/**
+ * Abuse Guard (PLAN §2, §5.4): atomic yes/no questions asked in the SAME decider batch as the recipe and
+ * capabilities. Any answer at or above the threshold rejects the build before anything is assembled.
+ */
+export const ABUSE_QUESTIONS: Record<string, string> = {
+  malware:
+    "The request asks for malware, credential stealers, ransomware or tools to break into systems.",
+  phishing:
+    "The request asks for a page that imitates a real bank, brand or login page to collect credentials.",
+  spam: "The request asks for mass unsolicited messaging, fake reviews or scraping of personal data.",
+  illegal: "The request asks for something illegal, such as selling weapons, drugs or stolen data.",
+  sexual_minors: "The request involves sexual content with minors.",
+};
+export const ABUSE_THRESHOLD = 0.5;

@@ -2,13 +2,14 @@
   "name": "@turbineh/worker",
   "version": "0.0.0",
   "private": true,
-  "description": "Build pipeline worker: compile → select → resolve → assemble → verify → deliver",
+  "description": "Build pipeline worker: compile \u2192 select \u2192 resolve \u2192 assemble \u2192 verify \u2192 deliver",
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
-    "build:local": "tsx src/cli.ts"
+    "build:local": "tsx src/cli.ts",
+    "service": "tsx src/service.ts"
   },
   "dependencies": {
     "@turbineh/assembler": "workspace:*",
@@ -20,6 +21,11 @@
     "@turbineh/selector": "workspace:*",
     "@turbineh/shared": "workspace:*",
     "@turbineh/verifier": "workspace:*",
-    "yaml": "2.9.1"
+    "yaml": "2.9.1",
+    "@turbineh/storage": "workspace:*",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
   }
 }
