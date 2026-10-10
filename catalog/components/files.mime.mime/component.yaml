@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: files.mime.mime
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/mime@4.1.0
+  repo: https://github.com/broofa/mime
+  integrity: sha512-X5ju04+cAzsojXKes0B/S4tcYtFAJ6tTMuSPBEn9CPGlrWr8Fiw7qYeLT0XyH80HSoAoqWCaz+MWKh22P7G1cw==
+capability:
+  does: Maps file extensions to MIME types and back
+  does_not: Does not inspect file contents
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add mime@4.1.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata mime@4.1.0
+  - claim: 0 OSV advisories for mime@4.1.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - files.type-detection
+  conflicts: []
+  tested_with:
+    - contract-harness

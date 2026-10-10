@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ui.i18n.i18next
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/i18next@26.4.2
+  repo: https://github.com/i18next/i18next
+  integrity: sha512-RX+R0VLg13IbvRuJSxnqykUFS9vQZTl8wYpWPCIUDWVrSGjsQywB5Y+pjzrkboxGAuYfJZVH1InFTdgBdxq6ug==
+capability:
+  does: Internationalisation with namespaces, interpolation and plurals
+  does_not: Does not translate content automatically
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    typescript: ^5 || ^6 || ^7
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add i18next@26.4.2
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata i18next@26.4.2
+  - claim: 0 OSV advisories for i18next@26.4.2 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - ui.i18n
+  conflicts: []
+  tested_with:
+    - contract-harness

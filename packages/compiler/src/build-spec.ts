@@ -34,6 +34,37 @@ export const CAPABILITIES = [
   "ops.rate-limit",
   "ops.idempotency",
   "security.headers",
+  "data.dates",
+  "data.timezones",
+  "data.recurrence",
+  "data.ics-export",
+  "data.ids",
+  "data.slug",
+  "data.money",
+  "data.phone",
+  "data.fuzzy-search",
+  "data.xlsx-export",
+  "data.serialization",
+  "ui.markdown",
+  "security.sanitize-html",
+  "security.jwt",
+  "security.password-hash",
+  "security.webhook-signature",
+  "auth.mfa",
+  "ops.retry",
+  "ops.concurrency",
+  "files.pdf",
+  "files.qr",
+  "files.type-detection",
+  "ui.date-picker",
+  "ui.icons",
+  "ui.notifications",
+  "ui.styling",
+  "ui.command-palette",
+  "ui.dialog",
+  "ui.i18n",
+  "data.diff",
+  "security.html-escape",
 ] as const;
 
 const fieldType = z.enum([
@@ -93,11 +124,11 @@ export const buildSpecSchema = z
       )
       .min(1)
       .max(20),
-    // Bounded so constrained decoding cannot loop on a repeated enum value; duplicates are removed in code.
+    // Decided by the decider (one Noul per capability), bounded by the enum; duplicates removed in code.
     capabilities: z
       .array(z.enum(CAPABILITIES))
       .min(1)
-      .max(15)
+      .max(CAPABILITIES.length)
       .transform((caps) => [...new Set(caps)]),
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
   })

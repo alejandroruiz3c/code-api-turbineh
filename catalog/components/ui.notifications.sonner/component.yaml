@@ -1,0 +1,79 @@
+schema: turbineh.component/v0.1
+id: ui.notifications.sonner
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/sonner@2.0.8
+  repo: https://github.com/emilkowalski/sonner
+  integrity: sha512-UM/ByIoFra8yzV75n1o0Puu0bw5U/9UNnDacrJNspekBewIfsQ3D6ez1nvlWpt7aTsO6rujQtifBpycwIivqlg==
+capability:
+  does: Toast notifications for React
+  does_not: Does not send push or email notifications
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+    react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+    "@types/react": ^18.0.0 || ^19.0.0
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add sonner@2.0.8
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata sonner@2.0.8
+  - claim: 0 OSV advisories for sonner@2.0.8 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - ui.notifications
+  conflicts: []
+  tested_with:
+    - contract-harness

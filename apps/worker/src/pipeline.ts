@@ -134,7 +134,16 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
     devDependencies: Stack;
   };
   const stack: Stack = { ...pkg.dependencies, ...pkg.devDependencies };
-  const ranked = Object.fromEntries(selection.decisions.map((d) => [d.capability, d.ranked]));
+  // Policy (code): among eligible candidates, components the recipe already integrates come first; the
+  // decider's order is kept within each group. External libraries wait for WP10 integration.
+  const native = (c: { pkg: { name: string } }) =>
+    c.pkg.name.startsWith("turbineh/") || c.pkg.name in stack;
+  const ranked = Object.fromEntries(
+    selection.decisions.map((d) => [
+      d.capability,
+      [...d.ranked.filter(native), ...d.ranked.filter((c) => !native(c))],
+    ]),
+  );
   const resolution = resolveSet(ranked, stack);
   lap("resolve", t);
   const triggers = Object.fromEntries(selection.decisions.map((d) => [d.capability, d.trigger]));
@@ -152,8 +161,17 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
   t = performance.now();
   const repoDir = join(deps.buildsDir, buildId, spec.slug);
   const decisionOf = (cap: string) => selection.decisions.find((d) => d.capability === cap);
-  const selected: SelectedComponent[] = Object.entries(resolution.selected).map(
-    ([capability, component]) => {
+  // A component counts as used only if the recipe can integrate it today: vendored in the recipe, or its
+  // package is already in the recipe's verified lockfile. Others wait for WP10 (install + glue) and are
+  // reported as "selected, integration pending", never claimed as used.
+  const integrable = (c: { pkg: { name: string } }) =>
+    c.pkg.name.startsWith("turbineh/") || c.pkg.name in stack;
+  const pendingIntegration = Object.entries(resolution.selected)
+    .filter(([, c]) => !integrable(c))
+    .map(([capability, c]) => ({ capability, component: c.id }));
+  const selected: SelectedComponent[] = Object.entries(resolution.selected)
+    .filter(([, c]) => integrable(c))
+    .map(([capability, component]) => {
       const d = decisionOf(capability);
       return {
         capability,
@@ -164,8 +182,14 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
           risk: d?.risk[component.id] ?? 0,
         },
       };
-    },
-  );
+    });
+  const gapsWithPending = [
+    ...gaps,
+    ...pendingIntegration.map((p) => ({
+      capability: p.capability,
+      trigger: `integration pending: ${p.component}`,
+    })),
+  ];
   const assembled = assemble({
     buildId,
     recipesDir,
@@ -173,7 +197,7 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
     outDir: repoDir,
     spec,
     selected,
-    gaps,
+    gaps: gapsWithPending,
   });
   git(repoDir, "init", "-q", "-b", "main");
   git(repoDir, "add", "-A");
@@ -215,6 +239,7 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
     },
     recipe: { requested: spec.recipe, built: recipeId },
     components: [...new Set(selected.map((s) => s.component.id))],
+    pendingIntegration,
     gaps,
   };
   writeReports(

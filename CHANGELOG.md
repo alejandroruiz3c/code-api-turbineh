@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- WP6: `@turbineh/curation` (`pnpm catalog:curate`): evaluate (registry + OSV) and certify with contract tests in the sandbox; batches 2–3 → 63 approved components covering ~50 capabilities; licence gate rejects `busboy` (no licence) and `nodemailer` (MIT-0) — ADR-0012.
+- Capabilities expanded to 54 (atomic decider question + plain-language label each); capability threshold 0.6; native-first selection policy; external selections reported as integration pending.
+
 - WP7: recipe inheritance (`recipe.yaml`: extends, provided entities, default capabilities, nav); recipes `internal-tool` (CSV import/export, search, pagination) and `landing-waitlist` (public waitlist with honeypot + rate limit + no enumeration, confirmation email, admin allow-list); search + pagination on every generated list; components data.csv-export/import, data.pagination, email.transactional (turbineh).
 
 - WP7: recipe `saas-crud` template (Next.js 16.3.8, better-auth with organizations, Drizzle, Zod, Tailwind, Security Pack) with committed lockfile, unit tests and Playwright E2E.

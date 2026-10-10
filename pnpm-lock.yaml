@@ -132,6 +132,18 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
+  packages/curation:
+    dependencies:
+      '@turbineh/catalog':
+        specifier: workspace:*
+        version: link:../catalog
+      '@turbineh/verifier':
+        specifier: workspace:*
+        version: link:../verifier
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
+
   packages/db:
     dependencies:
       '@turbineh/shared':

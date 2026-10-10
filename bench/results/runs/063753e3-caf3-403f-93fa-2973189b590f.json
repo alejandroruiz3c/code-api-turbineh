@@ -1,0 +1,139 @@
+{
+  "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export to Excel.",
+  "buildId": "063753e3-caf3-403f-93fa-2973189b590f",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/063753e3-caf3-403f-93fa-2973189b590f/warehouse-inventory-tracker",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6445
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 416
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2124
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1249
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 532
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 8153
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3746
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 89
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 1694,
+      "select": 170,
+      "resolve": 3,
+      "assemble": 112,
+      "verify": 25937,
+      "total": 27943
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 439,
+        "output_tokens": 628
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 131,
+      "requests": 1,
+      "questions": 72
+    },
+    "reuse": {
+      "generatedLines": 271,
+      "reusedLines": 735,
+      "reusedShare": 0.731
+    },
+    "recipe": {
+      "requested": "internal-tool",
+      "built": "internal-tool"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "data.csv-import.turbineh",
+      "data.csv-export.turbineh",
+      "ui.primitives.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "authz.roles.turbineh"
+    ],
+    "pendingIntegration": [
+      {
+        "capability": "ui.table",
+        "component": "ui.table.tanstack-table"
+      },
+      {
+        "capability": "ui.form",
+        "component": "ui.form.react-hook-form"
+      },
+      {
+        "capability": "data.fuzzy-search",
+        "component": "data.fuzzy-search.fuse"
+      },
+      {
+        "capability": "data.xlsx-export",
+        "component": "data.xlsx-export.exceljs"
+      },
+      {
+        "capability": "files.type-detection",
+        "component": "files.type-detection.file-type"
+      },
+      {
+        "capability": "ui.notifications",
+        "component": "ui.notifications.sonner"
+      },
+      {
+        "capability": "ops.rate-limit",
+        "component": "ops.rate-limit.rate-limiter-flexible"
+      }
+    ],
+    "gaps": [
+      {
+        "capability": "files.upload",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

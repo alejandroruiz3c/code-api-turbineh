@@ -24,7 +24,8 @@ export interface CompilerConfig {
 }
 
 /** Decider thresholds live in code (per decision point). */
-export const CAPABILITY_THRESHOLD = 0.5;
+// Calibration v1 (2026-10-10, from build traces): 0.5 admitted styling/dialog/retry noise; recalibrate with the D2 benchmark.
+export const CAPABILITY_THRESHOLD = 0.6;
 
 export interface CompileDecisions {
   recipe: { choice: string; confidence: number; probabilities: Record<string, number> };
