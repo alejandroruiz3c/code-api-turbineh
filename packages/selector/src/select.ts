@@ -1,5 +1,6 @@
 import { choice, noul, type Decider, type Questions } from "@turbineh/decider";
 import type { Candidate } from "@turbineh/resolver";
+import { capabilityLabel } from "./labels.js";
 
 /** What the decider sees about a candidate: a short card, never the full manifest. */
 export interface CandidateCard extends Candidate {
@@ -35,7 +36,8 @@ export interface SelectionResult {
 }
 
 /** Policy thresholds live in code (per decision point). */
-export const POLICY = { coversMin: 0.5, riskMax: 0.3 } as const;
+/** Risk only blocks clear cases; dependency security is decided by deterministic scans (OSV, licenses, gitleaks). */
+export const POLICY = { coversMin: 0.5, riskMax: 0.5 } as const;
 
 const key = (s: string) => s.replace(/[^a-zA-Z0-9]/g, "_");
 
@@ -58,16 +60,17 @@ export async function selectComponents(
   const questions: Questions = {};
   for (const [cap, cs] of Object.entries(input.candidates)) {
     if (cs.length === 0) continue;
+    const need = capabilityLabel(cap);
     questions[`best:${key(cap)}`] = choice(
-      `Which candidate in \`capabilities.${cap}\` best provides the capability "${cap}" for \`app\`?`,
+      `Which candidate in \`capabilities.${cap}\` is the best fit for ${need} in \`app\`?`,
       Object.fromEntries(cs.map((c) => [c.id, null])),
     );
     for (const c of cs) {
       questions[`covers:${key(cap)}:${key(c.id)}`] = noul(
-        `Candidate \`capabilities.${cap}.${c.id}\` fully provides "${cap}" as required by \`app\`.`,
+        `Candidate \`capabilities.${cap}.${c.id}\` offers ${need}.`,
       );
       questions[`risk:${key(cap)}:${key(c.id)}`] = noul(
-        `Candidate \`capabilities.${cap}.${c.id}\` introduces a security risk that standard security headers, input validation and role checks would not mitigate.`,
+        `Candidate \`capabilities.${cap}.${c.id}\` is described as unsafe or insecure.`,
       );
     }
   }
