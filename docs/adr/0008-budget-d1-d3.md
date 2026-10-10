@@ -1,6 +1,6 @@
 # ADR-0008 · Budget D1–D3 and cost circuit breaker
 
-- Status: proposed (Gate G0) — figures are **estimates**, not measurements; confirm prices in each console
+- Status: accepted by the owner (2026-10-10) — figures are **estimates**, not measurements; confirm prices in each console
 - Date: 2026-10-10
 - Inputs: owner's cost estimation workbook (per-app cost assumptions), provider pricing in the model knowledge base
 
