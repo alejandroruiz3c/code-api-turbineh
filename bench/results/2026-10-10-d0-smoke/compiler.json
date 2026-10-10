@@ -1,0 +1,90 @@
+{
+  "model": "gemma4:12b",
+  "valid": "5/5",
+  "results": [
+    {
+      "prompt": "A SaaS to manage gym memberships: organizations, admins and …",
+      "ok": true,
+      "recipe": "saas-crud",
+      "entities": [
+        "Organization",
+        "MembershipPlan",
+        "Member"
+      ],
+      "capabilities": 11,
+      "attempts": 1,
+      "latencyMs": 31739,
+      "usage": {
+        "input_tokens": 314,
+        "output_tokens": 1702
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A landing page for my coffee subscription startup with a wai…",
+      "ok": true,
+      "recipe": "landing-waitlist",
+      "entities": [
+        "Subscriber"
+      ],
+      "capabilities": 9,
+      "attempts": 1,
+      "latencyMs": 19470,
+      "usage": {
+        "input_tokens": 314,
+        "output_tokens": 1144
+      },
+      "errors": []
+    },
+    {
+      "prompt": "An internal tool for our warehouse to track inventory items …",
+      "ok": true,
+      "recipe": "internal-tool",
+      "entities": [
+        "InventoryItem"
+      ],
+      "capabilities": 11,
+      "attempts": 1,
+      "latencyMs": 23048,
+      "usage": {
+        "input_tokens": 315,
+        "output_tokens": 1390
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A booking app for a physiotherapy clinic: therapists set ava…",
+      "ok": true,
+      "recipe": "bookings",
+      "entities": [
+        "User",
+        "Availability",
+        "Booking"
+      ],
+      "capabilities": 23,
+      "attempts": 1,
+      "latencyMs": 27722,
+      "usage": {
+        "input_tokens": 313,
+        "output_tokens": 1615
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A client portal for an accounting firm where clients upload …",
+      "ok": true,
+      "recipe": "client-portal",
+      "entities": [
+        "TaxRequest"
+      ],
+      "capabilities": 11,
+      "attempts": 1,
+      "latencyMs": 25930,
+      "usage": {
+        "input_tokens": 310,
+        "output_tokens": 1541
+      },
+      "errors": []
+    }
+  ]
+}

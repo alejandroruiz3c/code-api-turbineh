@@ -1,0 +1,4 @@
+{
+  "status": "blocked",
+  "reason": "Backup Coder not configured: BACKUP_CODER_PRIMARY(+_BASE_URL), BACKUP_CODER_SECONDARY(+_BASE_URL)"
+}
