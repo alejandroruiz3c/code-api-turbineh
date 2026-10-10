@@ -1,6 +1,6 @@
 # ADR-0005 · How users interact: web app first, API second
 
-- Status: proposed (Gate G0) — deployment host needs owner confirmation
+- Status: accepted (Gate G0, 2026-10-10)
 - Date: 2026-10-10
 
 ## Context
@@ -31,8 +31,7 @@ of the plan.
 - GitHub sign-in is required to build, not to explore → low friction and abuse control.
 - The API keeps the plan's contract (`/v1/builds`, SSE events) so the UI and integrators share one path.
 
-## Open point
+## Deployment host
 
-`api.turbineh.com` currently serves the YES IF landing in production (TurbineH project context). Deploying here
-would replace it. Options: (a) keep the landing and serve this app on another subdomain; (b) move the landing.
-**Owner decision.**
+**`software.turbineh.com`** (owner decision, 2026-10-10). `api.turbineh.com` keeps serving the YES IF landing.
+The public API is served under the same host (`software.turbineh.com/v1/...`); DNS is managed at IONOS.

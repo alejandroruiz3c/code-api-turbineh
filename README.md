@@ -60,4 +60,5 @@ Open decider locally: see [services/open-decider/README.md](services/open-decide
 
 ## License
 
-Pending owner confirmation (proposed: Apache-2.0).
+[Apache-2.0](LICENSE). Copyright 2026 Alex Ruiz (TurbineH). As sole copyright holder the owner keeps the right to use,
+relicense or commercialise the code in any way.
