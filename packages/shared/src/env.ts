@@ -46,6 +46,15 @@ export const envSchema = z.object({
   /** Sent as `reasoning_effort` (e.g. "none") to compiler and backup coder; unset = provider default. */
   MODEL_REASONING_EFFORT: optionalString,
 
+  DATABASE_URL: z
+    .string()
+    .default("postgres://turbineh:turbineh_local_only@127.0.0.1:54329/turbineh"),
+  /** Open embedding model on the compiler's OpenAI-compatible endpoint unless overridden. */
+  EMBEDDINGS_MODEL: z.string().default("qwen3-embedding-8b"),
+  EMBEDDINGS_DIMENSIONS: z.coerce.number().int().default(1024),
+  EMBEDDINGS_BASE_URL: optionalUrl,
+  EMBEDDINGS_API_KEY: optionalString,
+
   BACKUP_CODER_PRIMARY: modelRef,
   BACKUP_CODER_PRIMARY_BASE_URL: optionalUrl,
   BACKUP_CODER_PRIMARY_API_KEY: optionalString,
