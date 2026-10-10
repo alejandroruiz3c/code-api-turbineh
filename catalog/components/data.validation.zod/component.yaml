@@ -1,7 +1,7 @@
 schema: turbineh.component/v0.1
 id: data.validation.zod
 version: 0.1.0
-status: evaluated
+status: approved
 category: data
 source:
   purl: pkg:npm/zod@4.6.5
@@ -29,7 +29,7 @@ integration:
   config: []
   migrations: false
 quality:
-  tests: { command: "pending: contract tests in the beta stack (WP6)", passed: false }
+  tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
 security:
   scanned_at: 2026-10-10
   tools: [osv.dev-api]
@@ -46,8 +46,11 @@ evidence:
   - claim: "No OSV advisories for zod@4.6.5 on 2026-10-10"
     origin: tested
     ref: "https://api.osv.dev/v1/query"
+  - claim: "Form and environment validation compile and run in recipe saas-crud (unit + build)"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipe-saas-crud.json"
 relations:
   requires: []
   provides: [data.validation]
   conflicts: []
-  tested_with: []
+  tested_with: [recipe.saas-crud]

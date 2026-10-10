@@ -1,0 +1,49 @@
+schema: turbineh.component/v0.1
+id: security.pack.turbineh
+version: 0.1.0
+status: approved
+category: security
+source:
+  purl: pkg:generic/turbineh/security.pack.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Security Pack: HTTP security headers with CSP, fixed-window rate limiting and safe error messages"
+  does_not: "Does not provide a WAF, bot detection or distributed rate limiting"
+  use_cases: [saas-crud, landing-waitlist, internal-tool, bookings, client-portal]
+  pros: ["Maintained by TurbineH", "No third-party runtime dependency beyond the stack"]
+  cons: ["Single-instance assumptions documented in code"]
+  alternatives: []
+contract:
+  inputs: ["see source"]
+  outputs: ["see source"]
+  errors: ["see source"]
+  limits: ["see source"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: false, fs: false, db: false, external_services: [] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Included in recipe templates at src/security/"
+  config: []
+  migrations: false
+quality:
+  tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
+security:
+  scanned_at: 2026-10-10
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed; no third-party dependencies of its own."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Unit tests: headers deny framing/sniffing and CSP is restrictive; rate limiter blocks after the limit"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipe-saas-crud.json"
+relations:
+  requires: []
+  provides: [security.headers, ops.rate-limit]
+  conflicts: []
+  tested_with: [recipe.saas-crud]
