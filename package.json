@@ -19,7 +19,11 @@
     "smoke:compiler": "pnpm --filter @turbineh/compiler run smoke",
     "smoke:backup-coder": "pnpm --filter @turbineh/backup-coder run smoke",
     "bench": "echo 'bench: not implemented yet (WP16)' && exit 1",
-    "open-decider": "uv run --python 3.12 --with quyet==1.0.2 python services/open-decider/server.py"
+    "open-decider": "uv run --python 3.12 --with quyet==1.0.2 python services/open-decider/server.py",
+    "db:up": "docker compose -f infra/docker-compose.yml up -d --wait",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:migrate": "pnpm --filter @turbineh/db run migrate",
+    "ingest": "pnpm --filter @turbineh/ingest run ingest"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

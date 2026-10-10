@@ -1,0 +1,28 @@
+{
+  "name": "@turbineh/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Platform database: migrations, client, catalog sync and vector search",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "migrate": "tsx src/migrate.ts"
+  },
+  "dependencies": {
+    "@turbineh/shared": "workspace:*",
+    "openai": "7.23.0",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

@@ -36,6 +36,8 @@ Requirements: Node 24+, pnpm 10, gitleaks (pre-commit hook), Python 3.12 + uv fo
 
 ```bash
 pnpm install                 # also enables the gitleaks pre-commit hook
+pnpm db:up && pnpm db:migrate   # local Postgres + pgvector (Docker)
+pnpm ingest -- --pages 40 --embed  # seed the discovered catalog layer
 cp .env.example .env.local   # fill in; never commit
 pnpm build && pnpm test
 pnpm lint && pnpm typecheck
