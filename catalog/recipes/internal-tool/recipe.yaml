@@ -1,0 +1,6 @@
+id: internal-tool
+description: Internal back-office tool with tables, search, CSV import and export
+extends: saas-crud
+providedEntities: []
+defaultCapabilities: [data.csv-import, data.csv-export, data.pagination]
+nav: []

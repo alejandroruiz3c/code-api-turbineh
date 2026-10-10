@@ -1,0 +1,109 @@
+{
+  "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export.",
+  "buildId": "bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f/warehouse-inventory-tracker",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6207
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 396
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2022
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1180
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 565
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 8354
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3704
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 86
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 1474,
+      "select": 108,
+      "resolve": 6,
+      "assemble": 131,
+      "verify": 25885,
+      "total": 27644
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 431,
+        "output_tokens": 611
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 93,
+      "requests": 1,
+      "questions": 39
+    },
+    "reuse": {
+      "generatedLines": 271,
+      "reusedLines": 735,
+      "reusedShare": 0.731
+    },
+    "recipe": {
+      "requested": "internal-tool",
+      "built": "internal-tool"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "data.csv-import.turbineh",
+      "data.csv-export.turbineh",
+      "ui.primitives.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "authz.roles.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "files.upload",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

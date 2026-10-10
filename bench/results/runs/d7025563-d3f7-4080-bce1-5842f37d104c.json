@@ -1,0 +1,92 @@
+{
+  "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, level, enrolled on) and courses (title, teacher, weekly hours, price).",
+  "buildId": "d7025563-d3f7-4080-bce1-5842f37d104c",
+  "status": "failed",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/d7025563-d3f7-4080-bce1-5842f37d104c/linguistflow",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6228
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 397
+    },
+    {
+      "name": "typecheck",
+      "ok": false,
+      "ms": 2039,
+      "detail": "STEP install 0 6228\nSTEP migrations 0 397\nSTEP typecheck 2 2039\ntests/unit/csv.test.ts(18,43): error TS2322: Type '100' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(18,58): error TS2322: Type '1' is not assignable to type '1000'.\ntests/unit/csv.test.ts(19,45): error TS2322: Type '10' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(19,59): error TS2322: Type '10' is not assignable to type '1000'.\n"
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 63
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2181,
+      "select": 121,
+      "resolve": 6,
+      "assemble": 124,
+      "verify": 9958,
+      "total": 12420
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 447,
+        "output_tokens": 969
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 97,
+      "requests": 1,
+      "questions": 33
+    },
+    "reuse": {
+      "generatedLines": 531,
+      "reusedLines": 744,
+      "reusedShare": 0.584
+    },
+    "recipe": {
+      "requested": "saas-crud",
+      "built": "saas-crud"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "ui.primitives.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "ui.calendar",
+        "trigger": "T1"
+      },
+      {
+        "capability": "payments.checkout",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

@@ -1,12 +1,4 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
@@ -17,6 +9,7 @@ import {
   type GeneratedFile,
 } from "./entities.js";
 import { entityNames } from "./naming.js";
+import { materializeRecipe, mergedRecipe } from "./recipes.js";
 
 export interface SelectedComponent {
   capability: string;
@@ -27,7 +20,10 @@ export interface SelectedComponent {
 
 export interface AssembleInput {
   buildId: string;
-  templateDir: string;
+  /** catalog/recipes — the recipe chain for spec.recipe is materialized from here. */
+  recipesDir: string;
+  /** Recipe to build (may differ from spec.recipe when a family falls back to its closest recipe). */
+  recipe: string;
   outDir: string;
   spec: BuildSpec;
   selected: SelectedComponent[];
@@ -66,7 +62,7 @@ function walk(dir: string): string[] {
 export function assemble(input: AssembleInput): AssembleResult {
   const { spec, outDir } = input;
   mkdirSync(outDir, { recursive: true });
-  cpSync(input.templateDir, outDir, { recursive: true });
+  const recipe = mergedRecipe(materializeRecipe(input.recipesDir, input.recipe, outDir));
 
   const placeholders: Record<string, string> = {
     __APP_SLUG__: spec.slug,
@@ -86,10 +82,18 @@ export function assemble(input: AssembleInput): AssembleResult {
     if (changed) writeFileSync(file, s);
   }
 
-  const entities = entitiesToGenerate(spec);
+  const entities = entitiesToGenerate(spec, recipe.providedEntities);
+  const chosen = new Set(input.selected.map((s) => s.capability));
+  const features = {
+    csvExport: chosen.has("data.csv-export"),
+    csvImport: chosen.has("data.csv-import"),
+  };
   const generated: GeneratedFile[] = [
-    ...entities.flatMap(generateEntity),
-    ...generateIndexes(entities),
+    ...entities.flatMap((e) => generateEntity(e, features)),
+    ...generateIndexes(entities, {
+      recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
+      extraNav: recipe.nav,
+    }),
     ...docs(
       input,
       entities.map((e) => entityNames(e.name).labelPlural),

@@ -1,0 +1,7 @@
+id: landing-waitlist
+description: Public landing page with a waitlist form, confirmation email and an admin panel
+extends: saas-crud
+providedEntities: [WaitlistEntry, Waitlist, Signup, Subscriber, Lead, Registration]
+defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
+nav:
+  - { label: Waitlist, href: /dashboard/waitlist }

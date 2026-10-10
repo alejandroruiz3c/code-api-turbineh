@@ -72,14 +72,25 @@ describe("entity generation", () => {
 
 describe("assemble", () => {
   it("fills placeholders, writes generated code and docs, and counts reused vs generated lines", () => {
-    const template = mkdtempSync(join(tmpdir(), "tpl-"));
+    const recipes = mkdtempSync(join(tmpdir(), "recipes-"));
+    const template = join(recipes, "base", "template");
     mkdirSync(join(template, "src/app"), { recursive: true });
+    writeFileSync(
+      join(recipes, "base", "recipe.yaml"),
+      "id: base\ndescription: b\nextends: null\nprovidedEntities: []\ndefaultCapabilities: []\nnav: []\n",
+    );
+    mkdirSync(join(recipes, "child", "template"), { recursive: true });
+    writeFileSync(
+      join(recipes, "child", "recipe.yaml"),
+      "id: child\ndescription: c\nextends: base\nprovidedEntities: [MembershipPlan]\ndefaultCapabilities: []\nnav: [{ label: Extra, href: /dashboard/extra }]\n",
+    );
     writeFileSync(join(template, "package.json"), '{ "name": "__APP_SLUG__" }');
     writeFileSync(join(template, "src/app/layout.tsx"), "export const t = '__APP_NAME__';\n");
     const out = mkdtempSync(join(tmpdir(), "out-"));
     const res = assemble({
       buildId: "b1",
-      templateDir: template,
+      recipesDir: recipes,
+      recipe: "child",
       outDir: out,
       spec,
       selected: [],
@@ -88,6 +99,11 @@ describe("assemble", () => {
     expect(readFileSync(join(out, "package.json"), "utf8")).toContain("gym-manager");
     expect(readFileSync(join(out, "COMPONENTS.md"), "utf8")).toContain("payments.checkout");
     expect(res.generatedLines).toBeGreaterThan(0);
+    // provided by the child recipe → not generated; extra nav from recipe.yaml
+    expect(readFileSync(join(out, "src/entities/index.ts"), "utf8")).toContain("/dashboard/extra");
+    expect(readFileSync(join(out, "src/entities/index.ts"), "utf8")).not.toContain(
+      "membership-plans",
+    );
     expect(res.reusedLines).toBeGreaterThan(0);
   });
 });
