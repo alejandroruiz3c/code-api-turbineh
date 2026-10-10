@@ -1,0 +1,24 @@
+{
+  "name": "@turbineh/decider",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed decision interface: JevDecider (TypeSafe) and OpenDecider (open alternative)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "smoke": "tsx src/smoke.ts"
+  },
+  "dependencies": {
+    "@turbineh/shared": "workspace:*",
+    "@typesafe-ai/sdk": "0.6.0"
+  }
+}
