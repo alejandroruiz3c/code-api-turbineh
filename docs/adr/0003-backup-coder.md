@@ -1,6 +1,6 @@
 # ADR-0003 · Backup Coder: primary and secondary models
 
-- Status: proposed — provider proposed (Scaleway); **API key pending (Gate G0)**
+- Status: accepted — provider Scaleway, project `code-frontiers`; API key being provisioned
 - Date: 2026-10-10
 - Context: PLAN §2.4; model policy in ADR-0001 (open-weights only, except JEV)
 
