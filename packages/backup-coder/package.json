@@ -1,0 +1,24 @@
+{
+  "name": "@turbineh/backup-coder",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Permanent backup coder (open-weights primary + secondary) with trigger policy",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "smoke": "tsx src/smoke.ts"
+  },
+  "dependencies": {
+    "@turbineh/shared": "workspace:*",
+    "openai": "7.23.0"
+  }
+}
