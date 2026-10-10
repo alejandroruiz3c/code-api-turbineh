@@ -66,6 +66,7 @@ Licencia del proyecto, proveedor de inferencia con coste relevante, cambios de a
 
 El repo vive en `YES-IF-API-PRODUCT/code-api-turbineh/`. Material de la carpeta del proyecto, relativo a este repo:
 
+- **DESCRIPCIÓN PRODUCTO FRONTIERS 10-26** (prevalece): `docs/PRODUCT_DESCRIPTION.md` (original en `../inputs/2026-10-descripcion-producto-frontiers.pdf`)
 - Comparativa JEV vs alternativa open: `../inputs/2026-10-comparativa-quyet-vs-jev.pdf` y `../knowledge/modelos-ia/03-guias-transversales/quyet-vs-jev-modelo-de-decision-hackathon.md`
 - Documentación de modelos: `../knowledge/modelos-ia/`
 - Logo: `../brand/turbineh-logo.pdf`

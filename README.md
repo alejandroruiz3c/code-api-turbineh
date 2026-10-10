@@ -50,11 +50,11 @@ pnpm smoke:compiler       # 5 prompts → valid BuildSpec
 pnpm smoke:backup-coder   # both backup slots answer
 ```
 
-Open decider locally: see [services/open-decider/README.md](services/open-decider/README.md).
+Open decider locally (on demand): `pnpm open-decider` — see [services/open-decider/README.md](services/open-decider/README.md).
 
 ## Documentation
 
-- [Plan](docs/PLAN.md) · [Architecture](docs/ARCHITECTURE.md) · [Component manifest](docs/COMPONENT_MANIFEST.md)
+- [Product description (source of truth)](docs/PRODUCT_DESCRIPTION.md) · [Plan](docs/PLAN.md) · [Architecture](docs/ARCHITECTURE.md) · [Component manifest](docs/COMPONENT_MANIFEST.md)
 - [Decider best practices](docs/DECIDER_BEST_PRACTICES.md) · [ADRs](docs/adr/)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
