@@ -9,6 +9,7 @@ export const POSTGRES_IMAGE =
 export const SYNTHETIC_ENV = {
   BETTER_AUTH_SECRET: "sandbox-synthetic-secret-0123456789abcdef",
   BETTER_AUTH_URL: "http://127.0.0.1:3000",
+  ADMIN_EMAILS: "admin-e2e@example.com",
 };
 
 export interface RunResult {

@@ -2,7 +2,14 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { assemble, writeReports, type SelectedComponent } from "@turbineh/assembler";
+import {
+  assemble,
+  hasRecipe,
+  mergedRecipe,
+  recipeChain,
+  writeReports,
+  type SelectedComponent,
+} from "@turbineh/assembler";
 import { compileIntent, type CompilerConfig } from "@turbineh/compiler";
 import type { Decider } from "@turbineh/decider";
 import { resolveSet, type Stack } from "@turbineh/resolver";
@@ -72,14 +79,22 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
   const spec = compiled.spec;
-  if (spec.recipe !== "saas-crud") {
+  if (spec.recipe === "out_of_scope") {
     return {
       buildId,
       status: "failed",
-      reason: `recipe ${spec.recipe} not available in this build of the pipeline`,
+      reason: `out of scope for the beta: ${spec.out_of_scope_reason ?? ""} (closest recipe: ${spec.closest_recipe ?? "none"})`,
       metrics: { timings },
     };
   }
+  const recipesDir = join(deps.repoRoot, "catalog/recipes");
+  // Families without their own recipe yet fall back to the multi-tenant CRUD base (recorded in metrics).
+  const recipeId = hasRecipe(recipesDir, spec.recipe) ? spec.recipe : "saas-crud";
+  const recipe = mergedRecipe(recipeChain(recipesDir, recipeId));
+  // Recipe defaults are added by code, never left to the model.
+  spec.capabilities = [
+    ...new Set([...spec.capabilities, ...recipe.defaultCapabilities]),
+  ] as typeof spec.capabilities;
 
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
@@ -109,8 +124,12 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
 
   // 3 · resolve (deterministic)
   t = performance.now();
-  const templateDir = join(deps.repoRoot, "catalog/recipes", spec.recipe, "template");
-  const pkg = JSON.parse(readFileSync(join(templateDir, "package.json"), "utf8")) as {
+  const baseTemplate = join(
+    recipesDir,
+    recipeChain(recipesDir, recipeId)[0]?.id ?? recipeId,
+    "template",
+  );
+  const pkg = JSON.parse(readFileSync(join(baseTemplate, "package.json"), "utf8")) as {
     dependencies: Stack;
     devDependencies: Stack;
   };
@@ -147,7 +166,15 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
       };
     },
   );
-  const assembled = assemble({ buildId, templateDir, outDir: repoDir, spec, selected, gaps });
+  const assembled = assemble({
+    buildId,
+    recipesDir,
+    recipe: recipeId,
+    outDir: repoDir,
+    spec,
+    selected,
+    gaps,
+  });
   git(repoDir, "init", "-q", "-b", "main");
   git(repoDir, "add", "-A");
   git(
@@ -186,7 +213,8 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
         assembled.reusedLines / Math.max(1, assembled.reusedLines + assembled.generatedLines)
       ).toFixed(3),
     },
-    components: selected.map((s) => s.component.id),
+    recipe: { requested: spec.recipe, built: recipeId },
+    components: [...new Set(selected.map((s) => s.component.id))],
     gaps,
   };
   writeReports(

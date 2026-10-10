@@ -1,0 +1,108 @@
+{
+  "prompt": "A landing page for my coffee subscription startup BeanBox with a waitlist form, confirmation email and an admin panel to see signups.",
+  "buildId": "271104a5-7ea2-46dd-bb63-32c4fcd16e19",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/271104a5-7ea2-46dd-bb63-32c4fcd16e19/beanbox-landing",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6640
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 423
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2103
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1323
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 540
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7880
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3994
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 66
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 1596,
+      "select": 143,
+      "resolve": 4,
+      "assemble": 119,
+      "verify": 26222,
+      "total": 28121
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 399,
+        "output_tokens": 652
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 130,
+      "requests": 1,
+      "questions": 36
+    },
+    "reuse": {
+      "generatedLines": 190,
+      "reusedLines": 928,
+      "reusedShare": 0.83
+    },
+    "recipe": {
+      "requested": "landing-waitlist",
+      "built": "landing-waitlist"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "authz.roles.turbineh",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "email.transactional.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "data.pagination.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "jobs.queue",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

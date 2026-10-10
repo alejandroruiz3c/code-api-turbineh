@@ -92,6 +92,9 @@ importers:
       '@turbineh/resolver':
         specifier: workspace:*
         version: link:../resolver
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/backup-coder:
     dependencies:

@@ -1,0 +1,6 @@
+id: saas-crud
+description: Multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens
+extends: null
+providedEntities: []
+defaultCapabilities: [auth.session, authz.organizations, authz.roles, data.orm, data.validation, data.pagination, ui.table, ui.form, ui.layout, security.headers, ops.rate-limit]
+nav: []

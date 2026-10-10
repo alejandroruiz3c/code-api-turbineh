@@ -34,8 +34,8 @@ const RESERVED_FIELDS = new Set([
   "tenantId",
 ]);
 
-export function entitiesToGenerate(spec: BuildSpec): Entity[] {
-  const seen = new Set<string>();
+export function entitiesToGenerate(spec: BuildSpec, providedByRecipe: string[] = []): Entity[] {
+  const seen = new Set<string>(providedByRecipe.map((p) => entityNames(p).table));
   return spec.entities.filter((e) => {
     const n = entityNames(e.name);
     if (AUTH_PROVIDED.has(n.table) || AUTH_PROVIDED.has(e.name.toLowerCase()) || seen.has(n.table))
@@ -156,8 +156,17 @@ export interface GeneratedFile {
   content: string;
 }
 
-/** All files for one entity: table, form schema, server actions, page and E2E test. */
-export function generateEntity(e: Entity): GeneratedFile[] {
+/** Optional features switched on by components selected for the build. */
+export interface EntityFeatures {
+  csvExport: boolean;
+  csvImport: boolean;
+}
+
+/** All files for one entity: table, form schema, server actions, page, optional CSV routes and E2E tests. */
+export function generateEntity(
+  e: Entity,
+  features: EntityFeatures = { csvExport: false, csvImport: false },
+): GeneratedFile[] {
   const n = entityNames(e.name);
   const fields = fieldsOf(e);
   const pgImports = new Set(["pgTable", "uuid", "varchar", "timestamp"]);
@@ -204,9 +213,9 @@ export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
 "use server";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db/client";
+${features.csvImport ? `import { redirect } from "next/navigation";\n` : ""}import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
-import { UserFacingError } from "@/security/errors";
+${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
 import { create${n.pascal}Schema } from "./schema";
@@ -232,7 +241,33 @@ export async function delete${n.pascal}(formData: FormData): Promise<void> {
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
   revalidatePath("/dashboard/${n.slug}");
 }
-`;
+${
+  features.csvImport
+    ? `
+/** CSV import (component data.csv-import.turbineh): bounded size and rows, every row validated. */
+export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
+  const ctx = await requireMember();
+  if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to import ${n.labelPlural.toLowerCase()}.");
+  if (!rateLimit(\`import:${n.table}:\${ctx.userId}\`, 5)) throw new UserFacingError("Too many imports. Try again later.");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) throw new UserFacingError("Choose a CSV file.");
+  if (file.size > CSV_LIMITS.maxBytes) throw new UserFacingError("The CSV file is too large.");
+  const rows = parseCsv(await file.text());
+  const valid = rows.map((r) => create${n.pascal}Schema.safeParse(r)).filter((r) => r.success).map((r) => r.data);
+  if (valid.length > 0) {
+    await db.insert(${n.variable}).values(
+      valid.map((input) => ({
+        organizationId: ctx.organizationId,
+${toRow.replace(/^ {4}/gm, " ".repeat(8))}
+      })),
+    );
+  }
+  revalidatePath("/dashboard/${n.slug}");
+  redirect(\`/dashboard/${n.slug}?imported=\${valid.length}&rejected=\${rows.length - valid.length}\`);
+}
+`
+    : ""
+}`;
 
   const formFields = fields
     .map((f) => {
@@ -251,8 +286,13 @@ export async function delete${n.pascal}(formData: FormData): Promise<void> {
     })
     .join("\n");
 
+  const firstText = fields.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
+  const search = firstText ? camel(firstText.name) : null;
+  const columns = fields.map((f) => camel(f.name));
+
   const page = `${GENERATED}
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq${search ? ", ilike" : ""} } from "drizzle-orm";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -260,21 +300,34 @@ import { Label } from "@/components/ui/label";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
-import { create${n.pascal}, delete${n.pascal} } from "@/entities/${n.slug}/actions";
+import { create${n.pascal}, delete${n.pascal}${features.csvImport ? `, import${n.pascal}Csv` : ""} } from "@/entities/${n.slug}/actions";
+import { PAGE_SIZE, parsePage, parseQuery } from "@/lib/pagination";
 import { can, requireMember } from "@/server/authz";
 
-export default async function ${n.pascal}Page() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function ${n.pascal}Page({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireMember();
-  const rows = await db
-    .select()
-    .from(${n.variable})
-    .where(eq(${n.variable}.organizationId, ctx.organizationId))
-    .orderBy(desc(${n.variable}.createdAt))
-    .limit(100);
+  const params = await searchParams;
+  const { page, offset, limit } = parsePage(params.page);
+  const q = parseQuery(params.q);
+  const where = and(
+    eq(${n.variable}.organizationId, ctx.organizationId),
+    ${search ? `q ? ilike(${n.variable}.${search}, \`%\${q.replace(/[%_\\\\]/g, "\\\\$&")}%\`) : undefined` : "undefined"},
+  );
+  const [rows, [{ total } = { total: 0 }]] = await Promise.all([
+    db.select().from(${n.variable}).where(where).orderBy(desc(${n.variable}.createdAt)).limit(limit).offset(offset),
+    db.select({ total: count() }).from(${n.variable}).where(where),
+  ]);
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canDelete = can(ctx.role, "delete");
+  const link = (p: number) => \`/dashboard/${n.slug}?page=\${p}\${q ? \`&q=\${encodeURIComponent(q)}\` : ""}\`;
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">${n.labelPlural}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">${n.labelPlural}</h1>
+        ${features.csvExport ? `<a className="text-sm underline" href="/dashboard/${n.slug}/export">Export CSV</a>` : ""}
+      </div>
       <Card title="New ${n.labelSingular.toLowerCase()}">
         <form action={create${n.pascal}} className="grid grid-cols-1 gap-4 md:grid-cols-2">
 ${formFields}
@@ -283,7 +336,33 @@ ${formFields}
           </div>
         </form>
       </Card>
-      <Card title="All ${n.labelPlural.toLowerCase()}">
+${
+  features.csvImport
+    ? `      <Card title="Import ${n.labelPlural.toLowerCase()} from CSV">
+        <form action={import${n.pascal}Csv} className="flex items-end gap-3">
+          <div>
+            <Label htmlFor="${n.slug}-csv">CSV file (columns: ${columns.join(", ")})</Label>
+            <input id="${n.slug}-csv" name="file" type="file" accept=".csv,text/csv" required />
+          </div>
+          <Button type="submit">Import CSV</Button>
+        </form>
+        {params.imported ? (
+          <p className="mt-2 text-sm text-slate-600" role="status">
+            Imported {String(params.imported)} rows, rejected {String(params.rejected ?? 0)}.
+          </p>
+        ) : null}
+      </Card>
+`
+    : ""
+}      <Card title="All ${n.labelPlural.toLowerCase()}">
+        ${
+          search
+            ? `<form className="mb-4 flex gap-2" role="search">
+          <Input aria-label="Search ${n.labelPlural.toLowerCase()}" name="q" defaultValue={q} placeholder="Search by ${label(firstText?.name ?? "")}" />
+          <Button type="submit">Search</Button>
+        </form>`
+            : ""
+        }
         <Table head={[${fields.map((f) => `"${label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}""]}>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-slate-100">
@@ -301,13 +380,45 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
             </tr>
           ))}
         </Table>
+        <nav aria-label="Pagination" className="mt-4 flex items-center gap-3 text-sm">
+          {page > 1 ? <Link href={link(page - 1)}>Previous</Link> : null}
+          <span>
+            Page {page} of {pages}
+          </span>
+          {page < pages ? <Link href={link(page + 1)}>Next</Link> : null}
+        </nav>
       </Card>
     </div>
   );
 }
 `;
 
-  const firstText = fields.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
+  const exportRoute = `${GENERATED}
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { ${n.variable} } from "@/db/schema";
+import { toCsv } from "@/lib/csv";
+import { requireMember } from "@/server/authz";
+
+/** CSV export (component data.csv-export.turbineh), scoped to the active workspace. */
+export async function GET(): Promise<Response> {
+  const ctx = await requireMember();
+  const rows = await db
+    .select()
+    .from(${n.variable})
+    .where(eq(${n.variable}.organizationId, ctx.organizationId))
+    .orderBy(desc(${n.variable}.createdAt))
+    .limit(10_000);
+  return new Response(toCsv(rows, ${JSON.stringify(columns)}), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="${n.slug}.csv"',
+      "Cache-Control": "no-store",
+    },
+  });
+}
+`;
+
   const fills = fields
     .filter((f) => f.required || f === firstText)
     .map((f) =>
@@ -317,8 +428,17 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
     )
     .join("\n");
   const expectation = firstText
-    ? `  await expect(page.getByRole("cell", { name: "${sampleValue(firstText, n.labelSingular)}" })).toBeVisible();`
-    : `  await expect(page.getByRole("row")).toHaveCount(2);`;
+    ? `  await expect(page.getByRole("cell", { name: "${sampleValue(firstText, n.labelSingular)}" }).first()).toBeVisible();`
+    : `  await expect(page.getByRole("row").nth(1)).toBeVisible();`;
+
+  const csvSample = (suffix: string) =>
+    `${columns.join(",")}\\n${fields
+      .map((f) => {
+        if (f.type === "boolean") return "true";
+        const v = sampleValue(f, n.labelSingular);
+        return f === firstText ? `${v} ${suffix}` : v;
+      })
+      .join(",")}\\n`;
 
   const e2e = `${GENERATED}
 import { expect, test } from "@playwright/test";
@@ -329,28 +449,66 @@ ${fills}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
 ${expectation}
 });
-`;
+${
+  features.csvExport
+    ? `
+test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ page }) => {
+  const res = await page.request.get("/dashboard/${n.slug}/export");
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("text/csv");
+  expect((await res.text()).split("\\r\\n")[0]).toBe("${columns.join(",")}");
+});
+`
+    : ""
+}${
+    features.csvImport
+      ? `
+test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
+  await page.goto("/dashboard/${n.slug}");
+  await page.getByLabel(/CSV file/).setInputFiles({ name: "import.csv", mimeType: "text/csv", buffer: Buffer.from("${csvSample("imported")}") });
+  await page.getByRole("button", { name: "Import CSV" }).click();
+  await expect(page.getByRole("status")).toContainText("Imported 1 rows");
+});
+`
+      : ""
+  }`;
 
   return [
     { path: `src/db/tables/${n.slug}.ts`, content: table },
     { path: `src/entities/${n.slug}/schema.ts`, content: schema },
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
     { path: `src/app/dashboard/${n.slug}/page.tsx`, content: page },
+    ...(features.csvExport
+      ? [{ path: `src/app/dashboard/${n.slug}/export/route.ts`, content: exportRoute }]
+      : []),
     { path: `tests/e2e/${n.slug}.spec.ts`, content: e2e },
   ];
 }
 
 /** Registry, schema barrel and shared E2E helper for the generated entities. */
-export function generateIndexes(entities: Entity[]): GeneratedFile[] {
+export function generateIndexes(
+  entities: Entity[],
+  opts: { recipeTables?: boolean; extraNav?: { label: string; href: string }[] } = {},
+): GeneratedFile[] {
   const names = entities.map((e) => entityNames(e.name));
+  const barrel = [
+    ...(opts.recipeTables ? ['export * from "./recipe-tables";'] : []),
+    ...names.map((n) => `export * from "./tables/${n.slug}";`),
+  ];
+  const nav = [
+    ...(opts.extraNav ?? []),
+    ...names.map((n) => ({ label: n.labelPlural, href: `/dashboard/${n.slug}` })),
+  ];
   return [
     {
       path: "src/db/schema.ts",
-      content: `${GENERATED}\n${names.map((n) => `export * from "./tables/${n.slug}";`).join("\n")}${names.length ? "\n" : "export {};\n"}`,
+      content: `${GENERATED}\n${barrel.length ? barrel.join("\n") + "\n" : "export {};\n"}`,
     },
     {
       path: "src/entities/index.ts",
-      content: `${GENERATED}\nexport const entityNav: { label: string; href: string }[] = [\n${names.map((n) => `  { label: "${n.labelPlural}", href: "/dashboard/${n.slug}" },`).join("\n")}\n];\n`,
+      content: `${GENERATED}\nexport const entityNav: { label: string; href: string }[] = [\n${nav
+        .map((e) => `  { label: ${JSON.stringify(e.label)}, href: ${JSON.stringify(e.href)} },`)
+        .join("\n")}\n];\n`,
     },
   ];
 }

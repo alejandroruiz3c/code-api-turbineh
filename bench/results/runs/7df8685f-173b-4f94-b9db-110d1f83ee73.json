@@ -1,0 +1,90 @@
+{
+  "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export.",
+  "buildId": "7df8685f-173b-4f94-b9db-110d1f83ee73",
+  "status": "failed",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/7df8685f-173b-4f94-b9db-110d1f83ee73/warehouse-inventory-tracker",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6679
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 437
+    },
+    {
+      "name": "typecheck",
+      "ok": false,
+      "ms": 2156,
+      "detail": "STEP install 0 6679\nSTEP migrations 0 437\nSTEP typecheck 2 2156\ntests/unit/csv.test.ts(18,43): error TS2322: Type '100' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(18,58): error TS2322: Type '1' is not assignable to type '1000'.\ntests/unit/csv.test.ts(19,45): error TS2322: Type '10' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(19,59): error TS2322: Type '10' is not assignable to type '1000'.\n"
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 95
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 1752,
+      "select": 119,
+      "resolve": 5,
+      "assemble": 129,
+      "verify": 10789,
+      "total": 12839
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 431,
+        "output_tokens": 611
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 105,
+      "requests": 1,
+      "questions": 39
+    },
+    "reuse": {
+      "generatedLines": 271,
+      "reusedLines": 732,
+      "reusedShare": 0.73
+    },
+    "recipe": {
+      "requested": "internal-tool",
+      "built": "internal-tool"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "data.csv-import.turbineh",
+      "data.csv-export.turbineh",
+      "ui.primitives.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "authz.roles.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "files.upload",
+        "trigger": "T1"
+      }
+    ]
+  }
+}
