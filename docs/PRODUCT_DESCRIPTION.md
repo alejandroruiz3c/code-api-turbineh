@@ -82,10 +82,10 @@ Decisiones de ejecución:
 
 ## Later owner decisions (2026-10-10, recorded as ADRs)
 
-| Topic            | Description says                                       | Owner decision                                                                     | ADR        |
-| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------- |
-| Deployment host  | api.turbineh.com                                       | **software.turbineh.com** (api.turbineh.com keeps the YES IF landing)              | 0005       |
-| Interaction      | "Uso mediante API" + typesafe.ai-style UI              | Web app first (best UX), API second on the same backend                            | 0005       |
-| Open Git project | Open project                                           | Private until the D3 release review, then public                                   | 0007       |
-| Delivery account | "la cuenta que tenemos para dar resultados a clientes" | Owner's personal account for now; customer delivery namespace decided in D2 (WP12) | 0007       |
-| Models           | JEV + best open version                                | Open-weights only, except JEV; closed frontier only as benchmark baseline          | 0001, 0009 |
+| Topic            | Description says                                                           | Owner decision                                                                                                                               | ADR        |
+| ---------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Deployment host  | api.turbineh.com                                                           | **software.turbineh.com** (api.turbineh.com keeps the YES IF landing)                                                                        | 0005       |
+| Interaction      | "Uso mediante API" + typesafe.ai-style UI                                  | Web app first (best UX), API second on the same backend                                                                                      | 0005       |
+| Open Git project | Open project                                                               | Private until the D3 release review, then public                                                                                             | 0007       |
+| Delivery         | "proyecto privado en la cuenta que tenemos para dar resultados a clientes" | Only the complete verified package (download) and "Push to my GitHub" into the user's own account; no delivery into TurbineH GitHub accounts | 0013       |
+| Models           | JEV + best open version                                                    | Open-weights only, except JEV; closed frontier only as benchmark baseline                                                                    | 0001, 0009 |
