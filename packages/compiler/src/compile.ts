@@ -3,6 +3,8 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { buildSpecSchema, type BuildSpec } from "./build-spec.js";
 import {
+  ABUSE_QUESTIONS,
+  ABUSE_THRESHOLD,
   ALWAYS_ON,
   CAPABILITY_QUESTIONS,
   PARTS,
@@ -30,6 +32,8 @@ export const CAPABILITY_THRESHOLD = 0.6;
 export interface CompileDecisions {
   recipe: { choice: string; confidence: number; probabilities: Record<string, number> };
   capabilities: Record<string, number>;
+  /** Abuse Guard probabilities (one atomic question each). */
+  abuse: Record<string, number>;
   deciderModel: string;
   deciderLatencyMs: number;
 }
@@ -44,6 +48,8 @@ export interface CompileResult {
   errors: string[];
   /** True when the caller must escalate to the Backup Coder (trigger T5). */
   escalate: boolean;
+  /** Set when the Abuse Guard rejects the prompt (never escalated). */
+  rejected?: string;
 }
 
 const SYSTEM =
@@ -79,6 +85,19 @@ export async function compileIntent(
   ]);
 
   const latencyMs = Math.round(performance.now() - start);
+  const flagged = Object.entries(decisions.abuse).filter(([, p]) => p >= ABUSE_THRESHOLD);
+  if (flagged.length > 0) {
+    return {
+      ok: false,
+      decisions,
+      attempts,
+      latencyMs,
+      usage,
+      errors: [],
+      escalate: false,
+      rejected: `rejected by the Abuse Guard: ${flagged.map(([k, p]) => `${k} (${p.toFixed(2)})`).join(", ")}`,
+    };
+  }
   if (parts.some((p) => p === undefined)) {
     return { ok: false, decisions, attempts, latencyMs, usage, errors, escalate: true };
   }
@@ -137,12 +156,19 @@ async function decide(prompt: string, decider: Decider): Promise<CompileDecision
   for (const [id, text] of Object.entries(CAPABILITY_QUESTIONS)) {
     questions[`cap:${id}`] = noul(`For the app described in \`prompt\`: ${text}`);
   }
+  for (const [id, text] of Object.entries(ABUSE_QUESTIONS)) {
+    questions[`abuse:${id}`] = noul(`In \`prompt\`: ${text}`);
+  }
   const d = await decider.ask({ prompt }, questions);
   const recipe = d.answers.recipe;
   if (recipe?.type !== "choice") throw new Error("decider returned no recipe choice");
   const capabilities: Record<string, number> = {};
   for (const [key, a] of Object.entries(d.answers)) {
     if (key.startsWith("cap:") && a.type === "noul") capabilities[key.slice(4)] = a.noul;
+  }
+  const abuse: Record<string, number> = {};
+  for (const [key, a] of Object.entries(d.answers)) {
+    if (key.startsWith("abuse:") && a.type === "noul") abuse[key.slice(6)] = a.noul;
   }
   return {
     recipe: {
@@ -151,6 +177,7 @@ async function decide(prompt: string, decider: Decider): Promise<CompileDecision
       probabilities: { ...recipe.probabilities },
     },
     capabilities,
+    abuse,
     deciderModel: d.meta.model,
     deciderLatencyMs: d.meta.latencyMs,
   };

@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- WP13 (part 1): Postgres build queue (idempotency keys, SKIP LOCKED claiming, stale requeue), hashed API keys with daily quotas, daily cost circuit breaker; worker service with channel-A artefacts (zip, git bundle, file list, docs) on local or S3 storage (`@turbineh/storage`).
+- WP15 (Abuse Guard): atomic abuse questions in the same decider batch as the compiler; flagged prompts are rejected before assembly.
+
 - WP6: `@turbineh/curation` (`pnpm catalog:curate`): evaluate (registry + OSV) and certify with contract tests in the sandbox; batches 2–3 → 63 approved components covering ~50 capabilities; licence gate rejects `busboy` (no licence) and `nodemailer` (MIT-0) — ADR-0012.
 - Capabilities expanded to 54 (atomic decider question + plain-language label each); capability threshold 0.6; native-first selection policy; external selections reported as integration pending.
 

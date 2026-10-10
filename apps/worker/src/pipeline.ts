@@ -46,6 +46,7 @@ export interface BuildOutcome {
   repoDir?: string;
   metrics: Record<string, unknown>;
   verify?: VerifyResult;
+  spec?: unknown;
   reason?: string;
 }
 
@@ -59,8 +60,11 @@ const git = (dir: string, ...args: string[]) =>
     },
   );
 
-export async function runBuild(prompt: string, deps: PipelineDeps): Promise<BuildOutcome> {
-  const buildId = randomUUID();
+export async function runBuild(
+  prompt: string,
+  deps: PipelineDeps,
+  buildId: string = randomUUID(),
+): Promise<BuildOutcome> {
   const t0 = performance.now();
   const timings: Record<string, number> = {};
   const lap = (k: string, from: number) => (timings[k] = Math.round(performance.now() - from));
@@ -75,6 +79,14 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
     decisions: compiled.decisions,
     usage: compiled.usage,
   });
+  if (compiled.rejected) {
+    return {
+      buildId,
+      status: "failed",
+      reason: compiled.rejected,
+      metrics: { timings, abuse: compiled.decisions?.abuse },
+    };
+  }
   if (!compiled.ok || !compiled.spec) {
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
@@ -250,7 +262,7 @@ export async function runBuild(prompt: string, deps: PipelineDeps): Promise<Buil
   git(repoDir, "add", "-A");
   git(repoDir, "commit", "-q", "-m", "docs: security report and build report");
   await deps.emit(buildId, result.ok ? "done" : "failed", "done", { repoDir, metrics });
-  return { buildId, status: result.ok ? "done" : "failed", repoDir, metrics, verify: result };
+  return { buildId, status: result.ok ? "done" : "failed", repoDir, metrics, verify: result, spec };
 }
 
 function securityReport(v: VerifyResult): string {

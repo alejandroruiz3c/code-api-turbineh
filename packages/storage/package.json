@@ -1,0 +1,23 @@
+{
+  "name": "@turbineh/storage",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Artifact storage (channel A): local filesystem for development, S3-compatible (Scaleway Object Storage) for staging/production",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1141.0",
+    "@aws-sdk/s3-request-presigner": "3.1141.0"
+  }
+}
