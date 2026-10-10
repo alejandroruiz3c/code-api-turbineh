@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks any commit that contains a secret. Installed by `pnpm install` (prepare script).
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is required (brew install gitleaks)." >&2
+  exit 1
+fi
+gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml || {
+  echo "pre-commit: gitleaks found a potential secret. Commit blocked." >&2
+  exit 1
+}
