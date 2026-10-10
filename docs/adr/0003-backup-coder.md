@@ -1,6 +1,6 @@
 # ADR-0003 · Backup Coder: primary and secondary models
 
-- Status: proposed — model choice accepted; **inference provider pending (Gate G0)**
+- Status: proposed — provider proposed (Scaleway); **API key pending (Gate G0)**
 - Date: 2026-10-10
 - Context: PLAN §2.4; model policy in ADR-0001 (open-weights only, except JEV)
 
@@ -18,11 +18,18 @@ MaaS businesses); MiMo-V2.6-Pro (released < 14 days ago at decision time — rev
 
 ## Serving
 
-- Both are too large to self-host for the beta; they are consumed through an OpenAI-compatible endpoint of an
-  inference provider with **EU data processing**. Never through the labs' official APIs (data processed in China;
+- Both models are too large to self-host for the beta; they are consumed through an OpenAI-compatible endpoint of
+  an inference provider with EU data processing — never through the labs' official APIs (data processed in China;
   Z.ai is on the US Entity List).
+- **Proposed provider: Scaleway Generative APIs (Paris, EU-sovereign).** Verified on 2026-10-10 in its supported
+  models page: `glm-5.2` (MIT) and `deepseek-v4-flash-0731` (MIT), both serverless, with structured outputs and
+  `reasoning_effort: none`. One account also serves the production compiler candidate `gemma-4-26b-a4b-it`
+  (Apache-2.0).
+- Scaleway serves DeepSeek **V4-Flash-0731**, not V4.1-Flash. Primary on Scaleway is therefore
+  `deepseek-v4-flash-0731`; V4.1-Flash (e.g. via Nebius, NL) is the upgrade path once the benchmark (D1) shows the
+  difference matters.
 - Configuration: `BACKUP_CODER_{PRIMARY,SECONDARY}` (`<provider>:<model>`), `_BASE_URL`, `_API_KEY`.
-- Reasoning/thinking must be disabled or capped for gap filling: a thinking model can spend the whole output
+- Reasoning must be disabled (`reasoning_effort: none`) for gap filling: a thinking model can spend the whole output
   budget before emitting code (observed with the local stand-in in D0).
 
 ## Usage rules (enforced in `packages/backup-coder`)

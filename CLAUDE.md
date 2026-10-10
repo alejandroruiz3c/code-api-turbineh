@@ -44,6 +44,9 @@ pnpm dev            # api + worker + web en local
 pnpm test
 pnpm lint && pnpm typecheck
 pnpm catalog:validate
+pnpm smoke:decider        # JEV + open decider (requiere .env.local y services/open-decider)
+pnpm smoke:compiler       # 5 prompts → BuildSpec
+pnpm smoke:backup-coder   # primario + secundario responden
 pnpm bench          # ejecuta bench/prompts contra el pipeline y el baseline
 ```
 
@@ -58,3 +61,13 @@ Al cerrar D0, D1, D2 y D3 entrega el informe de Gate con la plantilla de `docs/P
 ## Decisiones que no tomas tú
 
 Licencia del proyecto, proveedor de inferencia con coste relevante, cambios de alcance, cualquier acción sobre la org GitHub de clientes o sobre claves. Súbelas en el informe de Gate.
+
+## Rutas del workspace (reorganizado 2026-10-10)
+
+El repo vive en `YES-IF-API-PRODUCT/code-api-turbineh/`. Material de la carpeta del proyecto, relativo a este repo:
+
+- Comparativa JEV vs alternativa open: `../inputs/2026-10-comparativa-quyet-vs-jev.pdf` y `../knowledge/modelos-ia/03-guias-transversales/quyet-vs-jev-modelo-de-decision-hackathon.md`
+- Documentación de modelos: `../knowledge/modelos-ia/`
+- Logo: `../brand/turbineh-logo.pdf`
+- Claves: `../.secrets/` → solo hacia `.env.local` (ver `docs/SECRETS.md`)
+- Evaluación preliminar y estimación de coste: `../inputs/`
