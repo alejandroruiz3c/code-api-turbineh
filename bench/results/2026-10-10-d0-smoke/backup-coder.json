@@ -1,4 +1,16 @@
 {
-  "status": "blocked",
-  "reason": "Backup Coder not configured: BACKUP_CODER_PRIMARY(+_BASE_URL), BACKUP_CODER_SECONDARY(+_BASE_URL)"
+  "primary_ref": "scaleway:deepseek-v4-flash-0731",
+  "secondary_ref": "scaleway:glm-5.2",
+  "primary": {
+    "status": "ok",
+    "model": "deepseek-v4-flash-0731",
+    "latencyMs": 853,
+    "reply": "ready"
+  },
+  "secondary": {
+    "status": "ok",
+    "model": "glm-5.2",
+    "latencyMs": 616,
+    "reply": "ready"
+  }
 }

@@ -43,6 +43,8 @@ export const envSchema = z.object({
   COMPILER_BASE_URL: z.url().default("http://127.0.0.1:11434/v1"),
   COMPILER_MODEL: z.string().default("gemma4:12b"),
   COMPILER_API_KEY: optionalString,
+  /** Sent as `reasoning_effort` (e.g. "none") to compiler and backup coder; unset = provider default. */
+  MODEL_REASONING_EFFORT: optionalString,
 
   BACKUP_CODER_PRIMARY: modelRef,
   BACKUP_CODER_PRIMARY_BASE_URL: optionalUrl,

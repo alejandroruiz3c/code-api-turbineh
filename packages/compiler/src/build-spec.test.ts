@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSpecJsonSchema, buildSpecSchema } from "./build-spec.js";
+import { buildSpecSchema } from "./build-spec.js";
+import { CAPABILITY_QUESTIONS, PARTS } from "./parts.js";
 
 const valid = {
   recipe: "saas-crud",
@@ -32,11 +33,33 @@ describe("BuildSpec", () => {
     ).toBe(false);
   });
 
+  it("accepts dynamic segments as :param and rejects other characters", () => {
+    const page = (path: string) => ({
+      ...valid,
+      pages: [{ path, purpose: "Detail", auth_required: true }],
+    });
+    expect(buildSpecSchema.safeParse(page("/members/:id")).success).toBe(true);
+    expect(buildSpecSchema.safeParse(page("/Members?x=1")).success).toBe(false);
+  });
+
+  it("deduplicates capabilities deterministically", () => {
+    const res = buildSpecSchema.safeParse({
+      ...valid,
+      capabilities: ["auth.session", "auth.session", "security.headers"],
+    });
+    expect(res.success && res.data.capabilities).toEqual(["auth.session", "security.headers"]);
+  });
+
   it("requires a reason when out of scope", () => {
     expect(buildSpecSchema.safeParse({ ...valid, recipe: "out_of_scope" }).success).toBe(false);
   });
 
-  it("exports a JSON schema for constrained decoding", () => {
-    expect(buildSpecJsonSchema).toHaveProperty("properties.recipe");
+  it("asks one atomic decider question per optional capability", () => {
+    expect(Object.keys(CAPABILITY_QUESTIONS).length).toBeGreaterThan(10);
+    expect(Object.keys(CAPABILITY_QUESTIONS)).not.toContain("security.headers");
+  });
+
+  it("keeps every generated part small and bounded", () => {
+    expect(Object.keys(PARTS)).toEqual(["meta", "entities", "pages", "criteria"]);
   });
 });

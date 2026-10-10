@@ -4,6 +4,10 @@ Every module that talks to a decider follows these rules. Most are enforced by `
 Sources: TypeSafe docs (docs.typesafe.ai — fan-out, how-to-build, confidence, primitives, models, Jev 1.13
 jaggedness, hierarchical classification cookbook) and the Quyet README.
 
+## Project principle
+
+See [ADR-0010](adr/0010-decomposition-principle.md): decomposed, simple content and simple tools over complex tasks — for every model.
+
 ## Request structure
 
 - **All questions for one state go in one request**, including speculative ones; discard unneeded answers in code.
