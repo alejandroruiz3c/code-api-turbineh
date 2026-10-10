@@ -22,6 +22,7 @@ import {
 import { deciderFromEnv } from "@turbineh/decider";
 import { createLogger, loadLocalEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
+import { processDelivery } from "./delivery.js";
 import { runBuild, type Phase } from "./pipeline.js";
 
 loadLocalEnv();
@@ -141,6 +142,21 @@ async function tick(): Promise<void> {
 
 log.info("worker started", { workerId, concurrency: CONCURRENCY });
 setInterval(() => void requeueStale(db).catch(() => undefined), 60_000);
+const tokenKey = process.env.DELIVERY_TOKEN_KEY;
+if (tokenKey) {
+  // Deliveries are short and I/O-bound: a separate loop so they never wait behind builds.
+  void (async () => {
+    for (;;) {
+      const worked = await processDelivery(db, storage, tokenKey).catch((err: unknown) => {
+        log.error("delivery loop failed", { error: String(err) });
+        return false;
+      });
+      if (!worked) await new Promise((r) => setTimeout(r, 1000));
+    }
+  })();
+} else {
+  log.warn("DELIVERY_TOKEN_KEY not set: GitHub deliveries disabled");
+}
 for (;;) {
   await tick().catch((err: unknown) => log.error("tick failed", { error: String(err) }));
   await new Promise((r) => setTimeout(r, running >= CONCURRENCY ? 1000 : 500));

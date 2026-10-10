@@ -22,6 +22,10 @@
     "@turbineh/shared": "workspace:*",
     "@turbineh/verifier": "workspace:*",
     "yaml": "2.9.1",
-    "@turbineh/storage": "workspace:*"
+    "@turbineh/storage": "workspace:*",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
   }
 }

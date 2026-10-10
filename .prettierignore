@@ -6,3 +6,5 @@ CLAUDE.md
 catalog/**/*.yaml
 bench/results
 builds
+.next
+next-env.d.ts

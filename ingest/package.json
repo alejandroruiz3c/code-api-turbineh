@@ -8,10 +8,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
-    "ingest": "tsx src/cli.ts"
+    "ingest": "tsx src/cli.ts",
+    "sync": "tsx src/sync-catalog.ts"
   },
   "dependencies": {
     "@turbineh/db": "workspace:*",
-    "@turbineh/shared": "workspace:*"
+    "@turbineh/shared": "workspace:*",
+    "yaml": "2.9.1"
   }
 }
