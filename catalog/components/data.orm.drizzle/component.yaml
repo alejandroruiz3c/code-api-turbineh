@@ -1,0 +1,57 @@
+schema: turbineh.component/v0.1
+id: data.orm.drizzle
+version: 0.1.0
+status: evaluated
+category: data
+source:
+  purl: pkg:npm/drizzle-orm@0.45.3
+  repo: https://github.com/drizzle-team/drizzle-orm
+  integrity: sha512-CAloER21cDdcgZ1OmjrZX82EeRNsdP+y0onX/eyoYDaYzki/adrAa91lzM5jWh7zZPK4qUbw/6LGv9J+A+uizA==
+capability:
+  does: "Typed SQL query builder and schema definition for Postgres with generated migrations"
+  does_not: "Does not provide connection pooling, auth or row-level authorization by itself"
+  use_cases: [saas-crud, internal-tool, bookings, client-portal]
+  pros: ["SQL-like typed API", "Schema in TypeScript"]
+  cons: ["Pre-1.0 version line; minor releases may contain breaking changes"]
+  alternatives: []
+contract:
+  inputs: ["Postgres connection (pg driver)", "TypeScript table definitions"]
+  outputs: ["typed query results", "SQL migrations via drizzle-kit"]
+  errors: ["driver errors propagated from pg"]
+  limits: ["Migrations require drizzle-kit as a separate dev dependency"]
+compat:
+  runtime: node@>=20
+  framework: any
+  peer: { pg: ">=8" }
+effects: { network: true, fs: false, db: true, external_services: [postgres] }
+integration:
+  strategy: dependency
+  install: "pnpm add drizzle-orm@0.45.3 pg"
+  config: [DATABASE_URL]
+  migrations: true
+quality:
+  tests: { command: "pending: contract tests in the beta stack (WP6)", passed: false }
+security:
+  scanned_at: 2026-10-10
+  tools: [osv.dev-api]
+  findings: []
+  scope: "Known advisories for this exact version (OSV query). Transitive deps, static analysis and file-level license scan not yet run."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice, state-changes]
+evidence:
+  - claim: "License Apache-2.0"
+    origin: maintainer
+    ref: "npm registry metadata drizzle-orm@0.45.3 (detected = registry metadata; file-level scan pending)"
+  - claim: "Peer dependency pg >=8"
+    origin: maintainer
+    ref: "npm registry metadata peerDependencies"
+  - claim: "No OSV advisories for drizzle-orm@0.45.3 on 2026-10-10"
+    origin: tested
+    ref: "https://api.osv.dev/v1/query"
+relations:
+  requires: []
+  provides: [data.orm]
+  conflicts: []
+  tested_with: []
