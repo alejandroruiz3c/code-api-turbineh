@@ -13,4 +13,10 @@ const schema = z.object({
   USER_DAILY_BUILDS: z.coerce.number().int().default(10),
 });
 
-export const env = schema.parse(process.env);
+type Env = z.infer<typeof schema>;
+let cached: Env | undefined;
+
+/** Validated lazily on first use (at request time), so builds never need runtime secrets. */
+export const env = new Proxy({} as Env, {
+  get: (_t, key: string) => (cached ??= schema.parse(process.env))[key as keyof Env],
+});
