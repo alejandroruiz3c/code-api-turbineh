@@ -34,8 +34,12 @@ Exact versions only (`save-exact=true`), stable releases published **more than 1
 Next.js (App Router) + strict TypeScript + Tailwind + shadcn/ui + Drizzle + Postgres + open auth library + Zod.
 Exact versions are selected and frozen in WP7 when recipe 1 compiles and passes the E2E smoke.
 
-## Exceptions requested (pending approval at Gate G0)
+## Exceptions (approved at Gate G0, 2026-10-10)
 
 | Item                                  | Published  | Why                                                                                                    |
 | ------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
 | `quyet==1.0.2` (open decider runtime) | 2026-10-08 | Quyet 1.0 itself was released 2026-10-03. It is the open alternative chosen in the project comparison. |
+
+Rationale for the `quyet` exception: it is the open alternative chosen in the project comparison, it is pinned
+exactly, and JEV is the primary decider, so Quyet only serves as fallback. Re-check on 2026-10-22 (14 days after
+1.0.2) and pin the latest release older than 14 days at that point.
