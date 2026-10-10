@@ -5,3 +5,4 @@ docs/PLAN.md
 CLAUDE.md
 catalog/**/*.yaml
 bench/results
+builds

@@ -1,0 +1,117 @@
+{
+  "prompt": "A SaaS for gym memberships: gyms as workspaces with admins and staff; manage members (full name, email, plan, monthly fee, active, joined on) and classes (title, coach, starts at, capacity).",
+  "buildId": "ebeff520-6d18-4faa-8b88-a6231ef03b7b",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/ebeff520-6d18-4faa-8b88-a6231ef03b7b/gymflow-saas",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6865
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 482
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2157
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1225
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 450
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 8005
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 4012
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 105
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2565,
+      "select": 152,
+      "resolve": 6,
+      "assemble": 123,
+      "verify": 26577,
+      "total": 29447
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 467,
+        "output_tokens": 1017
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 124,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 428,
+      "reusedLines": 567,
+      "reusedShare": 0.57
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "security.pack.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ui.calendar",
+        "trigger": "T1"
+      },
+      {
+        "capability": "payments.checkout",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

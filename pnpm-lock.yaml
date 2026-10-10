@@ -42,6 +42,39 @@ importers:
         specifier: 5.0.2
         version: 5.0.2(@types/node@24.19.0)(@vitest/coverage-v8@5.0.2)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  apps/worker:
+    dependencies:
+      '@turbineh/assembler':
+        specifier: workspace:*
+        version: link:../../packages/assembler
+      '@turbineh/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
+      '@turbineh/compiler':
+        specifier: workspace:*
+        version: link:../../packages/compiler
+      '@turbineh/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../../packages/decider
+      '@turbineh/resolver':
+        specifier: workspace:*
+        version: link:../../packages/resolver
+      '@turbineh/selector':
+        specifier: workspace:*
+        version: link:../../packages/selector
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@turbineh/verifier':
+        specifier: workspace:*
+        version: link:../../packages/verifier
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
+
   ingest:
     dependencies:
       '@turbineh/db':
@@ -50,6 +83,15 @@ importers:
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../packages/shared
+
+  packages/assembler:
+    dependencies:
+      '@turbineh/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@turbineh/resolver':
+        specifier: workspace:*
+        version: link:../resolver
 
   packages/backup-coder:
     dependencies:
@@ -136,6 +178,12 @@ importers:
       zod:
         specifier: 4.6.5
         version: 4.6.5
+
+  packages/verifier:
+    dependencies:
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
 packages:
 
