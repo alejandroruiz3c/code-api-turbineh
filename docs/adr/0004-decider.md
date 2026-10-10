@@ -28,3 +28,17 @@ questions instead of one complex one; `none_of_the_above` by default; state budg
 - No TypeSafe API key in the project key files → JEV smoke test not run.
 - `quyet` 1.0.2 is younger than 14 days (ADR-0002 exception).
 - Quyet is English-first; production prompts to the decider are written in English.
+
+## Operation and cost (2026-10-10)
+
+JEV is the primary decider, so the open fallback is **never kept running when it is not needed**:
+
+| Environment                | Open fallback (Quyet)                                                                                | Cost                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------- |
+| Local development          | Started on demand with `pnpm open-decider` (Quyet-1.0-Medium, Apple MPS/CPU/CUDA); stopped otherwise | 0 €                 |
+| Benchmark / comparison day | Quyet-1.0-Large on a rented 80 GB GPU for the measured runs only                                     | ADR-0008 "GPU" line |
+| Launch window (D3)         | Quyet-1.0-Medium on a small GPU instance in the same EU region, only while beta traffic is open      | ADR-0008 "GPU" line |
+| Otherwise                  | Off. `FallbackDecider` surfaces JEV errors; no silent degradation                                    | 0 €                 |
+
+Correctness guard: every decision records `backend` and `fallbackFrom`, and the smoke test `pnpm smoke:decider`
+checks both backends before any session that relies on the fallback.
