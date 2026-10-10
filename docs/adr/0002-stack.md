@@ -43,3 +43,9 @@ Exact versions are selected and frozen in WP7 when recipe 1 compiles and passes 
 Rationale for the `quyet` exception: it is the open alternative chosen in the project comparison, it is pinned
 exactly, and JEV is the primary decider, so Quyet only serves as fallback. Re-check on 2026-10-22 (14 days after
 1.0.2) and pin the latest release older than 14 days at that point.
+
+## Security patches override the 14-day wait (2026-10-10)
+
+A release younger than 14 days is allowed, pinned exactly, when it is the first version that fixes a HIGH or
+CRITICAL advisory affecting the production dependency tree. First case: `next@16.3.8` (2026-09-30) fixes
+GHSA-cjq9-62q9-8jv4 (SSRF in image optimization) present in 16.3.6.

@@ -1,0 +1,23 @@
+{
+  "name": "@turbineh/selector",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Selector: catalog retrieval + one batched decider request per build",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/resolver": "workspace:*"
+  }
+}

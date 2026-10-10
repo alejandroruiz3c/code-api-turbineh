@@ -1,0 +1,49 @@
+schema: turbineh.component/v0.1
+id: ui.primitives.turbineh
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:generic/turbineh/ui.primitives.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Accessible UI primitives (button, input, label, card, table) styled with Tailwind"
+  does_not: "Does not provide complex widgets such as date pickers, charts or data grids"
+  use_cases: [saas-crud, landing-waitlist, internal-tool, bookings, client-portal]
+  pros: ["Maintained by TurbineH", "No third-party runtime dependency beyond the stack"]
+  cons: ["Single-instance assumptions documented in code"]
+  alternatives: []
+contract:
+  inputs: ["see source"]
+  outputs: ["see source"]
+  errors: ["see source"]
+  limits: ["see source"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: false, fs: false, db: false, external_services: [] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Included in recipe templates at src/components/ui/"
+  config: []
+  migrations: false
+quality:
+  tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
+security:
+  scanned_at: 2026-10-10
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed; no third-party dependencies of its own."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Pages built with these primitives compile, render and are driven by Playwright in recipe saas-crud"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipe-saas-crud.json"
+relations:
+  requires: []
+  provides: [ui.table, ui.form, ui.layout]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

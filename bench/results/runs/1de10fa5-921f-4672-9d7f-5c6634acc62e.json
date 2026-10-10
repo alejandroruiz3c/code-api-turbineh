@@ -1,0 +1,111 @@
+{
+  "prompt": "A SaaS for a dental clinic network: clinics as workspaces with admins and staff roles; manage patients (name, email, phone, birth date) and treatments (patient name, procedure, cost, date, paid).",
+  "buildId": "1de10fa5-921f-4672-9d7f-5c6634acc62e",
+  "status": "failed",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/1de10fa5-921f-4672-9d7f-5c6634acc62e/dentalflow-saas",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6313
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 406
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2077
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1221
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 454
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7675
+    },
+    {
+      "name": "e2e",
+      "ok": false,
+      "ms": 7920,
+      "detail": "e/clinics.spec.ts:5:1 › owner creates a clinic and sees it in the list ───\n\n    Error: expect(page).toHaveURL(expected) failed\n\n    Expected pattern: /\\/dashboard/\n    Received string:  \"http://127.0.0.1:3000/sign-up\"\n    Timeout: 5000ms\n\n    Call log:\n      - Expect \"toHaveURL\" with timeout 5000ms\n        14 × locator resolved to <html lang=\"en\">…</html>\n           - unexpected value \"http://127.0.0.1:3000/sign-up\"\n\n\n       at helpers.ts:12\n\n      10 |   await page.getByLabel(\"Workspace name\").fill(\"E2E Workspace\");\n      11 |   await page.getByRole(\"button\", { name: \"Create account\" }).click();\n    > 12 |   await expect(page).toHaveURL(/\\/dashboard/);\n         |                      ^\n      13 | }\n      14 |\n        at signUp (/work/tests/e2e/helpers.ts:12:22)\n        at /work/tests/e2e/clinics.spec.ts:6:3\n\n    Error Context: test-results/clinics-owner-creates-a-clinic-and-sees-it-in-the-list-chromium/error-context.md\n\n    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────\n    test-results/clinics-owner-creates-a-clinic-and-sees-it-in-the-list-chromium/trace.zip\n    Usage:\n\n        pnpm exec playwright show-trace test-results/clinics-owner-creates-a-clinic-and-sees-it-in-the-list-chromium/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n\n  1 failed\n    [chromium] › tests/e2e/clinics.spec.ts:5:1 › owner creates a clinic and sees it in the list ────\n  4 passed (6.4s)\n"
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 90
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": false,
+      "ms": 0,
+      "detail": "@img/sharp-libvips-linux-arm64@1.3.4 LGPL-3.0-or-later"
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2360,
+      "select": 122,
+      "resolve": 4,
+      "assemble": 116,
+      "verify": 29913,
+      "total": 32539
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 463,
+        "output_tokens": 1016
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 102,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 493,
+      "reusedLines": 536,
+      "reusedShare": 0.521
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "security.pack.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

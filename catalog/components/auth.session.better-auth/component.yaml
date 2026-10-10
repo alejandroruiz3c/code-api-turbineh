@@ -1,7 +1,7 @@
 schema: turbineh.component/v0.1
 id: auth.session.better-auth
 version: 0.1.0
-status: evaluated
+status: approved
 category: auth
 source:
   purl: pkg:npm/better-auth@1.7.6
@@ -30,7 +30,7 @@ integration:
   config: [BETTER_AUTH_SECRET, BETTER_AUTH_URL]
   migrations: true
 quality:
-  tests: { command: "pending: contract tests in the beta stack (WP6)", passed: false }
+  tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
 security:
   scanned_at: 2026-10-10
   tools: [osv.dev-api]
@@ -50,8 +50,11 @@ evidence:
   - claim: "No OSV advisories for better-auth@1.7.6 on 2026-10-10"
     origin: tested
     ref: "https://api.osv.dev/v1/query"
+  - claim: "Email/password sign-up, session cookie and protected-route redirect work in recipe saas-crud (E2E)"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipe-saas-crud.json"
 relations:
   requires: [data.orm]
   provides: [auth.session]
   conflicts: []
-  tested_with: []
+  tested_with: [recipe.saas-crud]

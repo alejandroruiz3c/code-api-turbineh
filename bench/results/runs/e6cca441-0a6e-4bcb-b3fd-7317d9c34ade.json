@@ -1,0 +1,109 @@
+{
+  "prompt": "A SaaS for a dental clinic network: clinics as workspaces with admins and staff roles; manage patients (name, email, phone, birth date) and treatments (patient name, procedure, cost, date, paid).",
+  "buildId": "e6cca441-0a6e-4bcb-b3fd-7317d9c34ade",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/e6cca441-0a6e-4bcb-b3fd-7317d9c34ade/dentalflow-saas",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6496
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 442
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2066
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1202
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 487
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7557
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3806
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 85
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2753,
+      "select": 140,
+      "resolve": 5,
+      "assemble": 126,
+      "verify": 25815,
+      "total": 28872
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 463,
+        "output_tokens": 995
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 120,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 473,
+      "reusedLines": 567,
+      "reusedShare": 0.545
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "security.pack.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

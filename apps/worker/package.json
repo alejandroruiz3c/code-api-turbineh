@@ -1,0 +1,25 @@
+{
+  "name": "@turbineh/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Build pipeline worker: compile → select → resolve → assemble → verify → deliver",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "build:local": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@turbineh/assembler": "workspace:*",
+    "@turbineh/catalog": "workspace:*",
+    "@turbineh/compiler": "workspace:*",
+    "@turbineh/db": "workspace:*",
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/resolver": "workspace:*",
+    "@turbineh/selector": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "@turbineh/verifier": "workspace:*",
+    "yaml": "2.9.1"
+  }
+}
