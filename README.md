@@ -42,6 +42,8 @@ cp .env.example .env.local   # fill in; never commit
 pnpm build && pnpm test
 pnpm lint && pnpm typecheck
 pnpm catalog:validate
+pnpm catalog:curate "$(pwd)/catalog/curation/batch-2.yaml"   # evaluate + certify a batch
+pnpm build:local "<prompt>"   # full pipeline locally (Docker required)
 ```
 
 Smoke tests (need the services from `.env.local`):

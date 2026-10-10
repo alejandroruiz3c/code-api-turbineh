@@ -1,0 +1,25 @@
+{
+  "name": "@turbineh/curation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Catalog curation: evaluate npm packages (metadata, licence, OSV) and certify them with contract tests in the sandbox",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "curate": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@turbineh/catalog": "workspace:*",
+    "@turbineh/verifier": "workspace:*",
+    "yaml": "2.9.1"
+  }
+}

@@ -1,0 +1,354 @@
+name: batch-2
+description: "Second curation batch: npm components for the beta capabilities (contract-tested)"
+entries:
+  - id: data.dates.date-fns
+    package: "date-fns"
+    category: data
+    provides: ["data.dates"]
+    does: "Pure date arithmetic, comparison and formatting functions"
+    does_not: "Does not handle time zones by itself (see date-fns-tz)"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.dates.dayjs
+    package: "dayjs"
+    category: data
+    provides: ["data.dates"]
+    does: "Small immutable date library for parsing, arithmetic and formatting"
+    does_not: "Does not ship time-zone support without plugins"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.timezones.date-fns-tz
+    package: "date-fns-tz"
+    category: data
+    provides: ["data.timezones"]
+    does: "Time-zone aware formatting and conversion on top of date-fns"
+    does_not: "Does not include a time-zone picker UI"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.recurrence.rrule
+    package: "rrule"
+    category: data
+    provides: ["data.recurrence"]
+    does: "RFC 5545 recurrence rules (weekly, monthly...) and occurrence expansion"
+    does_not: "Does not store events or send reminders"
+    use_cases: ["bookings"]
+  - id: data.ics-export.ical-generator
+    package: "ical-generator"
+    category: data
+    provides: ["data.ics-export"]
+    does: "Generates iCalendar (.ics) feeds and invitations"
+    does_not: "Does not sync with external calendars"
+    use_cases: ["bookings", "client-portal"]
+  - id: data.ids.nanoid
+    package: "nanoid"
+    category: data
+    provides: ["data.ids"]
+    does: "Compact, URL-safe, cryptographically strong unique IDs"
+    does_not: "Does not guarantee ordering by creation time"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.ids.uuid
+    package: "uuid"
+    category: data
+    provides: ["data.ids"]
+    does: "RFC 9562 UUID generation (v4, v7) and validation"
+    does_not: "Does not shorten ids for URLs"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.slug.slugify
+    package: "slugify"
+    category: data
+    provides: ["data.slug"]
+    does: "Turns titles into URL slugs with transliteration"
+    does_not: "Does not ensure uniqueness against a database"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.money.decimal-js
+    package: "decimal.js"
+    category: data
+    provides: ["data.money"]
+    does: "Arbitrary-precision decimal arithmetic for money and quantities"
+    does_not: "Does not format currencies (use Intl.NumberFormat)"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.validation.valibot
+    package: "valibot"
+    category: data
+    provides: ["data.validation"]
+    does: "Modular schema validation with static type inference and small bundle size"
+    does_not: "Does not persist data or sanitize HTML"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.validation.yup
+    package: "yup"
+    category: data
+    provides: ["data.validation"]
+    does: "Schema validation with casting and nested objects"
+    does_not: "Does not provide compile-time inference as strong as zod"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.csv-import.papaparse
+    package: "papaparse"
+    category: data
+    provides: ["data.csv-import"]
+    does: "Robust CSV parsing with headers, quoting and type detection"
+    does_not: "Does not validate rows against a schema"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.csv-export.csv-stringify
+    package: "csv-stringify"
+    category: data
+    provides: ["data.csv-export"]
+    does: "Streaming and sync CSV serialisation with quoting"
+    does_not: "Does not neutralise spreadsheet formulas by default"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.xlsx-export.exceljs
+    package: "exceljs"
+    category: data
+    provides: ["data.xlsx-export"]
+    does: "Reads and writes Excel workbooks (XLSX) in memory"
+    does_not: "Does not evaluate formulas"
+    use_cases: ["internal-tool", "saas-crud"]
+  - id: files.pdf.pdf-lib
+    package: "pdf-lib"
+    category: files
+    provides: ["files.pdf"]
+    does: "Creates and edits PDF documents in pure JavaScript"
+    does_not: "Does not render HTML to PDF"
+    use_cases: ["client-portal", "saas-crud", "internal-tool"]
+  - id: files.qr.qrcode
+    package: "qrcode"
+    category: files
+    provides: ["files.qr"]
+    does: "Generates QR codes as SVG, PNG data URLs or strings"
+    does_not: "Does not scan or decode QR codes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: files.type-detection.file-type
+    package: "file-type"
+    category: files
+    provides: ["files.type-detection"]
+    does: "Detects real file type from magic bytes (not from the extension)"
+    does_not: "Does not scan files for malware"
+    use_cases: ["client-portal", "saas-crud"]
+  - id: files.mime.mime
+    package: "mime"
+    category: files
+    provides: ["files.type-detection"]
+    does: "Maps file extensions to MIME types and back"
+    does_not: "Does not inspect file contents"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: files.upload.busboy
+    package: "busboy"
+    category: files
+    provides: ["files.upload"]
+    does: "Streaming multipart/form-data parser for file uploads"
+    does_not: "Does not store files"
+    use_cases: ["client-portal"]
+  - id: ui.markdown.marked
+    package: "marked"
+    category: ui
+    provides: ["ui.markdown"]
+    does: "Fast Markdown to HTML conversion"
+    does_not: "Does not sanitize the generated HTML (combine with sanitize-html)"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.markdown.markdown-it
+    package: "markdown-it"
+    category: ui
+    provides: ["ui.markdown"]
+    does: "CommonMark-compliant Markdown parser with safe defaults (HTML disabled)"
+    does_not: "Does not render MDX components"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: security.sanitize-html.sanitize-html
+    package: "sanitize-html"
+    category: security
+    provides: ["security.sanitize-html"]
+    does: "Allow-list HTML sanitizer for user-generated rich text"
+    does_not: "Does not sanitize CSS in style attributes unless configured"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: security.jwt.jose
+    package: "jose"
+    category: security
+    provides: ["security.jwt"]
+    does: "Standards-based JWT/JWS/JWE signing and verification with WebCrypto"
+    does_not: "Does not manage key rotation or storage"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: security.password-hash.bcryptjs
+    package: "bcryptjs"
+    category: security
+    provides: ["security.password-hash"]
+    does: "bcrypt password hashing in pure JavaScript"
+    does_not: "Does not enforce password policies"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: security.webhook-signature.standardwebhooks
+    package: "standardwebhooks"
+    category: security
+    provides: ["security.webhook-signature"]
+    does: "Signs and verifies webhooks following the Standard Webhooks spec"
+    does_not: "Does not deliver or retry webhooks"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: auth.mfa.otpauth
+    package: "otpauth"
+    category: auth
+    provides: ["auth.mfa"]
+    does: "TOTP/HOTP one-time passwords for two-factor authentication"
+    does_not: "Does not store secrets or render QR codes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ops.rate-limit.rate-limiter-flexible
+    package: "rate-limiter-flexible"
+    category: ops
+    provides: ["ops.rate-limit"]
+    does: "Rate limiting with memory, Redis or Postgres stores"
+    does_not: "Does not block bots by fingerprint"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ops.retry.p-retry
+    package: "p-retry"
+    category: ops
+    provides: ["ops.retry"]
+    does: "Retries failing async operations with exponential backoff"
+    does_not: "Does not make operations idempotent"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ops.concurrency.p-limit
+    package: "p-limit"
+    category: ops
+    provides: ["ops.concurrency"]
+    does: "Limits how many async operations run at once"
+    does_not: "Does not persist queued work"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: observability.logging.pino
+    package: "pino"
+    category: observability
+    provides: ["observability.logging"]
+    does: "Fast structured JSON logging with redaction"
+    does_not: "Does not ship logs to a backend by itself"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: email.transactional.resend
+    package: "resend"
+    category: email
+    provides: ["email.transactional"]
+    does: "Official Resend SDK for transactional email"
+    does_not: "Does not provide templates or a local outbox"
+    use_cases: ["landing-waitlist", "saas-crud", "bookings", "client-portal"]
+  - id: payments.checkout.stripe
+    package: "stripe"
+    category: payments
+    provides: ["payments.checkout"]
+    does: "Official Stripe SDK: checkout sessions, subscriptions and signed webhooks"
+    does_not: "Does not hold card data; payments run on Stripe"
+    use_cases: ["saas-crud", "bookings", "landing-waitlist"]
+  - id: jobs.scheduler.cron-parser
+    package: "cron-parser"
+    category: jobs
+    provides: ["jobs.scheduler"]
+    does: "Parses cron expressions and computes next run times"
+    does_not: "Does not execute jobs"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: jobs.scheduler.croner
+    package: "croner"
+    category: jobs
+    provides: ["jobs.scheduler"]
+    does: "Cron scheduler and next-run evaluation without dependencies"
+    does_not: "Does not persist schedules across restarts"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.i18n.i18next
+    package: "i18next"
+    category: ui
+    provides: ["ui.i18n"]
+    does: "Internationalisation with namespaces, interpolation and plurals"
+    does_not: "Does not translate content automatically"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.fuzzy-search.fuse
+    package: "fuse.js"
+    category: data
+    provides: ["data.fuzzy-search"]
+    does: "Client-side fuzzy search over small collections"
+    does_not: "Does not replace database full-text search for large datasets"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.phone.libphonenumber-js
+    package: "libphonenumber-js"
+    category: data
+    provides: ["data.phone"]
+    does: "Parses, validates and formats international phone numbers"
+    does_not: "Does not verify that a number is reachable"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.validation-strings.validator
+    package: "validator"
+    category: data
+    provides: ["data.validation"]
+    does: "String validators and sanitizers (emails, URLs, IBAN, etc.)"
+    does_not: "Does not validate structured objects"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.serialization.superjson
+    package: "superjson"
+    category: data
+    provides: ["data.serialization"]
+    does: "Serialises Dates, Maps, Sets and BigInts across the network boundary"
+    does_not: "Does not validate data"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.duration.ms
+    package: "ms"
+    category: data
+    provides: ["data.dates"]
+    does: "Converts human-readable durations to milliseconds and back"
+    does_not: "Does not handle calendar months"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.charts.recharts
+    package: "recharts"
+    category: ui
+    provides: ["ui.charts"]
+    does: "Composable React charts (line, bar, area, pie)"
+    does_not: "Does not provide dashboards or data fetching"
+    use_cases: ["saas-crud", "internal-tool", "client-portal"]
+  - id: ui.table.tanstack-table
+    package: "@tanstack/react-table"
+    major: "8"
+    category: ui
+    provides: ["ui.table"]
+    does: "Headless table state: sorting, filtering, pagination"
+    does_not: "Does not render markup or styles"
+    use_cases: ["internal-tool", "saas-crud"]
+  - id: ui.form.react-hook-form
+    package: "react-hook-form"
+    category: ui
+    provides: ["ui.form"]
+    does: "Performant React form state with validation resolvers"
+    does_not: "Does not render inputs or styles"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.icons.lucide-react
+    package: "lucide-react"
+    category: ui
+    provides: ["ui.icons"]
+    does: "Consistent open-source SVG icon set for React"
+    does_not: "Does not include brand logos"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.notifications.sonner
+    package: "sonner"
+    category: ui
+    provides: ["ui.notifications"]
+    does: "Toast notifications for React"
+    does_not: "Does not send push or email notifications"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.styling.class-variance-authority
+    package: "class-variance-authority"
+    category: ui
+    provides: ["ui.styling"]
+    does: "Typed component variants for utility-class styling"
+    does_not: "Does not include styles itself"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.calendar.react-day-picker
+    package: "react-day-picker"
+    category: ui
+    provides: ["ui.calendar", "ui.date-picker"]
+    does: "Accessible date picker and month calendar for React"
+    does_not: "Does not manage availability or bookings"
+    use_cases: ["bookings", "saas-crud", "client-portal"]
+  - id: ui.command-palette.cmdk
+    package: "cmdk"
+    category: ui
+    provides: ["ui.command-palette"]
+    does: "Fast, accessible command menu for React"
+    does_not: "Does not provide search indexing"
+    use_cases: ["internal-tool", "saas-crud"]
+  - id: ui.dialog.radix-dialog
+    package: "@radix-ui/react-dialog"
+    category: ui
+    provides: ["ui.dialog"]
+    does: "Accessible modal dialog primitives (focus trap, aria)"
+    does_not: "Does not style the dialog"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: email.smtp.nodemailer
+    package: "nodemailer"
+    category: email
+    provides: ["email.transactional"]
+    does: "SMTP email sending"
+    does_not: "Licence MIT-0 is outside the beta allow-list"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]

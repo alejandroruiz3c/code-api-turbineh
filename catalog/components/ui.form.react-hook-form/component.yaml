@@ -1,0 +1,78 @@
+schema: turbineh.component/v0.1
+id: ui.form.react-hook-form
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/react-hook-form@7.89.0
+  repo: https://github.com/react-hook-form/react-hook-form
+  integrity: sha512-vKcoCfy8RKZDrhSdqsRFp0uEOdS1AhLjOL6hR7Wmfzg1akNxEhaPf5WORx8SgEQPVXakdDyDkqQp+KNxVnnPHg==
+capability:
+  does: Performant React form state with validation resolvers
+  does_not: Does not render inputs or styles
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    react: ^16.8.0 || ^17 || ^18 || ^19
+    "@types/react": "*"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add react-hook-form@7.89.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata react-hook-form@7.89.0
+  - claim: 0 OSV advisories for react-hook-form@7.89.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - ui.form
+  conflicts: []
+  tested_with:
+    - contract-harness

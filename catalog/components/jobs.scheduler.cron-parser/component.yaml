@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: jobs.scheduler.cron-parser
+version: 0.1.0
+status: approved
+category: jobs
+source:
+  purl: pkg:npm/cron-parser@5.10.1
+  repo: https://github.com/harrisiirak/cron-parser
+  integrity: sha512-pKRrRagItwk9rGIStcUyMxFX34x56zoX3KDf9HJ4ttwkXIK1qxK63EvXvEDmlxI9AdPJ+Y7TEKRftRlW5eSS7A==
+capability:
+  does: Parses cron expressions and computes next run times
+  does_not: Does not execute jobs
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add cron-parser@5.10.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata cron-parser@5.10.1
+  - claim: 0 OSV advisories for cron-parser@5.10.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - jobs.scheduler
+  conflicts: []
+  tested_with:
+    - contract-harness

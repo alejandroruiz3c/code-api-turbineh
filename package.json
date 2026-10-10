@@ -24,7 +24,8 @@
     "db:down": "docker compose -f infra/docker-compose.yml down",
     "db:migrate": "pnpm --filter @turbineh/db run migrate",
     "ingest": "pnpm --filter @turbineh/ingest run ingest",
-    "build:local": "pnpm --filter @turbineh/worker run build:local"
+    "build:local": "pnpm --filter @turbineh/worker run build:local",
+    "catalog:curate": "pnpm --filter @turbineh/curation exec tsx src/cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

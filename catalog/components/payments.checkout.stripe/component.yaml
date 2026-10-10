@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: payments.checkout.stripe
+version: 0.1.0
+status: approved
+category: payments
+source:
+  purl: pkg:npm/stripe@22.6.2
+  repo: https://github.com/stripe/stripe-node
+  integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==
+capability:
+  does: "Official Stripe SDK: checkout sessions, subscriptions and signed webhooks"
+  does_not: Does not hold card data; payments run on Stripe
+  use_cases:
+    - saas-crud
+    - bookings
+    - landing-waitlist
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    "@types/node": ">=18"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add stripe@22.6.2
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata stripe@22.6.2
+  - claim: 0 OSV advisories for stripe@22.6.2 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass in the sandbox without network
+    origin: tested
+    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-2.json
+relations:
+  requires: []
+  provides:
+    - payments.checkout
+  conflicts: []
+  tested_with:
+    - contract-harness
