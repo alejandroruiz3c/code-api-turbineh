@@ -1,0 +1,57 @@
+schema: turbineh.component/v0.1
+id: auth.session.better-auth
+version: 0.1.0
+status: evaluated
+category: auth
+source:
+  purl: pkg:npm/better-auth@1.7.6
+  repo: https://github.com/better-auth/better-auth
+  integrity: sha512-WTMqOpmTTj+oBoX7zzPOzL85342Upyf+/v0IkH1kvGRA85lV4JGRFIYMIRKqvjZ6ShsuL5VX/c9C13jtoZXcKA==
+capability:
+  does: "Email/password and OAuth authentication with database-backed sessions and cookie handling"
+  does_not: "Does not implement enterprise SSO (SAML) in the core package"
+  use_cases: [saas-crud, internal-tool, bookings, client-portal]
+  pros: ["Framework-agnostic with Next.js integration", "Drizzle adapter"]
+  cons: ["Large surface; plugins must be reviewed individually"]
+  alternatives: []
+contract:
+  inputs: ["database adapter", "secret for signing", "provider credentials (optional)"]
+  outputs: ["session cookie", "server-side session lookup"]
+  errors: ["invalid credentials", "expired session"]
+  limits: ["Requires a persistent database"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+  peer: { next: "^14.0.0 || ^15.0.0 || ^16.0.0", react: "^18.0.0 || ^19.0.0", drizzle-orm: "^0.45.2" }
+effects: { network: true, fs: false, db: true, external_services: [] }
+integration:
+  strategy: dependency
+  install: "pnpm add better-auth@1.7.6"
+  config: [BETTER_AUTH_SECRET, BETTER_AUTH_URL]
+  migrations: true
+quality:
+  tests: { command: "pending: contract tests in the beta stack (WP6)", passed: false }
+security:
+  scanned_at: 2026-10-10
+  tools: [osv.dev-api]
+  findings: []
+  scope: "Known advisories for this exact version (OSV query). Transitive deps, static analysis and file-level license scan not yet run."
+license:
+  declared: MIT
+  detected: MIT
+  obligations: [preserve-notice]
+evidence:
+  - claim: "License MIT"
+    origin: maintainer
+    ref: "npm registry metadata better-auth@1.7.6 (detected = registry metadata; file-level scan pending)"
+  - claim: "Peer ranges next ^14||^15||^16, drizzle-orm ^0.45.2"
+    origin: maintainer
+    ref: "npm registry metadata peerDependencies"
+  - claim: "No OSV advisories for better-auth@1.7.6 on 2026-10-10"
+    origin: tested
+    ref: "https://api.osv.dev/v1/query"
+relations:
+  requires: [data.orm]
+  provides: [auth.session]
+  conflicts: []
+  tested_with: []

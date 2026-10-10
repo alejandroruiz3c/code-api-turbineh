@@ -1,0 +1,53 @@
+schema: turbineh.component/v0.1
+id: data.validation.zod
+version: 0.1.0
+status: evaluated
+category: data
+source:
+  purl: pkg:npm/zod@4.6.5
+  repo: https://github.com/colinhacks/zod
+  integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==
+capability:
+  does: "Declares runtime schemas with inferred static types and validates untrusted input at every boundary"
+  does_not: "Does not persist data, sanitize HTML or enforce authorization"
+  use_cases: [saas-crud, landing-waitlist, internal-tool, bookings, client-portal]
+  pros: ["TypeScript type inference from schemas", "No runtime dependencies"]
+  cons: ["Schemas must be kept in sync with database models manually"]
+  alternatives: []
+contract:
+  inputs: ["unknown value", "schema definition"]
+  outputs: ["typed parsed value or structured validation error"]
+  errors: ["ZodError with issue paths"]
+  limits: ["Validation only; no coercion unless explicitly declared"]
+compat:
+  runtime: node@>=20
+  framework: any
+effects: { network: false, fs: false, db: false, external_services: [] }
+integration:
+  strategy: dependency
+  install: "pnpm add zod@4.6.5"
+  config: []
+  migrations: false
+quality:
+  tests: { command: "pending: contract tests in the beta stack (WP6)", passed: false }
+security:
+  scanned_at: 2026-10-10
+  tools: [osv.dev-api]
+  findings: []
+  scope: "Known advisories for this exact version (OSV query). Transitive deps, static analysis and file-level license scan not yet run."
+license:
+  declared: MIT
+  detected: MIT
+  obligations: [preserve-notice]
+evidence:
+  - claim: "License MIT"
+    origin: maintainer
+    ref: "npm registry metadata zod@4.6.5 (detected = registry metadata; file-level scan pending)"
+  - claim: "No OSV advisories for zod@4.6.5 on 2026-10-10"
+    origin: tested
+    ref: "https://api.osv.dev/v1/query"
+relations:
+  requires: []
+  provides: [data.validation]
+  conflicts: []
+  tested_with: []
