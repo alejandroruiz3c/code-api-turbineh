@@ -85,14 +85,20 @@ export const buildSpecSchema = z
     pages: z
       .array(
         z.object({
-          path: z.string().regex(/^\/[a-z0-9\-/[\]]*$/),
+          // Dynamic segments as ":param". Kept escape-free so every provider's grammar engine accepts it.
+          path: z.string().regex(new RegExp("^/[a-z0-9/:_-]*$")),
           purpose: z.string().min(3).max(160),
           auth_required: z.boolean(),
         }),
       )
       .min(1)
       .max(20),
-    capabilities: z.array(z.enum(CAPABILITIES)).min(1),
+    // Bounded so constrained decoding cannot loop on a repeated enum value; duplicates are removed in code.
+    capabilities: z
+      .array(z.enum(CAPABILITIES))
+      .min(1)
+      .max(15)
+      .transform((caps) => [...new Set(caps)]),
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
   })
   .superRefine((spec, ctx) => {
@@ -110,9 +116,3 @@ export const buildSpecSchema = z
   });
 
 export type BuildSpec = z.infer<typeof buildSpecSchema>;
-
-/** JSON Schema handed to the model for constrained decoding (refinements are re-checked in code). */
-export const buildSpecJsonSchema = z.toJSONSchema(buildSpecSchema, {
-  target: "draft-7",
-  io: "input",
-});

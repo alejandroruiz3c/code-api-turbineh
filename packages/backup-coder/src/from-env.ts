@@ -22,5 +22,9 @@ export function backupCoderFromEnv(env: Env): BackupCoder {
     !secondary && "BACKUP_CODER_SECONDARY(+_BASE_URL)",
   ].filter(Boolean);
   if (!primary || !secondary) throw new Error(`Backup Coder not configured: ${missing.join(", ")}`);
-  return new BackupCoder(primary, secondary);
+  return new BackupCoder(
+    primary,
+    secondary,
+    env.MODEL_REASONING_EFFORT ? { reasoningEffort: env.MODEL_REASONING_EFFORT } : {},
+  );
 }

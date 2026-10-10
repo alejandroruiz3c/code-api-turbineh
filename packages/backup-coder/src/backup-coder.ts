@@ -62,7 +62,7 @@ export class BackupCoder {
   constructor(
     private readonly primary: CoderSlot,
     private readonly secondary: CoderSlot,
-    private readonly opts: { timeoutMs?: number } = {},
+    private readonly opts: { timeoutMs?: number; reasoningEffort?: string } = {},
   ) {}
 
   /** Generates the gap with the primary model; on any error the secondary takes over automatically. */
@@ -85,6 +85,9 @@ export class BackupCoder {
       model: modelOf(slot.ref),
       max_tokens: 16,
       messages: [{ role: "user", content: "Reply with the single word: ready" }],
+      ...(this.opts.reasoningEffort
+        ? { reasoning_effort: this.opts.reasoningEffort as OpenAI.ReasoningEffort }
+        : {}),
     });
     return {
       model: res.model,
@@ -108,6 +111,9 @@ export class BackupCoder {
       model: modelOf(slot.ref),
       temperature: 0,
       max_tokens: req.maxOutputTokens ?? 2048,
+      ...(this.opts.reasoningEffort
+        ? { reasoning_effort: this.opts.reasoningEffort as OpenAI.ReasoningEffort }
+        : {}),
       messages: [
         { role: "system", content: SYSTEM },
         {

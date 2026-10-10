@@ -2,6 +2,7 @@
  * WP4 smoke test: 5 prompts (one per beta recipe) must each produce a valid BuildSpec.
  *   pnpm smoke:compiler
  */
+import { deciderFromEnv } from "@turbineh/decider";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
 import { compileIntent } from "./index.js";
 
@@ -16,20 +17,24 @@ export const SMOKE_PROMPTS = [
 async function main() {
   loadLocalEnv();
   const env = readEnv();
+  const decider = deciderFromEnv(env);
   const config = {
     baseURL: env.COMPILER_BASE_URL,
     model: env.COMPILER_MODEL,
     ...(env.COMPILER_API_KEY ? { apiKey: env.COMPILER_API_KEY } : {}),
+    ...(env.MODEL_REASONING_EFFORT ? { reasoningEffort: env.MODEL_REASONING_EFFORT } : {}),
   };
   const results = [];
   for (const prompt of SMOKE_PROMPTS) {
-    const r = await compileIntent(prompt, config);
+    const r = await compileIntent(prompt, config, decider);
     results.push({
       prompt: prompt.slice(0, 60) + "…",
       ok: r.ok,
-      recipe: r.spec?.recipe,
+      recipe: r.spec?.recipe ?? r.decisions?.recipe.choice,
+      recipe_confidence: r.decisions?.recipe.confidence,
+      capabilities: r.spec?.capabilities,
       entities: r.spec?.entities.map((e) => e.name),
-      capabilities: r.spec?.capabilities.length,
+      decider: { model: r.decisions?.deciderModel, latencyMs: r.decisions?.deciderLatencyMs },
       attempts: r.attempts,
       latencyMs: r.latencyMs,
       usage: r.usage,
