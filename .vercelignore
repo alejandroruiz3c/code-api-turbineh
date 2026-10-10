@@ -1,0 +1,12 @@
+# Anchored to the repository root so app routes such as src/app/v1/builds are never excluded.
+node_modules
+**/node_modules
+**/.next
+**/dist
+/builds
+/artifacts
+/bench/results/runs
+/ingest/.cache
+.env*
+**/.env*
+*.rtf
