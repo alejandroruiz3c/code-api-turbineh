@@ -1,0 +1,25 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.rtf
+KEYS*
+*.pem
+*.key
+
+# Dependencies and builds
+node_modules/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
