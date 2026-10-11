@@ -10,6 +10,11 @@ export interface RecipeMeta {
   providedEntities: string[];
   /** Capabilities every build of this recipe needs (added to the BuildSpec by code). */
   defaultCapabilities: string[];
+  /**
+   * Capabilities the recipe template implements itself (e.g. password hashing inside better-auth). They are never
+   * sent to selection and never reported as gaps.
+   */
+  providedCapabilities?: string[];
   /** Extra dashboard navigation entries. */
   nav: { label: string; href: string }[];
 }
@@ -53,6 +58,7 @@ export function mergedRecipe(chain: RecipeMeta[]): Omit<RecipeMeta, "extends"> {
     description: last?.description ?? "",
     providedEntities: [...new Set(chain.flatMap((m) => m.providedEntities))],
     defaultCapabilities: [...new Set(chain.flatMap((m) => m.defaultCapabilities))],
+    providedCapabilities: [...new Set(chain.flatMap((m) => m.providedCapabilities ?? []))],
     nav: chain.flatMap((m) => m.nav),
   };
 }

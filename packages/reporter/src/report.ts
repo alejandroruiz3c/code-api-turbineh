@@ -160,16 +160,37 @@ function fallbackText(facts: ReportFacts): {
       ? "No open security alerts after verification."
       : `${facts.alerts.length} non-blocking security alert(s) remain.`,
     points: facts.alerts.slice(0, 6).map((a) => `${a.title}: ${a.explain}`),
-    nextSteps: [
-      ...facts.gaps
-        .slice(0, 3)
-        .map(
-          (g) =>
-            `Review ${facts.gapLabels?.[g] ?? g}: no audited component covered it, so it is not included yet.`,
-        ),
-      "Set your own secrets in .env.local before deploying.",
-    ].slice(0, 5),
+    nextSteps: stepFacts(facts),
   };
+}
+
+/**
+ * The closed list of next steps, built by code from verified facts (max 5). The writer may only rephrase them,
+ * one by one; it cannot add steps.
+ */
+function stepFacts(facts: ReportFacts): string[] {
+  const fixable = (facts.improvement?.fixable ?? 0) > 0;
+  return [
+    ...facts.gaps
+      .slice(0, 2)
+      .map(
+        (g) =>
+          `Not included in this version yet: ${facts.gapLabels?.[g] ?? g}. Add it yourself or ask for it in a new build.`,
+      ),
+    ...facts.alerts
+      .slice(0, 2)
+      .map(
+        (a) =>
+          `${a.title} (${a.level === "warning" ? "in what is shipped to users" : "development-only tool, not shipped to users"}): ${
+            facts.finalVersion
+              ? "it could not be fixed automatically; update it when a patched version is released."
+              : fixable
+                ? "it can be fixed with Improve & redeliver."
+                : "no patched version exists yet; update it when one is released."
+          }`,
+      ),
+    "Before deploying, set DATABASE_URL, BETTER_AUTH_SECRET and BETTER_AUTH_URL in your hosting environment.",
+  ].slice(0, 5);
 }
 
 /** Builds the user-facing report: decider for criteria, open writer model for short texts, code for assembly. */
@@ -229,13 +250,13 @@ export async function buildReport(
       writer,
       Steps,
       '{"next_steps": string[]}',
-      "List up to 5 concrete next steps for the founder (gaps not covered, remaining alerts, configuration before deploying).",
-      {
-        not_included_yet: facts.gaps.map((g) => facts.gapLabels?.[g] ?? g),
-        remaining_alerts: facts.alerts.map((a) => a.title),
-        deploy_needs: ["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL"],
-      },
-    ).catch(() => null),
+      "Rewrite each fact as one clear next step for the founder: same order, exactly one step per fact, keep names, " +
+        "versions and severities, add nothing else.",
+      { facts: fb.nextSteps },
+    )
+      // A different number of steps means the writer added or dropped something: use the facts as written.
+      .then((r) => (r.next_steps.length === fb.nextSteps.length ? r : null))
+      .catch(() => null),
   ]);
   return {
     headline: summary?.headline ?? fb.headline,

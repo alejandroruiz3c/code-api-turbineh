@@ -124,7 +124,10 @@ export async function runBuild(
         summary: spec.summary,
         acceptance_criteria: spec.acceptance_criteria,
       },
-      candidates: candidatesFor(spec.capabilities, catalog),
+      candidates: candidatesFor(
+        spec.capabilities.filter((c) => !recipe.providedCapabilities?.includes(c)),
+        catalog,
+      ),
     },
     deps.decider,
   );
