@@ -32,6 +32,23 @@ const EXAMPLES: { label: string; prompt: string }[] = [
 ];
 
 const KEY = "turbineh:pending-prompt";
+const BRAND_KEY = "turbineh:pending-brand";
+
+interface Brand {
+  primaryColor?: string;
+  font?: string;
+  logo?: string;
+}
+
+const FONTS: { value: string; label: string }[] = [
+  { value: "system", label: "Clean (system)" },
+  { value: "geometric", label: "Geometric" },
+  { value: "humanist", label: "Humanist" },
+  { value: "rounded", label: "Rounded" },
+  { value: "serif", label: "Serif" },
+  { value: "mono", label: "Monospace" },
+];
+const LOGO_MAX = 256 * 1024;
 
 export function PromptBox({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
@@ -39,16 +56,21 @@ export function PromptBox({ signedIn }: { signedIn: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brand, setBrand] = useState<Brand>({});
   const started = useRef(false);
 
   const start = useCallback(
-    async (text: string) => {
+    async (text: string, withBrand: Brand) => {
       setBusy(true);
       setError(null);
       const res = await fetch("/v1/builds", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify({
+          prompt: text,
+          ...(Object.keys(withBrand).length > 0 ? { brand: withBrand } : {}),
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         build_id?: string;
@@ -61,6 +83,7 @@ export function PromptBox({ signedIn }: { signedIn: boolean }) {
         return;
       }
       sessionStorage.removeItem(KEY);
+      sessionStorage.removeItem(BRAND_KEY);
       router.push(`/build/${body.build_id}`);
     },
     [router],
@@ -70,12 +93,14 @@ export function PromptBox({ signedIn }: { signedIn: boolean }) {
   useEffect(() => {
     const saved = sessionStorage.getItem(KEY);
     if (!saved) return;
+    const savedBrand = JSON.parse(sessionStorage.getItem(BRAND_KEY) ?? "{}") as Brand;
     // Deferred so the effect itself never sets state synchronously.
     queueMicrotask(() => {
       setPrompt(saved);
+      setBrand(savedBrand);
       if (signedIn && params.get("resume") === "1" && !started.current) {
         started.current = true;
-        void start(saved);
+        void start(saved, savedBrand);
       }
     });
   }, [signedIn, params, start]);
@@ -85,10 +110,23 @@ export function PromptBox({ signedIn }: { signedIn: boolean }) {
     if (!valid || busy) return;
     if (!signedIn) {
       sessionStorage.setItem(KEY, prompt.trim());
+      sessionStorage.setItem(BRAND_KEY, JSON.stringify(brand));
       await authClient.signIn.social({ provider: "github", callbackURL: "/?resume=1" });
       return;
     }
-    await start(prompt.trim());
+    await start(prompt.trim(), brand);
+  }
+
+  function onLogo(file: File | undefined) {
+    setError(null);
+    if (!file) return setBrand((b) => ({ ...b, logo: undefined }));
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      return setError("Logo: use a PNG, JPEG or WebP image.");
+    }
+    if (file.size > LOGO_MAX) return setError("Logo: maximum 256 KB.");
+    const reader = new FileReader();
+    reader.onload = () => setBrand((b) => ({ ...b, logo: String(reader.result) }));
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -123,6 +161,81 @@ export function PromptBox({ signedIn }: { signedIn: boolean }) {
             {busy ? "Starting…" : signedIn ? "Build it" : "Continue with GitHub"}
           </button>
         </div>
+      </div>
+      <div className="mt-3 text-left">
+        <button
+          type="button"
+          aria-expanded={brandOpen}
+          onClick={() => setBrandOpen((o) => !o)}
+          className="text-xs text-muted underline-offset-4 hover:text-ice-2 hover:underline"
+        >
+          {brandOpen ? "− Hide brand" : "+ Add your brand (optional)"}
+          {!brandOpen && Object.keys(brand).length > 0 ? " · added" : ""}
+        </button>
+        {brandOpen ? (
+          <div className="mt-3 grid gap-4 rounded-xl border border-line bg-navy-900/50 p-4 sm:grid-cols-3">
+            <div>
+              <label htmlFor="brand-color" className="block text-xs text-muted">
+                Main colour
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="brand-color"
+                  type="color"
+                  value={brand.primaryColor ?? "#0f172a"}
+                  onChange={(e) => setBrand((b) => ({ ...b, primaryColor: e.target.value }))}
+                  className="h-9 w-12 cursor-pointer rounded border border-line bg-transparent"
+                />
+                <span className="font-mono text-xs text-ice-2">
+                  {brand.primaryColor ?? "default"}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="brand-font" className="block text-xs text-muted">
+                Typeface
+              </label>
+              <select
+                id="brand-font"
+                value={brand.font ?? "system"}
+                onChange={(e) => setBrand((b) => ({ ...b, font: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-line bg-navy-900 px-2 py-2 text-sm text-ice-2"
+              >
+                {FONTS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="brand-logo" className="block text-xs text-muted">
+                Logo (PNG, JPEG or WebP · max 256 KB)
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                {brand.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local preview of the chosen file
+                  <img
+                    src={brand.logo}
+                    alt="Logo preview"
+                    className="h-9 w-auto rounded bg-white/90 p-1"
+                  />
+                ) : null}
+                <input
+                  id="brand-logo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => onLogo(e.target.files?.[0])}
+                  className="w-full text-xs text-muted file:mr-2 file:rounded-full file:border-0 file:bg-panel file:px-3 file:py-1 file:text-ice-2"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted sm:col-span-3">
+              Applied to buttons, focus rings, typography and the header of your app. Text colour on
+              your brand colour is chosen automatically for readability.
+            </p>
+          </div>
+        ) : null}
       </div>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-bad">

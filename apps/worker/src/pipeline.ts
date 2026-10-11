@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assemble,
+  parseBrand,
   hasRecipe,
   mergedRecipe,
   recipeChain,
@@ -84,7 +85,10 @@ export async function runBuild(
   prompt: string,
   deps: PipelineDeps,
   buildId: string = randomUUID(),
+  options: { brand?: unknown } = {},
 ): Promise<BuildOutcome> {
+  // Client brand: validated again here (colour format, font list, logo type by magic bytes, size).
+  const brand = parseBrand(options.brand);
   const t0 = performance.now();
   const timings: Record<string, number> = {};
   const lap = (k: string, from: number) => (timings[k] = Math.round(performance.now() - from));
@@ -236,6 +240,7 @@ export async function runBuild(
     spec,
     // Docs list only what is in the repository now; the integration step updates COMPONENTS.md when it succeeds.
     selected: selected.filter((x) => integrable(x.component)),
+    brand,
     gaps: [
       ...gaps,
       ...external.map((e) => ({
@@ -366,6 +371,9 @@ export async function runBuild(
       ).toFixed(3),
     },
     recipe: { requested: spec.recipe, built: recipeId },
+    brand: brand
+      ? { color: brand.primaryColor ?? null, font: brand.font ?? null, logo: Boolean(brand.logo) }
+      : null,
     components: [...new Set(usedComponents.map((s) => s.component.id))],
     integrated: integrations.map((i) => ({
       component: i.component,
