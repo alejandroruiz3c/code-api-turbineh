@@ -19,6 +19,7 @@ import {
 } from "./entities.js";
 import { entityNames } from "./naming.js";
 import { applyBrand, type Brand } from "./brand-theme.js";
+import { writeSiteContent } from "./site-content.js";
 import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe } from "./recipes.js";
 
@@ -117,6 +118,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     : [];
 
   if (input.brand) applyBrand(outDir, input.brand);
+  writeSiteContent(outDir, spec);
 
   const entities = entitiesToGenerate(spec, recipe.providedEntities);
   const chosen = new Set(input.selected.map((s) => s.capability));

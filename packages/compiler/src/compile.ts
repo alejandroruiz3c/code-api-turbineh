@@ -7,7 +7,9 @@ import {
   ABUSE_THRESHOLD,
   ALWAYS_ON,
   CAPABILITY_QUESTIONS,
+  OPTIONAL_PARTS,
   PARTS,
+  PUBLIC_SITE_RECIPES,
   RECIPE_DESCRIPTIONS,
   type PartName,
 } from "./parts.js";
@@ -75,14 +77,22 @@ export async function compileIntent(
   });
   const usage = { input_tokens: 0, output_tokens: 0 };
   const errors: string[] = [];
-  const attempts = { meta: 0, entities: 0, pages: 0, criteria: 0 } as Record<PartName, number>;
+  const attempts = { meta: 0, entities: 0, pages: 0, criteria: 0, site: 0 } as Record<
+    PartName,
+    number
+  >;
 
-  const [decisions, ...parts] = await Promise.all([
+  // Optional parts run in parallel too, but the build only waits for them when the recipe needs them.
+  const required = (Object.keys(PARTS) as PartName[]).filter((n) => !OPTIONAL_PARTS.includes(n));
+  const sitePromise = generatePart(client, config, prompt, "site", usage, attempts, errors).catch(
+    () => undefined,
+  );
+  const [decisions, ...requiredParts] = await Promise.all([
     decide(prompt, decider),
-    ...(Object.keys(PARTS) as PartName[]).map((name) =>
-      generatePart(client, config, prompt, name, usage, attempts, errors),
-    ),
+    ...required.map((name) => generatePart(client, config, prompt, name, usage, attempts, errors)),
   ]);
+  const publicSite = (PUBLIC_SITE_RECIPES as readonly string[]).includes(decisions.recipe.choice);
+  const parts = [...requiredParts, publicSite ? await sitePromise : undefined];
 
   const latencyMs = Math.round(performance.now() - start);
   const flagged = Object.entries(decisions.abuse).filter(([, p]) => p >= ABUSE_THRESHOLD);
@@ -98,15 +108,17 @@ export async function compileIntent(
       rejected: `rejected by the Abuse Guard: ${flagged.map(([k, p]) => `${k} (${p.toFixed(2)})`).join(", ")}`,
     };
   }
-  if (parts.some((p) => p === undefined)) {
+  const names = Object.keys(PARTS) as PartName[];
+  if (parts.some((p, i) => p === undefined && !OPTIONAL_PARTS.includes(names[i] as PartName))) {
     return { ok: false, decisions, attempts, latencyMs, usage, errors, escalate: true };
   }
 
-  const [meta, entities, pages, criteria] = parts as [
+  const [meta, entities, pages, criteria, site] = parts as [
     z.infer<typeof PARTS.meta.schema>,
     z.infer<typeof PARTS.entities.schema>,
     z.infer<typeof PARTS.pages.schema>,
     z.infer<typeof PARTS.criteria.schema>,
+    z.infer<typeof PARTS.site.schema> | undefined,
   ];
   const outOfScope = decisions.recipe.choice === "out_of_scope";
   const closest = Object.entries(decisions.recipe.probabilities)
@@ -128,6 +140,7 @@ export async function compileIntent(
     ...pages,
     capabilities,
     ...criteria,
+    site: site ?? null,
   });
   if (!parsed.success) {
     errors.push(...parsed.error.issues.map((i) => `${i.path.join(".") || "/"}: ${i.message}`));

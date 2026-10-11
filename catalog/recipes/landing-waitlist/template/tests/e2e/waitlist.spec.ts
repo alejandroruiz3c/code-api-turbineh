@@ -26,3 +26,22 @@ test("the admin sees waitlist signups", async ({ page }) => {
   await page.goto("/dashboard/waitlist");
   await expect(page.getByRole("cell", { name: "ada.visitor@example.com" })).toBeVisible();
 });
+
+test.describe("public landing", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("shows benefits, how it works and an FAQ", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Frequently asked questions" })).toBeVisible();
+    await expect(page.locator("details").first()).toBeVisible();
+  });
+
+  test("is ready for search engines (metadata, sitemap, robots)", async ({ page, request }) => {
+    await page.goto("/");
+    await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
+    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+    expect(await (await request.get("/sitemap.xml")).text()).toContain("<urlset");
+    expect(await (await request.get("/robots.txt")).text()).toContain("Disallow: /dashboard");
+  });
+});

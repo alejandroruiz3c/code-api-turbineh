@@ -60,6 +60,6 @@ describe("BuildSpec", () => {
   });
 
   it("keeps every generated part small and bounded", () => {
-    expect(Object.keys(PARTS)).toEqual(["meta", "entities", "pages", "criteria"]);
+    expect(Object.keys(PARTS)).toEqual(["meta", "entities", "pages", "criteria", "site"]);
   });
 });

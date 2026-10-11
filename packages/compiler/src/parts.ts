@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CAPABILITIES, RECIPES } from "./build-spec.js";
+import { sitePart } from "./build-spec.js";
 
 /**
  * The BuildSpec is produced in small, simple pieces (owner principle: decomposed content and simple tasks degrade
@@ -194,7 +195,20 @@ export const PARTS = {
     schema: criteriaPart,
     instruction: "Write 3 to 10 concrete, testable acceptance criteria, one behaviour each.",
   },
+  site: {
+    schema: sitePart,
+    instruction:
+      "Write the public website copy for this business in plain, specific English: a tagline, a hero subtitle, 3-6 " +
+      "benefits, 3-4 'how it works' steps, 3-6 services, a short 'about us', 3-6 FAQs with answers and a call to " +
+      "action. No prices, phone numbers, addresses or claims you cannot know from the prompt.",
+  },
 } as const;
+
+/** Recipes with a public website that renders the `site` copy. */
+export const PUBLIC_SITE_RECIPES = ["landing-waitlist", "corporate-site", "storefront"] as const;
+
+/** Parts whose failure does not fail the build (deterministic fallback in the recipes). */
+export const OPTIONAL_PARTS: readonly PartName[] = ["site"];
 
 export type PartName = keyof typeof PARTS;
 
