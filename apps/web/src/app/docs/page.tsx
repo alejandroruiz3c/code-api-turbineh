@@ -14,6 +14,11 @@ const ENDPOINTS: [method: string, path: string, description: string][] = [
   ["GET", "/v1/builds/{id}", "Status, metrics, artefact links, repository URL and documentation"],
   ["GET", "/v1/builds/{id}/events", "Live trace as Server-Sent Events"],
   ["POST", "/v1/builds/{id}/deliver", "Push to your GitHub (browser session)"],
+  [
+    "POST",
+    "/v1/builds/{id}/improve",
+    "Fix the remaining security alerts and deliver a new verified version",
+  ],
   ["GET", "/v1/components", "Search the catalog"],
   ["GET", "/v1/components/{id}", "Component manifest"],
 ];

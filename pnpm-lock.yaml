@@ -120,6 +120,12 @@ importers:
       '@turbineh/decider':
         specifier: workspace:*
         version: link:../../packages/decider
+      '@turbineh/remediation':
+        specifier: workspace:*
+        version: link:../../packages/remediation
+      '@turbineh/reporter':
+        specifier: workspace:*
+        version: link:../../packages/reporter
       '@turbineh/resolver':
         specifier: workspace:*
         version: link:../../packages/resolver
@@ -251,6 +257,36 @@ importers:
       '@typesafe-ai/sdk':
         specifier: 0.6.0
         version: 0.6.0
+
+  packages/remediation:
+    dependencies:
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@turbineh/verifier':
+        specifier: workspace:*
+        version: link:../verifier
+      openai:
+        specifier: 7.23.0
+        version: 7.23.0(@aws-sdk/credential-provider-node@3.972.85)(@smithy/signature-v4@5.7.4)(zod@4.6.5)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
+  packages/reporter:
+    dependencies:
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../decider
+      '@turbineh/remediation':
+        specifier: workspace:*
+        version: link:../remediation
+      openai:
+        specifier: 7.23.0
+        version: 7.23.0(@aws-sdk/credential-provider-node@3.972.85)(@smithy/signature-v4@5.7.4)(zod@4.6.5)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/resolver:
     dependencies:

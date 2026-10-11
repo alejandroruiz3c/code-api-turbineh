@@ -18,13 +18,18 @@ export interface RunResult {
   tail: string;
 }
 
-export function run(cmd: string, args: string[], timeoutMs = 15 * 60_000): Promise<RunResult> {
+export function run(
+  cmd: string,
+  args: string[],
+  timeoutMs = 15 * 60_000,
+  fullOutput = false,
+): Promise<RunResult> {
   const start = performance.now();
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     const keep = (d: Buffer) => {
-      out = (out + d.toString()).slice(-8000);
+      out = fullOutput ? out + d.toString() : (out + d.toString()).slice(-8000);
     };
     child.stdout.on("data", keep);
     child.stderr.on("data", keep);
@@ -34,7 +39,7 @@ export function run(cmd: string, args: string[], timeoutMs = 15 * 60_000): Promi
       resolve({
         code: code ?? 1,
         ms: Math.round(performance.now() - start),
-        tail: out.slice(-3000),
+        tail: fullOutput ? out : out.slice(-3000),
       });
     });
   });

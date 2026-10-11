@@ -1,0 +1,122 @@
+# TurbineH security rules (own rules, run with the Semgrep OSS engine). ERROR = blocks delivery, WARNING = alert.
+# `explain` metadata is shown to the user in plain language.
+rules:
+  - id: turbineh.no-eval
+    languages: [typescript]
+    severity: ERROR
+    message: Dynamic code execution (eval / new Function) allows code injection.
+    metadata:
+      {
+        explain: "The app executes text as code. If that text can be influenced by a user, an attacker can run arbitrary code on your server.",
+      }
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: turbineh.no-child-process
+    languages: [typescript]
+    severity: ERROR
+    message: Spawning operating-system processes from app code is not allowed.
+    metadata:
+      {
+        explain: "The app starts operating-system commands. A web app should not need this, and it can lead to command injection.",
+      }
+    pattern-either:
+      - pattern: require("child_process")
+      - pattern: import $X from "node:child_process"
+      - pattern: import $X from "child_process"
+      - pattern: import { $Y } from "node:child_process"
+      - pattern: import { $Y } from "child_process"
+
+  - id: turbineh.raw-sql-injection
+    languages: [typescript]
+    severity: ERROR
+    message: Raw SQL built from a template string can be injected; use Drizzle query builders or parameters.
+    metadata:
+      {
+        explain: "A database query is built by pasting text together. A crafted value could read or delete other customers' data.",
+      }
+    pattern-either:
+      - pattern: sql.raw(`...${$X}...`)
+      - pattern: $DB.execute(`...${$X}...`)
+      - pattern: $DB.query(`...${$X}...`)
+
+  - id: turbineh.server-action-without-authz
+    languages: [typescript]
+    severity: ERROR
+    message: Exported server action does not check the signed-in member (requireMember/requireAdmin).
+    metadata:
+      {
+        explain: "A server function that changes data can be called without checking who the user is or what workspace they belong to.",
+      }
+    patterns:
+      - pattern-inside: |
+          "use server";
+          ...
+      - pattern: |
+          export async function $F(...) { ... }
+      - pattern-not: |
+          export async function $F(...) { ... $C = await requireMember(); ... }
+      - pattern-not: |
+          export async function $F(...) { ... await requireMember(); ... }
+      - pattern-not: |
+          export async function $F(...) { ... await requireAdmin(); ... }
+
+  - id: turbineh.hardcoded-secret
+    languages: [typescript]
+    severity: ERROR
+    message: A secret-looking value is hardcoded; read it from validated environment variables.
+    metadata:
+      {
+        explain: "A password, key or token is written directly in the code, so anyone with access to the repository can use it.",
+      }
+    patterns:
+      - pattern-either:
+          - pattern: const $K = "$V"
+          - pattern: '$K: "$V"'
+      - metavariable-regex:
+          metavariable: $K
+          regex: "(?i).*(secret|password|passwd|api_?key|token|private_?key).*"
+      - metavariable-regex:
+          metavariable: $V
+          regex: "^[A-Za-z0-9_+/=-]{16,}$"
+
+  - id: turbineh.unsanitized-html
+    languages: [typescript]
+    severity: WARNING
+    message: dangerouslySetInnerHTML renders raw HTML; sanitize it first (component security.sanitize-html).
+    metadata:
+      {
+        explain: "Raw HTML is shown on a page. If it comes from users, it could run scripts in other visitors' browsers (XSS).",
+      }
+    patterns:
+      - pattern: "<$EL dangerouslySetInnerHTML={{__html: $H}} />"
+      - pattern-not: "<$EL dangerouslySetInnerHTML={{__html: sanitizeHtml(...)}} />"
+
+  - id: turbineh.sensitive-logging
+    languages: [typescript]
+    severity: WARNING
+    message: Logging values named like passwords or tokens can leak secrets into logs.
+    metadata:
+      {
+        explain: "The app may write passwords or tokens into its logs, where more people and tools can read them.",
+      }
+    patterns:
+      - pattern-either:
+          - pattern: console.$M(..., $X, ...)
+      - metavariable-regex:
+          metavariable: $X
+          regex: "(?i).*(password|token|secret|apikey|api_key).*"
+
+  - id: turbineh.open-redirect
+    languages: [typescript]
+    severity: WARNING
+    message: Redirecting to a URL taken from the request allows phishing redirects; allow-list destinations.
+    metadata:
+      {
+        explain: "The app sends users to an address taken from the link itself. Attackers can use your domain to redirect people to a fake site.",
+      }
+    pattern-either:
+      - pattern: redirect($P.get(...))
+      - pattern: redirect(searchParams.$K)
+      - pattern: redirect((await searchParams).$K)

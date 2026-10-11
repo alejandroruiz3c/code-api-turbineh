@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -20,6 +20,10 @@ interface BuildResult {
     reuse?: { reusedShare?: number };
     components?: string[];
     gaps?: { capability: string; trigger: string }[];
+    alerts?: { id: string; level: string; title: string; explain: string; where: string }[];
+    remediation?: { kind: string; target: string; reason: string; detail: string }[];
+    report?: BuildReport;
+    improved?: boolean;
   };
   artifact: {
     slug?: string;
@@ -29,12 +33,28 @@ interface BuildResult {
   } | null;
 }
 
-const PHASES: { key: string; label: string; match: string[] }[] = [
+interface BuildReport {
+  headline: string;
+  overview: string;
+  criteria: { criterion: string; evidence: string; verified: boolean }[];
+  security: {
+    status: "clear" | "alerts";
+    statusLine: string;
+    points: string[];
+    fixedBeforeDelivery: number;
+  };
+  nextSteps: string[];
+  writer: { model: string; fallback: boolean };
+}
+
+const PHASES: { key: string; label: string; match: string[]; optional?: boolean }[] = [
   { key: "understand", label: "Understanding your app", match: ["guarding", "compiling"] },
   { key: "select", label: "Selecting components", match: ["selecting"] },
   { key: "resolve", label: "Resolving compatibility", match: ["resolving"] },
   { key: "assemble", label: "Assembling", match: ["assembling"] },
   { key: "verify", label: "Building, testing & scanning", match: ["verifying"] },
+  { key: "fix", label: "Fixing security findings", match: ["remediating"], optional: true },
+  { key: "report", label: "Writing your report", match: ["reporting"] },
   { key: "deliver", label: "Delivering", match: ["delivering"] },
 ];
 
@@ -83,8 +103,9 @@ export function BuildLive({ id }: { id: string }) {
         decider?: { questions?: number; latencyMs?: number };
       }
     | undefined;
-  const verifying = by("verifying") as
-    { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
+  // The latest verification wins (it runs again after every automatic fix).
+  const verifying = events.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)
+    ?.data as { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
   const compiling = by("compiling") as
     { decisions?: { recipe?: { choice: string; confidence: number } } } | undefined;
 
@@ -93,6 +114,8 @@ export function BuildLive({ id }: { id: string }) {
       <ol className="flex flex-col gap-3" aria-label="Build phases">
         {PHASES.map((p) => {
           const s = phaseState(p.match);
+          // Remediation only appears when the verification found something to fix.
+          if (p.optional && s === "pending") return null;
           return (
             <li key={p.key} className="flex items-center gap-3 text-sm">
               <span
@@ -189,8 +212,12 @@ function Result({ id, result }: { id: string; result: BuildResult }) {
       </Panel>
     );
   }
+  const report = result.metrics.report;
   return (
     <>
+      {report ? (
+        <Report id={id} report={report} improved={Boolean(result.metrics.improved)} />
+      ) : null}
       <Panel title="Your app">
         <div className="flex flex-wrap items-center gap-3">
           <PushToGitHub id={id} initialUrl={result.repo_url} />
@@ -237,6 +264,114 @@ function Result({ id, result }: { id: string; result: BuildResult }) {
         </Panel>
       </div>
     </>
+  );
+}
+
+function Report({ id, report, improved }: { id: string; report: BuildReport; improved: boolean }) {
+  const verified = report.criteria.filter((c) => c.verified).length;
+  return (
+    <>
+      <Panel title="Your report">
+        <h3 className="text-lg font-semibold text-cream">{report.headline}</h3>
+        <p className="mt-2 text-sm text-ice-2">{report.overview}</p>
+        {report.criteria.length > 0 ? (
+          <>
+            <h4 className="eyebrow mt-5 mb-2">
+              What was checked · {verified}/{report.criteria.length} verified automatically
+            </h4>
+            <ul className="flex flex-col gap-2 text-sm">
+              {report.criteria.map((c) => (
+                <li key={c.criterion} className="flex gap-2">
+                  <span className={c.verified ? "text-teal" : "text-muted"} aria-hidden="true">
+                    {c.verified ? "✓" : "○"}
+                  </span>
+                  <span>
+                    <span className="text-ice-2">{c.criterion}</span>
+                    <span className="block text-xs text-muted">
+                      {c.verified ? c.evidence : "Not verified automatically — check it yourself"}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        {report.nextSteps.length > 0 ? (
+          <>
+            <h4 className="eyebrow mt-5 mb-2">Next steps</h4>
+            <ol className="list-decimal pl-5 text-sm text-ice-2">
+              {report.nextSteps.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+        <p className="mt-4 text-xs text-muted">
+          Written by {report.writer.model} from verified build facts only.
+        </p>
+      </Panel>
+      <Panel title="Security">
+        <p
+          className={`text-sm font-semibold ${report.security.status === "clear" ? "text-teal" : "text-amber"}`}
+          role="status"
+        >
+          {report.security.statusLine}
+        </p>
+        {report.security.fixedBeforeDelivery > 0 ? (
+          <p className="mt-1 text-xs text-muted">
+            {report.security.fixedBeforeDelivery} issue(s) were fixed automatically and everything
+            was verified again before delivery.
+          </p>
+        ) : null}
+        {report.security.points.length > 0 ? (
+          <ul className="mt-3 list-disc pl-5 text-sm text-ice-2">
+            {report.security.points.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        ) : null}
+        {report.security.status === "alerts" ? (
+          <ImproveCallout id={id} improved={improved} />
+        ) : null}
+      </Panel>
+    </>
+  );
+}
+
+function ImproveCallout({ id, improved }: { id: string; improved: boolean }) {
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "working" | "error">("idle");
+  const start = useCallback(async () => {
+    setState("working");
+    const res = await fetch(`/v1/builds/${id}/improve`, { method: "POST" });
+    if (!res.ok) {
+      setState("error");
+      return;
+    }
+    const body = (await res.json()) as { build_id: string };
+    router.push(`/build/${body.build_id}`);
+  }, [id, router]);
+  return (
+    <div className="mt-4 rounded-lg border border-amber/50 p-4">
+      <p className="text-sm text-ice-2">
+        {improved
+          ? "Some alerts could not be fixed automatically. They are explained above so you can decide."
+          : "Do you want us to fix these alerts and deliver a new verified version? Your current package stays available."}
+      </p>
+      {improved ? null : (
+        <button
+          type="button"
+          disabled={state === "working"}
+          onClick={() => void start()}
+          className="mt-3 rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy disabled:opacity-50"
+        >
+          {state === "working" ? "Starting…" : "Improve & redeliver"}
+        </button>
+      )}
+      {state === "error" ? (
+        <p className="mt-2 text-xs text-bad">Could not start the improvement. Please try again.</p>
+      ) : null}
+    </div>
   );
 }
 

@@ -1,0 +1,131 @@
+{
+  "prompt": "An internal tool for a bike repair shop to track repair orders (customer name, bike model, issue, price, promised date, done) with search and CSV export.",
+  "buildId": "02382c3f-4d5f-46d8-b353-806ee62542f1",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/02382c3f-4d5f-46d8-b353-806ee62542f1/cyclefix-tracker",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 127
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 421
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1972
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 3180
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 793
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7649
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 2956
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 104
+    },
+    {
+      "name": "static",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2344,
+      "select": 224,
+      "resolve": 6,
+      "assemble": 110,
+      "verify": 33336,
+      "total": 36051
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 427,
+        "output_tokens": 667
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 173,
+      "requests": 1,
+      "questions": 70
+    },
+    "reuse": {
+      "generatedLines": 281,
+      "reusedLines": 735,
+      "reusedShare": 0.723
+    },
+    "recipe": {
+      "requested": "internal-tool",
+      "built": "internal-tool"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "data.orm.drizzle",
+      "data.csv-export.turbineh",
+      "ui.primitives.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "authz.roles.turbineh",
+      "data.pagination.turbineh",
+      "data.csv-import.turbineh"
+    ],
+    "pendingIntegration": [
+      {
+        "capability": "data.money",
+        "component": "data.money.decimal-js"
+      },
+      {
+        "capability": "data.fuzzy-search",
+        "component": "data.fuzzy-search.fuse"
+      },
+      {
+        "capability": "data.serialization",
+        "component": "data.serialization.superjson"
+      },
+      {
+        "capability": "ui.date-picker",
+        "component": "ui.calendar.react-day-picker"
+      },
+      {
+        "capability": "ui.notifications",
+        "component": "ui.notifications.sonner"
+      }
+    ],
+    "gaps": []
+  }
+}

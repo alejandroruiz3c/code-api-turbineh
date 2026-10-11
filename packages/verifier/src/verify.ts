@@ -1,8 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
-import { POSTGRES_IMAGE, run, sandbox, SYNTHETIC_ENV, type RunResult } from "./sandbox.js";
+import {
+  PNPM_STORE_VOLUME,
+  POSTGRES_IMAGE,
+  run,
+  SANDBOX_IMAGE,
+  SYNTHETIC_ENV,
+  type RunResult,
+} from "./sandbox.js";
 
 export type StepName =
   | "install"
@@ -13,8 +23,19 @@ export type StepName =
   | "build"
   | "e2e"
   | "secrets"
+  | "static"
   | "dependencies"
   | "licenses";
+
+/** One static-analysis finding (own Semgrep rules). ERROR blocks delivery; WARNING is an alert. */
+export interface StaticFinding {
+  rule: string;
+  severity: "ERROR" | "WARNING";
+  path: string;
+  line: number;
+  message: string;
+  explain: string;
+}
 
 export interface StepResult {
   name: StepName;
@@ -35,68 +56,114 @@ export interface VerifyResult {
       scope: "production" | "development";
     }[];
     licenses: string[];
+    static: StaticFinding[];
   };
   scannedAt: string;
 }
-
-const toStep = (name: StepName, r: RunResult): StepResult => ({
-  name,
-  ok: r.code === 0,
-  ms: r.ms,
-  detail: r.code === 0 ? "" : r.tail,
-});
 
 /** Copyleft / unknown licenses that block delivery in the beta (direct and transitive dependencies). */
 const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
 
 /**
- * Full verification gate (PLAN §5.2) for an assembled app in `dir`:
- *  sandbox without network → install, migrations, typecheck, lint, unit, build
- *  internal network (no internet) + ephemeral Postgres → E2E smoke
- *  read-only scans → secrets (gitleaks on the git tree), dependency advisories (OSV), licenses
+ * Full verification gate (PLAN §5.2), optimised for speed without relaxing isolation (ADR-0011, ADR-0014):
+ *  - one container on a per-build `--internal` network (no internet) with an ephemeral Postgres started up front;
+ *  - dependencies come pre-installed in a base image keyed by the lockfile hash (offline install as fallback);
+ *  - strict typecheck, lint and unit tests run in parallel with the production build (no check removed);
+ *  - read-only scans (secrets, static rules, advisories) run concurrently with the build.
  */
 export async function verify(dir: string): Promise<VerifyResult> {
-  const steps: StepResult[] = [];
-  const env = { ...SYNTHETIC_ENV, DATABASE_URL: "postgres://app:app@db.invalid:5432/app" };
+  const lockHash = createHash("sha256")
+    .update(readFileSync(join(dir, "pnpm-lock.yaml")))
+    .digest("hex")
+    .slice(0, 12);
+  const net = `turbineh-sbx-${randomUUID().slice(0, 8)}`;
+  const dbHost = `${net}-db`;
+  const [baseImage] = await Promise.all([
+    ensureBaseImage(dir, lockHash),
+    run("docker", ["network", "create", "--internal", net]),
+  ]);
+  await run("docker", [
+    "run",
+    "-d",
+    "--rm",
+    "--name",
+    dbHost,
+    "--network",
+    net,
+    "-e",
+    "POSTGRES_USER=app",
+    "-e",
+    "POSTGRES_PASSWORD=app",
+    "-e",
+    "POSTGRES_DB=app",
+    POSTGRES_IMAGE,
+  ]);
+  const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
+  let main: RunResult;
+  try {
+    main = await run(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--network",
+        net,
+        "--memory",
+        process.env.SANDBOX_MEMORY ?? "6g",
+        "--cpus",
+        process.env.SANDBOX_CPUS ?? "4",
+        "--pids-limit",
+        "4096",
+        "--security-opt",
+        "no-new-privileges",
+        "-v",
+        `${PNPM_STORE_VOLUME}:/pnpm-store`,
+        "-v",
+        `${dir}:/src`,
+        ...Object.entries({
+          ...SYNTHETIC_ENV,
+          DATABASE_URL: `postgres://app:app@${dbHost}:5432/app`,
+          BASE_HASH: lockHash,
+          DB_HOST: dbHost,
+        }).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
+        baseImage ?? SANDBOX_IMAGE,
+        "sh",
+        "-c",
+        VERIFY_SCRIPT,
+      ],
+      20 * 60_000,
+    );
+  } finally {
+    await run("docker", ["rm", "-f", dbHost]);
+    await run("docker", ["network", "rm", net]);
+  }
+  const [secrets, staticFindings, advisories] = await scans;
 
-  const offline: [StepName, string][] = [
-    ["install", "pnpm install --offline --frozen-lockfile"],
-    ["migrations", "pnpm -s db:generate"],
-    ["typecheck", "pnpm -s typecheck"],
-    ["lint", "pnpm -s lint"],
-    ["unit", "pnpm -s test"],
-    ["build", "pnpm -s build"],
-  ];
-  // One container for the offline phase keeps node_modules warm between steps; each step is timed separately.
-  const script = offline
-    .map(
-      ([name, cmd]) =>
-        `s=$(date +%s%3N); ${cmd} > /tmp/${name}.log 2>&1; c=$?; e=$(date +%s%3N); echo "STEP ${name} $c $((e-s))"; if [ $c -ne 0 ]; then tail -c 2500 /tmp/${name}.log; exit $c; fi`,
-    )
-    .join("\n");
-  const r = await sandbox(dir, script, { network: "none", env });
-  const seen = new Set<string>();
-  for (const line of r.tail.split("\n")) {
+  const steps: StepResult[] = [];
+  for (const line of main.tail.split("\n")) {
     const m = /^STEP (\w+) (\d+) (\d+)$/.exec(line.trim());
-    if (m) {
-      seen.add(m[1] as string);
+    if (m)
       steps.push({
         name: m[1] as StepName,
         ok: m[2] === "0",
         ms: Number(m[3]),
-        detail: m[2] === "0" ? "" : r.tail,
+        detail: m[2] === "0" ? "" : main.tail,
       });
-    }
   }
-  if (r.code !== 0 && steps.every((s) => s.ok)) {
-    const failed = offline.find(([n]) => !seen.has(n))?.[0] ?? "install";
-    steps.push({ name: failed, ok: false, ms: r.ms, detail: r.tail });
-  }
+  if (main.code !== 0 && steps.every((x) => x.ok))
+    steps.push({ name: "install", ok: false, ms: main.ms, detail: main.tail });
 
-  if (steps.every((s) => s.ok)) steps.push(await e2e(dir));
-
-  steps.push(await secretsScan(dir));
-  const advisories = await osvScan(dir);
+  const licenseLines = main.tail.split("\n").filter((l) => l.startsWith("LICENSE_BAD "));
+  const blockingLicenses = licenseLines
+    .map((l) => l.slice(12))
+    .filter((l) => BLOCKING_LICENSE.test(l));
+  steps.push(secrets);
+  steps.push({
+    name: "static",
+    ok: !staticFindings.some((f) => f.severity === "ERROR"),
+    ms: 0,
+    detail: staticFindings.map((f) => `${f.severity} ${f.rule} ${f.path}:${f.line}`).join("\n"),
+  });
   steps.push({
     name: "dependencies",
     ok: !advisories.some(
@@ -105,53 +172,130 @@ export async function verify(dir: string): Promise<VerifyResult> {
     ms: 0,
     detail: advisories.map((a) => `${a.id} ${a.pkg} ${a.severity} ${a.scope}`).join("\n"),
   });
-  const licenses = steps.find((s) => s.name === "build")?.ok ? await licenseScan(dir) : [];
-  const blocking = licenses.filter((l) => !l.startsWith("TOTAL") && BLOCKING_LICENSE.test(l));
-  steps.push({ name: "licenses", ok: blocking.length === 0, ms: 0, detail: blocking.join("\n") });
-
-  const secrets = steps.find((s) => s.name === "secrets");
+  steps.push({
+    name: "licenses",
+    ok: blockingLicenses.length === 0 && main.tail.includes("LICENSE_TOTAL"),
+    ms: 0,
+    detail: blockingLicenses.join("\n"),
+  });
   return {
-    ok: steps.every((s) => s.ok),
+    ok: steps.every((x) => x.ok),
     steps,
-    findings: { secrets: secrets && !secrets.ok ? 1 : 0, advisories, licenses: blocking },
+    findings: {
+      secrets: secrets.ok ? 0 : 1,
+      advisories,
+      licenses: blockingLicenses,
+      static: staticFindings,
+    },
     scannedAt: new Date().toISOString(),
   };
 }
 
-async function e2e(dir: string): Promise<StepResult> {
-  const net = `turbineh-sbx-${randomUUID().slice(0, 8)}`;
-  const db = `${net}-db`;
-  await run("docker", ["network", "create", "--internal", net]);
-  try {
-    await run("docker", [
+/** Shell script run inside the verification container. Each step prints `STEP <name> <exit> <ms>`. */
+const VERIFY_SCRIPT = String.raw`
+set -u
+now() { date +%s%3N; }
+step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && tail -c 2500 /tmp/$n.log; return $c; }
+if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then
+  W=/opt/base; s=$(now); (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -); echo "STEP install 0 $(( $(now) - s ))"
+else
+  W=/tmp/app; mkdir -p $W; (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -)
+  cd $W && step install pnpm install --offline --frozen-lockfile || exit 1
+fi
+cd $W
+step migrations pnpm -s db:generate || exit 1
+[ -d drizzle ] && cp -r drizzle /src/ 2>/dev/null
+node -e "const fs=require('fs'),p=require('path');const r='node_modules/.pnpm';const re=/\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;let t=0;for(const d of fs.readdirSync(r)){const nm=p.join(r,d,'node_modules');if(!fs.existsSync(nm))continue;for(const a of fs.readdirSync(nm)){const ns=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];for(const n of ns){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));t++;const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';if(re.test(l))console.log('LICENSE_BAD '+j.name+'@'+j.version+' '+l)}catch{}}}}console.log('LICENSE_TOTAL '+t)" 2>/dev/null
+( step lint pnpm -s lint > /tmp/out.lint ) &
+( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
+( step unit pnpm -s test > /tmp/out.unit ) &
+( step build pnpm -s build > /tmp/out.build ) &
+wait
+cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit /tmp/out.build
+grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit && grep -q "STEP build 0" /tmp/out.build || exit 1
+for i in $(seq 1 40); do node -e "require('net').connect(5432,process.env.DB_HOST).on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" && break; sleep 0.5; done
+step e2e sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+`;
+
+/** Base image with the recipe dependencies pre-installed, keyed by lockfile hash (built once, reused by every build). */
+async function ensureBaseImage(dir: string, lockHash: string): Promise<string | null> {
+  const tag = `turbineh/sandbox-base:${lockHash}`;
+  if ((await run("docker", ["image", "inspect", tag])).code === 0) return tag;
+  const ctx = mkdtempSync(join(tmpdir(), "turbineh-base-"));
+  cpSync(join(dir, "pnpm-lock.yaml"), join(ctx, "pnpm-lock.yaml"));
+  cpSync(join(dir, "package.json"), join(ctx, "package.json"));
+  writeFileSync(
+    join(ctx, "Dockerfile"),
+    [
+      `FROM ${SANDBOX_IMAGE}`,
+      "USER root",
+      "RUN mkdir -p /opt/base && chown pwuser:pwuser /opt/base",
+      "USER pwuser",
+      "WORKDIR /opt/base",
+      "COPY --chown=pwuser:pwuser package.json pnpm-lock.yaml ./",
+      "RUN pnpm install --frozen-lockfile && rm -f package.json",
+      `LABEL turbineh.lockhash=${lockHash}`,
+    ].join("\n"),
+  );
+  const r = await run("docker", ["build", "-q", "-t", tag, ctx], 20 * 60_000);
+  return r.code === 0 ? tag : null;
+}
+
+const SEMGREP_IMAGE =
+  "semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b";
+const RULES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../rules");
+
+/** Own security rules with the Semgrep OSS engine: read-only mount, no network, no metrics. */
+export async function staticScan(dir: string): Promise<StaticFinding[]> {
+  const r = await run(
+    "docker",
+    [
       "run",
-      "-d",
       "--rm",
-      "--name",
-      db,
       "--network",
-      net,
-      "-e",
-      "POSTGRES_USER=app",
-      "-e",
-      "POSTGRES_PASSWORD=app",
-      "-e",
-      "POSTGRES_DB=app",
-      POSTGRES_IMAGE,
-    ]);
-    for (let i = 0; i < 30; i++) {
-      if ((await run("docker", ["exec", db, "pg_isready", "-U", "app"])).code === 0) break;
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    const res = await sandbox(dir, "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line", {
-      network: net,
-      env: { ...SYNTHETIC_ENV, DATABASE_URL: `postgres://app:app@${db}:5432/app` },
-    });
-    return toStep("e2e", res);
-  } finally {
-    await run("docker", ["rm", "-f", db]);
-    await run("docker", ["network", "rm", net]);
-  }
+      "none",
+      "-v",
+      `${dir}:/src:ro`,
+      "-v",
+      `${RULES_DIR}:/rules:ro`,
+      SEMGREP_IMAGE,
+      "semgrep",
+      "scan",
+      "--config",
+      "/rules/turbineh-security.yml",
+      "--metrics",
+      "off",
+      "--disable-version-check",
+      "--quiet",
+      "--json",
+      "--exclude",
+      "node_modules",
+      "--exclude",
+      ".next",
+      "--exclude",
+      "tests",
+      "/src",
+    ],
+    10 * 60_000,
+    true,
+  );
+  const json = r.tail.slice(r.tail.indexOf("{"));
+  const data = JSON.parse(json || "{}") as {
+    results?: {
+      check_id: string;
+      path: string;
+      start: { line: number };
+      extra: { severity: string; message: string; metadata?: { explain?: string } };
+    }[];
+  };
+  return (data.results ?? []).map((x) => ({
+    rule: x.check_id.replace(/^.*turbineh\./, "turbineh."),
+    severity: x.extra.severity === "ERROR" ? "ERROR" : "WARNING",
+    path: x.path.replace(/^\/src\//, ""),
+    line: x.start.line,
+    message: x.extra.message,
+    explain: x.extra.metadata?.explain ?? x.extra.message,
+  }));
 }
 
 /** gitleaks over the git tree of the generated repo (tracked files only). */
@@ -241,24 +385,4 @@ async function osvScan(
     }
   }
   return out;
-}
-
-/**
- * Licenses of every installed package, read inside the sandbox (package code is never executed).
- * Only blocking licenses are returned; the total count is the last element ("TOTAL n").
- */
-async function licenseScan(dir: string): Promise<string[]> {
-  const js = [
-    "const fs=require('fs'),p=require('path');",
-    "const root='node_modules/.pnpm';const bad=[];let total=0;",
-    "const re=/\\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\\b/i;",
-    "for(const d of fs.readdirSync(root)){const nm=p.join(root,d,'node_modules');if(!fs.existsSync(nm))continue;",
-    "for(const a of fs.readdirSync(nm)){const names=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];",
-    "for(const n of names){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));total++;",
-    "const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';",
-    "if(re.test(l))bad.push(j.name+'@'+j.version+' '+l)}catch{}}}}",
-    "console.log([...new Set(bad)].concat('TOTAL '+total).join('\\n'))",
-  ].join("");
-  const r = await sandbox(dir, `node -e "${js}"`, { network: "none", env: {} });
-  return r.tail.split("\n").filter(Boolean);
 }

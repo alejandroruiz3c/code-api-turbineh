@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { closePool, getPool } from "@turbineh/db";
 import { deciderFromEnv } from "@turbineh/decider";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
+import { modelSlotsFromEnv } from "./models.js";
 import { runBuild } from "./pipeline.js";
 
 const prompt = process.argv.slice(2).join(" ").trim();
@@ -26,6 +27,7 @@ const outcome = await runBuild(prompt, {
   repoRoot,
   buildsDir: join(repoRoot, "builds"),
   decider: deciderFromEnv(env),
+  ...modelSlotsFromEnv(env),
   compiler: {
     baseURL: env.COMPILER_BASE_URL,
     model: env.COMPILER_MODEL,

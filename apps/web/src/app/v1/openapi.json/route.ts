@@ -103,6 +103,20 @@ const spec = {
         },
       },
     },
+    "/v1/builds/{id}/improve": {
+      post: {
+        summary:
+          "Improve & redeliver: fix every remaining security alert, verify again and deliver a new build (the original is kept)",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "202": { description: "Improvement build queued (returns the new build_id)" },
+          "409": { description: "The original build is not finished" },
+          "429": { description: "Daily build quota reached" },
+        },
+      },
+    },
     "/v1/components": {
       get: {
         summary: "Search the catalog",
