@@ -9,7 +9,7 @@
  *
  * Outputs stay in builds/baseline/ (git-ignored): never copied into the catalog or used for training.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,9 +19,16 @@ const root = join(import.meta.dirname, "../..");
 const IMAGE = "turbineh/baseline:1";
 const MODEL = process.env.BASELINE_MODEL ?? "claude-opus-5-5";
 const AGENT = "claude-code@2.1.283";
-const only = process.argv.includes("--only")
-  ? process.argv[process.argv.indexOf("--only") + 1]
-  : null;
+const arg = (name: string) =>
+  process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
+const only = arg("--only") ?? null;
+/** Representative sample: comma-separated prompt ids (default: all, or --only). */
+const ids = arg("--ids")?.split(",") ?? null;
+const PARALLEL = Number(arg("--parallel") ?? 1);
+/** Hard time box per agent run; the container is killed and the run is recorded as not finished. */
+const TIMEOUT_MIN = Number(arg("--timeout-min") ?? 90);
+const MAX_TURNS = arg("--max-turns") ?? "300";
+const MEMORY = arg("--memory") ?? "6g";
 
 const key = /^ANTHROPIC_API_KEY=(.+)$/m
   .exec(readFileSync(join(root, ".env.local"), "utf8"))?.[1]
@@ -29,10 +36,10 @@ const key = /^ANTHROPIC_API_KEY=(.+)$/m
 if (!key) throw new Error("ANTHROPIC_API_KEY missing in .env.local");
 
 /** The same delivery contract our builds satisfy, so both sides go through the same gate. */
-const CONTRACT = `
+const contract = () => `
 
 Build this as a complete, production-ready web app in the current directory, working autonomously until done
-(do not ask questions). Requirements for the delivered repository:
+(do not ask questions). You have about ${Math.max(TIMEOUT_MIN - 5, 10)} minutes. Requirements for the delivered repository:
 - Next.js (App Router) + TypeScript strict, pnpm 10, with a committed pnpm-lock.yaml (run pnpm install).
 - PostgreSQL through the DATABASE_URL environment variable. Authentication with workspaces/roles if the app needs
   users. Environment variables available when tests run: DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL.
@@ -60,24 +67,26 @@ async function runOne(p: Prompt) {
   mkdirSync(dir, { recursive: true });
   execFileSync("chmod", ["777", dir]);
   // The key reaches the container through a private env file that is deleted right after the run.
-  const envDir = join(tmpdir(), `turbineh-baseline-${process.pid}`);
+  const envDir = join(tmpdir(), `turbineh-baseline-${process.pid}-${p.id}`);
   mkdirSync(envDir, { recursive: true, mode: 0o700 });
   const envFile = join(envDir, "env");
   writeFileSync(envFile, `ANTHROPIC_API_KEY=${key}\nDISABLE_TELEMETRY=1\nDISABLE_AUTOUPDATER=1\n`, {
     mode: 0o600,
   });
   const t0 = Date.now();
-  let agent: ReturnType<typeof spawnSync>;
+  const name = `turbineh-baseline-${p.id}-${process.pid}`;
+  let agent: { status: number | null; stdout: string; stderr: string; timedOut: boolean };
   try {
-    agent = spawnSync(
-      "docker",
-      [
+    agent = await new Promise((resolve) => {
+      const child = spawn("docker", [
         "run",
         "--rm",
+        "--name",
+        name,
         "--env-file",
         envFile,
         "--memory",
-        "6g",
+        MEMORY,
         "--cpus",
         "4",
         "--pids-limit",
@@ -89,18 +98,31 @@ async function runOne(p: Prompt) {
         IMAGE,
         "claude",
         "-p",
-        p.prompt + CONTRACT,
+        p.prompt + contract(),
         "--model",
         MODEL,
         "--output-format",
         "json",
         "--dangerously-skip-permissions",
         "--max-turns",
-        "300",
-      ],
-      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 90 * 60_000 },
-    );
+        MAX_TURNS,
+      ]);
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      child.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+      child.stderr.on("data", (d: Buffer) => (stderr = (stderr + d.toString()).slice(-4000)));
+      const timer = setTimeout(() => {
+        timedOut = true;
+        spawnSync("docker", ["kill", name]);
+      }, TIMEOUT_MIN * 60_000);
+      child.on("close", (status) => {
+        clearTimeout(timer);
+        resolve({ status, stdout, stderr, timedOut });
+      });
+    });
   } finally {
+    // The env file is only needed to start the container.
     rmSync(envDir, { recursive: true, force: true });
   }
   const agentMs = Date.now() - t0;
@@ -145,6 +167,8 @@ async function runOne(p: Prompt) {
     model: MODEL,
     dir: dir.replace(`${root}/`, ""),
     agentExit: agent.status,
+    finished: !agent.timedOut && agent.status === 0,
+    timeBoxMin: TIMEOUT_MIN,
     agentS: Math.round(agentMs / 1000),
     turns: report.num_turns ?? null,
     costUsd: report.total_cost_usd ?? null,
@@ -173,21 +197,46 @@ async function runOne(p: Prompt) {
 const prompts = readdirSync(join(root, "bench/prompts"))
   .filter((f) => f.endsWith(".json"))
   .map((f) => JSON.parse(readFileSync(join(root, "bench/prompts", f), "utf8")) as Prompt)
-  .filter((p) => !only || p.id === only)
+  .filter((p) => (!only || p.id === only) && (!ids || ids.includes(p.id)))
   .sort((a, b) => a.id.localeCompare(b.id));
 
 ensureImage();
-const results = [];
-for (const p of prompts) {
-  const r = await runOne(p);
-  results.push(r);
-  console.log(JSON.stringify({ id: r.id, green: r.green, agentS: r.agentS, costUsd: r.costUsd }));
-}
+const results: Awaited<ReturnType<typeof runOne>>[] = [];
+const queue = [...prompts];
+await Promise.all(
+  Array.from({ length: Math.max(1, PARALLEL) }, async () => {
+    for (let p = queue.shift(); p; p = queue.shift()) {
+      const r = await runOne(p);
+      results.push(r);
+      console.log(
+        JSON.stringify({
+          id: r.id,
+          finished: r.finished,
+          green: r.green,
+          agentS: r.agentS,
+          costUsd: r.costUsd,
+        }),
+      );
+    }
+  }),
+);
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
-const out = join(root, `bench/results/${stamp}-baseline${only ? `-${only}` : ""}.json`);
+const label = only ? `-${only}` : ids ? "-sample" : "";
+const out = join(root, `bench/results/${stamp}-baseline${label}.json`);
 writeFileSync(
   out,
-  JSON.stringify({ agent: AGENT, model: MODEL, date: new Date().toISOString(), results }, null, 2) +
-    "\n",
+  JSON.stringify(
+    {
+      agent: AGENT,
+      model: MODEL,
+      date: new Date().toISOString(),
+      timeBoxMin: TIMEOUT_MIN,
+      maxTurns: MAX_TURNS,
+      parallel: PARALLEL,
+      results,
+    },
+    null,
+    2,
+  ) + "\n",
 );
 console.log(`written ${out.replace(`${root}/`, "")}`);
