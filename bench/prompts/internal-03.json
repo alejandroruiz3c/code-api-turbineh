@@ -1,0 +1,5 @@
+{
+  "id": "internal-03",
+  "expected_recipe": "internal-tool",
+  "prompt": "An internal tool for an HR team to manage equipment loans: employee, item, serial number, loan date, return date and condition, searchable and exportable to CSV."
+}

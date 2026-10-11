@@ -1,0 +1,5 @@
+{
+  "id": "internal-01",
+  "expected_recipe": "internal-tool",
+  "prompt": "An internal tool for a bakery to track daily orders: customer name, product, quantity, pickup date and status, with search and CSV export."
+}

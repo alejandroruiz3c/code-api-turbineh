@@ -1,0 +1,5 @@
+{
+  "id": "bookings-01",
+  "expected_recipe": "bookings",
+  "prompt": "An appointment booking app for a physiotherapy clinic: staff set weekly opening hours, receptionists book appointments for patients without double booking, and everyone sees a weekly calendar. Patients get an email confirmation."
+}

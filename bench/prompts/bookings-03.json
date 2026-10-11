@@ -1,0 +1,5 @@
+{
+  "id": "bookings-03",
+  "expected_recipe": "bookings",
+  "prompt": "Meeting room reservations for a small office: admins set when the room is available, employees reserve time slots, double bookings are rejected and a weekly calendar shows reservations."
+}

@@ -1,0 +1,5 @@
+{
+  "id": "saas-02",
+  "expected_recipe": "saas-crud",
+  "prompt": "A small CRM for a solar panel installer: track leads (name, phone, address, roof size, estimated value, stage) and follow-up calls (lead, date, outcome, notes) per sales team."
+}

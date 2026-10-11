@@ -1,0 +1,5 @@
+{
+  "id": "saas-03",
+  "expected_recipe": "saas-crud",
+  "prompt": "A fleet maintenance tracker for a delivery company: vehicles (plate, model, mileage, next service date) and maintenance records (vehicle, date, cost, workshop, description), with roles for managers and drivers."
+}

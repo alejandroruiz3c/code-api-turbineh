@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- WP16: benchmark runner (`pnpm bench`) and 15 prompts across the 5 recipes (`bench/prompts/`); first staging run in `bench/results/2026-10-11-15-52-benchmark.{json,md}`; baseline procedure documented (`bench/baseline/`, pending an API key, ADR-0009).
+
 - WP15: recipes `bookings` (weekly availability, conflict-free booking under a per-workspace lock, 7-day calendar, email confirmation) and `client-portal` (requests with status workflow, file uploads type-checked by content and size-limited, attachment-only downloads with the same visibility rule); unit and E2E tests; verified through the pipeline (`bench/results/2026-10-11-d2-recipes.json`).
 
 - WP10 (ADR-0015): `@turbineh/integrator` — approved external components are installed at exact versions with their contract tests running inside the app and a small generated helper; Backup Coder fills self-contained gaps (T1/T2) with module + tests and records them (catalog flywheel); corrector with directed patches, quick checks between patches, granular and full swap, Backup Coder takeover (T4); compiler fallback to the Backup Coder (T5).
