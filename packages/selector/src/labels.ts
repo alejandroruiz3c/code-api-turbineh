@@ -84,6 +84,20 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "data.xml": "reading and writing XML",
   "ops.http-client": "calling external APIs",
   "email.plain-text": "plain-text versions of emails",
+  "ui.map": "an interactive map",
+  "files.image-processing": "resizing and converting images",
+  "privacy.cookie-consent": "a cookie consent banner",
+  "ui.lightbox": "a full-screen image gallery",
+  "ui.slider": "sliders for values and ranges",
+  "ui.checkbox": "accessible checkboxes",
+  "ui.switch": "on/off switches",
+  "ui.progress": "progress bars",
+  "ui.avatar": "user avatars",
+  "ui.scroll-area": "scrollable panels",
+  "ui.toggle-group": "toggle buttons to switch views",
+  "ui.alert-dialog": "confirmation dialogs before deleting",
+  "ui.hover-card": "preview cards on hover",
+  "ui.color-picker": "a colour picker",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;

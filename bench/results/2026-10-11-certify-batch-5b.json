@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-11",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "sandbox": "install with network (no secrets), tests and type-check with --network none",
+  "typecheckTail": "exit=0\n",
+  "runTail": "exit=0\n",
+  "components": {
+    "ui.toggle-group.radix": {
+      "purl": "pkg:npm/@radix-ui/react-toggle-group@1.1.19",
+      "passed": true,
+      "message": ""
+    }
+  }
+}

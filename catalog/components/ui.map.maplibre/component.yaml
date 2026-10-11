@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ui.map.maplibre
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/maplibre-gl@6.11.2
+  repo: https://github.com/maplibre/maplibre-gl-js
+  integrity: sha512-Xh06pxoipjX/Ad1sUPGhiNh9go9naCNGZZ1IJm3sIeqK1kYGuMaMDSTIGDQ2igOLfVyukJU7kvEOA089VO7Z7g==
+capability:
+  does: Interactive vector maps (store locations, delivery areas) without a proprietary SDK
+  does_not: Needs a tile source (style URL) chosen by the client
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add maplibre-gl@6.11.2
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: BSD-3-Clause
+  detected: BSD-3-Clause
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License BSD-3-Clause
+    origin: maintainer
+    ref: npm registry metadata maplibre-gl@6.11.2
+  - claim: 0 OSV advisories for maplibre-gl@6.11.2 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-5.json
+relations:
+  requires: []
+  provides:
+    - ui.map
+  conflicts: []
+  tested_with:
+    - contract-harness
