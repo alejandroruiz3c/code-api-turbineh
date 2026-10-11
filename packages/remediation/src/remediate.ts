@@ -88,7 +88,8 @@ async function fixDependencies(dir: string, advisories: Advisory[]): Promise<Rem
     const name = a.pkg.slice(0, at);
     const fixed = await fixedVersion(a.id, name);
     if (!fixed) continue;
-    overrides[name] = fixed;
+    // Range selector: only vulnerable versions are lifted; newer copies used by other packages stay untouched.
+    overrides[`${name}@<${fixed}`] = fixed;
     changes.push({
       kind: "dependency",
       target: `${name} → ${fixed}`,
