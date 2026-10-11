@@ -1,0 +1,5 @@
+{
+  "id": "corporate-01",
+  "expected_recipe": "corporate-site",
+  "prompt": "A corporate website for Nordic Light, an architecture studio in Barcelona: home, services (residential, commercial, interior design), about the team, a news blog the team can update, and a contact form for project inquiries."
+}

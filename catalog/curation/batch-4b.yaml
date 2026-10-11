@@ -1,0 +1,17 @@
+name: batch-4b
+description: "Batch 4 re-certification after schema categories and contract fixes"
+entries:
+  - id: content.frontmatter.gray-matter
+  - id: content.reading-time.reading-time
+  - id: content.rss.feed
+  - id: content.markdown.react-markdown
+  - id: seo.structured-data.schema-dts
+  - id: seo.sitemap.sitemap
+  - id: ui.virtual-list.tanstack-virtual
+  - id: ui.form.hookform-resolvers
+  - id: commerce.cart.zustand
+  - id: data.money.dinero
+  - id: storage.objects.aws-s3
+  - id: storage.objects.s3-presigner
+  - id: storage.objects.vercel-blob
+  - id: ops.http-client.ky

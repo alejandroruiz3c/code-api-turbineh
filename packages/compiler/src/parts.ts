@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CAPABILITIES, RECIPES } from "./build-spec.js";
+import { sitePart } from "./build-spec.js";
 
 /**
  * The BuildSpec is produced in small, simple pieces (owner principle: decomposed content and simple tasks degrade
@@ -16,6 +17,10 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
   bookings: "Booking or appointment app with availability, calendar slots and notifications",
   "client-portal":
     "Portal where external clients upload files and follow the status of their requests",
+  "corporate-site":
+    "Company or professional website: home, services, about, blog or news, contact form, edited by the team",
+  storefront:
+    "Online shop: product catalog with prices and images, cart, online payment, orders and stock managed by the owner",
   out_of_scope:
     "Anything else: not a web app, mobile/desktop/game, AI features in the app, scraping, or a different product family",
 };
@@ -80,6 +85,34 @@ export const CAPABILITY_QUESTIONS: Partial<Record<(typeof CAPABILITIES)[number],
   "ui.i18n": "The app is available in more than one language.",
   "data.diff": "Users compare versions of text or see change history.",
   "security.html-escape": "User text is inserted into HTML emails or documents.",
+  "content.blog": "The site has a blog, news or articles section.",
+  "content.rss": "Readers can subscribe to the blog or news with RSS.",
+  "seo.structured-data":
+    "Search engines should show rich results (organization, products, articles).",
+  "seo.sitemap": "The public site must be indexed well by search engines (sitemap).",
+  "ui.carousel": "The interface shows a carousel or slider (testimonials, galleries, products).",
+  "ui.accordion": "The page has collapsible sections such as a FAQ.",
+  "ui.tabs": "Content is organised in tabs.",
+  "ui.menu": "The interface has dropdown or context menus.",
+  "ui.tooltip": "Controls need tooltips that explain them.",
+  "ui.popover": "Small panels open next to a control (filters, quick actions).",
+  "ui.select": "Forms use rich select boxes.",
+  "ui.navigation": "A public website needs a navigation menu with submenus.",
+  "ui.animation": "The interface should feel animated (transitions, reveal on scroll).",
+  "ui.drag-drop": "Users drag and drop items (kanban boards, reordering, sorting).",
+  "ui.virtual-list": "Lists or tables can have thousands of rows.",
+  "ui.otp-input": "Users type one-time codes (two-factor, email verification).",
+  "ui.drawer": "Panels slide in from the side or bottom (cart, filters on mobile).",
+  "ui.url-state": "Filters, search or tabs are kept in the URL so they can be shared.",
+  "commerce.cart": "Shoppers add products to a cart before paying.",
+  "data.countries": "Users pick countries (addresses, shipping, phone prefixes).",
+  "storage.objects": "The app stores many or large files and images (product photos, media).",
+  "data.search-index": "Users search a catalog or documentation by text.",
+  "data.fetching": "The browser loads and refreshes data from the server while the page is open.",
+  "files.barcode": "The app prints or shows barcodes (products, tickets, labels).",
+  "data.xml": "The app imports or exports XML (product feeds, sitemaps, integrations).",
+  "ops.http-client": "The app calls external APIs.",
+  "email.plain-text": "Emails need a plain-text version for better deliverability.",
 };
 
 const fieldType = z.enum([
@@ -166,7 +199,20 @@ export const PARTS = {
     schema: criteriaPart,
     instruction: "Write 3 to 10 concrete, testable acceptance criteria, one behaviour each.",
   },
+  site: {
+    schema: sitePart,
+    instruction:
+      "Write the public website copy for this business in plain, specific English: a tagline, a hero subtitle, 3-6 " +
+      "benefits, 3-4 'how it works' steps, 3-6 services, a short 'about us', 3-6 FAQs with answers and a call to " +
+      "action. No prices, phone numbers, addresses or claims you cannot know from the prompt.",
+  },
 } as const;
+
+/** Recipes with a public website that renders the `site` copy. */
+export const PUBLIC_SITE_RECIPES = ["landing-waitlist", "corporate-site", "storefront"] as const;
+
+/** Parts whose failure does not fail the build (deterministic fallback in the recipes). */
+export const OPTIONAL_PARTS: readonly PartName[] = ["site"];
 
 export type PartName = keyof typeof PARTS;
 

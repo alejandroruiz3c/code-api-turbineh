@@ -25,6 +25,8 @@ const HARNESS = {
   "@types/node": "24.19.0",
   "@types/react": "19.3.0",
   "@types/react-dom": "19.3.0",
+  // Present in every recipe; contracts of schema adapters (e.g. form resolvers) use it.
+  zod: "4.6.5",
 };
 
 /** Same strictness as the generated apps (recipe tsconfig), so a contract that passes here type-checks there. */
@@ -86,7 +88,12 @@ export async function certify(
         name: "turbineh-certify",
         private: true,
         type: "module",
-        dependencies: { ...deps, react: HARNESS.react, "react-dom": HARNESS["react-dom"] },
+        dependencies: {
+          ...deps,
+          react: HARNESS.react,
+          "react-dom": HARNESS["react-dom"],
+          zod: HARNESS.zod,
+        },
         devDependencies: {
           vitest: HARNESS.vitest,
           vite: HARNESS.vite,

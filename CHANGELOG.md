@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Recipe `storefront` (ADR-0018): catalog with images and search, cookie cart, Stripe Checkout via REST (hosted page), signed idempotent webhook with stock in one transaction, orders and products admin, Product JSON-LD.
+- GEO by default in public recipes: `/llms.txt`, Organization/WebSite/FAQPage/Article/Product JSON-LD, robots.txt open to AI crawlers on public pages (single opt-out switch), sitemaps.
+- Benchmark prompts for corporate sites and shops (21 prompts).
+
+- Recipe `corporate-site`: home, services, about, blog (safe Markdown renderer, RSS), contact form (rate limit, honeypot, email to admins), admin panel to edit website texts, posts and messages, SEO (metadata, Open Graph, JSON-LD Organization/Article, sitemap with posts, robots).
+
+- Landing recipe extended: benefits, how it works, FAQ, final call to action, SEO (metadata, Open Graph, JSON-LD, sitemap.xml, robots.txt) with copy written for each business (new optional `site` part of the BuildSpec, deterministic fallback; only awaited for public-site recipes).
+
+- Catalog batch 4: 40 new approved components (106 manifests) for websites, landing pages, management apps and e-commerce — content and SEO (front matter, RSS, Markdown, JSON-LD, sitemaps), website and app UI (carousel, accordion, tabs, menus, tooltips, popovers, select, navigation, react-aria, animation, drag and drop, virtual lists, OTP input, drawer, URL state), commerce and data (cart state, money, countries, search index, data fetching, ids, barcodes, XML, HTTP client, plain-text email) and object storage (S3, presigned URLs, Vercel Blob); 27 new capabilities; manifest categories content, seo, commerce, storage.
+
 - "Deploy for me" (ADR-0017, optional): `@turbineh/deployer` deploys a verified build into the client's own Vercel account and a new Neon database (EU) or their existing Postgres — settings and secrets configured, migrations inside the client's build, live check — and returns an adapted package (`DEPLOYED.md`, `START_HERE.html` live mode). `POST/GET /v1/builds/{id}/deploy-app`, guided dialog with live progress; credentials erased when the job ends.
 
 - Client brand (ADR-0016): optional main colour, typeface and logo when asking for an app ("Add your brand" in the prompt box, `brand` in `POST /v1/builds`), applied as theme tokens with WCAG-based text contrast; logo checked by content; repository made public after a full-history gitleaks scan and path clean-up.

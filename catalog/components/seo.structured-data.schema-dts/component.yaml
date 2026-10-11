@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: seo.structured-data.schema-dts
+version: 0.1.0
+status: approved
+category: seo
+source:
+  purl: pkg:npm/schema-dts@2.0.0
+  repo: https://github.com/google/schema-dts
+  integrity: sha512-t7NoCy3Rn5GHGx6p7s1qIYK/AeIb8ZxJNR9WUNFkwMv2CiiGZBmqqYWc2FlZVm5ZbiHMY4OvBWhj7QtyrFO2Jw==
+capability:
+  does: Typed schema.org JSON-LD for rich search results (Organization, Product, Article)
+  does_not: Types only; does not inject tags
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add schema-dts@2.0.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License Apache-2.0
+    origin: maintainer
+    ref: npm registry metadata schema-dts@2.0.0
+  - claim: 0 OSV advisories for schema-dts@2.0.0 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-4b.json
+relations:
+  requires: []
+  provides:
+    - seo.structured-data
+  conflicts: []
+  tested_with:
+    - contract-harness

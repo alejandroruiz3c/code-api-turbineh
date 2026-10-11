@@ -52,7 +52,11 @@
         "observability",
         "ops",
         "deploy",
-        "ai"
+        "ai",
+        "content",
+        "seo",
+        "commerce",
+        "storage"
       ]
     },
     "source": {

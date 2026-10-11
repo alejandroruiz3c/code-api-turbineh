@@ -7,6 +7,8 @@ export const RECIPES = [
   "internal-tool",
   "bookings",
   "client-portal",
+  "corporate-site",
+  "storefront",
 ] as const;
 
 /** Capability ids the Selector can resolve (category.capability). `ai.*` is blocked until Phase 3. */
@@ -65,7 +67,52 @@ export const CAPABILITIES = [
   "ui.i18n",
   "data.diff",
   "security.html-escape",
+  "content.blog",
+  "content.rss",
+  "seo.structured-data",
+  "seo.sitemap",
+  "ui.carousel",
+  "ui.accordion",
+  "ui.tabs",
+  "ui.menu",
+  "ui.tooltip",
+  "ui.popover",
+  "ui.select",
+  "ui.navigation",
+  "ui.animation",
+  "ui.drag-drop",
+  "ui.virtual-list",
+  "ui.otp-input",
+  "ui.drawer",
+  "ui.url-state",
+  "commerce.cart",
+  "data.countries",
+  "storage.objects",
+  "data.search-index",
+  "data.fetching",
+  "files.barcode",
+  "data.xml",
+  "ops.http-client",
+  "email.plain-text",
 ] as const;
+
+const item = (t: number, x: number) =>
+  z.object({ title: z.string().min(2).max(t), text: z.string().min(5).max(x) });
+
+/** Public-site copy (landing, corporate site, storefront). Rendered as plain text by the recipes. */
+export const sitePart = z.object({
+  tagline: z.string().min(5).max(90),
+  hero_subtitle: z.string().min(10).max(220),
+  features: z.array(item(48, 180)).min(3).max(6),
+  steps: z.array(item(48, 180)).min(3).max(4),
+  services: z.array(item(48, 200)).min(3).max(6),
+  about: z.string().min(20).max(600),
+  faq: z
+    .array(z.object({ q: z.string().min(5).max(140), a: z.string().min(5).max(400) }))
+    .min(3)
+    .max(6),
+  cta: z.string().min(3).max(40),
+});
 
 const fieldType = z.enum([
   "string",
@@ -131,6 +178,8 @@ export const buildSpecSchema = z
       .max(CAPABILITIES.length)
       .transform((caps) => [...new Set(caps)]),
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
+    // Public-site copy (optional part; recipes fall back to deterministic copy when it is null).
+    site: sitePart.nullable().optional(),
   })
   .superRefine((spec, ctx) => {
     if (spec.recipe === "out_of_scope" && !spec.out_of_scope_reason) {

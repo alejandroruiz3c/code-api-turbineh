@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-11",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "sandbox": "install with network (no secrets), tests and type-check with --network none",
+  "typecheckTail": "exit=0\n",
+  "runTail": "exit=0\n",
+  "components": {
+    "content.frontmatter.gray-matter": {
+      "purl": "pkg:npm/gray-matter@4.0.3",
+      "passed": true,
+      "message": ""
+    },
+    "content.reading-time.reading-time": {
+      "purl": "pkg:npm/reading-time@1.5.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.rss.feed": {
+      "purl": "pkg:npm/feed@6.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.markdown.react-markdown": {
+      "purl": "pkg:npm/react-markdown@10.1.0",
+      "passed": true,
+      "message": ""
+    },
+    "seo.structured-data.schema-dts": {
+      "purl": "pkg:npm/schema-dts@2.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "seo.sitemap.sitemap": {
+      "purl": "pkg:npm/sitemap@9.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.virtual-list.tanstack-virtual": {
+      "purl": "pkg:npm/@tanstack/react-virtual@3.14.13",
+      "passed": true,
+      "message": ""
+    },
+    "ui.form.hookform-resolvers": {
+      "purl": "pkg:npm/@hookform/resolvers@5.9.1",
+      "passed": true,
+      "message": ""
+    },
+    "commerce.cart.zustand": {
+      "purl": "pkg:npm/zustand@5.0.15",
+      "passed": true,
+      "message": ""
+    },
+    "data.money.dinero": {
+      "purl": "pkg:npm/dinero.js@2.0.2",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.aws-s3": {
+      "purl": "pkg:npm/@aws-sdk/client-s3@3.1141.0",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.s3-presigner": {
+      "purl": "pkg:npm/@aws-sdk/s3-request-presigner@3.1141.0",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.vercel-blob": {
+      "purl": "pkg:npm/@vercel/blob@2.8.0",
+      "passed": true,
+      "message": ""
+    },
+    "ops.http-client.ky": {
+      "purl": "pkg:npm/ky@2.1.0",
+      "passed": true,
+      "message": ""
+    }
+  }
+}
