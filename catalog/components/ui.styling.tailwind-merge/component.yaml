@@ -42,9 +42,9 @@ integration:
   migrations: false
 quality:
   tests:
-    command: contract.test.ts (vitest, sandbox --network none)
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
     passed: true
-    date: 2026-10-10
+    date: 2026-10-11
 security:
   scanned_at: 2026-10-10
   tools:
@@ -63,9 +63,9 @@ evidence:
   - claim: 0 OSV advisories for tailwind-merge@3.7.0 on 2026-10-10
     origin: tested
     ref: https://api.osv.dev/v1/query
-  - claim: Contract tests pass in the sandbox without network
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
     origin: tested
-    ref: /Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/bench/results/2026-10-10-certify-batch-3.json
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
 relations:
   requires: []
   provides:

@@ -28,6 +28,7 @@ const results = await certify(
   componentsDir,
   evidence,
   today,
+  relative(repoRoot, evidence),
 );
 for (const r of results)
   console.log(

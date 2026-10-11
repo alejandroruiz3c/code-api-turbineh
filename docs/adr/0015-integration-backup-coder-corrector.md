@@ -60,4 +60,6 @@ Components the recipe does not already contain are integrated after assembly:
   provenance from `catalog/components/<id>/files/`, copied by the assembler only when selected).
 - Libraries without bundled TypeScript types failed `typecheck` deterministically. Manifests now declare
   `integration.types` (exact DefinitelyTyped version, ≥ 14 days old), installed as a devDependency with the
-  component. Contract-test certification should also run `tsc` (curation follow-up).
+  component. Contract-test certification now also type-checks every contract with the apps' strict settings (a
+  library without types and without `integration.types` is not approved); all 52 external components were
+  re-certified (`bench/results/2026-10-11-certify-recertify-typecheck.json`).
