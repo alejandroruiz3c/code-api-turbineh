@@ -1,0 +1,10 @@
+id: client-portal
+description: Client portal where clients submit requests with file uploads and follow their status; staff review and update them
+extends: saas-crud
+providedEntities:
+  [Request, ServiceRequest, ClientRequest, Ticket, Case, File, Upload, Document, Attachment, RequestFile, Status]
+defaultCapabilities: [ops.rate-limit, data.pagination]
+# Implemented by the template: type sniffing by content (magic bytes), size limits and safe downloads.
+providedCapabilities: [files.upload, files.type-detection, files.mime]
+nav:
+  - { label: Requests, href: /dashboard/requests }
