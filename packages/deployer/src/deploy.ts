@@ -51,6 +51,10 @@ export async function deployToClient(input: DeployInput): Promise<DeployResult> 
 
   const keys = KEYS_IN(readFileSync(join(input.repoDir, ".env.example"), "utf8"));
   const cron = keys.includes("JOBS_RUNNER_SECRET");
+  // Checked before anything is created in the client's accounts.
+  if (keys.includes("ADMIN_EMAILS") && !input.adminEmail) {
+    throw new Error("this app has an admin panel: please give the admin email and try again");
+  }
 
   await input.onStep(
     input.database.mode === "neon" ? "Creating your database (Neon, EU)" : "Using your database",

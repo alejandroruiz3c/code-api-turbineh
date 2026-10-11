@@ -269,7 +269,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
 
                 <div>
                   <label htmlFor="adm" className="block text-xs text-muted">
-                    Admin email (only for apps with an admin panel, optional)
+                    Admin email (required for websites and shops with an admin panel)
                   </label>
                   <input
                     id="adm"

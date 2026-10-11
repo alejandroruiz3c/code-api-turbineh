@@ -240,6 +240,8 @@ MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC. Cualquier otra, sin licencia o
 3. **Herramienta interna** con tablas, filtros, importación CSV y exportación.
 4. **Reservas/citas** con calendario, disponibilidad y notificaciones.
 5. **Portal de clientes** con subida de archivos y estados de solicitud.
+6. **Web corporativa** con servicios, blog, contacto y panel de textos (añadida en D3, ADR-0018).
+7. **Tienda online** con catálogo, carrito, pago con Stripe Checkout, pedidos y stock (añadida en D3, ADR-0018).
 
 Prompts fuera de estas familias → respuesta honesta "fuera del alcance de la beta" con la receta más cercana sugerida.
 
