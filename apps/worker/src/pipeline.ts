@@ -7,14 +7,16 @@ import {
   hasRecipe,
   mergedRecipe,
   recipeChain,
-  writeReports,
   type SelectedComponent,
 } from "@turbineh/assembler";
 import { compileIntent, type CompilerConfig } from "@turbineh/compiler";
 import type { Decider } from "@turbineh/decider";
 import { resolveSet, type Stack } from "@turbineh/resolver";
-import { selectComponents } from "@turbineh/selector";
-import { verify, type VerifyResult } from "@turbineh/verifier";
+import { CAPABILITY_LABELS, selectComponents } from "@turbineh/selector";
+import type { FixerSlot } from "@turbineh/remediation";
+import type { WriterConfig } from "@turbineh/reporter";
+import type { VerifyResult } from "@turbineh/verifier";
+import { finalize, type FinalizeDeps } from "./finalize.js";
 import { candidatesFor, loadCatalog } from "./catalog-source.js";
 
 export type Phase =
@@ -23,6 +25,8 @@ export type Phase =
   | "resolving"
   | "assembling"
   | "verifying"
+  | "remediating"
+  | "reporting"
   | "delivering"
   | "done"
   | "failed";
@@ -32,6 +36,8 @@ export interface PipelineDeps {
   buildsDir: string;
   compiler: CompilerConfig;
   decider: Decider;
+  fixers: FixerSlot[];
+  writer: WriterConfig;
   emit: (
     buildId: string,
     phase: Phase,
@@ -227,19 +233,9 @@ export async function runBuild(
     files: assembled.files.length,
   });
 
-  // 5 · verify (sandbox)
+  // 5 · verify → automatic security remediation → report (shared with "improve and redeliver")
   t = performance.now();
-  await deps.emit(buildId, "verifying", "start", {});
-  const result = await verify(repoDir);
-  lap("verify", t);
-  await deps.emit(buildId, "verifying", "done", {
-    ok: result.ok,
-    steps: result.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
-  });
-
-  // 6 · deliver locally (channel A artefact on disk): reports + final commit
-  const metrics = {
-    timings: { ...timings, total: Math.round(performance.now() - t0) },
+  const metrics: Record<string, unknown> = {
     tokens: { compiler: compiled.usage, decider: "input-only, counted by the provider" },
     decider: selection.decider,
     reuse: {
@@ -254,62 +250,122 @@ export async function runBuild(
     pendingIntegration,
     gaps,
   };
-  writeReports(
-    repoDir,
-    securityReport(result),
-    turbinehReport(buildId, spec.app_name, metrics, result),
+  const fin = await finalize(
+    {
+      buildId,
+      repoDir,
+      scope: "auto",
+      facts: {
+        appName: spec.app_name,
+        summary: spec.summary,
+        recipe: recipeId,
+        entities: spec.entities.map((e) => e.name),
+        acceptanceCriteria: spec.acceptance_criteria,
+        components: selected.map((s) => ({ capability: s.capability, id: s.component.id })),
+        gaps: gapsWithPending.map((g) => g.capability),
+        gapLabels: CAPABILITY_LABELS,
+        reusedShare: (metrics.reuse as { reusedShare: number }).reusedShare,
+      },
+      metrics: { ...metrics, timings },
+    },
+    finalizeDeps(deps, buildId),
   );
-  git(repoDir, "add", "-A");
-  git(repoDir, "commit", "-q", "-m", "docs: security report and build report");
-  await deps.emit(buildId, result.ok ? "done" : "failed", "done", { repoDir, metrics });
-  return { buildId, status: result.ok ? "done" : "failed", repoDir, metrics, verify: result, spec };
-}
-
-function securityReport(v: VerifyResult): string {
-  const row = (n: string) => {
-    const s = v.steps.find((x) => x.name === n);
-    return s ? (s.ok ? "pass" : "FAIL") : "not run";
+  lap("verify", t);
+  const finalMetrics = {
+    ...metrics,
+    timings: { ...timings, total: Math.round(performance.now() - t0) },
+    alerts: fin.alerts,
+    remediation: fin.remediation,
+    report: fin.report,
+    improvement: fin.improvement,
   };
-  return `# Security report
-
-- Date: ${v.scannedAt}
-- Scope: this repository at the commit that contains this file, its lockfile (direct and transitive npm dependencies)
-  and the running app in an isolated network.
-
-| Check | Tool | Result |
-|---|---|---|
-| Secrets in git history | gitleaks | ${row("secrets")} |
-| Known vulnerabilities (direct + transitive) | OSV database | ${row("dependencies")} (${v.findings.advisories.length} advisories) |
-| Licenses (copyleft / unlicensed blocked) | installed package metadata | ${row("licenses")} |
-| Type safety | TypeScript strict | ${row("typecheck")} |
-| Lint | ESLint | ${row("lint")} |
-| Unit tests (security headers, rate limit, role policy) | Vitest | ${row("unit")} |
-| End-to-end smoke (sign-up, authz redirect, CRUD) | Playwright | ${row("e2e")} |
-
-${v.findings.advisories.length ? `## Advisories\n\n${v.findings.advisories.map((a) => `- ${a.id} · ${a.pkg} · ${a.severity}`).join("\n")}\n` : ""}
-## Not checked
-
-- Static analysis with custom Semgrep rules (planned).
-- Penetration testing, load testing and infrastructure configuration of your deployment.
-- Business-logic authorization beyond the role policy in \`src/server/authz.ts\`.
-
-This report is not a statement that the software is "secure"; it lists what was checked, when and with what result.
-`;
+  await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
+    repoDir,
+    alerts: fin.alerts.length,
+    remediated: fin.remediation.length,
+  });
+  return {
+    buildId,
+    status: fin.ok ? "done" : "failed",
+    repoDir,
+    metrics: finalMetrics,
+    verify: fin.verify,
+    spec,
+  };
 }
 
-function turbinehReport(
+/** Adapter from pipeline deps to finalize deps. */
+function finalizeDeps(deps: PipelineDeps, buildId: string): FinalizeDeps {
+  return {
+    decider: deps.decider,
+    fixers: deps.fixers,
+    writer: deps.writer,
+    ...(deps.compiler.reasoningEffort ? { reasoningEffort: deps.compiler.reasoningEffort } : {}),
+    emit: (phase, type, data) => deps.emit(buildId, phase, type, data),
+  };
+}
+
+/**
+ * "Improve and redeliver": takes a delivered repository, runs the improve-scope remediation (everything, including
+ * informational alerts) with full re-verification, and produces a new verified version.
+ */
+export async function improveBuild(
+  repoDir: string,
+  parent: {
+    spec: {
+      app_name: string;
+      summary: string;
+      entities: { name: string }[];
+      acceptance_criteria: string[];
+    };
+    metrics: Record<string, unknown>;
+  },
+  deps: PipelineDeps,
   buildId: string,
-  name: string,
-  metrics: Record<string, unknown>,
-  v: VerifyResult,
-): string {
-  return `# Build report · ${name}
-
-- Build: \`${buildId}\`
-- Verification: **${v.ok ? "green" : "red"}** (${v.steps.map((s) => `${s.name} ${s.ok ? "✓" : "✗"}`).join(", ")})
-
-\`\`\`json
-${JSON.stringify(metrics, null, 2)}
-\`\`\`
-`;
+): Promise<BuildOutcome> {
+  const t0 = performance.now();
+  const fin = await finalize(
+    {
+      buildId,
+      repoDir,
+      scope: "improve",
+      facts: {
+        appName: parent.spec.app_name,
+        summary: parent.spec.summary,
+        recipe: String((parent.metrics.recipe as { built?: string } | undefined)?.built ?? ""),
+        entities: parent.spec.entities.map((e) => e.name),
+        acceptanceCriteria: parent.spec.acceptance_criteria,
+        components: [],
+        gaps: ((parent.metrics.gaps as { capability: string }[] | undefined) ?? []).map(
+          (g) => g.capability,
+        ),
+        reusedShare: null,
+      },
+      metrics: { improvedFrom: parent.metrics.buildId ?? null },
+    },
+    finalizeDeps(deps, buildId),
+  );
+  const metrics = {
+    ...parent.metrics,
+    timings: { verify: fin.verifyMs, total: Math.round(performance.now() - t0) },
+    alerts: fin.alerts,
+    remediation: fin.remediation,
+    report: fin.report,
+    improvement: fin.improvement,
+    improved: true,
+    improvedFrom: parent.metrics.buildId ?? null,
+  };
+  await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
+    repoDir,
+    alerts: fin.alerts.length,
+    remediated: fin.remediation.length,
+  });
+  return {
+    buildId,
+    status: fin.ok ? "done" : "failed",
+    repoDir,
+    metrics,
+    verify: fin.verify,
+    spec: parent.spec,
+  };
 }

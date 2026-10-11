@@ -1,0 +1,216 @@
+{
+  "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, phone, level, enrolled on) and courses (title, teacher, weekly hours, price).",
+  "buildId": "27264a8f-ee3e-4ddb-9ec4-2f5817a222d0",
+  "status": "done",
+  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/27264a8f-ee3e-4ddb-9ec4-2f5817a222d0/linguistflow",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 136
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 382
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1986
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 3256
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 687
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7745
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3092
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 105
+    },
+    {
+      "name": "static",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "tokens": {
+      "compiler": {
+        "input_tokens": 455,
+        "output_tokens": 968
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 112,
+      "requests": 1,
+      "questions": 68
+    },
+    "reuse": {
+      "generatedLines": 538,
+      "reusedLines": 747,
+      "reusedShare": 0.581
+    },
+    "recipe": {
+      "requested": "saas-crud",
+      "built": "saas-crud"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "ui.primitives.turbineh"
+    ],
+    "pendingIntegration": [
+      {
+        "capability": "data.recurrence",
+        "component": "data.recurrence.rrule"
+      },
+      {
+        "capability": "data.ids",
+        "component": "data.ids.nanoid"
+      },
+      {
+        "capability": "data.money",
+        "component": "data.money.decimal-js"
+      },
+      {
+        "capability": "data.phone",
+        "component": "data.phone.libphonenumber-js"
+      },
+      {
+        "capability": "data.serialization",
+        "component": "data.serialization.superjson"
+      },
+      {
+        "capability": "security.password-hash",
+        "component": "security.password-hash.bcryptjs"
+      },
+      {
+        "capability": "ui.notifications",
+        "component": "ui.notifications.sonner"
+      }
+    ],
+    "gaps": [],
+    "timings": {
+      "compile": 3741,
+      "select": 161,
+      "resolve": 4,
+      "assemble": 109,
+      "verify": 55182,
+      "total": 59217
+    },
+    "alerts": [
+      {
+        "id": "GHSA-vfj7-8cjw-p6xm",
+        "level": "info",
+        "title": "high advisory in braces@3.0.3",
+        "explain": "A known vulnerability affects a development-only tool (used to build or test the app). It is not shipped to your users and is not reachable at runtime.",
+        "where": "braces@3.0.3"
+      }
+    ],
+    "remediation": [
+      {
+        "kind": "dependency",
+        "target": "esbuild → 0.25.0",
+        "reason": "GHSA-67mh-4wv8-2f99",
+        "detail": "MODERATE advisory in esbuild@0.18.20 (production)"
+      }
+    ],
+    "report": {
+      "headline": "LinguistFlow built for language school management",
+      "overview": "The app lets language schools manage student enrollments, course scheduling, and faculty assignments. It covers three core areas: schools, students, and courses. Roughly 58% of the codebase was reused from existing components.",
+      "criteria": [
+        {
+          "criterion": "Given an admin user, when they create a new student, then the student's name, email, phone, level, and enrollment date are saved to the database.",
+          "evidence": "End-to-end test: owner creates a student and sees it in the list",
+          "verified": true,
+          "confidence": 0.8835294117647059
+        },
+        {
+          "criterion": "Given an admin user, when they create a new course, then the course title, assigned teacher, weekly hours, and price are correctly recorded.",
+          "evidence": "End-to-end test: owner creates a course and sees it in the list",
+          "verified": true,
+          "confidence": 0.7988235294117647
+        },
+        {
+          "criterion": "Given a teacher role, when they log in, then they can view only the courses assigned to them.",
+          "evidence": "Not verified automatically",
+          "verified": false,
+          "confidence": 0.9470588235294117
+        },
+        {
+          "criterion": "Given an admin user, when they attempt to access the workspace settings, then they are granted access while a teacher is denied access.",
+          "evidence": "Not verified automatically",
+          "verified": false,
+          "confidence": 0.5341176470588236
+        },
+        {
+          "criterion": "Given a student record, when the admin updates the student's level, then the change is reflected in the student's profile immediately.",
+          "evidence": "Not verified automatically",
+          "verified": false,
+          "confidence": 0.7458823529411764
+        },
+        {
+          "criterion": "Given a course exists, when the admin assigns a teacher to it, then the teacher's dashboard displays the new course.",
+          "evidence": "Not verified automatically",
+          "verified": false,
+          "confidence": 0.9258823529411765
+        }
+      ],
+      "security": {
+        "status": "alerts",
+        "statusLine": "All automated checks passed. One development-only alert remains and does not affect your users.",
+        "points": [
+          "The app is protected by security headers, content security policy, input validation, role-based access checks, rate limiting, and safe error messages.",
+          "Before delivery, esbuild was updated to 0.25.0 to fix a moderate advisory in the previous version.",
+          "One info-level alert remains for a vulnerability in braces@3.0.3, a development-only tool. It is not shipped to your users and is not reachable at runtime, so it does not pose a risk to the live app."
+        ],
+        "fixedBeforeDelivery": 1
+      },
+      "nextSteps": [
+        "Add data.recurrence: no verified component covered it yet.",
+        "Add data.ids: no verified component covered it yet.",
+        "Add data.money: no verified component covered it yet.",
+        "Set your own secrets in .env.local before deploying."
+      ],
+      "writer": {
+        "model": "glm-5.2",
+        "fallback": true
+      }
+    }
+  }
+}

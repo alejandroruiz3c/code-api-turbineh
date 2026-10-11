@@ -17,13 +17,15 @@
     "@turbineh/compiler": "workspace:*",
     "@turbineh/db": "workspace:*",
     "@turbineh/decider": "workspace:*",
+    "@turbineh/remediation": "workspace:*",
+    "@turbineh/reporter": "workspace:*",
     "@turbineh/resolver": "workspace:*",
     "@turbineh/selector": "workspace:*",
     "@turbineh/shared": "workspace:*",
-    "@turbineh/verifier": "workspace:*",
-    "yaml": "2.9.1",
     "@turbineh/storage": "workspace:*",
-    "pg": "8.23.0"
+    "@turbineh/verifier": "workspace:*",
+    "pg": "8.23.0",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@types/pg": "8.23.1"

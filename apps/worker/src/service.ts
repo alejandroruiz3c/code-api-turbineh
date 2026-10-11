@@ -6,7 +6,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { hostname } from "node:os";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -15,6 +15,7 @@ import {
   costToday,
   emitEvent,
   finishBuild,
+  getBuild,
   getPool,
   requeueStale,
   type BuildRow,
@@ -23,7 +24,14 @@ import { deciderFromEnv } from "@turbineh/decider";
 import { createLogger, loadLocalEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
 import { processDelivery } from "./delivery.js";
-import { runBuild, type Phase } from "./pipeline.js";
+import { modelSlotsFromEnv } from "./models.js";
+import {
+  improveBuild,
+  runBuild,
+  type BuildOutcome,
+  type Phase,
+  type PipelineDeps,
+} from "./pipeline.js";
 
 loadLocalEnv();
 const env = readEnv();
@@ -70,22 +78,25 @@ async function storeArtifact(
 
 async function handle(build: BuildRow): Promise<void> {
   log.info("build claimed", { buildId: build.id });
-  const outcome = await runBuild(
-    build.prompt,
-    {
-      repoRoot,
-      buildsDir: join(repoRoot, "builds"),
-      decider,
-      compiler: {
-        baseURL: env.COMPILER_BASE_URL,
-        model: env.COMPILER_MODEL,
-        ...(env.COMPILER_API_KEY ? { apiKey: env.COMPILER_API_KEY } : {}),
-        ...(env.MODEL_REASONING_EFFORT ? { reasoningEffort: env.MODEL_REASONING_EFFORT } : {}),
-      },
-      emit: (_id, phase: Phase, type, data) => emitEvent(db, build.id, phase, type, data),
+  const pipelineDeps = {
+    repoRoot,
+    buildsDir: join(repoRoot, "builds"),
+    decider,
+    ...modelSlotsFromEnv(env),
+    compiler: {
+      baseURL: env.COMPILER_BASE_URL,
+      model: env.COMPILER_MODEL,
+      ...(env.COMPILER_API_KEY ? { apiKey: env.COMPILER_API_KEY } : {}),
+      ...(env.MODEL_REASONING_EFFORT ? { reasoningEffort: env.MODEL_REASONING_EFFORT } : {}),
     },
-    build.id,
-  );
+    emit: (_id: string, phase: Phase, type: string, data: Record<string, unknown>) =>
+      emitEvent(db, build.id, phase, type, data),
+  };
+  const parentId = typeof build.options.parent === "string" ? build.options.parent : null;
+  const outcome =
+    build.options.mode === "improve" && parentId
+      ? await improveFromParent(build, parentId, pipelineDeps)
+      : await runBuild(build.prompt, pipelineDeps, build.id);
   let artifact: Record<string, unknown> | undefined;
   if (outcome.status === "done" && outcome.repoDir) {
     await emitEvent(db, build.id, "delivering", "start", { channel: "A" });
@@ -111,6 +122,40 @@ async function handle(build: BuildRow): Promise<void> {
     reason: outcome.reason ?? null,
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
+}
+
+/** Restores the parent build's repository from its git bundle and runs "improve and redeliver" on a copy. */
+async function improveFromParent(
+  build: BuildRow,
+  parentId: string,
+  deps: PipelineDeps,
+): Promise<BuildOutcome> {
+  const parent = await getBuild(db, parentId, build.owner_id ?? undefined);
+  const art = parent?.artifact as { bundleKey?: string; slug?: string } | null | undefined;
+  if (!parent || parent.status !== "done" || !art?.bundleKey) {
+    return {
+      buildId: build.id,
+      status: "failed",
+      reason: "original build not available for improvement",
+      metrics: {},
+    };
+  }
+  const dir = join(repoRoot, "builds", build.id);
+  mkdirSync(dir, { recursive: true });
+  const bundle = join(dir, "parent.bundle");
+  writeFileSync(bundle, await storage.get(art.bundleKey));
+  const repoDir = join(dir, art.slug ?? "app");
+  execFileSync("git", ["clone", "--quiet", bundle, repoDir], { stdio: "pipe" });
+  await emitEvent(db, build.id, "assembling", "done", { improvedFrom: parentId });
+  return improveBuild(
+    repoDir,
+    {
+      spec: parent.spec as Parameters<typeof improveBuild>[1]["spec"],
+      metrics: { ...parent.metrics, buildId: parentId },
+    },
+    deps,
+    build.id,
+  );
 }
 
 let running = 0;

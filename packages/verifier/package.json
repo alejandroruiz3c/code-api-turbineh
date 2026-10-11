@@ -18,5 +18,9 @@
   },
   "dependencies": {
     "yaml": "2.9.1"
-  }
+  },
+  "files": [
+    "dist",
+    "rules"
+  ]
 }

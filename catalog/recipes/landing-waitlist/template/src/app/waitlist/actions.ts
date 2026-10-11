@@ -17,6 +17,8 @@ const schema = z.object({
 
 export type JoinState = { ok: boolean; message: string } | null;
 
+// Public by design (anyone can join): protected by IP rate limit, honeypot and Zod; no member to check.
+// nosemgrep: turbineh.server-action-without-authz
 export async function joinWaitlist(_prev: JoinState, formData: FormData): Promise<JoinState> {
   const h = await headers();
   const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0]?.trim() ?? "local";
