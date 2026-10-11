@@ -81,6 +81,8 @@ async function handle(build: BuildRow): Promise<void> {
   const pipelineDeps = {
     repoRoot,
     buildsDir: join(repoRoot, "builds"),
+    // Flywheel records outside the deployed tree (deploys replace the repository copy).
+    ...(process.env.GAPS_DIR ? { gapsDir: process.env.GAPS_DIR } : {}),
     decider,
     ...modelSlotsFromEnv(env),
     compiler: {

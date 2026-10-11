@@ -191,6 +191,86 @@ export async function verify(dir: string): Promise<VerifyResult> {
   };
 }
 
+/**
+ * Fast inner-loop check for the corrector: lint, typecheck and unit tests in parallel, no network, no database, no
+ * build/E2E/scans. It never replaces `verify()`: a build is accepted only after a full verification.
+ */
+export async function quickCheck(dir: string): Promise<VerifyResult> {
+  const lockHash = createHash("sha256")
+    .update(readFileSync(join(dir, "pnpm-lock.yaml")))
+    .digest("hex")
+    .slice(0, 12);
+  const baseImage = await ensureBaseImage(dir, lockHash);
+  const main = await run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--memory",
+      process.env.SANDBOX_MEMORY ?? "6g",
+      "--cpus",
+      process.env.SANDBOX_CPUS ?? "4",
+      "--pids-limit",
+      "4096",
+      "--security-opt",
+      "no-new-privileges",
+      "-v",
+      `${PNPM_STORE_VOLUME}:/pnpm-store`,
+      "-v",
+      `${dir}:/src:ro`,
+      ...Object.entries({ ...SYNTHETIC_ENV, BASE_HASH: lockHash }).flatMap(([k, v]) => [
+        "-e",
+        `${k}=${v}`,
+      ]),
+      baseImage ?? SANDBOX_IMAGE,
+      "sh",
+      "-c",
+      QUICK_SCRIPT,
+    ],
+    10 * 60_000,
+  );
+  const steps: StepResult[] = [];
+  for (const line of main.tail.split("\n")) {
+    const m = /^STEP (\w+) (\d+) (\d+)$/.exec(line.trim());
+    if (m)
+      steps.push({
+        name: m[1] as StepName,
+        ok: m[2] === "0",
+        ms: Number(m[3]),
+        detail: m[2] === "0" ? "" : main.tail,
+      });
+  }
+  if (main.code !== 0 && steps.every((x) => x.ok))
+    steps.push({ name: "install", ok: false, ms: main.ms, detail: main.tail });
+  return {
+    ok: steps.every((x) => x.ok),
+    steps,
+    findings: { secrets: 0, advisories: [], licenses: [], static: [] },
+    scannedAt: new Date().toISOString(),
+  };
+}
+
+const QUICK_SCRIPT = String.raw`
+set -u
+now() { date +%s%3N; }
+step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && tail -c 2500 /tmp/$n.log; return $c; }
+if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then
+  W=/opt/base; (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -)
+else
+  W=/tmp/app; mkdir -p $W; (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -)
+  cd $W && step install pnpm install --offline --frozen-lockfile || exit 1
+fi
+cd $W
+( step lint pnpm -s lint > /tmp/out.lint ) &
+( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
+( step unit pnpm -s test > /tmp/out.unit ) &
+wait
+cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit
+grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit || exit 1
+`;
+
 /** Shell script run inside the verification container. Each step prints `STEP <name> <exit> <ms>`. */
 const VERIFY_SCRIPT = String.raw`
 set -u

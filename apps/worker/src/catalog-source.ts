@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ExternalComponent } from "@turbineh/integrator";
 import type { CandidateCard } from "@turbineh/selector";
 import { parse } from "yaml";
 
@@ -49,4 +50,26 @@ export function candidatesFor(
       ),
     ]),
   );
+}
+
+/** Integration card for an approved dependency component (versions from the manifest, never from a model). */
+export function externalComponent(
+  componentsDir: string,
+  id: string,
+  capability: string,
+  label: string,
+): ExternalComponent {
+  const dir = join(componentsDir, id);
+  const m = parse(readFileSync(join(dir, "component.yaml"), "utf8")) as Manifest;
+  const purl = /^pkg:[a-z]+\/(.+)@([^@]+)$/.exec(m.source.purl);
+  if (!purl?.[1] || !purl[2]) throw new Error(`component ${id} has no installable purl`);
+  return {
+    id,
+    capability,
+    label,
+    pkg: { name: purl[1], version: purl[2] },
+    does: m.capability.does,
+    doesNot: m.capability.does_not,
+    dir,
+  };
 }

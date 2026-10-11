@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { writeReports } from "@turbineh/assembler";
+import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
   alertsOf,
@@ -22,15 +23,25 @@ import {
   type ReportFacts,
   type WriterConfig,
 } from "@turbineh/reporter";
-import { verify, type VerifyResult } from "@turbineh/verifier";
+import {
+  backupPatch,
+  failureLog,
+  patchOnce,
+  qualityFailed,
+  type CorrectionStep,
+  type ModelCfg,
+} from "@turbineh/integrator";
+import { quickCheck, verify, type VerifyResult } from "@turbineh/verifier";
 
 export interface FinalizeDeps {
   decider: Decider;
   fixers: FixerSlot[];
   writer: WriterConfig;
   reasoningEffort?: string;
+  /** WP10 corrector: directed patches (compiler model), swap, then Backup Coder (T4). */
+  correction?: { compiler: ModelCfg; backupCoder: BackupCoder };
   emit: (
-    phase: "verifying" | "remediating" | "reporting",
+    phase: "verifying" | "correcting" | "remediating" | "reporting",
     type: string,
     data: Record<string, unknown>,
   ) => Promise<void>;
@@ -45,6 +56,16 @@ export interface FinalizeInput {
     "evidence" | "checks" | "alerts" | "remediation" | "improvement" | "finalVersion"
   >;
   metrics: Record<string, unknown>;
+  /**
+   * Swap target: the commit before external integrations and Backup Coder fills. If directed corrections cannot make
+   * the build green, the extras are removed (their capabilities are reported as gaps) and everything is verified again.
+   */
+  swap?: {
+    toCommit: string;
+    capabilities: string[];
+    /** Optional files per capability (glue, Backup Coder module + test), removable one by one before a full swap. */
+    parts: { capability: string; kind: "glue" | "backup"; files: string[] }[];
+  };
 }
 
 export interface FinalizeResult {
@@ -56,6 +77,11 @@ export interface FinalizeResult {
   verifyMs: number;
   /** Offered once, only on normal builds with remaining alerts. */
   improvement: ImprovementEstimate | null;
+  corrections: CorrectionStep[];
+  /** Integrated components whose optional glue helper was removed (library and contract test kept). */
+  glueRemoved: string[];
+  /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
+  swappedOut: string[];
 }
 
 const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
@@ -63,7 +89,7 @@ const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s
 /** Evidence actually produced by this build's checks: E2E and unit test titles found in the repository. */
 function evidenceOf(repoDir: string): string[] {
   const out = new Set<string>();
-  for (const dir of ["tests/e2e", "tests/unit"]) {
+  for (const dir of ["tests/e2e", "tests/unit", "tests/unit/components", "tests/unit/backup"]) {
     const path = join(repoDir, dir);
     if (!existsSync(path)) continue;
     const files = readdirSync(path);
@@ -95,6 +121,94 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   };
   let result = await timedVerify();
   await deps.emit("verifying", "done", { ok: result.ok, steps: stepsView(result) });
+
+  // WP10 corrector (PLAN §4: correcting ↺ max 3) → swap → Backup Coder (T4). Full verification after every step.
+  const corrections: CorrectionStep[] = [];
+  let swappedOut: string[] = [];
+  let glueRemoved: string[] = [];
+  // False while `result` comes from a quick check; every exit from the correction phase is a full verification.
+  let full = true;
+  const reverify = async (data: Record<string, unknown>) => {
+    full = true;
+    result = await timedVerify();
+    await deps.emit("verifying", "done", { ok: result.ok, steps: stepsView(result), ...data });
+  };
+  if (deps.correction && qualityFailed(result)) {
+    // Inner loop: patch → quick check (lint, typecheck, unit; seconds). A full verification runs only when the
+    // quick check is green, so build/E2E failures are still caught and nothing is accepted without it.
+    for (let attempt = 1; attempt <= 3 && qualityFailed(result); attempt++) {
+      await deps.emit("correcting", "start", { attempt });
+      const step = await patchOnce(input.repoDir, result, deps.correction.compiler, attempt);
+      await deps.emit("correcting", "done", { attempt, step });
+      if (!step) break;
+      corrections.push(step);
+      const quick = await quickCheck(input.repoDir);
+      if (!quick.ok) {
+        result = quick;
+        full = false;
+        continue;
+      }
+      await reverify({ afterCorrection: attempt });
+    }
+    // Granular swap first: drop only the optional files named in the failing log (a glue helper is optional — the
+    // library and its contract test stay; a Backup Coder fill becomes a reported gap again).
+    const remaining = [...(input.swap?.parts ?? [])];
+    while (qualityFailed(result) && remaining.length > 0) {
+      const log = failureLog(result);
+      const culprits = remaining.filter((p) => p.files.some((f) => log.includes(f)));
+      if (culprits.length === 0) break;
+      for (const c of culprits) remaining.splice(remaining.indexOf(c), 1);
+      {
+        for (const p of culprits) {
+          for (const f of p.files) rmSync(join(input.repoDir, f), { force: true });
+        }
+        execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
+        execFileSync(
+          "git",
+          [
+            "-c",
+            "user.name=CODE-API-TURBINEH",
+            "-c",
+            "user.email=builds@turbineh.com",
+            "commit",
+            "-q",
+            "-m",
+            `fix: remove ${culprits.length} optional generated part(s) that could not be made green`,
+          ],
+          { cwd: input.repoDir },
+        );
+        glueRemoved.push(...culprits.filter((p) => p.kind === "glue").map((p) => p.capability));
+        swappedOut.push(...culprits.filter((p) => p.kind === "backup").map((p) => p.capability));
+        await deps.emit("correcting", "swap", { removed: culprits });
+        await reverify({ afterSwap: "partial" });
+      }
+    }
+    if (qualityFailed(result) && input.swap && input.swap.capabilities.length > 0) {
+      execFileSync("git", ["reset", "-q", "--hard", input.swap.toCommit], { cwd: input.repoDir });
+      execFileSync("git", ["clean", "-qfd"], { cwd: input.repoDir });
+      swappedOut = input.swap.capabilities;
+      glueRemoved = [];
+      await deps.emit("correcting", "swap", { removed: swappedOut });
+      await reverify({ afterSwap: true });
+    }
+    if (qualityFailed(result)) {
+      await deps.emit("correcting", "start", { trigger: "T4" });
+      const step = await backupPatch(
+        input.repoDir,
+        result,
+        deps.correction.backupCoder,
+        input.buildId,
+        corrections.length + 1,
+      );
+      await deps.emit("correcting", "done", { trigger: "T4", step });
+      if (step) {
+        corrections.push(step);
+        await reverify({ afterCorrection: "T4" });
+      }
+    }
+  }
+
+  if (!full) await reverify({ afterCorrection: "final" });
 
   const remediation: RemediationChange[] = [];
   const maxRounds = input.scope === "improve" ? 3 : 2;
@@ -159,8 +273,12 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       : null;
 
   await deps.emit("reporting", "start", {});
+  const swapped = new Set(swappedOut);
   const facts: ReportFacts = {
     ...input.facts,
+    components: input.facts.components.filter((c) => !swapped.has(c.capability)),
+    gaps: [...new Set([...input.facts.gaps, ...swappedOut])],
+    backupGenerated: (input.facts.backupGenerated ?? []).filter((b) => !swapped.has(b.capability)),
     evidence: evidenceOf(input.repoDir),
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,
@@ -173,6 +291,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
 
   const metrics = {
     ...input.metrics,
+    corrections,
+    swappedOut,
+    glueRemoved,
     alerts,
     remediation,
     improvement,
@@ -198,7 +319,18 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     ],
     { cwd: input.repoDir },
   );
-  return { ok: result.ok, verify: result, alerts, remediation, report, verifyMs, improvement };
+  return {
+    ok: result.ok,
+    verify: result,
+    alerts,
+    remediation,
+    report,
+    verifyMs,
+    improvement,
+    corrections,
+    swappedOut,
+    glueRemoved,
+  };
 }
 
 function securityMarkdown(

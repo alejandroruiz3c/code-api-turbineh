@@ -1,0 +1,25 @@
+{
+  "name": "@turbineh/integrator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WP10: integrates external catalog components (exact install, contract tests in the app, small generated glue), fills gaps with the Backup Coder and corrects failing builds with directed patches",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@turbineh/backup-coder": "workspace:*",
+    "@turbineh/verifier": "workspace:*",
+    "openai": "7.23.0",
+    "zod": "4.6.5"
+  }
+}

@@ -20,6 +20,8 @@ export interface ReportFacts {
   alerts: SecurityAlert[];
   remediation: RemediationChange[];
   reusedShare: number | null;
+  /** Helpers written by the Backup Coder for capabilities without a catalog component (verified like the rest). */
+  backupGenerated?: { capability: string; label: string; file: string }[];
   /** Estimate for "Improve & redeliver" (null when it is not offered). */
   improvement?: ImprovementEstimate | null;
   /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
@@ -176,6 +178,12 @@ function stepFacts(facts: ReportFacts): string[] {
       .map(
         (g) =>
           `Not included in this version yet: ${facts.gapLabels?.[g] ?? g}. Add it yourself or ask for it in a new build.`,
+      ),
+    ...(facts.backupGenerated ?? [])
+      .slice(0, 1)
+      .map(
+        (b) =>
+          `Review ${b.file} (${b.label}): it was written by the backup code model because no audited component exists yet; it passed the same checks and has its own tests.`,
       ),
     ...facts.alerts
       .slice(0, 2)
