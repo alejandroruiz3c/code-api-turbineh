@@ -2,7 +2,7 @@
   "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export to Excel.",
   "buildId": "9eda83fe-d8d6-4e76-a326-6c90d47e3ca3",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/9eda83fe-d8d6-4e76-a326-6c90d47e3ca3/warehouse-inventory-tracker",
+  "repoDir": "builds/9eda83fe-d8d6-4e76-a326-6c90d47e3ca3/warehouse-inventory-tracker",
   "steps": [
     {
       "name": "install",

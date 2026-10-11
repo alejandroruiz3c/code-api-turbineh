@@ -2,7 +2,7 @@
   "prompt": "A SaaS for gym memberships: gyms as workspaces with admins and staff; manage members (full name, email, plan, monthly fee, active, joined on) and classes (title, coach, starts at, capacity).",
   "buildId": "ebeff520-6d18-4faa-8b88-a6231ef03b7b",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/ebeff520-6d18-4faa-8b88-a6231ef03b7b/gymflow-saas",
+  "repoDir": "builds/ebeff520-6d18-4faa-8b88-a6231ef03b7b/gymflow-saas",
   "steps": [
     {
       "name": "install",

@@ -2,7 +2,7 @@
   "prompt": "A SaaS for property managers: agencies as workspaces; manage properties (address, city, monthly rent, available from, furnished) and tenants (full name, email, phone, lease end date).",
   "buildId": "a531b3ce-47bf-4d41-8a9d-38a90f562cb3",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/a531b3ce-47bf-4d41-8a9d-38a90f562cb3/propflow-saas",
+  "repoDir": "builds/a531b3ce-47bf-4d41-8a9d-38a90f562cb3/propflow-saas",
   "steps": [
     {
       "name": "install",

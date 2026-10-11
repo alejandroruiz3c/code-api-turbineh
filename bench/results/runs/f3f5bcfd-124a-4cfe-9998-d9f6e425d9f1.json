@@ -2,7 +2,7 @@
   "prompt": "A SaaS for freelance agencies to track projects (name, client, budget, deadline, status, notes) and invoices (number, amount, issued on, paid) per agency workspace with admin and member roles.",
   "buildId": "f3f5bcfd-124a-4cfe-9998-d9f6e425d9f1",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/f3f5bcfd-124a-4cfe-9998-d9f6e425d9f1/agencyflow",
+  "repoDir": "builds/f3f5bcfd-124a-4cfe-9998-d9f6e425d9f1/agencyflow",
   "steps": [
     {
       "name": "install",

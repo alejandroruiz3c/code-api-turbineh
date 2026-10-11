@@ -2,7 +2,7 @@
   "prompt": "An internal tool for a bike repair shop to track repair orders (customer name, bike model, issue, price, promised date, done) with search and CSV export.",
   "buildId": "830c2415-f675-4373-b79b-4c7186091ba9",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/830c2415-f675-4373-b79b-4c7186091ba9/cyclefix-manager",
+  "repoDir": "builds/830c2415-f675-4373-b79b-4c7186091ba9/cyclefix-manager",
   "steps": [
     {
       "name": "install",

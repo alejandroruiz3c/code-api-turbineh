@@ -2,7 +2,7 @@
   "prompt": "A landing page for my coffee subscription startup BeanBox with a waitlist form, confirmation email and an admin panel to see signups.",
   "buildId": "8a248c1c-0ab3-44e2-a5f9-5abb4d1ed543",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/8a248c1c-0ab3-44e2-a5f9-5abb4d1ed543/beanbox-landing",
+  "repoDir": "builds/8a248c1c-0ab3-44e2-a5f9-5abb4d1ed543/beanbox-landing",
   "steps": [
     {
       "name": "install",

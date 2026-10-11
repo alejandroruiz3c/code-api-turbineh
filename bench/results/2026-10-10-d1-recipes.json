@@ -6,7 +6,7 @@
       "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, level, enrolled on) and courses (title, teacher, weekly hours, price).",
       "buildId": "456af441-6e6a-4b8c-b552-0ac1c55527a5",
       "status": "done",
-      "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/456af441-6e6a-4b8c-b552-0ac1c55527a5/linguistflow",
+      "repoDir": "builds/456af441-6e6a-4b8c-b552-0ac1c55527a5/linguistflow",
       "steps": [
         {
           "name": "install",
@@ -113,7 +113,7 @@
       "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export.",
       "buildId": "bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f",
       "status": "done",
-      "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f/warehouse-inventory-tracker",
+      "repoDir": "builds/bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f/warehouse-inventory-tracker",
       "steps": [
         {
           "name": "install",
@@ -222,7 +222,7 @@
       "prompt": "A landing page for my coffee subscription startup BeanBox with a waitlist form, confirmation email and an admin panel to see signups.",
       "buildId": "271104a5-7ea2-46dd-bb63-32c4fcd16e19",
       "status": "done",
-      "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/271104a5-7ea2-46dd-bb63-32c4fcd16e19/beanbox-landing",
+      "repoDir": "builds/271104a5-7ea2-46dd-bb63-32c4fcd16e19/beanbox-landing",
       "steps": [
         {
           "name": "install",
