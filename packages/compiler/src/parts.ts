@@ -113,6 +113,22 @@ export const CAPABILITY_QUESTIONS: Partial<Record<(typeof CAPABILITIES)[number],
   "data.xml": "The app imports or exports XML (product feeds, sitemaps, integrations).",
   "ops.http-client": "The app calls external APIs.",
   "email.plain-text": "Emails need a plain-text version for better deliverability.",
+  "ui.map": "The site shows a map (store locations, delivery areas, offices).",
+  "files.image-processing":
+    "Uploaded images must be resized or converted (thumbnails, product photos).",
+  "privacy.cookie-consent":
+    "The site uses analytics or marketing cookies that need visitor consent.",
+  "ui.lightbox": "Users open images full screen in a gallery (products, portfolio).",
+  "ui.slider": "Users pick a value or range with a slider (price filters, quantities).",
+  "ui.checkbox": "Forms or lists use custom checkboxes.",
+  "ui.switch": "Settings are turned on and off with switches.",
+  "ui.progress": "The interface shows progress (uploads, onboarding steps).",
+  "ui.avatar": "The interface shows user avatars or profile pictures.",
+  "ui.scroll-area": "Panels with long content need their own scrolling.",
+  "ui.toggle-group": "Users switch between views or options with toggle buttons.",
+  "ui.alert-dialog": "Destructive actions ask for confirmation first.",
+  "ui.hover-card": "Hovering over a name or link shows a preview card.",
+  "ui.color-picker": "Users choose colours (branding, product options).",
 };
 
 const fieldType = z.enum([

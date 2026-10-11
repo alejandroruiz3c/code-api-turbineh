@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Catalog batch 5: 17 more approved components (123 manifests): maps (MapLibre), image processing (Jimp), cookie consent, image lightbox, PDF from React, QR codes as components, file drop zones, colour picker and the remaining accessible controls (slider, checkbox, switch, progress, avatar, scroll area, toggle group, confirmation dialog, hover card); 14 new capabilities.
+
 - Recipe `storefront` (ADR-0018): catalog with images and search, cookie cart, Stripe Checkout via REST (hosted page), signed idempotent webhook with stock in one transaction, orders and products admin, Product JSON-LD.
 - GEO by default in public recipes: `/llms.txt`, Organization/WebSite/FAQPage/Article/Product JSON-LD, robots.txt open to AI crawlers on public pages (single opt-out switch), sitemaps.
 - Benchmark prompts for corporate sites and shops (21 prompts).

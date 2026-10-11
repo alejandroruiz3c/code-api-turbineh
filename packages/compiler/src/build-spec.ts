@@ -94,6 +94,20 @@ export const CAPABILITIES = [
   "data.xml",
   "ops.http-client",
   "email.plain-text",
+  "ui.map",
+  "files.image-processing",
+  "privacy.cookie-consent",
+  "ui.lightbox",
+  "ui.slider",
+  "ui.checkbox",
+  "ui.switch",
+  "ui.progress",
+  "ui.avatar",
+  "ui.scroll-area",
+  "ui.toggle-group",
+  "ui.alert-dialog",
+  "ui.hover-card",
+  "ui.color-picker",
 ] as const;
 
 const item = (t: number, x: number) =>
