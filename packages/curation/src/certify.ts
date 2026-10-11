@@ -88,7 +88,12 @@ export async function certify(
         name: "turbineh-certify",
         private: true,
         type: "module",
-        dependencies: { ...deps, react: HARNESS.react, "react-dom": HARNESS["react-dom"], zod: HARNESS.zod },
+        dependencies: {
+          ...deps,
+          react: HARNESS.react,
+          "react-dom": HARNESS["react-dom"],
+          zod: HARNESS.zod,
+        },
         devDependencies: {
           vitest: HARNESS.vitest,
           vite: HARNESS.vite,

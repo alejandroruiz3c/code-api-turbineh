@@ -36,12 +36,7 @@
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
     "status": {
-      "enum": [
-        "discovered",
-        "evaluated",
-        "approved",
-        "deprecated"
-      ]
+      "enum": ["discovered", "evaluated", "approved", "deprecated"]
     },
     "category": {
       "enum": [
@@ -67,10 +62,7 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "purl",
-        "repo"
-      ],
+      "required": ["purl", "repo"],
       "properties": {
         "purl": {
           "type": "string",
@@ -93,11 +85,7 @@
     "capability": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "does",
-        "does_not",
-        "use_cases"
-      ],
+      "required": ["does", "does_not", "use_cases"],
       "properties": {
         "does": {
           "type": "string",
@@ -137,12 +125,7 @@
     "contract": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "inputs",
-        "outputs",
-        "errors",
-        "limits"
-      ],
+      "required": ["inputs", "outputs", "errors", "limits"],
       "properties": {
         "inputs": {
           "type": "array",
@@ -173,9 +156,7 @@
     "compat": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "runtime"
-      ],
+      "required": ["runtime"],
       "properties": {
         "runtime": {
           "type": "string"
@@ -194,12 +175,7 @@
     "effects": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "network",
-        "fs",
-        "db",
-        "external_services"
-      ],
+      "required": ["network", "fs", "db", "external_services"],
       "properties": {
         "network": {
           "type": "boolean"
@@ -221,18 +197,10 @@
     "integration": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "strategy",
-        "install"
-      ],
+      "required": ["strategy", "install"],
       "properties": {
         "strategy": {
-          "enum": [
-            "dependency",
-            "vendored-with-provenance",
-            "adapter",
-            "fork"
-          ]
+          "enum": ["dependency", "vendored-with-provenance", "adapter", "fork"]
         },
         "install": {
           "type": "string"
@@ -257,17 +225,12 @@
     "quality": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "tests"
-      ],
+      "required": ["tests"],
       "properties": {
         "tests": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "command",
-            "passed"
-          ],
+          "required": ["command", "passed"],
           "properties": {
             "command": {
               "type": "string"
@@ -286,11 +249,7 @@
     "security": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "tools",
-        "findings",
-        "scope"
-      ],
+      "required": ["tools", "findings", "scope"],
       "properties": {
         "scanned_at": {
           "type": "string",
@@ -306,22 +265,13 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "severity"
-            ],
+            "required": ["id", "severity"],
             "properties": {
               "id": {
                 "type": "string"
               },
               "severity": {
-                "enum": [
-                  "critical",
-                  "high",
-                  "medium",
-                  "low",
-                  "info"
-                ]
+                "enum": ["critical", "high", "medium", "low", "info"]
               },
               "mitigation": {
                 "type": "string"
@@ -337,10 +287,7 @@
     "license": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "declared",
-        "detected"
-      ],
+      "required": ["declared", "detected"],
       "properties": {
         "declared": {
           "type": "string"
@@ -361,21 +308,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "claim",
-          "origin"
-        ],
+        "required": ["claim", "origin"],
         "properties": {
           "claim": {
             "type": "string"
           },
           "origin": {
-            "enum": [
-              "maintainer",
-              "model-inferred",
-              "tested",
-              "unknown"
-            ]
+            "enum": ["maintainer", "model-inferred", "tested", "unknown"]
           },
           "ref": {
             "type": "string"
@@ -386,12 +325,7 @@
     "relations": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "requires",
-        "provides",
-        "conflicts",
-        "tested_with"
-      ],
+      "required": ["requires", "provides", "conflicts", "tested_with"],
       "properties": {
         "requires": {
           "type": "array",
