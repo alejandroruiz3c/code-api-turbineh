@@ -1,0 +1,5 @@
+{
+  "id": "shop-01",
+  "expected_recipe": "storefront",
+  "prompt": "An online shop for Lino & Co, a small brand selling linen clothing: product catalog with photos and prices, shopping cart, card payments, order management and stock for the owner."
+}

@@ -17,6 +17,18 @@ test.describe.serial("corporate site", () => {
       await expect(page.getByRole("heading", { name: /About/, level: 1 })).toBeVisible();
     });
 
+    test("is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)", async ({
+      page,
+      request,
+    }) => {
+      await page.goto("/");
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(3);
+      expect(await (await request.get("/llms.txt")).text()).toContain("## Services");
+      const robots = await (await request.get("/robots.txt")).text();
+      expect(robots).toContain("ClaudeBot");
+      expect(robots).toContain("Disallow: /dashboard");
+    });
+
     test("sends a contact message", async ({ page }) => {
       await page.goto("/contact");
       await page.getByLabel("Name").fill("Grace Visitor");

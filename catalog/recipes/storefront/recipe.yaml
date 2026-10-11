@@ -1,0 +1,12 @@
+id: storefront
+description: Online shop with product catalog and images, cart, Stripe Checkout payments, orders and stock, and an admin panel
+extends: saas-crud
+providedEntities:
+  [Product, Item, Article, Variant, Cart, CartItem, Order, OrderItem, OrderLine, Purchase, Payment, Customer, Stock, Inventory, Category]
+defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
+# Implemented by the template itself (native): no SDK, signature verification and money in integer cents.
+providedCapabilities:
+  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection]
+nav:
+  - { label: Products, href: /dashboard/products }
+  - { label: Orders, href: /dashboard/orders }

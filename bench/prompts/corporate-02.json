@@ -1,0 +1,5 @@
+{
+  "id": "corporate-02",
+  "expected_recipe": "corporate-site",
+  "prompt": "A website for a boutique accounting firm: services for freelancers and small companies, about us, a blog with tax tips, and a contact form; the partners edit the texts and publish articles."
+}

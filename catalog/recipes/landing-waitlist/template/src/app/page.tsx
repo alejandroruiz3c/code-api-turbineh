@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BRAND } from "@/brand";
 import { SITE } from "@/content/site";
 import { env } from "@/env";
+import { faqJsonLd, websiteJsonLd } from "@/lib/geo";
 import { WaitlistForm } from "./waitlist/form";
 
 export const metadata: Metadata = {
@@ -32,6 +33,18 @@ export default function Home() {
     <>
       {/* nosemgrep: turbineh.unsanitized-html -- static JSON-LD built from our own constants, "<" escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by the GEO helpers, "<" escaped */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: faqJsonLd(SITE.faq) }}
+      />
+      {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by the GEO helpers, "<" escaped */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: websiteJsonLd("__APP_NAME__", env.BETTER_AUTH_URL, SITE.hero_subtitle),
+        }}
+      />
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
         <span className="flex items-center gap-2 font-semibold">
           {BRAND.logo ? (

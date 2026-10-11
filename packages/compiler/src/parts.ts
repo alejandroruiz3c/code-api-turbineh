@@ -19,6 +19,8 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
     "Portal where external clients upload files and follow the status of their requests",
   "corporate-site":
     "Company or professional website: home, services, about, blog or news, contact form, edited by the team",
+  storefront:
+    "Online shop: product catalog with prices and images, cart, online payment, orders and stock managed by the owner",
   out_of_scope:
     "Anything else: not a web app, mobile/desktop/game, AI features in the app, scraping, or a different product family",
 };

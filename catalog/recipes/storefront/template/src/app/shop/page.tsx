@@ -1,0 +1,76 @@
+import { and, count, desc, eq, ilike } from "drizzle-orm";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ProductCard } from "@/components/product-card";
+import { ShopShell } from "@/components/shop-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { db } from "@/db/client";
+import { products } from "@/db/schema";
+import { env } from "@/env";
+import { PAGE_SIZE, parsePage, parseQuery } from "@/lib/pagination";
+import { cartCount } from "@/server/shop";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Shop — __APP_NAME__",
+  alternates: { canonical: "/shop" },
+};
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function Shop({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams;
+  const { page, offset, limit } = parsePage(params.page);
+  const q = parseQuery(params.q);
+  const where = and(
+    eq(products.active, true),
+    q ? ilike(products.name, `%${q.replace(/[%_\\]/g, "\\$&")}%`) : undefined,
+  );
+  const [rows, [{ total } = { total: 0 }]] = await Promise.all([
+    db
+      .select({
+        id: products.id,
+        slug: products.slug,
+        name: products.name,
+        priceCents: products.priceCents,
+        imageMime: products.imageMime,
+      })
+      .from(products)
+      .where(where)
+      .orderBy(desc(products.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db.select({ total: count() }).from(products).where(where),
+  ]);
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const link = (p: number) => `/shop?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+  return (
+    <ShopShell cartCount={await cartCount()}>
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <h1 className="mb-6 text-4xl font-bold">Shop</h1>
+        <form role="search" className="mb-8 flex max-w-md gap-2">
+          <Input
+            aria-label="Search products"
+            name="q"
+            defaultValue={q}
+            placeholder="Search products"
+          />
+          <Button type="submit">Search</Button>
+        </form>
+        {rows.length === 0 ? <p className="text-slate-600">No products found.</p> : null}
+        <ul className="grid grid-cols-2 gap-6 md:grid-cols-4">
+          {rows.map((p) => (
+            <ProductCard key={p.id} p={p} currency={env.SHOP_CURRENCY} />
+          ))}
+        </ul>
+        <nav aria-label="Pagination" className="mt-8 flex gap-4 text-sm">
+          {page > 1 ? <Link href={link(page - 1)}>Previous</Link> : null}
+          <span>
+            Page {page} of {pages}
+          </span>
+          {page < pages ? <Link href={link(page + 1)}>Next</Link> : null}
+        </nav>
+      </section>
+    </ShopShell>
+  );
+}

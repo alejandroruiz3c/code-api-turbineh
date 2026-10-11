@@ -1,0 +1,5 @@
+{
+  "id": "shop-03",
+  "expected_recipe": "storefront",
+  "prompt": "A shop for handmade ceramics: catalog with images and prices, limited stock per piece, cart and secure card checkout, and an admin to manage products and orders."
+}

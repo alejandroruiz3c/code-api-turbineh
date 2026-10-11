@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { db } from "@/db/client";
 import { posts } from "@/db/schema";
+import { faqJsonLd, websiteJsonLd } from "@/lib/geo";
 import { absolute, jsonLd } from "@/lib/seo";
 import { getSite } from "@/server/site";
 
@@ -43,6 +44,18 @@ export default async function Home() {
     <SiteShell cta={site.cta}>
       {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by jsonLd(), "<" escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: org }} />
+      {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by the GEO helpers, "<" escaped */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: faqJsonLd(site.faq) }}
+      />
+      {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by the GEO helpers, "<" escaped */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: websiteJsonLd("__APP_NAME__", absolute("/"), site.hero_subtitle),
+        }}
+      />
       <section className="bg-white">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-6 py-24 text-center">
           <h1 className="text-5xl font-bold tracking-tight">{site.tagline}</h1>

@@ -40,7 +40,9 @@ test.describe("public landing", () => {
   test("is ready for search engines (metadata, sitemap, robots)", async ({ page, request }) => {
     await page.goto("/");
     await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
-    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(3);
+    expect(await (await request.get("/llms.txt")).text()).toContain("## FAQ");
+    expect(await (await request.get("/robots.txt")).text()).toContain("GPTBot");
     expect(await (await request.get("/sitemap.xml")).text()).toContain("<urlset");
     expect(await (await request.get("/robots.txt")).text()).toContain("Disallow: /dashboard");
   });

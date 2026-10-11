@@ -8,6 +8,7 @@ export const RECIPES = [
   "bookings",
   "client-portal",
   "corporate-site",
+  "storefront",
 ] as const;
 
 /** Capability ids the Selector can resolve (category.capability). `ai.*` is blocked until Phase 3. */
