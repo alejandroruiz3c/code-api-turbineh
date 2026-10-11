@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { DeployForMe } from "./deploy-for-me";
 
 interface BuildEvent {
   id: number;
@@ -191,7 +192,7 @@ export function BuildLive({ id }: { id: string }) {
           </Panel>
         ) : null}
 
-        {result ? <Result id={id} result={result} /> : null}
+        {result ? <Result id={id} result={result} onReload={() => void loadResult()} /> : null}
       </div>
     </div>
   );
@@ -206,7 +207,15 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Result({ id, result }: { id: string; result: BuildResult }) {
+function Result({
+  id,
+  result,
+  onReload,
+}: {
+  id: string;
+  result: BuildResult;
+  onReload: () => void;
+}) {
   const docs = useMemo(() => Object.keys(result.artifact?.docs ?? {}), [result]);
   const [tab, setTab] = useState(docs[0] ?? "README.md");
   if (!result.artifact) {
@@ -230,6 +239,7 @@ function Result({ id, result }: { id: string; result: BuildResult }) {
       <Panel title="Your app">
         <div className="flex flex-wrap items-center gap-3">
           <PushToGitHub id={id} initialUrl={result.repo_url} />
+          <DeployForMe id={id} onDone={onReload} />
           <a
             href={result.artifact.zip_url}
             className="rounded-full border border-line px-4 py-2 text-sm text-ice-2 hover:border-teal"

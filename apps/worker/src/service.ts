@@ -23,6 +23,7 @@ import {
 import { deciderFromEnv } from "@turbineh/decider";
 import { createLogger, loadLocalEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
+import { processDeployment } from "./deploy-job.js";
 import { processDelivery } from "./delivery.js";
 import { modelSlotsFromEnv } from "./models.js";
 import {
@@ -45,6 +46,7 @@ const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 2);
 const DAILY_CAP_EUR = Number(process.env.DAILY_COST_CAP_EUR ?? 100);
 const EST_EUR_PER_BUILD = Number(process.env.EST_COST_EUR_PER_BUILD ?? 0.02);
 const DOCS = [
+  "DEPLOYED.md",
   "TURBINEH_REPORT.md",
   "DEPLOY.md",
   "SECURITY.md",
@@ -208,8 +210,22 @@ if (tokenKey) {
       if (!worked) await new Promise((r) => setTimeout(r, 1000));
     }
   })();
+  // "Deploy for me": own loop (minutes per job, mostly waiting on the client's Vercel build).
+  void (async () => {
+    for (;;) {
+      const worked = await processDeployment(db, storage, tokenKey, async (buildId, repoDir) => {
+        const build = await getBuild(db, buildId);
+        if (!build) throw new Error("build not found");
+        return storeArtifact(build, repoDir, storage);
+      }).catch((err: unknown) => {
+        log.error("deployment loop failed", { error: String(err) });
+        return false;
+      });
+      if (!worked) await new Promise((r) => setTimeout(r, 2000));
+    }
+  })();
 } else {
-  log.warn("DELIVERY_TOKEN_KEY not set: GitHub deliveries disabled");
+  log.warn("DELIVERY_TOKEN_KEY not set: GitHub deliveries and deployments disabled");
 }
 for (;;) {
   await tick().catch((err: unknown) => log.error("tick failed", { error: String(err) }));

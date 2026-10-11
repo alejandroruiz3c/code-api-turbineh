@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { writeReports, writeStartHere } from "@turbineh/assembler";
+import { writeReports, writeStartHere, type HandoverFacts } from "@turbineh/assembler";
 import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
@@ -78,6 +78,8 @@ export interface FinalizeResult {
   /** Offered once, only on normal builds with remaining alerts. */
   improvement: ImprovementEstimate | null;
   corrections: CorrectionStep[];
+  /** Facts behind START_HERE.html (kept so "Deploy for me" can regenerate it). */
+  handover: HandoverFacts;
   /** Integrated components whose optional glue helper was removed (library and contract test kept). */
   glueRemoved: string[];
   /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
@@ -289,6 +291,17 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   const report = await buildReport(facts, deps.decider, deps.writer);
   await deps.emit("reporting", "done", { report });
 
+  const handover = {
+    appName: input.facts.appName,
+    summary: input.facts.summary,
+    verified: result.ok,
+    checksPassed: result.steps.filter((s) => s.ok).length,
+    checksTotal: result.steps.length,
+    criteriaVerified: report.criteria.filter((c) => c.verified).length,
+    criteriaTotal: report.criteria.length,
+    alerts: alerts.length,
+    fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
+  };
   const metrics = {
     ...input.metrics,
     corrections,
@@ -299,17 +312,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     improvement,
     report: { writer: report.writer },
   };
-  writeStartHere(input.repoDir, {
-    appName: input.facts.appName,
-    summary: input.facts.summary,
-    verified: result.ok,
-    checksPassed: result.steps.filter((s) => s.ok).length,
-    checksTotal: result.steps.length,
-    criteriaVerified: report.criteria.filter((c) => c.verified).length,
-    criteriaTotal: report.criteria.length,
-    alerts: alerts.length,
-    fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
-  });
+  writeStartHere(input.repoDir, handover);
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),
@@ -332,6 +335,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   );
   return {
     ok: result.ok,
+    handover,
     verify: result,
     alerts,
     remediation,

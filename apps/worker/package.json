@@ -18,6 +18,7 @@
     "@turbineh/compiler": "workspace:*",
     "@turbineh/db": "workspace:*",
     "@turbineh/decider": "workspace:*",
+    "@turbineh/deployer": "workspace:*",
     "@turbineh/integrator": "workspace:*",
     "@turbineh/remediation": "workspace:*",
     "@turbineh/reporter": "workspace:*",

@@ -1,0 +1,19 @@
+{
+  "name": "@turbineh/deployer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deploy for me (ADR-0017): deploys a verified build into the client's own Vercel account and database (Neon or an existing Postgres)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  }
+}

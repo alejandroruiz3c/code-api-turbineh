@@ -53,6 +53,9 @@ export function deployGuide(appName: string, envExample: string): string {
 
 From this package to a live app your customers can use. Takes about 30 minutes the first time.
 
+> **Prefer us to do it?** On your build page, **Deploy for me** puts the app online in your own Vercel account and a
+> new database for you in about 5 minutes, and updates this package with the live address. It is optional.
+
 ## 1 · What you need
 
 - A **PostgreSQL** database (managed: Neon, Supabase, Scaleway, AWS RDS…).
@@ -122,6 +125,60 @@ export interface HandoverFacts {
   criteriaTotal: number;
   alerts: number;
   fixedBeforeDelivery: number;
+  /** Set when TurbineH deployed the app into the client's own accounts ("Deploy for me"). */
+  live?: LiveInfo;
+}
+
+export interface LiveInfo {
+  url: string;
+  vercelProject: string;
+  database: {
+    provider: "neon" | "external";
+    projectId?: string | undefined;
+    region?: string | undefined;
+  };
+  settings: string[];
+  cron: boolean;
+  deployedAt: string;
+}
+
+/** DEPLOYED.md: what TurbineH set up in the client's accounts and what is left for them to do. */
+export function deployedGuide(appName: string, live: LiveInfo): string {
+  const db =
+    live.database.provider === "neon"
+      ? `Neon project \`${live.database.projectId ?? ""}\` in ${live.database.region ?? "the EU"} (Frankfurt) — https://console.neon.tech`
+      : "Your existing PostgreSQL database (the one you gave us)";
+  return `# ${appName} is live
+
+**${live.url}** — deployed for you on ${live.deployedAt.slice(0, 10)} into **your own accounts**. TurbineH keeps no access:
+the credentials you gave us were used once and deleted.
+
+## What we set up
+
+| What | Where |
+|---|---|
+| Hosting | Vercel project \`${live.vercelProject}\` — https://vercel.com/dashboard (functions in the EU, \`fra1\`) |
+| Database | ${db} |
+| Tables | Created by the migrations, which ran inside your own Vercel build |
+| Settings | ${live.settings.map((k) => `\`${k}\``).join(", ")} — stored encrypted in your Vercel project (secrets were generated at random and are not stored anywhere else) |
+${live.cron ? "| Background jobs | Vercel Cron calls `/api/jobs/run` daily (Hobby plan limit); on Vercel Pro you can make it every minute in `vercel.json` |\n" : ""}
+## What is left for you (about 15 minutes)
+
+1. **Open your app** at ${live.url} and **sign up**: you become the owner of the first workspace.
+2. **Invite your team** and give each person the right role.
+3. **Your domain (optional):** Vercel → your project → Settings → Domains. Then set \`BETTER_AUTH_URL\` to the new
+   address (Settings → Environment Variables) and redeploy.
+4. **Real emails (optional):** create a Resend account, verify your domain and add \`RESEND_API_KEY\` and \`EMAIL_FROM\`
+   in the same place. Until then, emails are written to the logs instead of being sent.
+5. **Backups:** ${live.database.provider === "neon" ? "Neon keeps point-in-time history; check the retention of your plan." : "turn on daily backups in your database provider."}
+
+## Changing the app later
+
+Push this repository to your GitHub ("Push to my GitHub"), then in Vercel → your project → Settings → Git connect
+that repository: every push deploys automatically. Migrations run on each deploy.
+
+[DEPLOY.md](DEPLOY.md) still explains every setting if you ever move to another host.
+`;
 }
 
 const esc = (s: string) =>
@@ -161,6 +218,14 @@ const READ_FIRST: DocCard[] = [
     when: "Before inviting customers",
   },
 ];
+
+const LIVE_CARD: DocCard = {
+  file: "DEPLOYED.md",
+  title: "Your live app",
+  what: "The address of your app, what we set up in your accounts and the few steps left for you.",
+  who: "You",
+  when: "Now",
+};
 
 const FOR_DEVELOPERS: DocCard[] = [
   {
@@ -236,6 +301,7 @@ export function startHereHtml(f: HandoverFacts): string {
           padding: 7px 14px; border: 1px solid var(--line); background: rgba(10,42,114,.5); color: var(--ice); }
   .pill.ok { color: var(--ok); border-color: rgba(127,209,160,.45); }
   .pill.warn { color: var(--warn); border-color: rgba(242,178,75,.45); }
+  .pill.live { color: var(--navy); background: var(--ok); border-color: var(--ok); text-decoration: none; font-weight: 700; }
   section { margin-top: 48px; }
   h2 { font-size: 22px; margin: 8px 0 18px; color: #fff; letter-spacing: -.01em; }
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: s; list-style: none; padding: 0; margin: 0; }
@@ -274,10 +340,11 @@ export function startHereHtml(f: HandoverFacts): string {
   </header>
 
   <div class="hero">
-    <span class="eyebrow">Your app is ready</span>
+    <span class="eyebrow">${f.live ? "Your app is live" : "Your app is ready"}</span>
     <h1>${esc(f.appName)}</h1>
     <p class="lead">${esc(f.summary)}</p>
     <div class="pills">
+      ${f.live ? `<a class="pill live" href="${esc(f.live.url)}">● Live · ${esc(f.live.url.replace(/^https:\/\//, ""))} ↗</a>` : ""}
       ${pill(f.verified ? "✓ Verified" : "Needs attention", f.verified ? "ok" : "warn")}
       ${pill(`${f.checksPassed}/${f.checksTotal} checks passed`, f.checksPassed === f.checksTotal ? "ok" : "warn")}
       ${pill(`${f.criteriaVerified}/${f.criteriaTotal} requirements proven by tests`, "plain")}
@@ -291,7 +358,11 @@ export function startHereHtml(f: HandoverFacts): string {
     <h2>From this package to your customers</h2>
     <ol class="steps">
       <li><b>Read your report</b>What you got, what is proven and what to do next. <a class="file" href="TURBINEH_REPORT.md">TURBINEH_REPORT.md ↗</a></li>
-      <li><b>Go live</b>Database, settings and hosting in about 30 minutes. <a class="file" href="DEPLOY.md">DEPLOY.md ↗</a></li>
+      ${
+        f.live
+          ? `<li><b>Your app is live</b>We set up hosting, database and settings in your accounts. <a class="file" href="DEPLOYED.md">DEPLOYED.md ↗</a></li>`
+          : `<li><b>Go live</b>Database, settings and hosting in about 30 minutes — or let us do it with "Deploy for me". <a class="file" href="DEPLOY.md">DEPLOY.md ↗</a></li>`
+      }
       <li><b>Invite your team</b>Sign up as the owner in your live app and add your team with the right roles.</li>
     </ol>
   </section>
@@ -300,7 +371,9 @@ export function startHereHtml(f: HandoverFacts): string {
     <span class="eyebrow">Start with these</span>
     <h2>For you</h2>
     <div class="grid">
-      ${READ_FIRST.map((d) => card(d, true)).join("\n      ")}
+      ${(f.live ? READ_FIRST.map((d) => (d.file === "DEPLOY.md" ? LIVE_CARD : d)) : READ_FIRST)
+        .map((d) => card(d, true))
+        .join("\n      ")}
     </div>
   </section>
 

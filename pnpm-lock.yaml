@@ -123,6 +123,9 @@ importers:
       '@turbineh/decider':
         specifier: workspace:*
         version: link:../../packages/decider
+      '@turbineh/deployer':
+        specifier: workspace:*
+        version: link:../../packages/deployer
       '@turbineh/integrator':
         specifier: workspace:*
         version: link:../../packages/integrator
@@ -269,6 +272,8 @@ importers:
       '@typesafe-ai/sdk':
         specifier: 0.6.0
         version: 0.6.0
+
+  packages/deployer: {}
 
   packages/integrator:
     dependencies:
