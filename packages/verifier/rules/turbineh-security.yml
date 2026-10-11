@@ -44,27 +44,46 @@ rules:
   - id: turbineh.server-action-without-authz
     languages: [typescript]
     severity: ERROR
-    message: Exported server action does not check the signed-in member (requireMember/requireAdmin).
+    message: Exported server action does not check who is calling it (no authorization call before doing work).
     metadata:
       {
         explain: "A server function that changes data can be called without checking who the user is or what workspace they belong to.",
       }
-    patterns:
-      - pattern-inside: |
-          "use server";
-          ...
-      - pattern: |
-          export async function $F(...) { ... }
-      - pattern-not: |
-          export async function $F(...) { ... $C = await requireMember(); ... }
-      - pattern-not: |
-          export async function $F(...) { ... await requireMember(); ... }
-      - pattern-not: |
-          export async function $F(...) { ... await requireAdmin(); ... }
+    match:
+      all:
+        - inside: |
+            "use server";
+            ...
+        - |
+            export async function $F(...) { ... }
+        - not:
+            all:
+              - |
+                export async function $F(...) { ... await $G(...); ... }
+            where:
+              - metavariable: $G
+                regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect|with)\w*$
+        - not:
+            all:
+              - |
+                export async function $F(...) { ... await $O.$M(...); ... }
+            where:
+              - metavariable: $M
+                regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect)\w*$
+        - not:
+            all:
+              - |
+                export async function $F(...) { ... $S = await $G(...); ... if (!$S) $BODY; ... }
+            where:
+              - metavariable: $G
+                regex: (?i)^(get(Server)?Session|getCurrent(User|Member|Session)|auth)$
 
   - id: turbineh.hardcoded-secret
     languages: [typescript]
     severity: ERROR
+    # Test fixtures are not shipped; gitleaks still scans the whole history, tests included.
+    paths:
+      exclude: ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx"]
     message: A secret-looking value is hardcoded; read it from validated environment variables.
     metadata:
       {

@@ -158,6 +158,12 @@ importers:
         specifier: 8.23.1
         version: 8.23.1
 
+  bench:
+    dependencies:
+      '@turbineh/verifier':
+        specifier: workspace:*
+        version: link:../packages/verifier
+
   infra:
     dependencies:
       '@aws-sdk/client-s3':
