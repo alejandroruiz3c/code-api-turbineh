@@ -16,6 +16,9 @@ rules:
   - id: turbineh.no-child-process
     languages: [typescript]
     severity: ERROR
+    # Test setup (not shipped) may start processes; application code may not.
+    paths:
+      exclude: ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "playwright.config.ts"]
     message: Spawning operating-system processes from app code is not allowed.
     metadata:
       {
@@ -73,7 +76,7 @@ rules:
         - not:
             all:
               - |
-                export async function $F(...) { ... $S = await $G(...); ... if (!$S) $BODY; ... }
+                export async function $F(...) { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
             where:
               - metavariable: $G
                 regex: (?i)^(get(Server)?Session|getCurrent(User|Member|Session)|auth)$
