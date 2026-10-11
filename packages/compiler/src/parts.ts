@@ -17,6 +17,8 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
   bookings: "Booking or appointment app with availability, calendar slots and notifications",
   "client-portal":
     "Portal where external clients upload files and follow the status of their requests",
+  "corporate-site":
+    "Company or professional website: home, services, about, blog or news, contact form, edited by the team",
   out_of_scope:
     "Anything else: not a web app, mobile/desktop/game, AI features in the app, scraping, or a different product family",
 };

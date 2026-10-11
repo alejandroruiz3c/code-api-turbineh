@@ -1,0 +1,12 @@
+id: corporate-site
+description: Corporate website with home, services, about, blog with RSS, contact form and an admin panel to edit content, posts and messages
+extends: saas-crud
+providedEntities:
+  [Post, Article, BlogPost, News, NewsItem, Page, Message, ContactMessage, Inquiry, Contact, Service, Faq, Setting, SiteSetting]
+defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
+# Implemented by the template itself (native, no extra dependencies).
+providedCapabilities: [content.blog, content.rss, seo.sitemap, seo.structured-data, ui.navigation, ui.accordion, ui.markdown]
+nav:
+  - { label: Website texts, href: /dashboard/site }
+  - { label: Blog posts, href: /dashboard/posts }
+  - { label: Messages, href: /dashboard/messages }

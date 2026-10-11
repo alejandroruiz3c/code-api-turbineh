@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Recipe `corporate-site`: home, services, about, blog (safe Markdown renderer, RSS), contact form (rate limit, honeypot, email to admins), admin panel to edit website texts, posts and messages, SEO (metadata, Open Graph, JSON-LD Organization/Article, sitemap with posts, robots).
+
 - Landing recipe extended: benefits, how it works, FAQ, final call to action, SEO (metadata, Open Graph, JSON-LD, sitemap.xml, robots.txt) with copy written for each business (new optional `site` part of the BuildSpec, deterministic fallback; only awaited for public-site recipes).
 
 - Catalog batch 4: 40 new approved components (106 manifests) for websites, landing pages, management apps and e-commerce — content and SEO (front matter, RSS, Markdown, JSON-LD, sitemaps), website and app UI (carousel, accordion, tabs, menus, tooltips, popovers, select, navigation, react-aria, animation, drag and drop, virtual lists, OTP input, drawer, URL state), commerce and data (cart state, money, countries, search index, data fetching, ids, barcodes, XML, HTTP client, plain-text email) and object storage (S3, presigned URLs, Vercel Blob); 27 new capabilities; manifest categories content, seo, commerce, storage.
