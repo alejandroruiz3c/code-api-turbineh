@@ -277,6 +277,7 @@ export async function runBuild(
     alerts: fin.alerts,
     remediation: fin.remediation,
     report: fin.report,
+    improvement: fin.improvement,
   };
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
     repoDir,
@@ -350,6 +351,7 @@ export async function improveBuild(
     alerts: fin.alerts,
     remediation: fin.remediation,
     report: fin.report,
+    improvement: fin.improvement,
     improved: true,
     improvedFrom: parent.metrics.buildId ?? null,
   };

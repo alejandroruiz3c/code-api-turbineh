@@ -30,6 +30,10 @@ inline `nosemgrep` with a justification comment (e.g. the public waitlist action
 - Code: one call per affected file to the security specialist (Backup Coder slots, open weights: primary
   `deepseek-v4-flash`, secondary `glm-5.2`, automatic failover), with only that file and its findings (ADR-0010).
   Files over 600 lines are not sent. Each fixed file carries `// turbineh:security-fix <rules>`.
+- **Routing with one batched decider request per round:** one atomic Choice per warning ("fix inside this file" /
+  "needs a human decision"). Blocking findings (ERROR) are always attempted; a warning is skipped only when the
+  decider is confident (≥ 0.7) that it needs a product decision. The decider routes work, it never waives a check.
+- Dependency pins and per-file code fixes run in parallel in the same round, so most builds need a single round.
 - **A fix must never break the app:** if a quality gate (lint, typecheck, build, unit, E2E) fails after a fix, the
   specialist repairs only the files the remediation touched, using the failing log (max 2 attempts).
 - **Nothing is trusted from the model:** after every round the full verification runs again. Rounds: 2 (`auto`),
@@ -37,6 +41,16 @@ inline `nosemgrep` with a justification comment (e.g. the public waitlist action
 - Remaining non-blocking alerts are delivered and explained (`alertsOf`); the result view asks the user whether to
   improve and redeliver. `POST /v1/builds/{id}/improve` queues a new build that restores the delivered repository from
   its bundle, runs scope `improve` and delivers a new package; the original is never modified.
+
+### 2b · "Improve & redeliver": informed, once
+
+- Offered only on normal builds that passed verification and still have alerts, and only if something is fixable.
+- Before deciding, the user sees: how many of the remaining alerts can most likely be fixed (dependencies: a patched
+  version exists in OSV — deterministic; code warnings: one Noul per alert in one batched decider request, ≥ 0.6),
+  how many affect what is shipped to users, the estimated duration (range computed from this build's own measured
+  verification time) and that it uses 1 build of the daily quota. Numbers are rendered by code, never by the writer.
+- Allowed **once** per build (API returns 409 otherwise; idempotent per parent). The improved delivery is final: no
+  further improvement is offered and its report says so.
 
 ### 3 · The report (`@turbineh/reporter`)
 

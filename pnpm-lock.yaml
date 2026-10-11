@@ -260,6 +260,9 @@ importers:
 
   packages/remediation:
     dependencies:
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../decider
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../shared

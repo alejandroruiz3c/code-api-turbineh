@@ -15,6 +15,7 @@ interface BuildResult {
   status: string;
   error: string | null;
   repo_url: string | null;
+  improvement_build_id: string | null;
   metrics: {
     timings?: Record<string, number>;
     reuse?: { reusedShare?: number };
@@ -44,6 +45,7 @@ interface BuildReport {
     fixedBeforeDelivery: number;
   };
   nextSteps: string[];
+  improvement: ImprovementEstimate | null;
   writer: { model: string; fallback: boolean };
 }
 
@@ -216,7 +218,12 @@ function Result({ id, result }: { id: string; result: BuildResult }) {
   return (
     <>
       {report ? (
-        <Report id={id} report={report} improved={Boolean(result.metrics.improved)} />
+        <Report
+          id={id}
+          report={report}
+          improved={Boolean(result.metrics.improved)}
+          existingId={result.improvement_build_id}
+        />
       ) : null}
       <Panel title="Your app">
         <div className="flex flex-wrap items-center gap-3">
@@ -267,7 +274,17 @@ function Result({ id, result }: { id: string; result: BuildResult }) {
   );
 }
 
-function Report({ id, report, improved }: { id: string; report: BuildReport; improved: boolean }) {
+function Report({
+  id,
+  report,
+  improved,
+  existingId,
+}: {
+  id: string;
+  report: BuildReport;
+  improved: boolean;
+  existingId: string | null;
+}) {
   const verified = report.criteria.filter((c) => c.verified).length;
   return (
     <>
@@ -331,34 +348,74 @@ function Report({ id, report, improved }: { id: string; report: BuildReport; imp
           </ul>
         ) : null}
         {report.security.status === "alerts" ? (
-          <ImproveCallout id={id} improved={improved} />
+          <ImproveCallout
+            id={id}
+            improved={improved}
+            estimate={report.improvement ?? null}
+            existingId={existingId}
+          />
         ) : null}
       </Panel>
     </>
   );
 }
 
-function ImproveCallout({ id, improved }: { id: string; improved: boolean }) {
+interface ImprovementEstimate {
+  total: number;
+  fixable: number;
+  fixableProduction: number;
+  minutes: { min: number; max: number };
+}
+
+function ImproveCallout({
+  id,
+  improved,
+  estimate,
+  existingId,
+}: {
+  id: string;
+  improved: boolean;
+  estimate: ImprovementEstimate | null;
+  existingId: string | null;
+}) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "working" | "error">("idle");
   const start = useCallback(async () => {
     setState("working");
     const res = await fetch(`/v1/builds/${id}/improve`, { method: "POST" });
-    if (!res.ok) {
-      setState("error");
+    const body = (await res.json().catch(() => ({}))) as { build_id?: string };
+    // 409 with build_id: the single improvement already exists — open it.
+    if (body.build_id) {
+      router.push(`/build/${body.build_id}`);
       return;
     }
-    const body = (await res.json()) as { build_id: string };
-    router.push(`/build/${body.build_id}`);
+    setState("error");
   }, [id, router]);
+
+  let text: string;
+  let offer = false;
+  if (improved) {
+    text =
+      "This is the improved, final version. The remaining alerts could not be fixed automatically; they are explained above.";
+  } else if (existingId) {
+    text = "You already asked for the improvement of this build (it can be requested once).";
+  } else if (!estimate || estimate.fixable === 0) {
+    text =
+      "None of the remaining alerts can be fixed automatically, so no improvement is offered. They are explained above.";
+  } else {
+    offer = true;
+    text =
+      `We can most likely fix ${estimate.fixable} of ${estimate.total} remaining alert(s)` +
+      (estimate.fixableProduction
+        ? ` (${estimate.fixableProduction} in what is shipped to your users)`
+        : " (all in development-only tools, not shipped to your users)") +
+      `. It takes about ${estimate.minutes.min}–${estimate.minutes.max} min, uses 1 build of your daily quota and every check runs again. ` +
+      "You can ask for this once; your current package stays available.";
+  }
   return (
     <div className="mt-4 rounded-lg border border-amber/50 p-4">
-      <p className="text-sm text-ice-2">
-        {improved
-          ? "Some alerts could not be fixed automatically. They are explained above so you can decide."
-          : "Do you want us to fix these alerts and deliver a new verified version? Your current package stays available."}
-      </p>
-      {improved ? null : (
+      <p className="text-sm text-ice-2">{text}</p>
+      {offer ? (
         <button
           type="button"
           disabled={state === "working"}
@@ -367,7 +424,12 @@ function ImproveCallout({ id, improved }: { id: string; improved: boolean }) {
         >
           {state === "working" ? "Starting…" : "Improve & redeliver"}
         </button>
-      )}
+      ) : null}
+      {existingId ? (
+        <a href={`/build/${existingId}`} className="mt-3 inline-block text-sm text-teal underline">
+          Open the improved build
+        </a>
+      ) : null}
       {state === "error" ? (
         <p className="mt-2 text-xs text-bad">Could not start the improvement. Please try again.</p>
       ) : null}

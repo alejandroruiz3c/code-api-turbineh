@@ -1,5 +1,5 @@
 import { choice, type Decider } from "@turbineh/decider";
-import type { RemediationChange, SecurityAlert } from "@turbineh/remediation";
+import type { ImprovementEstimate, RemediationChange, SecurityAlert } from "@turbineh/remediation";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -20,6 +20,10 @@ export interface ReportFacts {
   alerts: SecurityAlert[];
   remediation: RemediationChange[];
   reusedShare: number | null;
+  /** Estimate for "Improve & redeliver" (null when it is not offered). */
+  improvement?: ImprovementEstimate | null;
+  /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
+  finalVersion?: boolean;
 }
 
 export interface BuildReport {
@@ -33,6 +37,8 @@ export interface BuildReport {
     fixedBeforeDelivery: number;
   };
   nextSteps: string[];
+  improvement: ImprovementEstimate | null;
+  finalVersion: boolean;
   writer: { model: string; fallback: boolean };
 }
 
@@ -64,7 +70,8 @@ const Steps = z.object({ next_steps: list(5, 240) });
 const SYSTEM =
   "You write one short section of a build report for a non-technical founder. Use ONLY the facts given. " +
   "Never invent numbers, features or guarantees. Never say the app is 'secure' or 'bug-free'. Plain English, " +
-  "short sentences, no marketing. Answer with JSON matching the requested shape.";
+  "short sentences, no marketing. Keep the severity and scope of every alert exactly as given (for example " +
+  "'high' and 'development-only'): never downplay or exaggerate a risk. Answer with JSON matching the requested shape.";
 
 async function writePartOnce<T>(
   cfg: WriterConfig,
@@ -176,10 +183,11 @@ export async function buildReport(
     checks: facts.checks,
     fixed_before_delivery: facts.remediation.map((r) => ({ what: r.target, why: r.detail })),
     remaining_alerts: facts.alerts.map((a) => ({
-      level: a.level,
+      affects: a.level === "warning" ? "what is shipped to users" : "development-only tools",
       title: a.title,
       explain: a.explain,
     })),
+    automatic_improvement_possible: facts.improvement ? facts.improvement.fixable > 0 : false,
     always_included: [
       "security headers and content security policy",
       "input validation",
@@ -240,6 +248,8 @@ export async function buildReport(
       fixedBeforeDelivery: facts.remediation.length,
     },
     nextSteps: steps?.next_steps ?? fb.nextSteps,
+    improvement: facts.improvement ?? null,
+    finalVersion: facts.finalVersion ?? false,
     writer: { model: writer.model, fallback: !summary || !security || !steps },
   };
 }
@@ -260,7 +270,7 @@ ${r.criteria.map((c) => `- ${c.verified ? "✅" : "⬜"} ${c.criterion} — _${c
 
 ${r.security.points.map((p) => `- ${p}`).join("\n")}
 
-See [SECURITY.md](SECURITY.md) for scope, tools and what was not checked.
+${improvementMarkdown(r)}See [SECURITY.md](SECURITY.md) for scope, tools and what was not checked.
 
 ## Next steps
 
@@ -278,4 +288,29 @@ ${metricsJson}
 
 _Report written by ${r.writer.model}${r.writer.fallback ? " (some sections from deterministic templates)" : ""} from verified build facts only._
 `;
+}
+
+/** Deterministic text about "Improve & redeliver" (numbers never come from the writer model). */
+export function improvementText(
+  r: Pick<BuildReport, "improvement" | "finalVersion">,
+): string | null {
+  if (r.finalVersion) {
+    return "This is the improved, final version: the remaining alerts could not be fixed automatically and are explained above.";
+  }
+  const i = r.improvement;
+  if (!i) return null;
+  if (i.fixable === 0) {
+    return "None of the remaining alerts can be fixed automatically, so no improvement is offered. They are explained above.";
+  }
+  return (
+    `Improve & redeliver can most likely fix ${i.fixable} of ${i.total} remaining alert(s)` +
+    `${i.fixableProduction ? ` (${i.fixableProduction} in what is shipped to users)` : " (all in development-only tools)"}. ` +
+    `It takes about ${i.minutes.min}–${i.minutes.max} min, uses 1 build of your daily quota, re-runs every check and ` +
+    "can be requested only once. Your current package stays available."
+  );
+}
+
+function improvementMarkdown(r: BuildReport): string {
+  const t = improvementText(r);
+  return t ? `> ${t}\n\n` : "";
 }

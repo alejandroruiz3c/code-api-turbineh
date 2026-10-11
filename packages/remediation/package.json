@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@turbineh/decider": "workspace:*",
     "@turbineh/shared": "workspace:*",
     "@turbineh/verifier": "workspace:*",
     "openai": "7.23.0",

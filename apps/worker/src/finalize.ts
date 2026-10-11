@@ -5,10 +5,13 @@ import { writeReports } from "@turbineh/assembler";
 import type { Decider } from "@turbineh/decider";
 import {
   alertsOf,
+  estimateImprovement,
+  fixedVersion,
   needsRemediation,
   remediateOnce,
   repairAfterRemediation,
   type FixerSlot,
+  type ImprovementEstimate,
   type RemediationChange,
   type SecurityAlert,
 } from "@turbineh/remediation";
@@ -37,7 +40,10 @@ export interface FinalizeInput {
   buildId: string;
   repoDir: string;
   scope: "auto" | "improve";
-  facts: Omit<ReportFacts, "evidence" | "checks" | "alerts" | "remediation">;
+  facts: Omit<
+    ReportFacts,
+    "evidence" | "checks" | "alerts" | "remediation" | "improvement" | "finalVersion"
+  >;
   metrics: Record<string, unknown>;
 }
 
@@ -48,6 +54,8 @@ export interface FinalizeResult {
   remediation: RemediationChange[];
   report: BuildReport;
   verifyMs: number;
+  /** Offered once, only on normal builds with remaining alerts. */
+  improvement: ImprovementEstimate | null;
 }
 
 const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
@@ -78,7 +86,14 @@ function evidenceOf(repoDir: string): string[] {
 export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promise<FinalizeResult> {
   const t = performance.now();
   await deps.emit("verifying", "start", {});
-  let result = await verify(input.repoDir);
+  let lastVerifyMs = 0;
+  const timedVerify = async () => {
+    const v0 = performance.now();
+    const r = await verify(input.repoDir);
+    lastVerifyMs = Math.round(performance.now() - v0);
+    return r;
+  };
+  let result = await timedVerify();
   await deps.emit("verifying", "done", { ok: result.ok, steps: stepsView(result) });
 
   const remediation: RemediationChange[] = [];
@@ -89,6 +104,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       findings: result.findings.static.length + result.findings.advisories.length,
     });
     const changes = await remediateOnce(input.repoDir, result, {
+      decider: deps.decider,
       fixers: deps.fixers,
       scope: input.scope,
       ...(deps.reasoningEffort ? { reasoningEffort: deps.reasoningEffort } : {}),
@@ -103,7 +119,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     if (changes.length === 0) break;
     remediation.push(...changes);
     await deps.emit("verifying", "start", { afterRemediation: round });
-    result = await verify(input.repoDir);
+    result = await timedVerify();
     await deps.emit("verifying", "done", {
       ok: result.ok,
       steps: stepsView(result),
@@ -124,7 +140,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       await deps.emit("remediating", "repair", { repair, fixes });
       if (fixes.length === 0) break;
       remediation.push(...fixes);
-      result = await verify(input.repoDir);
+      result = await timedVerify();
       await deps.emit("verifying", "done", {
         ok: result.ok,
         steps: stepsView(result),
@@ -134,6 +150,13 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   }
   const verifyMs = Math.round(performance.now() - t);
   const alerts = alertsOf(result);
+  // "Improve & redeliver" is offered once: never on an improvement build, never when nothing can be fixed.
+  const improvement =
+    input.scope === "auto" && result.ok && alerts.length > 0
+      ? await estimateImprovement(result, lastVerifyMs, deps.decider, async (id, pkg) =>
+          Boolean(await fixedVersion(id, pkg.slice(0, pkg.lastIndexOf("@")))),
+        ).catch(() => null)
+      : null;
 
   await deps.emit("reporting", "start", {});
   const facts: ReportFacts = {
@@ -142,11 +165,19 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,
     remediation,
+    improvement,
+    finalVersion: input.scope === "improve",
   };
   const report = await buildReport(facts, deps.decider, deps.writer);
   await deps.emit("reporting", "done", { report });
 
-  const metrics = { ...input.metrics, alerts, remediation, report: { writer: report.writer } };
+  const metrics = {
+    ...input.metrics,
+    alerts,
+    remediation,
+    improvement,
+    report: { writer: report.writer },
+  };
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),
@@ -167,7 +198,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     ],
     { cwd: input.repoDir },
   );
-  return { ok: result.ok, verify: result, alerts, remediation, report, verifyMs };
+  return { ok: result.ok, verify: result, alerts, remediation, report, verifyMs, improvement };
 }
 
 function securityMarkdown(

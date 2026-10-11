@@ -1,6 +1,6 @@
 import type { Decider } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
-import { buildReport, reportMarkdown, type ReportFacts } from "./report.js";
+import { buildReport, improvementText, reportMarkdown, type ReportFacts } from "./report.js";
 
 const facts: ReportFacts = {
   appName: "Course Hub",
@@ -51,5 +51,27 @@ describe("buildReport", () => {
     expect(r.nextSteps.join(" ")).toContain("invoices");
     expect(r.nextSteps.join(" ")).not.toContain("payments.invoices");
     expect(reportMarkdown(r, "{}")).toContain(`# ${r.headline}`);
+  });
+});
+
+describe("improvementText", () => {
+  const base = {
+    total: 3,
+    fixable: 2,
+    fixableProduction: 0,
+    minutes: { min: 2, max: 5 },
+    usesOneBuild: true as const,
+  };
+  it("states cost, expected gain and the once-only rule", () => {
+    const t = improvementText({ improvement: base, finalVersion: false });
+    expect(t).toContain("2 of 3");
+    expect(t).toContain("2–5 min");
+    expect(t).toContain("only once");
+  });
+  it("offers nothing on the final version or when nothing is fixable", () => {
+    expect(improvementText({ improvement: base, finalVersion: true })).toContain("final version");
+    expect(
+      improvementText({ improvement: { ...base, fixable: 0 }, finalVersion: false }),
+    ).toContain("no improvement is offered");
   });
 });

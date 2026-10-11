@@ -167,6 +167,21 @@ export async function getBuild(
   return res.rows[0] ?? null;
 }
 
+/** The single "Improve & redeliver" build of a parent build, if one was requested. */
+export async function findImprovement(
+  db: pg.Pool,
+  parentId: string,
+  ownerId: string,
+): Promise<{ id: string; status: string } | null> {
+  const res = await db.query<{ id: string; status: string }>(
+    `SELECT id, status FROM builds
+     WHERE owner_id = $1 AND options->>'mode' = 'improve' AND options->>'parent' = $2
+     ORDER BY created_at LIMIT 1`,
+    [ownerId, parentId],
+  );
+  return res.rows[0] ?? null;
+}
+
 export async function eventsSince(
   db: pg.Pool,
   buildId: string,

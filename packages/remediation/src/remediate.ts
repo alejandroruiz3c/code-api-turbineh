@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
+import type { Decider } from "@turbineh/decider";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sandbox, type StaticFinding, type VerifyResult } from "@turbineh/verifier";
 import OpenAI from "openai";
 import { z } from "zod";
+import { findingKey, triageFindings } from "./triage.js";
 
 /** A model slot for the security specialist (OpenAI-compatible endpoint serving an open-weights model). */
 export interface FixerSlot {
@@ -27,6 +29,8 @@ export interface RemediationOptions {
    */
   scope: "auto" | "improve";
   reasoningEffort?: string;
+  /** Routes findings in one batched request before fixing (optional; without it every finding is attempted). */
+  decider?: Decider;
 }
 
 type Advisory = VerifyResult["findings"]["advisories"][number];
@@ -52,7 +56,7 @@ export function needsRemediation(v: VerifyResult, scope: RemediationOptions["sco
 }
 
 /** OSV "fixed" version for an advisory affecting `name` (highest fixed event), if any. */
-async function fixedVersion(id: string, name: string): Promise<string | null> {
+export async function fixedVersion(id: string, name: string): Promise<string | null> {
   const res = await fetch(`https://api.osv.dev/v1/vulns/${id}`);
   if (!res.ok) return null;
   const v = (await res.json()) as {
@@ -155,7 +159,7 @@ async function askFixer(
   throw new Error(`security fixer unavailable: ${String(last)}`);
 }
 
-/** Code remediation: one specialist call per affected file, minimal context (that file + its findings). */
+/** Code remediation: one specialist call per affected file, minimal context, all files in parallel. */
 async function fixCode(
   dir: string,
   findings: StaticFinding[],
@@ -163,26 +167,29 @@ async function fixCode(
 ): Promise<RemediationChange[]> {
   const byFile = new Map<string, StaticFinding[]>();
   for (const f of findings) byFile.set(f.path, [...(byFile.get(f.path) ?? []), f]);
-  const changes: RemediationChange[] = [];
-  for (const [file, fs] of byFile) {
-    const p = join(dir, file);
-    if (!existsSync(p)) continue;
-    const before = readFileSync(p, "utf8");
-    if (before.split("\n").length > 600) continue; // keep the specialist on small, reviewable units
-    const after = (await askFixer(opts, file, before, fs))
-      .replace(new RegExp(`\\n?${FIX_MARKER}.*$`, "m"), "")
-      .trimEnd();
-    if (!after || after === before.trimEnd()) continue;
-    writeFileSync(p, `${after}\n${FIX_MARKER} ${[...new Set(fs.map((f) => f.rule))].join(", ")}\n`);
-    for (const f of fs)
-      changes.push({
-        kind: "code",
+  const perFile = await Promise.all(
+    [...byFile].map(async ([file, fs]): Promise<RemediationChange[]> => {
+      const p = join(dir, file);
+      if (!existsSync(p)) return [];
+      const before = readFileSync(p, "utf8");
+      if (before.split("\n").length > 600) return []; // keep the specialist on small, reviewable units
+      const after = (await askFixer(opts, file, before, fs))
+        .replace(new RegExp(`\\n?${FIX_MARKER}.*$`, "m"), "")
+        .trimEnd();
+      if (!after || after === before.trimEnd()) return [];
+      writeFileSync(
+        p,
+        `${after}\n${FIX_MARKER} ${[...new Set(fs.map((f) => f.rule))].join(", ")}\n`,
+      );
+      return fs.map((f) => ({
+        kind: "code" as const,
         target: `${file}:${f.line}`,
         reason: f.rule,
         detail: f.message,
-      });
-  }
-  return changes;
+      }));
+    }),
+  );
+  return perFile.flat();
 }
 
 /**
@@ -195,8 +202,14 @@ export async function remediateOnce(
   opts: RemediationOptions,
 ): Promise<RemediationChange[]> {
   const deps = advisoriesInScope(v, opts.scope);
-  const code = v.findings.static;
-  const changes = [...(await fixDependencies(dir, deps)), ...(await fixCode(dir, code, opts))];
+  const routes = await triageFindings(v.findings.static, opts.decider);
+  const code = v.findings.static.filter((f) => routes.get(findingKey(f)) !== "human");
+  // Dependency pins and code fixes touch different files: run them at the same time.
+  const [depChanges, codeChanges] = await Promise.all([
+    fixDependencies(dir, deps),
+    fixCode(dir, code, opts),
+  ]);
+  const changes = [...depChanges, ...codeChanges];
   if (changes.length > 0) {
     execFileSync("git", ["add", "-A"], { cwd: dir });
     execFileSync(
