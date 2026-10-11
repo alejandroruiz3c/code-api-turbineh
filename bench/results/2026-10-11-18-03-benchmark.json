@@ -1,0 +1,776 @@
+{
+  "summary": {
+    "target": "https://software.turbineh.com",
+    "date": "2026-10-11T18:03:31.240Z",
+    "prompts": 15,
+    "green": 15,
+    "avgTimeToResultS": 115,
+    "avgVerifyS": 104,
+    "criteriaVerified": "56/80",
+    "avgReusedShare": 0.793,
+    "buildsWithBackup": 2,
+    "avgCorrections": 0.8,
+    "avgCostEur": 0.00233,
+    "avgTokens": 6409,
+    "notes": [
+      "Cost [est.]: tracked tokens × Scaleway list prices (compiler, glue, Backup Coder, corrections). Not included: decider (JEV) requests, security fixer and report writer calls, embeddings, sandbox compute.",
+      "Time to result: pipeline time reported by the worker (excludes queue wait)."
+    ]
+  },
+  "results": [
+    {
+      "id": "bookings-01",
+      "buildId": "1bde8537-37aa-4eb1-a481-3a60a207b30e",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "bookings",
+        "built": "bookings"
+      },
+      "timeToResultS": 137,
+      "wallS": 144,
+      "verifyS": 122,
+      "criteria": {
+        "verified": 4,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.883,
+        "generatedLines": 184,
+        "reusedLines": 1384
+      },
+      "components": 13,
+      "integrated": 4,
+      "backupActivations": [
+        "T1"
+      ],
+      "compilerBackup": null,
+      "corrections": 1,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 443,
+          "output_tokens": 892
+        },
+        "glue": {
+          "input_tokens": 1025,
+          "output_tokens": 638
+        },
+        "backup": {
+          "input_tokens": 1945,
+          "output_tokens": 1787
+        },
+        "corrections": {
+          "input_tokens": 1806,
+          "output_tokens": 454
+        },
+        "backupShare": 0.415
+      },
+      "costEur": 0.00402
+    },
+    {
+      "id": "bookings-02",
+      "buildId": "02977327-8a4c-4b02-90f1-f160eeb6987a",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "bookings",
+        "built": "bookings"
+      },
+      "timeToResultS": 129,
+      "wallS": 133,
+      "verifyS": 117,
+      "criteria": {
+        "verified": 4,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.892,
+        "generatedLines": 167,
+        "reusedLines": 1384
+      },
+      "components": 13,
+      "integrated": 4,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 1,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 463,
+          "output_tokens": 928
+        },
+        "glue": {
+          "input_tokens": 1025,
+          "output_tokens": 654
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 1819,
+          "output_tokens": 470
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00185
+    },
+    {
+      "id": "bookings-03",
+      "buildId": "bc97ce0d-1b9e-4a91-8eba-56503008fbda",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "bookings",
+        "built": "bookings"
+      },
+      "timeToResultS": 127,
+      "wallS": 132,
+      "verifyS": 114,
+      "criteria": {
+        "verified": 5,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.807,
+        "generatedLines": 332,
+        "reusedLines": 1384
+      },
+      "components": 13,
+      "integrated": 5,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 1,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 419,
+          "output_tokens": 922
+        },
+        "glue": {
+          "input_tokens": 1025,
+          "output_tokens": 628
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 1793,
+          "output_tokens": 444
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00181
+    },
+    {
+      "id": "internal-01",
+      "buildId": "84e49532-2c55-46c4-bfd9-c65722547658",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "internal-tool",
+        "built": "internal-tool"
+      },
+      "timeToResultS": 165,
+      "wallS": 168,
+      "verifyS": 153,
+      "criteria": {
+        "verified": 5,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.731,
+        "generatedLines": 271,
+        "reusedLines": 735
+      },
+      "components": 14,
+      "integrated": 4,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 3,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 407,
+          "output_tokens": 663
+        },
+        "glue": {
+          "input_tokens": 946,
+          "output_tokens": 693
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 3223,
+          "output_tokens": 1540
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00259
+    },
+    {
+      "id": "internal-02",
+      "buildId": "6dbb36fe-ade2-4211-86a7-5c7b2a93cf23",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "internal-tool",
+        "built": "internal-tool"
+      },
+      "timeToResultS": 173,
+      "wallS": 178,
+      "verifyS": 163,
+      "criteria": {
+        "verified": 2,
+        "total": 6
+      },
+      "reuse": {
+        "reusedShare": 0.723,
+        "generatedLines": 281,
+        "reusedLines": 735
+      },
+      "components": 12,
+      "integrated": 2,
+      "backupActivations": [
+        "T1"
+      ],
+      "compilerBackup": null,
+      "corrections": 3,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 451,
+          "output_tokens": 718
+        },
+        "glue": {
+          "input_tokens": 554,
+          "output_tokens": 352
+        },
+        "backup": {
+          "input_tokens": 2222,
+          "output_tokens": 1929
+        },
+        "corrections": {
+          "input_tokens": 22138,
+          "output_tokens": 8522
+        },
+        "backupShare": 0.113
+      },
+      "costEur": 0.01301
+    },
+    {
+      "id": "internal-03",
+      "buildId": "86ba5ada-f6f4-41cf-a6be-7e05f6a7c059",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "internal-tool",
+        "built": "internal-tool"
+      },
+      "timeToResultS": 76,
+      "wallS": 79,
+      "verifyS": 64,
+      "criteria": {
+        "verified": 4,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.483,
+        "generatedLines": 788,
+        "reusedLines": 735
+      },
+      "components": 13,
+      "integrated": 3,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 427,
+          "output_tokens": 1137
+        },
+        "glue": {
+          "input_tokens": 495,
+          "output_tokens": 216
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00091
+    },
+    {
+      "id": "landing-01",
+      "buildId": "ed21fef3-046d-4efc-9302-2cbb73c7d651",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "landing-waitlist",
+        "built": "landing-waitlist"
+      },
+      "timeToResultS": 118,
+      "wallS": 121,
+      "verifyS": 110,
+      "criteria": {
+        "verified": 2,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.869,
+        "generatedLines": 166,
+        "reusedLines": 1097
+      },
+      "components": 12,
+      "integrated": 2,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 415,
+          "output_tokens": 515
+        },
+        "glue": {
+          "input_tokens": 454,
+          "output_tokens": 191
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00057
+    },
+    {
+      "id": "landing-02",
+      "buildId": "85e3a9e7-cd38-49fd-bcf7-949ad4159d3a",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "landing-waitlist",
+        "built": "landing-waitlist"
+      },
+      "timeToResultS": 67,
+      "wallS": 74,
+      "verifyS": 59,
+      "criteria": {
+        "verified": 4,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.992,
+        "generatedLines": 9,
+        "reusedLines": 1097
+      },
+      "components": 12,
+      "integrated": 2,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 447,
+          "output_tokens": 518
+        },
+        "glue": {
+          "input_tokens": 454,
+          "output_tokens": 191
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00058
+    },
+    {
+      "id": "landing-03",
+      "buildId": "cee25217-1548-4f90-813e-93350a456189",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "landing-waitlist",
+        "built": "landing-waitlist"
+      },
+      "timeToResultS": 125,
+      "wallS": 127,
+      "verifyS": 115,
+      "criteria": {
+        "verified": 4,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.992,
+        "generatedLines": 9,
+        "reusedLines": 1097
+      },
+      "components": 15,
+      "integrated": 5,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 415,
+          "output_tokens": 721
+        },
+        "glue": {
+          "input_tokens": 1408,
+          "output_tokens": 701
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00117
+    },
+    {
+      "id": "portal-01",
+      "buildId": "3ca1f2fe-4833-41b2-89bc-ae2fa88f5fce",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "client-portal",
+        "built": "client-portal"
+      },
+      "timeToResultS": 67,
+      "wallS": 69,
+      "verifyS": 58,
+      "criteria": {
+        "verified": 5,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.994,
+        "generatedLines": 8,
+        "reusedLines": 1260
+      },
+      "components": 11,
+      "integrated": 2,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 451,
+          "output_tokens": 807
+        },
+        "glue": {
+          "input_tokens": 495,
+          "output_tokens": 216
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00075
+    },
+    {
+      "id": "portal-02",
+      "buildId": "4625db2d-02fa-4dea-8074-b1503ca69f10",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "client-portal",
+        "built": "client-portal"
+      },
+      "timeToResultS": 68,
+      "wallS": 74,
+      "verifyS": 58,
+      "criteria": {
+        "verified": 5,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.886,
+        "generatedLines": 183,
+        "reusedLines": 1427
+      },
+      "components": 14,
+      "integrated": 4,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 439,
+          "output_tokens": 892
+        },
+        "glue": {
+          "input_tokens": 993,
+          "output_tokens": 415
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00101
+    },
+    {
+      "id": "portal-03",
+      "buildId": "b4ed3eae-730e-4c5a-90f0-5a33a582baff",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "client-portal",
+        "built": "client-portal"
+      },
+      "timeToResultS": 71,
+      "wallS": 74,
+      "verifyS": 61,
+      "criteria": {
+        "verified": 3,
+        "total": 5
+      },
+      "reuse": {
+        "reusedShare": 0.787,
+        "generatedLines": 340,
+        "reusedLines": 1260
+      },
+      "components": 11,
+      "integrated": 3,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 431,
+          "output_tokens": 836
+        },
+        "glue": {
+          "input_tokens": 495,
+          "output_tokens": 216
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00076
+    },
+    {
+      "id": "saas-01",
+      "buildId": "fd672e3b-4801-4ea3-a745-2ba6acf5a2e4",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "saas-crud",
+        "built": "saas-crud"
+      },
+      "timeToResultS": 116,
+      "wallS": 121,
+      "verifyS": 106,
+      "criteria": {
+        "verified": 2,
+        "total": 7
+      },
+      "reuse": {
+        "reusedShare": 0.593,
+        "generatedLines": 513,
+        "reusedLines": 747
+      },
+      "components": 13,
+      "integrated": 5,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 447,
+          "output_tokens": 863
+        },
+        "glue": {
+          "input_tokens": 1999,
+          "output_tokens": 1181
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00163
+    },
+    {
+      "id": "saas-02",
+      "buildId": "e9bb5f68-14ab-42d6-ae5f-5abf945fb71d",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "saas-crud",
+        "built": "saas-crud"
+      },
+      "timeToResultS": 71,
+      "wallS": 74,
+      "verifyS": 60,
+      "criteria": {
+        "verified": 3,
+        "total": 6
+      },
+      "reuse": {
+        "reusedShare": 0.59,
+        "generatedLines": 519,
+        "reusedLines": 747
+      },
+      "components": 12,
+      "integrated": 4,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 0,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 467,
+          "output_tokens": 886
+        },
+        "glue": {
+          "input_tokens": 954,
+          "output_tokens": 680
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00114
+    },
+    {
+      "id": "saas-03",
+      "buildId": "b3817923-4724-45cd-8dab-bc41ec64dfa2",
+      "status": "done",
+      "reason": null,
+      "recipe": {
+        "expected": "saas-crud",
+        "built": "saas-crud"
+      },
+      "timeToResultS": 217,
+      "wallS": 220,
+      "verifyS": 206,
+      "criteria": {
+        "verified": 4,
+        "total": 6
+      },
+      "reuse": {
+        "reusedShare": 0.672,
+        "generatedLines": 364,
+        "reusedLines": 747
+      },
+      "components": 14,
+      "integrated": 6,
+      "backupActivations": [],
+      "compilerBackup": null,
+      "corrections": 3,
+      "swappedOut": 0,
+      "securityFixed": 0,
+      "alerts": 1,
+      "tokens": {
+        "compiler": {
+          "input_tokens": 459,
+          "output_tokens": 842
+        },
+        "glue": {
+          "input_tokens": 1977,
+          "output_tokens": 1400
+        },
+        "backup": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "corrections": {
+          "input_tokens": 3361,
+          "output_tokens": 1283
+        },
+        "backupShare": 0
+      },
+      "costEur": 0.00321
+    }
+  ]
+}
