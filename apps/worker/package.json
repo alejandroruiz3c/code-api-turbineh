@@ -13,10 +13,12 @@
   },
   "dependencies": {
     "@turbineh/assembler": "workspace:*",
+    "@turbineh/backup-coder": "workspace:*",
     "@turbineh/catalog": "workspace:*",
     "@turbineh/compiler": "workspace:*",
     "@turbineh/db": "workspace:*",
     "@turbineh/decider": "workspace:*",
+    "@turbineh/integrator": "workspace:*",
     "@turbineh/remediation": "workspace:*",
     "@turbineh/reporter": "workspace:*",
     "@turbineh/resolver": "workspace:*",

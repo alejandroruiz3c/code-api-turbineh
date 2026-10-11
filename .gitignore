@@ -37,3 +37,6 @@ next-env.d.ts
 .vercel/
 .vercel
 .env*
+
+# Backup Coder flywheel records from local runs
+catalog/gaps/*.json

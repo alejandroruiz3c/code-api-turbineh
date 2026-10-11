@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- WP10 (ADR-0015): `@turbineh/integrator` — approved external components are installed at exact versions with their contract tests running inside the app and a small generated helper; Backup Coder fills self-contained gaps (T1/T2) with module + tests and records them (catalog flywheel); corrector with directed patches, quick checks between patches, granular and full swap, Backup Coder takeover (T4); compiler fallback to the Backup Coder (T5).
+- Staging fixes: template esbuild pin, range overrides in dependency remediation, closed next-step list, recipe-provided capabilities.
+
 - ADR-0014 · security remediation before delivery: Semgrep static analysis with TurbineH rules; `@turbineh/remediation` (automatic dependency and code fixes, repair if a fix breaks a quality gate, full re-verification after every round, plain-language alerts); `@turbineh/reporter` (criteria mapped to evidence by the decider, texts by the open writer model, deterministic fallback); `POST /v1/builds/{id}/improve` and "Improve & redeliver" in the result view; report and security panels in the web UI.
 - Remediation routing with one batched decider request per round and parallel fixes; "Improve & redeliver" shows the expected gain, duration and quota cost beforehand and can be requested once (the improved delivery is final).
 - Faster verification without removing checks: per-lockfile base image, concurrent scans, parallel lint/typecheck/unit/build.

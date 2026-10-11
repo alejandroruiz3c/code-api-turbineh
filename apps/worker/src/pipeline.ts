@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assemble,
@@ -9,22 +9,32 @@ import {
   recipeChain,
   type SelectedComponent,
 } from "@turbineh/assembler";
+import type { BackupCoder } from "@turbineh/backup-coder";
 import { compileIntent, type CompilerConfig } from "@turbineh/compiler";
 import type { Decider } from "@turbineh/decider";
 import { resolveSet, type Stack } from "@turbineh/resolver";
 import { CAPABILITY_LABELS, selectComponents } from "@turbineh/selector";
 import type { FixerSlot } from "@turbineh/remediation";
 import type { WriterConfig } from "@turbineh/reporter";
+import {
+  fillGap,
+  integrateComponents,
+  isFillable,
+  type FilledGap,
+  type IntegrationResult,
+} from "@turbineh/integrator";
 import type { VerifyResult } from "@turbineh/verifier";
 import { finalize, type FinalizeDeps } from "./finalize.js";
-import { candidatesFor, loadCatalog } from "./catalog-source.js";
+import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 
 export type Phase =
   | "compiling"
   | "selecting"
   | "resolving"
   | "assembling"
+  | "integrating"
   | "verifying"
+  | "correcting"
   | "remediating"
   | "reporting"
   | "delivering"
@@ -38,6 +48,10 @@ export interface PipelineDeps {
   decider: Decider;
   fixers: FixerSlot[];
   writer: WriterConfig;
+  /** Always connected (ADR-0003): fills gaps (T1/T2) and takes over exhausted corrections (T4). */
+  backupCoder: BackupCoder;
+  /** Catalog flywheel records (default: catalog/gaps under repoRoot). */
+  gapsDir?: string;
   emit: (
     buildId: string,
     phase: Phase,
@@ -78,7 +92,25 @@ export async function runBuild(
   // 1 · compile (decider batch + small parts)
   let t = performance.now();
   await deps.emit(buildId, "compiling", "start", { prompt });
-  const compiled = await compileIntent(prompt, deps.compiler, deps.decider);
+  let compiled = await compileIntent(prompt, deps.compiler, deps.decider);
+  // T5: the compiler model could not produce a valid BuildSpec after its retries → same decomposed process on the
+  // Backup Coder's primary model (open weights), once.
+  let t5: { model: string } | null = null;
+  const backupSlot = deps.fixers[0];
+  if (!compiled.ok && !compiled.rejected && backupSlot) {
+    t5 = { model: backupSlot.model };
+    await deps.emit(buildId, "compiling", "backup", { trigger: "T5", model: backupSlot.model });
+    compiled = await compileIntent(
+      prompt,
+      {
+        ...deps.compiler,
+        baseURL: backupSlot.baseURL,
+        apiKey: backupSlot.apiKey,
+        model: backupSlot.model,
+      },
+      deps.decider,
+    );
+  }
   lap("compile", t);
   await deps.emit(buildId, "compiling", "done", {
     ok: compiled.ok,
@@ -182,43 +214,35 @@ export async function runBuild(
   t = performance.now();
   const repoDir = join(deps.buildsDir, buildId, spec.slug);
   const decisionOf = (cap: string) => selection.decisions.find((d) => d.capability === cap);
-  // A component counts as used only if the recipe can integrate it today: vendored in the recipe, or its
-  // package is already in the recipe's verified lockfile. Others wait for WP10 (install + glue) and are
-  // reported as "selected, integration pending", never claimed as used.
+  // Components the recipe already integrates (vendored or in its verified lockfile) go straight into assembly.
+  // Other approved components are integrated after assembly (WP10): exact install, contract test, small glue.
   const integrable = (c: { pkg: { name: string } }) =>
     c.pkg.name.startsWith("turbineh/") || c.pkg.name in stack;
-  const pendingIntegration = Object.entries(resolution.selected)
+  const external = Object.entries(resolution.selected)
     .filter(([, c]) => !integrable(c))
     .map(([capability, c]) => ({ capability, component: c.id }));
-  const selected: SelectedComponent[] = Object.entries(resolution.selected)
-    .filter(([, c]) => integrable(c))
-    .map(([capability, component]) => {
-      const d = decisionOf(capability);
-      return {
-        capability,
-        component,
-        why: {
-          pBest: d?.best?.p ?? 0,
-          covers: d?.covers[component.id] ?? 0,
-          risk: d?.risk[component.id] ?? 0,
-        },
-      };
-    });
-  const gapsWithPending = [
-    ...gaps,
-    ...pendingIntegration.map((p) => ({
-      capability: p.capability,
-      trigger: `integration pending: ${p.component}`,
-    })),
-  ];
+  const whyOf = (capability: string, id: string) => {
+    const d = decisionOf(capability);
+    return { pBest: d?.best?.p ?? 0, covers: d?.covers[id] ?? 0, risk: d?.risk[id] ?? 0 };
+  };
+  const selected: SelectedComponent[] = Object.entries(resolution.selected).map(
+    ([capability, component]) => ({ capability, component, why: whyOf(capability, component.id) }),
+  );
   const assembled = assemble({
     buildId,
     recipesDir,
     recipe: recipeId,
     outDir: repoDir,
     spec,
-    selected,
-    gaps: gapsWithPending,
+    // Docs list only what is in the repository now; the integration step updates COMPONENTS.md when it succeeds.
+    selected: selected.filter((x) => integrable(x.component)),
+    gaps: [
+      ...gaps,
+      ...external.map((e) => ({
+        capability: e.capability,
+        trigger: `integration pending: ${e.component}`,
+      })),
+    ],
   });
   git(repoDir, "init", "-q", "-b", "main");
   git(repoDir, "add", "-A");
@@ -236,10 +260,103 @@ export async function runBuild(
     files: assembled.files.length,
   });
 
+  // 4b · integrate external components + Backup Coder fills (T1/T2), in parallel; swap point = assembled commit
+  t = performance.now();
+  const assembledCommit = git(repoDir, "rev-parse", "HEAD").toString().trim();
+  const componentsDir = join(deps.repoRoot, "catalog/components");
+  const label = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;
+  const toFill = gaps
+    .filter((g) => isFillable(g.capability) && (g.trigger === "T1" || g.trigger === "T2"))
+    .map((g) => ({
+      capability: g.capability,
+      label: label(g.capability),
+      trigger: g.trigger as "T1" | "T2",
+    }));
+  let integrations: IntegrationResult[] = [];
+  let filled: FilledGap[] = [];
+  let integrationError: string | null = null;
+  if (external.length > 0 || toFill.length > 0) {
+    await deps.emit(buildId, "integrating", "start", {
+      components: external.map((e) => e.component),
+      gaps: toFill.map((g) => g.capability),
+    });
+    const [ints, fills] = await Promise.all([
+      integrateComponents(
+        repoDir,
+        external.map((e) =>
+          externalComponent(componentsDir, e.component, e.capability, label(e.capability)),
+        ),
+        deps.compiler,
+      ).catch((err: unknown) => {
+        integrationError = err instanceof Error ? err.message.slice(0, 300) : "integration failed";
+        return [] as IntegrationResult[];
+      }),
+      Promise.all(
+        toFill.map((g) =>
+          fillGap(repoDir, g, deps.backupCoder, {
+            buildId,
+            summary: spec.summary,
+            allowedImports: ["zod", ...Object.keys(pkg.dependencies)],
+            gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
+          }).catch(() => null),
+        ),
+      ),
+    ]);
+    integrations = ints;
+    filled = fills.filter((f): f is FilledGap => f !== null);
+    if (integrationError) {
+      // Install failed: nothing half-integrated stays in the repository.
+      git(repoDir, "reset", "-q", "--hard", assembledCommit);
+      git(repoDir, "clean", "-qfd");
+      integrations = [];
+      filled = [];
+    } else if (integrations.length > 0 || filled.length > 0) {
+      appendComponentsDoc(repoDir, integrations, filled);
+      git(repoDir, "add", "-A");
+      git(
+        repoDir,
+        "commit",
+        "-q",
+        "-m",
+        `feat: integrate ${integrations.length} component(s), backup coder fills ${filled.length} gap(s)`,
+      );
+    }
+    await deps.emit(buildId, "integrating", "done", {
+      integrated: integrations.map((i) => ({
+        component: i.component,
+        glue: i.glue,
+        test: i.contractTest,
+      })),
+      backup: filled.map((f) => ({
+        capability: f.capability,
+        trigger: f.trigger,
+        model: f.model,
+        usage: f.usage,
+        module: f.module,
+      })),
+      error: integrationError,
+    });
+  }
+  lap("integrate", t);
+  const integratedCaps = new Set(integrations.map((i) => i.capability));
+  const filledCaps = new Set(filled.map((f) => f.capability));
+  const pendingIntegration = external.filter((e) => !integratedCaps.has(e.capability));
+  const gapsWithPending = [
+    ...gaps.filter((g) => !filledCaps.has(g.capability)),
+    ...pendingIntegration.map((p) => ({
+      capability: p.capability,
+      trigger: `integration failed: ${p.component}`,
+    })),
+  ];
+  const usedComponents = selected.filter(
+    (s) => integrable(s.component) || integratedCaps.has(s.capability),
+  );
+
   // 5 · verify → automatic security remediation → report (shared with "improve and redeliver")
   t = performance.now();
   const metrics: Record<string, unknown> = {
     tokens: { compiler: compiled.usage, decider: "input-only, counted by the provider" },
+    ...(t5 ? { compilerBackup: { trigger: "T5", model: t5.model } } : {}),
     decider: selection.decider,
     reuse: {
       generatedLines: assembled.generatedLines,
@@ -249,9 +366,26 @@ export async function runBuild(
       ).toFixed(3),
     },
     recipe: { requested: spec.recipe, built: recipeId },
-    components: [...new Set(selected.map((s) => s.component.id))],
+    components: [...new Set(usedComponents.map((s) => s.component.id))],
+    integrated: integrations.map((i) => ({
+      component: i.component,
+      capability: i.capability,
+      glue: i.glue,
+      contractTest: i.contractTest,
+      usage: i.usage,
+    })),
+    backup: {
+      activations: filled.map((f) => ({
+        capability: f.capability,
+        trigger: f.trigger,
+        model: f.model,
+        failedOver: f.failedOver,
+        usage: f.usage,
+        module: f.module,
+      })),
+    },
     pendingIntegration,
-    gaps,
+    gaps: gapsWithPending,
   };
   const fin = await finalize(
     {
@@ -264,12 +398,31 @@ export async function runBuild(
         recipe: recipeId,
         entities: spec.entities.map((e) => e.name),
         acceptanceCriteria: spec.acceptance_criteria,
-        components: selected.map((s) => ({ capability: s.capability, id: s.component.id })),
+        components: usedComponents.map((s) => ({ capability: s.capability, id: s.component.id })),
         gaps: gapsWithPending.map((g) => g.capability),
         gapLabels: CAPABILITY_LABELS,
+        backupGenerated: filled.map((f) => ({
+          capability: f.capability,
+          label: label(f.capability),
+          file: f.module,
+        })),
         reusedShare: (metrics.reuse as { reusedShare: number }).reusedShare,
       },
       metrics: { ...metrics, timings },
+      swap: {
+        toCommit: assembledCommit,
+        capabilities: [...integratedCaps, ...filledCaps],
+        parts: [
+          ...integrations.flatMap((i) =>
+            i.glue ? [{ capability: i.capability, kind: "glue" as const, files: [i.glue] }] : [],
+          ),
+          ...filled.map((f) => ({
+            capability: f.capability,
+            kind: "backup" as const,
+            files: [f.module, f.test],
+          })),
+        ],
+      },
     },
     finalizeDeps(deps, buildId),
   );
@@ -281,6 +434,35 @@ export async function runBuild(
     remediation: fin.remediation,
     report: fin.report,
     improvement: fin.improvement,
+    corrections: fin.corrections,
+    swappedOut: fin.swappedOut,
+    glueRemoved: fin.glueRemoved,
+    // What is in the delivered repository after corrections and swaps.
+    components: usedComponents
+      .filter((u) => !fin.swappedOut.includes(u.capability))
+      .map((u) => u.component.id)
+      .filter((id, i, all) => all.indexOf(id) === i),
+    integrated: integrations
+      .filter((i) => !fin.swappedOut.includes(i.capability))
+      .map((i) => ({ ...i, glue: fin.glueRemoved.includes(i.capability) ? null : i.glue })),
+    backup: {
+      activations: filled.map((f) => ({
+        capability: f.capability,
+        trigger: f.trigger,
+        model: f.model,
+        failedOver: f.failedOver,
+        usage: f.usage,
+        module: f.module,
+        kept: !fin.swappedOut.includes(f.capability),
+      })),
+    },
+    gaps: [
+      ...gapsWithPending,
+      ...fin.swappedOut.map((capability) => ({
+        capability,
+        trigger: "removed after failed corrections (T4)",
+      })),
+    ],
   };
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
     repoDir,
@@ -303,6 +485,7 @@ function finalizeDeps(deps: PipelineDeps, buildId: string): FinalizeDeps {
     decider: deps.decider,
     fixers: deps.fixers,
     writer: deps.writer,
+    correction: { compiler: deps.compiler, backupCoder: deps.backupCoder },
     ...(deps.compiler.reasoningEffort ? { reasoningEffort: deps.compiler.reasoningEffort } : {}),
     emit: (phase, type, data) => deps.emit(buildId, phase, type, data),
   };
@@ -371,4 +554,45 @@ export async function improveBuild(
     verify: fin.verify,
     spec: parent.spec,
   };
+}
+
+/** COMPONENTS.md after integration: integrated libraries and Backup Coder helpers, removed from "not covered". */
+function appendComponentsDoc(
+  repoDir: string,
+  integrations: IntegrationResult[],
+  filled: FilledGap[],
+): void {
+  const path = join(repoDir, "COMPONENTS.md");
+  if (!existsSync(path)) return;
+  const done = new Set([
+    ...integrations.map((i) => i.capability),
+    ...filled.map((f) => f.capability),
+  ]);
+  const kept = readFileSync(path, "utf8")
+    .split("\n")
+    .filter(
+      (line) =>
+        !/^- `([^`]+)` \(trigger /.test(line) || !done.has(/^- `([^`]+)`/.exec(line)?.[1] ?? ""),
+    )
+    .join("\n");
+  // Drop the "not covered" heading when nothing is left under it.
+  const body = kept.replace(/## Not covered by a catalog component\s*$/, "");
+  const sections = [
+    integrations.length
+      ? `## Integrated after assembly\n\nInstalled at the exact approved version; the component's contract test runs in this app (\`tests/unit/components/\`).\n\n${integrations
+          .map(
+            (i) =>
+              `- \`${i.capability}\` → \`${i.component}\`${i.glue ? ` · helper \`${i.glue}\`` : ""}`,
+          )
+          .join("\n")}\n`
+      : "",
+    filled.length
+      ? `## Written by the Backup Coder\n\nNo audited component exists yet for these capabilities. The code carries \`// turbineh:generated-backup\`, has its own unit tests and passed the same verification.\n\n${filled
+          .map(
+            (f) => `- \`${f.capability}\` (${f.trigger}) → \`${f.module}\` · tests \`${f.test}\``,
+          )
+          .join("\n")}\n`
+      : "",
+  ].filter(Boolean);
+  writeFileSync(path, `${body.trimEnd()}\n\n${sections.join("\n")}`);
 }
