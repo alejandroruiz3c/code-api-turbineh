@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Client handover: every package now includes `START_HERE.html` (one self-contained page in TurbineH style: status, the 3 steps to go live, what each document is for) and `DEPLOY.md` (go-live guide with only the settings that app uses, Vercel + Neon or own server, background jobs when present, first steps and upkeep).
+
 - Curation: contract tests are also type-checked (strict, same settings as generated apps); 52/52 external components re-certified; evidence references are repo-relative.
 
 - G2 fixes: native component `jobs.queue.turbineh` (Postgres queue with SKIP LOCKED claiming, typed jobs, exponential backoff, secret-protected runner endpoint), copied by the assembler only when selected — the most frequent Backup Coder gap is gone; manifests declare `integration.types` (exact `@types/*` for libraries without bundled types: papaparse, ms, validator, qrcode, he, sanitize-html), installed with the component. Plan updated to `software.turbineh.com`.
