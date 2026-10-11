@@ -1,0 +1,278 @@
+{
+  "date": "2026-10-11",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  },
+  "sandbox": "install with network (no secrets), tests and type-check with --network none",
+  "typecheckTail": "exit=0\n",
+  "runTail": "exit=0\n",
+  "components": {
+    "auth.mfa.otpauth": {
+      "purl": "pkg:npm/otpauth@9.5.2",
+      "passed": true,
+      "message": ""
+    },
+    "data.csv-export.csv-stringify": {
+      "purl": "pkg:npm/csv-stringify@6.9.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.csv-import.papaparse": {
+      "purl": "pkg:npm/papaparse@5.7.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.dates.date-fns": {
+      "purl": "pkg:npm/date-fns@4.4.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.dates.dayjs": {
+      "purl": "pkg:npm/dayjs@1.11.23",
+      "passed": true,
+      "message": ""
+    },
+    "data.diff.diff": {
+      "purl": "pkg:npm/diff@9.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.duration.ms": {
+      "purl": "pkg:npm/ms@2.1.3",
+      "passed": true,
+      "message": ""
+    },
+    "data.fuzzy-search.fuse": {
+      "purl": "pkg:npm/fuse.js@7.5.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.ics-export.ical-generator": {
+      "purl": "pkg:npm/ical-generator@11.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "data.ids.nanoid": {
+      "purl": "pkg:npm/nanoid@6.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "data.ids.uuid": {
+      "purl": "pkg:npm/uuid@14.0.2",
+      "passed": true,
+      "message": ""
+    },
+    "data.money.decimal-js": {
+      "purl": "pkg:npm/decimal.js@10.6.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.phone.libphonenumber-js": {
+      "purl": "pkg:npm/libphonenumber-js@1.13.14",
+      "passed": true,
+      "message": ""
+    },
+    "data.recurrence.rrule": {
+      "purl": "pkg:npm/rrule@2.8.1",
+      "passed": true,
+      "message": ""
+    },
+    "data.serialization.superjson": {
+      "purl": "pkg:npm/superjson@2.2.6",
+      "passed": true,
+      "message": ""
+    },
+    "data.slug.slugify": {
+      "purl": "pkg:npm/slugify@1.6.9",
+      "passed": true,
+      "message": ""
+    },
+    "data.timezones.date-fns-tz": {
+      "purl": "pkg:npm/date-fns-tz@3.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.validation-strings.validator": {
+      "purl": "pkg:npm/validator@13.15.35",
+      "passed": true,
+      "message": ""
+    },
+    "data.validation.valibot": {
+      "purl": "pkg:npm/valibot@1.5.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.validation.yup": {
+      "purl": "pkg:npm/yup@1.7.1",
+      "passed": true,
+      "message": ""
+    },
+    "data.xlsx-export.exceljs": {
+      "purl": "pkg:npm/exceljs@4.4.0",
+      "passed": true,
+      "message": ""
+    },
+    "email.transactional.resend": {
+      "purl": "pkg:npm/resend@6.30.0",
+      "passed": true,
+      "message": ""
+    },
+    "files.mime.mime": {
+      "purl": "pkg:npm/mime@4.1.0",
+      "passed": true,
+      "message": ""
+    },
+    "files.pdf.pdf-lib": {
+      "purl": "pkg:npm/pdf-lib@1.17.1",
+      "passed": true,
+      "message": ""
+    },
+    "files.qr.qrcode": {
+      "purl": "pkg:npm/qrcode@1.5.4",
+      "passed": true,
+      "message": ""
+    },
+    "files.type-detection.file-type": {
+      "purl": "pkg:npm/file-type@22.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "jobs.scheduler.cron-parser": {
+      "purl": "pkg:npm/cron-parser@5.10.1",
+      "passed": true,
+      "message": ""
+    },
+    "jobs.scheduler.croner": {
+      "purl": "pkg:npm/croner@10.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "observability.logging.pino": {
+      "purl": "pkg:npm/pino@10.3.1",
+      "passed": true,
+      "message": ""
+    },
+    "ops.concurrency.p-limit": {
+      "purl": "pkg:npm/p-limit@7.3.3",
+      "passed": true,
+      "message": ""
+    },
+    "ops.rate-limit.rate-limiter-flexible": {
+      "purl": "pkg:npm/rate-limiter-flexible@11.2.1",
+      "passed": true,
+      "message": ""
+    },
+    "ops.retry.p-retry": {
+      "purl": "pkg:npm/p-retry@8.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "payments.checkout.stripe": {
+      "purl": "pkg:npm/stripe@22.6.2",
+      "passed": true,
+      "message": ""
+    },
+    "security.html-escape.he": {
+      "purl": "pkg:npm/he@1.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "security.jwt.jose": {
+      "purl": "pkg:npm/jose@6.2.12",
+      "passed": true,
+      "message": ""
+    },
+    "security.password-hash.bcryptjs": {
+      "purl": "pkg:npm/bcryptjs@3.0.3",
+      "passed": true,
+      "message": ""
+    },
+    "security.sanitize-html.sanitize-html": {
+      "purl": "pkg:npm/sanitize-html@2.17.7",
+      "passed": true,
+      "message": ""
+    },
+    "security.webhook-signature.standardwebhooks": {
+      "purl": "pkg:npm/standardwebhooks@1.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.calendar.react-day-picker": {
+      "purl": "pkg:npm/react-day-picker@10.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.charts.recharts": {
+      "purl": "pkg:npm/recharts@3.10.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.command-palette.cmdk": {
+      "purl": "pkg:npm/cmdk@1.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.dialog.radix-dialog": {
+      "purl": "pkg:npm/@radix-ui/react-dialog@1.1.23",
+      "passed": true,
+      "message": ""
+    },
+    "ui.form.react-hook-form": {
+      "purl": "pkg:npm/react-hook-form@7.89.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.i18n.i18next": {
+      "purl": "pkg:npm/i18next@26.4.2",
+      "passed": true,
+      "message": ""
+    },
+    "ui.icons.lucide-react": {
+      "purl": "pkg:npm/lucide-react@1.48.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.markdown.markdown-it": {
+      "purl": "pkg:npm/markdown-it@15.0.2",
+      "passed": true,
+      "message": ""
+    },
+    "ui.markdown.marked": {
+      "purl": "pkg:npm/marked@18.0.14",
+      "passed": true,
+      "message": ""
+    },
+    "ui.notifications.sonner": {
+      "purl": "pkg:npm/sonner@2.0.8",
+      "passed": true,
+      "message": ""
+    },
+    "ui.styling.class-variance-authority": {
+      "purl": "pkg:npm/class-variance-authority@0.7.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.styling.clsx": {
+      "purl": "pkg:npm/clsx@2.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.styling.tailwind-merge": {
+      "purl": "pkg:npm/tailwind-merge@3.7.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.table.tanstack-table": {
+      "purl": "pkg:npm/@tanstack/react-table@8.21.3",
+      "passed": true,
+      "message": ""
+    }
+  }
+}

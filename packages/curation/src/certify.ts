@@ -12,14 +12,44 @@ export interface CertifyResult {
   reason: string;
 }
 
-/** Test harness versions (ADR-0002). React is only used by UI component contracts (server rendering). */
-const HARNESS = { vitest: "5.0.2", vite: "8.3.1", react: "19.3.0", "react-dom": "19.3.0" };
+/**
+ * Test harness versions (ADR-0002), aligned with the recipe templates. React is only used by UI component contracts
+ * (server rendering); TypeScript and type packages type-check every contract like a generated app does.
+ */
+const HARNESS = {
+  vitest: "5.0.2",
+  vite: "8.3.1",
+  react: "19.3.0",
+  "react-dom": "19.3.0",
+  typescript: "6.0.3",
+  "@types/node": "24.19.0",
+  "@types/react": "19.3.0",
+  "@types/react-dom": "19.3.0",
+};
+
+/** Same strictness as the generated apps (recipe tsconfig), so a contract that passes here type-checks there. */
+const TSCONFIG = {
+  compilerOptions: {
+    target: "ES2022",
+    module: "ESNext",
+    moduleResolution: "Bundler",
+    strict: true,
+    noUncheckedIndexedAccess: true,
+    isolatedModules: true,
+    jsx: "react-jsx",
+    skipLibCheck: true,
+    noEmit: true,
+    types: ["node"],
+  },
+  include: ["tests/*.ts"],
+};
 
 /**
  * Certifies components with their contract tests:
  *  1. one workspace with every package under test + vitest (dependency install is the only networked step),
- *  2. contract tests run in the sandbox with --network none,
- *  3. a component becomes `approved` only if its contract passed AND the deterministic approval gate passes
+ *  2. contract tests run in the sandbox with --network none, and are type-checked with the apps' strict settings
+ *     (libraries without bundled types must declare `integration.types`),
+ *  3. a component becomes `approved` only if its contract passed, type-checked AND the deterministic approval gate passes
  *     (allowed licence, no unmitigated high/critical advisory, tested evidence).
  */
 export async function certify(
@@ -27,10 +57,13 @@ export async function certify(
   componentsDir: string,
   evidencePath: string,
   today: string,
+  /** How manifests cite the evidence (repo-relative path); defaults to `evidencePath`. */
+  evidenceRef: string = evidencePath,
 ): Promise<CertifyResult[]> {
   const work = mkdtempSync(join(tmpdir(), "turbineh-certify-"));
   const manifests = new Map<string, ComponentManifest>();
   const deps: Record<string, string> = {};
+  const typeDeps: Record<string, string> = {};
   mkdirSync(join(work, "tests"));
   for (const id of ids) {
     const m = parse(
@@ -39,6 +72,10 @@ export async function certify(
     manifests.set(id, m);
     const purl = /^pkg:npm\/(.+)@([^@]+)$/.exec(m.source.purl);
     if (purl) deps[purl[1] as string] = purl[2] as string;
+    const types = /^(@types\/[^@]+)@(.+)$/.exec(
+      (m.integration as { types?: string } | undefined)?.types ?? "",
+    );
+    if (types?.[1] && types[2]) typeDeps[types[1]] = types[2];
     const contract = join(componentsDir, id, "contract.test.ts");
     if (existsSync(contract)) cpSync(contract, join(work, "tests", `${id}.test.ts`));
   }
@@ -50,7 +87,15 @@ export async function certify(
         private: true,
         type: "module",
         dependencies: { ...deps, react: HARNESS.react, "react-dom": HARNESS["react-dom"] },
-        devDependencies: { vitest: HARNESS.vitest, vite: HARNESS.vite },
+        devDependencies: {
+          vitest: HARNESS.vitest,
+          vite: HARNESS.vite,
+          typescript: HARNESS.typescript,
+          "@types/node": HARNESS["@types/node"],
+          "@types/react": HARNESS["@types/react"],
+          "@types/react-dom": HARNESS["@types/react-dom"],
+          ...typeDeps,
+        },
       },
       null,
       2,
@@ -60,6 +105,8 @@ export async function certify(
     join(work, "vitest.config.ts"),
     'import { defineConfig } from "vitest/config";\nexport default defineConfig({ test: { include: ["tests/*.test.ts"], environment: "node", testTimeout: 20000 } });\n',
   );
+
+  writeFileSync(join(work, "tsconfig.json"), JSON.stringify(TSCONFIG, null, 2));
 
   const install = await sandbox(
     work,
@@ -72,6 +119,19 @@ export async function certify(
     "pnpm exec vitest run --reporter=json --outputFile=results.json > /dev/null 2>&1; echo exit=$?",
     { network: "none", env: {} },
   );
+  const typecheck = await sandbox(
+    work,
+    "pnpm exec tsc -p tsconfig.json --pretty false; echo exit=$?",
+    {
+      network: "none",
+      env: {},
+    },
+  );
+  const typeErrors = (id: string) =>
+    typecheck.tail
+      .split("\n")
+      .filter((l) => l.startsWith(`tests/${id}.test.ts(`))
+      .join(" | ");
   const results = existsSync(join(work, "results.json"))
     ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
         testResults: {
@@ -87,14 +147,17 @@ export async function certify(
   const evidence: Record<string, unknown> = {
     date: today,
     harness: HARNESS,
-    sandbox: "install with network (no secrets), tests with --network none",
+    sandbox: "install with network (no secrets), tests and type-check with --network none",
+    typecheckTail: typecheck.tail.slice(-4000),
     runTail: run.tail,
     components: {},
   };
   for (const [id, m] of manifests) {
     const file = results.testResults.find((r) => r.name.endsWith(`/tests/${id}.test.ts`));
-    const passed = file?.status === "passed";
+    const tsErrors = typeErrors(id);
+    const passed = file?.status === "passed" && tsErrors === "";
     const failure = [
+      tsErrors && `typecheck: ${tsErrors}`,
       file?.message,
       ...(file?.assertionResults ?? []).flatMap((a) => a.failureMessages ?? []),
     ]
@@ -120,7 +183,7 @@ export async function certify(
       status: "approved",
       quality: {
         tests: {
-          command: "contract.test.ts (vitest, sandbox --network none)",
+          command: "contract.test.ts (vitest + tsc strict, sandbox --network none)",
           passed: true,
           date: today,
         },
@@ -128,9 +191,9 @@ export async function certify(
       evidence: [
         ...m.evidence.filter((e) => e.origin !== "tested" || !e.claim.startsWith("Contract")),
         {
-          claim: "Contract tests pass in the sandbox without network",
+          claim: "Contract tests pass and type-check (strict) in the sandbox without network",
           origin: "tested",
-          ref: evidencePath,
+          ref: evidenceRef,
         },
       ],
       relations: { ...m.relations, tested_with: ["contract-harness"] },
