@@ -7,7 +7,7 @@
 
 ## 0. Objetivo de la beta (D3 · martes 13-oct)
 
-Un usuario escribe un prompt en la UI o llama a `POST https://api.turbineh.com/v1/builds`. En minutos recibe:
+Un usuario escribe un prompt en la UI o llama a `POST https://software.turbineh.com/v1/builds`. En minutos recibe:
 
 1. **Un repositorio privado** en la organización GitHub de TurbineH para entregas a clientes, con una app web completamente funcional, estructurada en carpetas jerarquizadas y documentada, que compila, pasa sus tests y pasa la puerta de seguridad.
 2. **Feedback textual** generado por el modelo que trabaja con JEV: qué se ha construido, qué componentes se eligieron y por qué, qué código se generó en las uniones, informe de seguridad con alcance y fecha, y métricas del build.
@@ -39,7 +39,7 @@ Un usuario escribe un prompt en la UI o llama a `POST https://api.turbineh.com/v
 ## 2. Arquitectura
 
 ```
-                    ┌────────────────────────────── api.turbineh.com ──────────────────────────────┐
+                    ┌──────────────────────────── software.turbineh.com ────────────────────────────┐
  Prompt ─► Gateway ─► Abuse Guard ─► Intent Compiler ─► Selector ─► Resolver ─► Assembler ─► Verifier ─► Delivery
  (UI/API)  (auth,     (JEV: política   (modelo open     (retrieval  (determinista: (receta +   (sandbox:   (repo privado
            quotas,     de uso)          pequeño →        + JEV)      versiones,     componentes  build, test, GitHub +
@@ -470,7 +470,7 @@ Cada día cierra con un **Gate**. Claude Code no avanza al siguiente bloque sin 
 | Bloque | Tarea |
 |---|---|
 | Mañana | Prueba de carga, ajuste de cuotas y concurrencia, corrección de los fallos de G2 |
-| Mediodía | **Code freeze.** Despliegue a producción en `api.turbineh.com` |
+| Mediodía | **Code freeze.** Despliegue a producción en `software.turbineh.com` (`api.turbineh.com` sigue siendo la landing de YES IF; ADR-0005) |
 | Tarde | Pulido de docs públicas, demo grabada de respaldo, 3 prompts de demo ensayados |
 | Presentación | Demo en vivo + repo público + benchmark |
 

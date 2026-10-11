@@ -23,14 +23,21 @@
     "relations"
   ],
   "properties": {
-    "schema": { "const": "turbineh.component/v0.1" },
+    "schema": {
+      "const": "turbineh.component/v0.1"
+    },
     "id": {
       "description": "category.capability.implementation",
       "type": "string",
       "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+){2,}$"
     },
-    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "status": { "enum": ["discovered", "evaluated", "approved", "deprecated"] },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "status": {
+      "enum": ["discovered", "evaluated", "approved", "deprecated"]
+    },
     "category": {
       "enum": [
         "security",
@@ -53,10 +60,22 @@
       "additionalProperties": false,
       "required": ["purl", "repo"],
       "properties": {
-        "purl": { "type": "string", "pattern": "^pkg:[a-z]+/.+@.+$" },
-        "repo": { "type": "string", "format": "uri" },
-        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
-        "integrity": { "type": "string", "pattern": "^sha(256|384|512)-.+$" }
+        "purl": {
+          "type": "string",
+          "pattern": "^pkg:[a-z]+/.+@.+$"
+        },
+        "repo": {
+          "type": "string",
+          "format": "uri"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "integrity": {
+          "type": "string",
+          "pattern": "^sha(256|384|512)-.+$"
+        }
       }
     },
     "capability": {
@@ -64,12 +83,39 @@
       "additionalProperties": false,
       "required": ["does", "does_not", "use_cases"],
       "properties": {
-        "does": { "type": "string", "minLength": 10 },
-        "does_not": { "type": "string", "minLength": 5 },
-        "use_cases": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "pros": { "type": "array", "items": { "type": "string" } },
-        "cons": { "type": "array", "items": { "type": "string" } },
-        "alternatives": { "type": "array", "items": { "type": "string" } }
+        "does": {
+          "type": "string",
+          "minLength": 10
+        },
+        "does_not": {
+          "type": "string",
+          "minLength": 5
+        },
+        "use_cases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "pros": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "contract": {
@@ -77,10 +123,30 @@
       "additionalProperties": false,
       "required": ["inputs", "outputs", "errors", "limits"],
       "properties": {
-        "inputs": { "type": "array", "items": { "type": "string" } },
-        "outputs": { "type": "array", "items": { "type": "string" } },
-        "errors": { "type": "array", "items": { "type": "string" } },
-        "limits": { "type": "array", "items": { "type": "string" } }
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "compat": {
@@ -88,9 +154,18 @@
       "additionalProperties": false,
       "required": ["runtime"],
       "properties": {
-        "runtime": { "type": "string" },
-        "framework": { "type": "string" },
-        "peer": { "type": "object", "additionalProperties": { "type": "string" } }
+        "runtime": {
+          "type": "string"
+        },
+        "framework": {
+          "type": "string"
+        },
+        "peer": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
       }
     },
     "effects": {
@@ -98,10 +173,21 @@
       "additionalProperties": false,
       "required": ["network", "fs", "db", "external_services"],
       "properties": {
-        "network": { "type": "boolean" },
-        "fs": { "type": "boolean" },
-        "db": { "type": "boolean" },
-        "external_services": { "type": "array", "items": { "type": "string" } }
+        "network": {
+          "type": "boolean"
+        },
+        "fs": {
+          "type": "boolean"
+        },
+        "db": {
+          "type": "boolean"
+        },
+        "external_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "integration": {
@@ -109,13 +195,27 @@
       "additionalProperties": false,
       "required": ["strategy", "install"],
       "properties": {
-        "strategy": { "enum": ["dependency", "vendored-with-provenance", "adapter", "fork"] },
-        "install": { "type": "string" },
+        "strategy": {
+          "enum": ["dependency", "vendored-with-provenance", "adapter", "fork"]
+        },
+        "install": {
+          "type": "string"
+        },
         "config": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          }
         },
-        "migrations": { "type": "boolean" }
+        "migrations": {
+          "type": "boolean"
+        },
+        "types": {
+          "type": "string",
+          "pattern": "^@types/[a-z0-9._-]+@\\d+\\.\\d+\\.\\d+$",
+          "description": "Exact DefinitelyTyped package for libraries without bundled TypeScript types (installed as a devDependency)."
+        }
       }
     },
     "quality": {
@@ -128,9 +228,16 @@
           "additionalProperties": false,
           "required": ["command", "passed"],
           "properties": {
-            "command": { "type": "string" },
-            "passed": { "type": "boolean" },
-            "date": { "type": "string", "format": "date" }
+            "command": {
+              "type": "string"
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "date": {
+              "type": "string",
+              "format": "date"
+            }
           }
         }
       }
@@ -140,21 +247,37 @@
       "additionalProperties": false,
       "required": ["tools", "findings", "scope"],
       "properties": {
-        "scanned_at": { "type": "string", "format": "date" },
-        "tools": { "type": "array", "items": { "type": "string" } },
+        "scanned_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "findings": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["id", "severity"],
             "properties": {
-              "id": { "type": "string" },
-              "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
-              "mitigation": { "type": "string" }
+              "id": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": ["critical", "high", "medium", "low", "info"]
+              },
+              "mitigation": {
+                "type": "string"
+              }
             }
           }
         },
-        "scope": { "type": "string" }
+        "scope": {
+          "type": "string"
+        }
       }
     },
     "license": {
@@ -162,9 +285,18 @@
       "additionalProperties": false,
       "required": ["declared", "detected"],
       "properties": {
-        "declared": { "type": "string" },
-        "detected": { "type": "string" },
-        "obligations": { "type": "array", "items": { "type": "string" } }
+        "declared": {
+          "type": "string"
+        },
+        "detected": {
+          "type": "string"
+        },
+        "obligations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "evidence": {
@@ -174,9 +306,15 @@
         "additionalProperties": false,
         "required": ["claim", "origin"],
         "properties": {
-          "claim": { "type": "string" },
-          "origin": { "enum": ["maintainer", "model-inferred", "tested", "unknown"] },
-          "ref": { "type": "string" }
+          "claim": {
+            "type": "string"
+          },
+          "origin": {
+            "enum": ["maintainer", "model-inferred", "tested", "unknown"]
+          },
+          "ref": {
+            "type": "string"
+          }
         }
       }
     },
@@ -185,10 +323,31 @@
       "additionalProperties": false,
       "required": ["requires", "provides", "conflicts", "tested_with"],
       "properties": {
-        "requires": { "type": "array", "items": { "type": "string" } },
-        "provides": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "conflicts": { "type": "array", "items": { "type": "string" } },
-        "tested_with": { "type": "array", "items": { "type": "string" } }
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tested_with": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   }

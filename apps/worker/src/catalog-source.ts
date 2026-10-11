@@ -9,6 +9,7 @@ interface Manifest {
   status: CandidateCard["status"];
   source: { purl: string };
   capability: { does: string; does_not: string };
+  integration?: { types?: string };
   compat: { peer?: Record<string, string> };
   license: { declared: string; detected: string };
   relations: { requires: string[]; provides: string[]; conflicts: string[] };
@@ -70,6 +71,7 @@ export function externalComponent(
     pkg: { name: purl[1], version: purl[2] },
     does: m.capability.does,
     doesNot: m.capability.does_not,
+    ...(m.integration?.types ? { typesPkg: m.integration.types } : {}),
     dir,
   };
 }

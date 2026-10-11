@@ -488,11 +488,16 @@ test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
 /** Registry, schema barrel and shared E2E helper for the generated entities. */
 export function generateIndexes(
   entities: Entity[],
-  opts: { recipeTables?: boolean; extraNav?: { label: string; href: string }[] } = {},
+  opts: {
+    recipeTables?: boolean;
+    componentTables?: string[];
+    extraNav?: { label: string; href: string }[];
+  } = {},
 ): GeneratedFile[] {
   const names = entities.map((e) => entityNames(e.name));
   const barrel = [
     ...(opts.recipeTables ? ['export * from "./recipe-tables";'] : []),
+    ...(opts.componentTables ?? []).map((t) => `export * from "./${t}";`),
     ...names.map((n) => `export * from "./tables/${n.slug}";`),
   ];
   const nav = [

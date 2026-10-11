@@ -38,6 +38,7 @@ effects:
 integration:
   strategy: dependency
   install: pnpm add papaparse@5.7.0
+  types: "@types/papaparse@5.5.2"
   config: []
   migrations: false
 quality:

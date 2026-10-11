@@ -38,6 +38,7 @@ effects:
 integration:
   strategy: dependency
   install: pnpm add he@1.2.0
+  types: "@types/he@1.2.3"
   config: []
   migrations: false
 quality:

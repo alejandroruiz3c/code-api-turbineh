@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
@@ -82,6 +91,27 @@ export function assemble(input: AssembleInput): AssembleResult {
     if (changed) writeFileSync(file, s);
   }
 
+  // Native components vendored with provenance: their files/ are copied into the app when selected.
+  const componentsDir = join(input.recipesDir, "..", "components");
+  for (const s of input.selected) {
+    const files = join(componentsDir, s.component.id, "files");
+    if (!s.component.pkg.name.startsWith("turbineh/") || !existsSync(files)) continue;
+    cpSync(files, outDir, {
+      recursive: true,
+      filter: (src) => !src.endsWith(".env.example.append"),
+    });
+    const extraEnv = join(files, ".env.example.append");
+    if (existsSync(extraEnv) && existsSync(join(outDir, ".env.example"))) {
+      appendFileSync(join(outDir, ".env.example"), readFileSync(extraEnv, "utf8"));
+    }
+  }
+  const componentTables = existsSync(join(outDir, "src/db"))
+    ? readdirSync(join(outDir, "src/db"))
+        .filter((f) => /^component-[a-z0-9-]+\.ts$/.test(f))
+        .map((f) => f.replace(/\.ts$/, ""))
+        .sort()
+    : [];
+
   const entities = entitiesToGenerate(spec, recipe.providedEntities);
   const chosen = new Set(input.selected.map((s) => s.capability));
   const features = {
@@ -92,6 +122,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     ...entities.flatMap((e) => generateEntity(e, features)),
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
+      componentTables,
       extraNav: recipe.nav,
     }),
     ...docs(

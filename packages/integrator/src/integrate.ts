@@ -12,6 +12,8 @@ export interface ExternalComponent {
   pkg: { name: string; version: string };
   does: string;
   doesNot: string;
+  /** Exact `@types/x@version` for libraries without bundled types (from the manifest). */
+  typesPkg?: string;
   /** Directory of the component in the catalog (holds component.yaml and contract.test.ts). */
   dir: string;
 }
@@ -36,8 +38,18 @@ export const glueFile = (capability: string) =>
 export async function installComponents(dir: string, comps: ExternalComponent[]): Promise<void> {
   if (comps.length === 0) return;
   const path = join(dir, "package.json");
-  const pkg = JSON.parse(readFileSync(path, "utf8")) as { dependencies: Record<string, string> };
-  for (const c of comps) pkg.dependencies[c.pkg.name] = c.pkg.version;
+  const pkg = JSON.parse(readFileSync(path, "utf8")) as {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
+  for (const c of comps) {
+    pkg.dependencies[c.pkg.name] = c.pkg.version;
+    const t = c.typesPkg ? /^(@types\/[^@]+)@(.+)$/.exec(c.typesPkg) : null;
+    if (t?.[1] && t[2]) pkg.devDependencies[t[1]] = t[2];
+  }
+  pkg.devDependencies = Object.fromEntries(
+    Object.entries(pkg.devDependencies).sort(([a], [b]) => a.localeCompare(b)),
+  );
   pkg.dependencies = Object.fromEntries(
     Object.entries(pkg.dependencies).sort(([a], [b]) => a.localeCompare(b)),
   );
