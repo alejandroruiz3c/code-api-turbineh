@@ -1,3 +1,5 @@
+import { TURBINEH_LOGO_SVG } from "./brand.js";
+
 /**
  * Client handover documents: DEPLOY.md (how to go live, only the settings this app uses) and START_HERE.html (a short,
  * non-technical entry point in TurbineH style that explains every document of the package). Written by code from
@@ -128,25 +130,85 @@ const esc = (s: string) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
   );
 
-/** One self-contained page (inline CSS, no scripts, no external requests). */
+interface DocCard {
+  file: string;
+  title: string;
+  what: string;
+  who: string;
+  when: string;
+}
+
+const READ_FIRST: DocCard[] = [
+  {
+    file: "TURBINEH_REPORT.md",
+    title: "Your build report",
+    what: "What was built, which of your requirements are proven by tests, and your next steps.",
+    who: "You",
+    when: "Read first",
+  },
+  {
+    file: "DEPLOY.md",
+    title: "Go-live guide",
+    what: "Database, settings and hosting, step by step, so your customers can use the app.",
+    who: "You or your developer",
+    when: "Before launch · ~30 min",
+  },
+  {
+    file: "SECURITY.md",
+    title: "Security report",
+    what: "Every check we ran, what we fixed for you before delivery and what to keep an eye on.",
+    who: "You",
+    when: "Before inviting customers",
+  },
+];
+
+const FOR_DEVELOPERS: DocCard[] = [
+  {
+    file: "README.md",
+    title: "Developer guide",
+    what: "Run the app on a computer and its quality checks.",
+    who: "Developer",
+    when: "To change the app",
+  },
+  {
+    file: "COMPONENTS.md",
+    title: "Building blocks",
+    what: "The verified components the app is made of, with versions and licences.",
+    who: "Developer",
+    when: "Reference",
+  },
+  {
+    file: "ARCHITECTURE.md",
+    title: "How it fits together",
+    what: "A one-page technical overview.",
+    who: "Developer",
+    when: "Reference",
+  },
+  {
+    file: "src/ · tests/",
+    title: "The code",
+    what: "A complete Next.js app with sign-in, workspaces, roles and tests. All of it is yours.",
+    who: "Developer",
+    when: "Always",
+  },
+];
+
+const card = (d: DocCard, light: boolean) => {
+  const link = d.file.includes(" ")
+    ? `<span class="file">${esc(d.file)}</span>`
+    : `<a class="file" href="${esc(d.file)}">${esc(d.file)} ↗</a>`;
+  return `<article class="card${light ? " light" : ""}">
+        <h3>${esc(d.title)}</h3>
+        <p>${esc(d.what)}</p>
+        <dl><div><dt>Who</dt><dd>${esc(d.who)}</dd></div><div><dt>When</dt><dd>${esc(d.when)}</dd></div></dl>
+        ${link}
+      </article>`;
+};
+
+/** One self-contained page in the api.turbineh.com style (inline CSS + inline logo, no scripts, no requests). */
 export function startHereHtml(f: HandoverFacts): string {
-  const docs: [string, string, string][] = [
-    ["START_HERE.html", "This page", "What you received and where to begin."],
-    [
-      "TURBINEH_REPORT.md",
-      "Your build report",
-      "What was built, what was checked, and your next steps. Read it first.",
-    ],
-    ["DEPLOY.md", "Go-live guide", "How to put the app online for your customers, step by step."],
-    [
-      "SECURITY.md",
-      "Security report",
-      "Every security check we ran, what we fixed for you and what to watch.",
-    ],
-    ["README.md", "For your developer", "How to run the app on a computer and its quality checks."],
-    ["COMPONENTS.md", "Building blocks", "The verified components your app is made of."],
-    ["ARCHITECTURE.md", "How it fits together", "A one-page technical overview."],
-  ];
+  const pill = (text: string, tone: "ok" | "warn" | "plain") =>
+    `<span class="pill ${tone}">${esc(text)}</span>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -154,62 +216,106 @@ export function startHereHtml(f: HandoverFacts): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(f.appName)} · Start here</title>
 <style>
-  :root { --navy:#001A5A; --navy-2:#0B2A73; --teal:#34D8C4; --amber:#F2B24B; --ice:#EAF2FF; --muted:#9FB0D4; }
+  :root { --navy:#001a5a; --navy-900:#00123f; --panel:#0a2a72; --panel-2:#123a8c; --line:#1f448f; --ice:#c0e5ff;
+          --ice-2:#e1eaf3; --muted:#8fa6d4; --cream:#fcf6e4; --cream-2:#f3ead0; --ink:#0b1f5c; --ink-muted:#4a5f93;
+          --ok:#7fd1a0; --warn:#f2b24b;
+          --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-         background: var(--navy); color: var(--ice); line-height: 1.5; }
-  main { max-width: 760px; margin: 0 auto; padding: 48px 24px 64px; }
-  .eyebrow { color: var(--teal); letter-spacing: .14em; text-transform: uppercase; font-size: 12px; font-weight: 700; }
-  h1 { font-size: 34px; margin: 8px 0 8px; }
-  p.lead { color: var(--muted); margin: 0 0 24px; }
-  .status { display:flex; flex-wrap:wrap; gap:10px; margin: 0 0 32px; }
-  .pill { border:1px solid var(--navy-2); background: rgba(255,255,255,.04); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
-  .ok { color: var(--teal); border-color: rgba(52,216,196,.4); }
-  .warn { color: var(--amber); border-color: rgba(242,178,75,.4); }
-  h2 { font-size: 18px; margin: 32px 0 12px; }
-  ol.steps { padding-left: 20px; margin: 0; }
-  ol.steps li { margin: 6px 0; }
-  .docs { display:grid; grid-template-columns: 1fr; gap: 10px; }
-  .doc { border:1px solid var(--navy-2); border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,.03); }
-  .doc b { color: var(--ice); } .doc code { color: var(--teal); font-size: 13px; }
-  .doc p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
-  .first { border-color: var(--teal); }
-  footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
-  footer b { color: var(--teal); }
+  body { margin: 0; background: var(--navy); color: var(--ice-2); font-family: var(--sans); line-height: 1.55;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 24px 72px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 40px; }
+  .logo { height: 46px; width: auto; color: var(--ice); }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
+  .hero { border: 1px solid var(--line); background: rgba(10,42,114,.4); border-radius: 18px; padding: 36px; }
+  h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 10px 0 10px; color: #fff; }
+  .lead { color: var(--ice); margin: 0 0 22px; max-width: 70ch; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; border-radius: 999px;
+          padding: 7px 14px; border: 1px solid var(--line); background: rgba(10,42,114,.5); color: var(--ice); }
+  .pill.ok { color: var(--ok); border-color: rgba(127,209,160,.45); }
+  .pill.warn { color: var(--warn); border-color: rgba(242,178,75,.45); }
+  section { margin-top: 48px; }
+  h2 { font-size: 22px; margin: 8px 0 18px; color: #fff; letter-spacing: -.01em; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li { border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 22px; counter-increment: s; }
+  .steps li::before { content: "0" counter(s); display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .2em; color: var(--muted); margin-bottom: 10px; }
+  .steps li:first-child { background: var(--cream); color: var(--ink); border-color: var(--cream); }
+  .steps li:first-child::before { color: var(--ink-muted); }
+  .steps b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
+  .card { display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 22px; }
+  .card.light { background: var(--cream); color: var(--ink); border-color: var(--cream); }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0 0 14px; font-size: 14px; color: var(--ice); }
+  .card.light p { color: var(--ink-muted); }
+  dl { display: flex; gap: 18px; margin: 0 0 16px; }
+  dt { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .card.light dt { color: var(--ink-muted); }
+  dd { margin: 2px 0 0; font-size: 13px; }
+  .file { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 12px;
+          color: var(--ice); text-decoration: none; }
+  .steps .file { display: block; margin-top: 16px; }
+  .steps li:first-child .file { color: var(--ink); border-color: var(--cream-2); }
+  .card.light .file { border-color: var(--cream-2); color: var(--ink); }
+  a.file:hover { text-decoration: underline; }
+  footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between;
+           gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  @media (max-width: 860px) { .steps, .grid, .grid.four { grid-template-columns: 1fr; } .hero { padding: 26px; } }
 </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">TurbineH · Start here</div>
-  <h1>${esc(f.appName)}</h1>
-  <p class="lead">${esc(f.summary)}</p>
-  <div class="status">
-    <span class="pill ${f.verified ? "ok" : "warn"}">${f.verified ? "✓ Verified" : "Needs attention"}</span>
-    <span class="pill ok">${f.checksPassed}/${f.checksTotal} automated checks passed</span>
-    <span class="pill">${f.criteriaVerified}/${f.criteriaTotal} requirements proven by tests</span>
-    ${f.fixedBeforeDelivery ? `<span class="pill ok">${f.fixedBeforeDelivery} security fix(es) applied for you</span>` : ""}
-    <span class="pill ${f.alerts ? "warn" : "ok"}">${f.alerts ? `${f.alerts} alert(s) explained in the report` : "No open alerts"}</span>
+  <header>
+    ${TURBINEH_LOGO_SVG}
+    <span class="eyebrow">Start here</span>
+  </header>
+
+  <div class="hero">
+    <span class="eyebrow">Your app is ready</span>
+    <h1>${esc(f.appName)}</h1>
+    <p class="lead">${esc(f.summary)}</p>
+    <div class="pills">
+      ${pill(f.verified ? "✓ Verified" : "Needs attention", f.verified ? "ok" : "warn")}
+      ${pill(`${f.checksPassed}/${f.checksTotal} checks passed`, f.checksPassed === f.checksTotal ? "ok" : "warn")}
+      ${pill(`${f.criteriaVerified}/${f.criteriaTotal} requirements proven by tests`, "plain")}
+      ${f.fixedBeforeDelivery ? pill(`${f.fixedBeforeDelivery} security fix(es) applied`, "ok") : ""}
+      ${pill(f.alerts ? `${f.alerts} alert(s) explained` : "No open alerts", f.alerts ? "warn" : "ok")}
+    </div>
   </div>
 
-  <h2>Your app in 3 steps</h2>
-  <ol class="steps">
-    <li><b>Read your build report</b> — <code>TURBINEH_REPORT.md</code>: what you got and what to do next.</li>
-    <li><b>Go live</b> with <code>DEPLOY.md</code>: database, settings, hosting. About 30 minutes.</li>
-    <li><b>Sign up as the owner</b> in your live app and invite your team.</li>
-  </ol>
+  <section>
+    <span class="eyebrow">Three steps</span>
+    <h2>From this package to your customers</h2>
+    <ol class="steps">
+      <li><b>Read your report</b>What you got, what is proven and what to do next. <a class="file" href="TURBINEH_REPORT.md">TURBINEH_REPORT.md ↗</a></li>
+      <li><b>Go live</b>Database, settings and hosting in about 30 minutes. <a class="file" href="DEPLOY.md">DEPLOY.md ↗</a></li>
+      <li><b>Invite your team</b>Sign up as the owner in your live app and add your team with the right roles.</li>
+    </ol>
+  </section>
 
-  <h2>What is in this package</h2>
-  <div class="docs">
-${docs
-  .map(
-    ([file, title, what], i) =>
-      `    <div class="doc${i === 1 ? " first" : ""}"><b>${title}</b> · <code>${file}</code><p>${what}</p></div>`,
-  )
-  .join("\n")}
-    <div class="doc"><b>Your app's code</b> · <code>src/</code>, <code>tests/</code><p>Everything is yours: a complete Next.js app with sign-in, workspaces, roles and tests.</p></div>
-  </div>
+  <section>
+    <span class="eyebrow">Start with these</span>
+    <h2>For you</h2>
+    <div class="grid">
+      ${READ_FIRST.map((d) => card(d, true)).join("\n      ")}
+    </div>
+  </section>
 
-  <footer>Built and verified by <b>TurbineH</b> — selected from verified components, tested in an isolated sandbox before delivery.</footer>
+  <section>
+    <span class="eyebrow">Technical</span>
+    <h2>For your developer</h2>
+    <div class="grid four">
+      ${FOR_DEVELOPERS.map((d) => card(d, false)).join("\n      ")}
+    </div>
+  </section>
+
+  <footer>
+    <span>Built and verified by TurbineH — selected from verified components and tested in an isolated sandbox before delivery.</span>
+    <span class="eyebrow">software.turbineh.com</span>
+  </footer>
 </main>
 </body>
 </html>

@@ -5,8 +5,9 @@ with Claude Opus 5.5**, used only here, never in the product pipeline.
 
 ## Status
 
-Not run yet: it needs an Anthropic API key for the benchmark (decision and budget line in ADR-0008/0009). No such
-key is configured.
+Done on 2026-10-11 with a representative, time-boxed sample (one prompt per recipe family):
+[results and method](../results/2026-10-11-baseline-comparison.md). Runner: `pnpm --filter @turbineh/bench baseline --
+--ids a,b,c --parallel 3 --timeout-min 38 --max-turns 60`; re-verification after rule changes: `baseline/reverify.ts`.
 
 ## Procedure (same prompts, same gate)
 
