@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BackupCoder } from "@turbineh/backup-coder";
-import type { VerifyResult } from "@turbineh/verifier";
+import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import {
   askFile,
   CODE_RULES,
@@ -94,7 +94,9 @@ export async function patchOnce(
       changed.push(f);
     }),
   );
-  if (changed.length === 0) return null;
+  const kept = dropLeaks(dir, changed);
+  if (kept.length === 0) return null;
+  changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: directed correction ${attempt} (${changed.length} file(s))`);
   return { attempt, by: cfg.model, files: changed, usage };
 }
@@ -134,9 +136,18 @@ export async function backupPatch(
       changed.push(f);
     }),
   );
-  if (changed.length === 0) return null;
+  const kept = dropLeaks(dir, changed);
+  if (kept.length === 0) return null;
+  changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: backup coder correction (T4, ${changed.length} file(s))`);
   return { attempt, by: model, trigger: "T4", files: changed, usage };
+}
+
+/** Model-written changes that look like secrets are reverted before they can reach git history. */
+function dropLeaks(dir: string, files: string[]): string[] {
+  const leaks = leakingFiles(dir, files);
+  for (const f of leaks) execFileSync("git", ["checkout", "--", f], { cwd: dir });
+  return files.filter((f) => !leaks.includes(f));
 }
 
 function commit(dir: string, message: string): void {

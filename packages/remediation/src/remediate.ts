@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import type { Decider } from "@turbineh/decider";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { sandbox, type StaticFinding, type VerifyResult } from "@turbineh/verifier";
+import { leakingFiles, sandbox, type StaticFinding, type VerifyResult } from "@turbineh/verifier";
 import OpenAI from "openai";
 import { z } from "zod";
 import { findingKey, triageFindings } from "./triage.js";
@@ -210,7 +210,14 @@ export async function remediateOnce(
     fixDependencies(dir, deps),
     fixCode(dir, code, opts),
   ]);
-  const changes = [...depChanges, ...codeChanges];
+  // Specialist-written files that look like secrets are reverted (they would stay in git history forever).
+  const files = [...new Set(codeChanges.map((c) => c.target.split(":")[0] ?? ""))].filter(Boolean);
+  const leaks = new Set(leakingFiles(dir, files));
+  for (const f of leaks) execFileSync("git", ["checkout", "--", f], { cwd: dir });
+  const changes = [
+    ...depChanges,
+    ...codeChanges.filter((c) => !leaks.has(c.target.split(":")[0] ?? "")),
+  ];
   if (changes.length > 0) {
     execFileSync("git", ["add", "-A"], { cwd: dir });
     execFileSync(
@@ -299,6 +306,14 @@ export async function repairAfterRemediation(
       detail: `quality gate fixed after security remediation (${failing.map((x) => x.name).join(", ")})`,
     });
   }
+  const repairLeaks = new Set(
+    leakingFiles(
+      dir,
+      changes.map((c) => c.target),
+    ),
+  );
+  for (const f of repairLeaks) execFileSync("git", ["checkout", "--", f], { cwd: dir });
+  changes.splice(0, changes.length, ...changes.filter((c) => !repairLeaks.has(c.target)));
   if (changes.length > 0) {
     execFileSync("git", ["add", "-A"], { cwd: dir });
     execFileSync(

@@ -22,6 +22,8 @@ export const CODE_RULES =
   "handle possibly-undefined array/record access, no `any`, no unused variables or imports, no non-null assertions " +
   "on user data. React 19: there is no global JSX namespace (use React.ReactElement or omit return types). " +
   "Tests: import every vitest helper you use (describe, it, expect, vi). " +
+  "Never write literals that look like API keys, tokens, passwords or long random strings, not even in tests: " +
+  "use short obvious fakes such as 'key-1' or 'test-token'. " +
   "ESLint: typescript-eslint recommended + Next.js core-web-vitals + react-hooks.";
 
 /** One small task → one whole file. JSON output keeps the reply machine-checkable (ADR-0010). */

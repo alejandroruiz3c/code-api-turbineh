@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assemble,
@@ -24,7 +24,7 @@ import {
   type FilledGap,
   type IntegrationResult,
 } from "@turbineh/integrator";
-import type { VerifyResult } from "@turbineh/verifier";
+import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 
@@ -309,6 +309,24 @@ export async function runBuild(
     ]);
     integrations = ints;
     filled = fills.filter((f): f is FilledGap => f !== null);
+    // Model-written files are scanned for secret-looking literals BEFORE they reach git history.
+    const leaking = new Set(
+      leakingFiles(repoDir, [
+        ...integrations.flatMap((i) => (i.glue ? [i.glue] : [])),
+        ...filled.flatMap((f) => [f.module, f.test]),
+      ]),
+    );
+    if (leaking.size > 0) {
+      for (const f of leaking) rmSync(join(repoDir, f), { force: true });
+      integrations = integrations.map((i) =>
+        i.glue && leaking.has(i.glue) ? { ...i, glue: null } : i,
+      );
+      const dropped = filled.filter((f) => leaking.has(f.module) || leaking.has(f.test));
+      for (const f of dropped)
+        for (const p of [f.module, f.test]) rmSync(join(repoDir, p), { force: true });
+      filled = filled.filter((f) => !dropped.includes(f));
+      await deps.emit(buildId, "integrating", "secret-scan", { removed: [...leaking] });
+    }
     if (integrationError) {
       // Install failed: nothing half-integrated stays in the repository.
       git(repoDir, "reset", "-q", "--hard", assembledCommit);

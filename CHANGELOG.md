@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Pre-commit secret barrier for model-written code: glue, Backup Coder modules and tests, corrector patches and security fixes are scanned with gitleaks before they enter git history; leaking parts are removed or reverted (found by the final benchmark: a generated test with a key-like literal). Code rules forbid key-like literals in tests.
+
 - Catalog batch 5: 17 more approved components (123 manifests): maps (MapLibre), image processing (Jimp), cookie consent, image lightbox, PDF from React, QR codes as components, file drop zones, colour picker and the remaining accessible controls (slider, checkbox, switch, progress, avatar, scroll area, toggle group, confirmation dialog, hover card); 14 new capabilities.
 
 - Recipe `storefront` (ADR-0018): catalog with images and search, cookie cart, Stripe Checkout via REST (hosted page), signed idempotent webhook with stock in one transaction, orders and products admin, Product JSON-LD.
