@@ -18,6 +18,7 @@ import {
   type GeneratedFile,
 } from "./entities.js";
 import { entityNames } from "./naming.js";
+import { applyBrand, type Brand } from "./brand-theme.js";
 import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe } from "./recipes.js";
 
@@ -39,6 +40,8 @@ export interface AssembleInput {
   selected: SelectedComponent[];
   /** Capabilities left uncovered (recorded honestly; Backup Coder in later phases). */
   gaps: { capability: string; trigger: string }[];
+  /** Client brand (validated); applied as theme tokens and logo. */
+  brand?: Brand | null;
 }
 
 export interface AssembleResult {
@@ -112,6 +115,8 @@ export function assemble(input: AssembleInput): AssembleResult {
         .map((f) => f.replace(/\.ts$/, ""))
         .sort()
     : [];
+
+  if (input.brand) applyBrand(outDir, input.brand);
 
   const entities = entitiesToGenerate(spec, recipe.providedEntities);
   const chosen = new Set(input.selected.map((s) => s.capability));
@@ -191,6 +196,11 @@ pnpm install
 pnpm db:migrate
 pnpm dev
 \`\`\`
+
+## Look and feel
+
+Colours and typeface are theme tokens in \`src/app/globals.css\` (\`@theme\`: \`--color-brand\`, \`--font-brand\`); the
+logo, if any, is in \`public/brand/\` and referenced from \`src/brand.ts\`. Change them there and every screen follows.
 
 ## Quality gates
 

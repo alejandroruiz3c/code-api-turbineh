@@ -3,3 +3,4 @@ export * from "./entities.js";
 export * from "./naming.js";
 export * from "./recipes.js";
 export * from "./handover.js";
+export * from "./brand-theme.js";

@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Client brand (ADR-0016): optional main colour, typeface and logo when asking for an app ("Add your brand" in the prompt box, `brand` in `POST /v1/builds`), applied as theme tokens with WCAG-based text contrast; logo checked by content; repository made public after a full-history gitleaks scan and path clean-up.
+
 - Baseline comparison (ADR-0009), representative and time-boxed: 4 recipes, same verification gate — ours 4/4 verified (avg 110 s), Claude Code + Opus 5.5 0/4 (all functional checks pass; LGPL `sharp`, unpatched production advisory, unannotated public actions), $5.88 total (`bench/results/2026-10-11-baseline-comparison.md`).
 - `START_HERE.html` restyled after api.turbineh.com (logo, cream/panel cards, who/when per document).
 - Semgrep: authorization rule also accepts session checks combined with other conditions; test setup files excluded from the child-process rule.

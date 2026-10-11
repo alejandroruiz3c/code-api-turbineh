@@ -105,7 +105,7 @@ async function handle(build: BuildRow): Promise<void> {
   const outcome =
     build.options.mode === "improve" && parentId
       ? await improveFromParent(build, parentId, pipelineDeps)
-      : await runBuild(build.prompt, pipelineDeps, build.id);
+      : await runBuild(build.prompt, pipelineDeps, build.id, { brand: build.options.brand });
   let artifact: Record<string, unknown> | undefined;
   if (outcome.status === "done" && outcome.repoDir) {
     await emitEvent(db, build.id, "delivering", "start", { channel: "A" });

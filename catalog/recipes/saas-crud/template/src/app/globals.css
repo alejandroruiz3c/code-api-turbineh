@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Theme tokens. The assembler replaces this block when the client provides a brand (colour, font). */
+@theme {
+  --color-brand: #0f172a;
+  --color-brand-contrast: #ffffff;
+  --font-brand: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: var(--font-brand);
 }
