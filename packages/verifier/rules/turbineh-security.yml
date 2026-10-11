@@ -55,7 +55,7 @@ rules:
             "use server";
             ...
         - |
-            export async function $F(...) { ... }
+          export async function $F(...) { ... }
         - not:
             all:
               - |
