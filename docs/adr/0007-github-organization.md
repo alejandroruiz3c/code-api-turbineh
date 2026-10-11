@@ -11,6 +11,6 @@
   documents, numbers only from `bench/`.
 - Branch protection on `main`: PR required, CI checks required, no force-push.
 - The repository can be transferred to an organization later without losing history, issues or redirects.
-- Customer deliveries (channel C, PLAN §7.1) still need a separate namespace with its own GitHub App; to be
-  decided in D2 (WP12). Delivery channel B (push to the user's own account) does not depend on it.
+- Customer deliveries into a TurbineH GitHub namespace (channel C) are out of scope — see ADR-0013. Users get the
+  complete package and can push it to their own GitHub (channel B).
 - Token: fine-grained, scoped to the repositories it must touch.
