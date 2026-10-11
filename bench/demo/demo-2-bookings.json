@@ -1,0 +1,4 @@
+{
+  "id": "demo-2-bookings",
+  "prompt": "A booking app for a yoga studio: the owner sets weekly opening hours, staff book 60-minute private sessions for clients without double booking, clients get an email confirmation, and everyone sees a weekly calendar."
+}
