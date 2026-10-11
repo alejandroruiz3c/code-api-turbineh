@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- G2 fixes: native component `jobs.queue.turbineh` (Postgres queue with SKIP LOCKED claiming, typed jobs, exponential backoff, secret-protected runner endpoint), copied by the assembler only when selected — the most frequent Backup Coder gap is gone; manifests declare `integration.types` (exact `@types/*` for libraries without bundled types: papaparse, ms, validator, qrcode, he, sanitize-html), installed with the component. Plan updated to `software.turbineh.com`.
+
 - WP16: benchmark runner (`pnpm bench`) and 15 prompts across the 5 recipes (`bench/prompts/`); first staging run in `bench/results/2026-10-11-15-52-benchmark.{json,md}`; baseline procedure documented (`bench/baseline/`, pending an API key, ADR-0009).
 
 - WP15: recipes `bookings` (weekly availability, conflict-free booking under a per-workspace lock, 7-day calendar, email confirmation) and `client-portal` (requests with status workflow, file uploads type-checked by content and size-limited, attachment-only downloads with the same visibility rule); unit and E2E tests; verified through the pipeline (`bench/results/2026-10-11-d2-recipes.json`).

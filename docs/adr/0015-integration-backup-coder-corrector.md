@@ -52,3 +52,12 @@ Components the recipe does not already contain are integrated after assembly:
 - A new lockfile means a new sandbox base image the first time (cached afterwards per lockfile hash).
 - Every model-written file is marked, tested and verified; metrics record integrations, Backup Coder activations
   (trigger, model, tokens), corrections and swaps.
+
+## Addendum (2026-10-11, after Gate G2)
+
+- The benchmark showed `jobs.queue` as the most frequent gap (6/15 builds) and the Backup Coder's module for it
+  rarely passed. Following the flywheel, it became a native catalog component (`jobs.queue.turbineh`, vendored with
+  provenance from `catalog/components/<id>/files/`, copied by the assembler only when selected).
+- Libraries without bundled TypeScript types failed `typecheck` deterministically. Manifests now declare
+  `integration.types` (exact DefinitelyTyped version, ≥ 14 days old), installed as a devDependency with the
+  component. Contract-test certification should also run `tsc` (curation follow-up).

@@ -38,6 +38,7 @@ effects:
 integration:
   strategy: dependency
   install: pnpm add qrcode@1.5.4
+  types: "@types/qrcode@1.5.6"
   config: []
   migrations: false
 quality:

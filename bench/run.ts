@@ -19,7 +19,7 @@ if (existsSync(join(root, ".env.local"))) {
   }
 }
 const API = process.env.BENCH_API_URL ?? "https://software.turbineh.com";
-const KEY = process.env.BENCH_API_KEY ?? env.STAGING_SMOKE_API_KEY;
+const KEY = process.env.BENCH_API_KEY ?? env.BENCH_API_KEY ?? env.STAGING_SMOKE_API_KEY;
 if (!KEY) throw new Error("Set BENCH_API_KEY (or STAGING_SMOKE_API_KEY in .env.local)");
 const only = process.argv.includes("--only")
   ? process.argv[process.argv.indexOf("--only") + 1]
