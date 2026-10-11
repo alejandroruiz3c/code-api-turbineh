@@ -4,7 +4,11 @@ import { renderToString } from "react-dom/server";
 import useEmblaCarousel from "embla-carousel-react";
 function Carousel() {
   const [ref] = useEmblaCarousel({ loop: true });
-  return h("div", { ref, className: "embla" }, h("div", null, h("div", null, "Slide 1"), h("div", null, "Slide 2")));
+  return h(
+    "div",
+    { ref, className: "embla" },
+    h("div", null, h("div", null, "Slide 1"), h("div", null, "Slide 2")),
+  );
 }
 describe("embla-carousel-react contract", () => {
   it("renders slides on the server", () => {
