@@ -1,0 +1,80 @@
+schema: turbineh.component/v0.1
+id: ui.drag-drop.dnd-kit
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/@dnd-kit/core@6.3.1
+  repo: https://github.com/clauderic/dnd-kit
+  integrity: sha512-xkGBRQQab4RLwgXxoqETICr6S5JlogafbhNsidmrkVv2YRs5MLwpjoF2qpiGjQt8S9AoxtIV603s0GIUpY5eYQ==
+capability:
+  does: Accessible drag and drop for boards, lists and uploads
+  does_not: Does not include sortable presets (see dnd-kit sortable)
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add @dnd-kit/core@6.3.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata @dnd-kit/core@6.3.1
+  - claim: 0 OSV advisories for @dnd-kit/core@6.3.1 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-4.json
+relations:
+  requires: []
+  provides:
+    - ui.drag-drop
+  conflicts: []
+  tested_with:
+    - contract-harness

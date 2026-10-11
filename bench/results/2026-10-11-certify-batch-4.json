@@ -1,0 +1,218 @@
+{
+  "date": "2026-10-11",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  },
+  "sandbox": "install with network (no secrets), tests and type-check with --network none",
+  "typecheckTail": "tests/ops.http-client.ky.test.ts(5,29): error TS2561: Object literal may only specify known properties, but 'prefixUrl' does not exist in type 'Options'. Did you mean to write 'prefix'?\ntests/ui.form.hookform-resolvers.test.ts(3,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations.\ntests/ui.virtual-list.tanstack-virtual.test.ts(5,102): error TS2322: Type '<T extends Element>(offset: number, options: { adjustments?: number | undefined; behavior?: ScrollBehavior | undefined; }, instance: Virtualizer<T, any>) => void' is not assignable to type '(offset: number, options: { adjustments?: number | undefined; behavior?: ScrollBehavior | undefined; }, instance: Virtualizer<Element | Window, Element>) => void'.\n  Types of parameters 'instance' and 'instance' are incompatible.\n    Type 'Virtualizer<Element | Window, Element>' is not assignable to type 'Virtualizer<Element, any>'.\n      The types returned by 'options.getScrollElement()' are incompatible between these types.\n        Type 'Element | Window | null' is not assignable to type 'Element | null'.\n          Type 'Window' is missing the following properties from type 'Element': attributes, classList, className, clientHeight, and 177 more.\ntests/ui.virtual-list.tanstack-virtual.test.ts(5,129): error TS2322: Type '<T extends Element>(instance: Virtualizer<T, any>, cb: (rect: Rect) => void) => (() => void) | undefined' is not assignable to type '(instance: Virtualizer<Element | Window, Element>, cb: (rect: Rect) => void) => void | (() => void)'.\n  Types of parameters 'instance' and 'instance' are incompatible.\n    Type 'Virtualizer<Element | Window, Element>' is not assignable to type 'Virtualizer<Element, any>'.\n      The types returned by 'options.getScrollElement()' are incompatible between these types.\n        Type 'Element | Window | null' is not assignable to type 'Element | null'.\n          Type 'Window' is missing the following properties from type 'Element': attributes, classList, className, clientHeight, and 177 more.\ntests/ui.virtual-list.tanstack-virtual.test.ts(5,149): error TS2322: Type '<T extends Element>(instance: Virtualizer<T, any>, cb: ObserveOffsetCallBack) => (() => void) | undefined' is not assignable to type '(instance: Virtualizer<Element | Window, Element>, cb: ObserveOffsetCallBack) => void | (() => void)'.\n  Types of parameters 'instance' and 'instance' are incompatible.\n    Type 'Virtualizer<Element | Window, Element>' is not assignable to type 'Virtualizer<Element, any>'.\n      The types returned by 'options.getScrollElement()' are incompatible between these types.\n        Type 'Element | Window | null' is not assignable to type 'Element | null'.\n          Type 'Window' is missing the following properties from type 'Element': attributes, classList, className, clientHeight, and 177 more.\nexit=2\n",
+  "runTail": "exit=1\n",
+  "components": {
+    "content.frontmatter.gray-matter": {
+      "purl": "pkg:npm/gray-matter@4.0.3",
+      "passed": true,
+      "message": ""
+    },
+    "content.reading-time.reading-time": {
+      "purl": "pkg:npm/reading-time@1.5.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.rss.feed": {
+      "purl": "pkg:npm/feed@6.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.markdown.react-markdown": {
+      "purl": "pkg:npm/react-markdown@10.1.0",
+      "passed": true,
+      "message": ""
+    },
+    "seo.structured-data.schema-dts": {
+      "purl": "pkg:npm/schema-dts@2.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "seo.sitemap.sitemap": {
+      "purl": "pkg:npm/sitemap@9.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.carousel.embla": {
+      "purl": "pkg:npm/embla-carousel-react@8.6.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.accordion.radix": {
+      "purl": "pkg:npm/@radix-ui/react-accordion@1.2.20",
+      "passed": true,
+      "message": ""
+    },
+    "ui.tabs.radix": {
+      "purl": "pkg:npm/@radix-ui/react-tabs@1.1.21",
+      "passed": true,
+      "message": ""
+    },
+    "ui.menu.radix-dropdown": {
+      "purl": "pkg:npm/@radix-ui/react-dropdown-menu@2.1.24",
+      "passed": true,
+      "message": ""
+    },
+    "ui.tooltip.radix": {
+      "purl": "pkg:npm/@radix-ui/react-tooltip@1.2.16",
+      "passed": true,
+      "message": ""
+    },
+    "ui.popover.radix": {
+      "purl": "pkg:npm/@radix-ui/react-popover@1.1.23",
+      "passed": true,
+      "message": ""
+    },
+    "ui.select.radix": {
+      "purl": "pkg:npm/@radix-ui/react-select@2.3.7",
+      "passed": true,
+      "message": ""
+    },
+    "ui.navigation.radix-navigation-menu": {
+      "purl": "pkg:npm/@radix-ui/react-navigation-menu@1.2.22",
+      "passed": true,
+      "message": ""
+    },
+    "ui.primitives.react-aria": {
+      "purl": "pkg:npm/react-aria-components@1.21.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.animation.motion": {
+      "purl": "pkg:npm/motion@13.4.4",
+      "passed": true,
+      "message": ""
+    },
+    "ui.animation.auto-animate": {
+      "purl": "pkg:npm/@formkit/auto-animate@0.10.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.drag-drop.dnd-kit": {
+      "purl": "pkg:npm/@dnd-kit/core@6.3.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.drag-drop.dnd-kit-sortable": {
+      "purl": "pkg:npm/@dnd-kit/sortable@10.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.virtual-list.tanstack-virtual": {
+      "purl": "pkg:npm/@tanstack/react-virtual@3.14.13",
+      "passed": false,
+      "message": "typecheck: tests/ui.virtual-list.tanstack-virtual.test.ts(5,102): error TS2322: Type '<T extends Element>(offset: number, options: { adjustments?: number | undefined; behavior?: ScrollBehavior | undefined; }, instance: Virtualizer<T, any>) => void' is not assignable to type '(offset: number, options: { adjustments?: number | undefined; behavior?: ScrollBehavior | undefined; }, instance: Virtualizer<Element | Window, Element>) => void'. | tests/ui.virtual-list.tanstack-virtual.test.ts(5,129): error TS2322: Type '<T extends Element>(instance: Virtualizer<T, any>, cb: (rect: Rect) => void) => (() => void) | undefined' is not assignable to type '(instance: Virtualizer<Element | Window, Element>, cb: (rect: Rect) => void) => void | (() => void)'. | tests/ui.virtual-list.tanstack-virtual.test.ts"
+    },
+    "ui.otp-input.input-otp": {
+      "purl": "pkg:npm/input-otp@1.5.0",
+      "passed": true,
+      "message": ""
+    },
+    "ui.drawer.vaul": {
+      "purl": "pkg:npm/vaul@1.1.2",
+      "passed": true,
+      "message": ""
+    },
+    "ui.notifications.react-hot-toast": {
+      "purl": "pkg:npm/react-hot-toast@2.6.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.form.hookform-resolvers": {
+      "purl": "pkg:npm/@hookform/resolvers@5.9.1",
+      "passed": false,
+      "message": "typecheck: tests/ui.form.hookform-resolvers.test.ts(3,19): error TS2307: Cannot find module 'zod' or its corresponding type declarations. | Cannot find package 'zod' imported from /work/tests/ui.form.hookform-resolvers.test.ts"
+    },
+    "ui.url-state.nuqs": {
+      "purl": "pkg:npm/nuqs@2.10.1",
+      "passed": true,
+      "message": ""
+    },
+    "commerce.cart.zustand": {
+      "purl": "pkg:npm/zustand@5.0.15",
+      "passed": true,
+      "message": ""
+    },
+    "data.money.currency-js": {
+      "purl": "pkg:npm/currency.js@2.0.4",
+      "passed": true,
+      "message": ""
+    },
+    "data.money.dinero": {
+      "purl": "pkg:npm/dinero.js@2.0.2",
+      "passed": false,
+      "message": "AssertionError: expected [ 33, 67 ] to deeply equal [ 34, 66 ]\n    at /work/tests/data.money.dinero.test.ts:8:103\n    at file:///work/node_modules/.pnpm/vitest@5.0.2_@types+node@24.19.0_vite@8.3.1_@types+node@24.19.0_/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:1628:35\n    at file:///work/node_modules/.pnpm/vitest@5.0.2_@types+node@24.19.0_vite@8.3.1_@types+node@24.19.0_/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:2783:26\n    at file:///work/node_modules/.pnpm/vitest@5.0.2_@types+node@24.19.0_vite@8.3.1_@types+node@24.19.0_/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:3319:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///work/node_modules/.pnpm/vitest@5.0.2_@types+node@24.19.0_vite@8.3.1_@types+node@24.19.0_/node_modules/vitest/dist/chunks/run.C5UmxDPh.js:3314:1"
+    },
+    "data.countries.i18n-iso-countries": {
+      "purl": "pkg:npm/i18n-iso-countries@7.14.0",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.aws-s3": {
+      "purl": "pkg:npm/@aws-sdk/client-s3@3.1141.0",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.s3-presigner": {
+      "purl": "pkg:npm/@aws-sdk/s3-request-presigner@3.1141.0",
+      "passed": true,
+      "message": ""
+    },
+    "storage.objects.vercel-blob": {
+      "purl": "pkg:npm/@vercel/blob@2.8.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.search-index.minisearch": {
+      "purl": "pkg:npm/minisearch@7.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.fetching.react-query": {
+      "purl": "pkg:npm/@tanstack/react-query@5.104.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.ids.cuid2": {
+      "purl": "pkg:npm/@paralleldrive/cuid2@3.3.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.ids.ulid": {
+      "purl": "pkg:npm/ulid@3.0.2",
+      "passed": true,
+      "message": ""
+    },
+    "files.barcode.bwip-js": {
+      "purl": "pkg:npm/bwip-js@4.11.4",
+      "passed": true,
+      "message": ""
+    },
+    "data.xml.fast-xml-parser": {
+      "purl": "pkg:npm/fast-xml-parser@5.11.1",
+      "passed": true,
+      "message": ""
+    },
+    "ops.http-client.ky": {
+      "purl": "pkg:npm/ky@2.1.0",
+      "passed": false,
+      "message": "typecheck: tests/ops.http-client.ky.test.ts(5,29): error TS2561: Object literal may only specify known properties, but 'prefixUrl' does not exist in type 'Options'. Did you mean to write 'prefix'?"
+    },
+    "email.plain-text.html-to-text": {
+      "purl": "pkg:npm/html-to-text@10.0.1",
+      "passed": true,
+      "message": ""
+    }
+  }
+}

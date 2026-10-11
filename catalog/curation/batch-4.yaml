@@ -1,0 +1,284 @@
+name: batch-4
+description: "Fourth curation batch: content and SEO, website and management UI, commerce, storage and data utilities"
+entries:
+  - id: content.frontmatter.gray-matter
+    package: "gray-matter"
+    category: content
+    provides: ["content.blog"]
+    does: "Parses Markdown files with front matter (title, date, tags) for blogs and pages"
+    does_not: "Does not render Markdown to HTML"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: content.reading-time.reading-time
+    package: "reading-time"
+    category: content
+    provides: ["content.blog"]
+    does: "Estimates reading time of an article"
+    does_not: "Does not parse Markdown"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: content.rss.feed
+    package: "feed"
+    category: content
+    provides: ["content.rss"]
+    does: "Generates RSS 2.0, Atom and JSON feeds for blogs and news"
+    does_not: "Does not fetch or parse feeds"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: content.markdown.react-markdown
+    package: "react-markdown"
+    category: content
+    provides: ["ui.markdown"]
+    does: "Renders Markdown as React elements without dangerouslySetInnerHTML"
+    does_not: "Does not edit Markdown"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: seo.structured-data.schema-dts
+    package: "schema-dts"
+    category: seo
+    provides: ["seo.structured-data"]
+    does: "Typed schema.org JSON-LD for rich search results (Organization, Product, Article)"
+    does_not: "Types only; does not inject tags"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: seo.sitemap.sitemap
+    package: "sitemap"
+    category: seo
+    provides: ["seo.sitemap"]
+    does: "Builds XML sitemaps for search engines"
+    does_not: "Does not crawl the site"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.carousel.embla
+    package: "embla-carousel-react"
+    category: ui
+    provides: ["ui.carousel"]
+    does: "Accessible, lightweight carousels and sliders for testimonials, galleries and products"
+    does_not: "Does not include visual styles"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.accordion.radix
+    package: "@radix-ui/react-accordion"
+    category: ui
+    provides: ["ui.accordion"]
+    does: "Accessible accordion for FAQs and collapsible sections"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.tabs.radix
+    package: "@radix-ui/react-tabs"
+    category: ui
+    provides: ["ui.tabs"]
+    does: "Accessible tabs"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.menu.radix-dropdown
+    package: "@radix-ui/react-dropdown-menu"
+    category: ui
+    provides: ["ui.menu"]
+    does: "Accessible dropdown menus"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.tooltip.radix
+    package: "@radix-ui/react-tooltip"
+    category: ui
+    provides: ["ui.tooltip"]
+    does: "Accessible tooltips"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.popover.radix
+    package: "@radix-ui/react-popover"
+    category: ui
+    provides: ["ui.popover"]
+    does: "Accessible popovers"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.select.radix
+    package: "@radix-ui/react-select"
+    category: ui
+    provides: ["ui.select"]
+    does: "Accessible custom select boxes"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.navigation.radix-navigation-menu
+    package: "@radix-ui/react-navigation-menu"
+    category: ui
+    provides: ["ui.navigation"]
+    does: "Accessible site navigation menus with submenus for websites"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.primitives.react-aria
+    package: "react-aria-components"
+    category: ui
+    provides: ["ui.primitives"]
+    does: "Accessible unstyled components (buttons, fields, dialogs, date fields) from Adobe"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.animation.motion
+    package: "motion"
+    category: ui
+    provides: ["ui.animation"]
+    does: "Declarative animations and transitions for React"
+    does_not: "Not for canvas or 3D"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.animation.auto-animate
+    package: "@formkit/auto-animate"
+    category: ui
+    provides: ["ui.animation"]
+    does: "Zero-config animations for lists when items are added, removed or moved"
+    does_not: "Not for complex timelines"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.drag-drop.dnd-kit
+    package: "@dnd-kit/core"
+    category: ui
+    provides: ["ui.drag-drop"]
+    does: "Accessible drag and drop for boards, lists and uploads"
+    does_not: "Does not include sortable presets (see dnd-kit sortable)"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.drag-drop.dnd-kit-sortable
+    package: "@dnd-kit/sortable"
+    category: ui
+    provides: ["ui.drag-drop"]
+    does: "Sortable lists and kanban columns on top of dnd-kit"
+    does_not: "Requires @dnd-kit/core"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.virtual-list.tanstack-virtual
+    package: "@tanstack/react-virtual"
+    category: ui
+    provides: ["ui.virtual-list"]
+    does: "Renders very long lists and tables efficiently (virtualisation)"
+    does_not: "Does not fetch data"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.otp-input.input-otp
+    package: "input-otp"
+    category: ui
+    provides: ["ui.otp-input"]
+    does: "Accessible one-time-code input for two-factor and email codes"
+    does_not: "Does not send codes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.drawer.vaul
+    package: "vaul"
+    category: ui
+    provides: ["ui.drawer"]
+    does: "Mobile-friendly drawers (bottom sheets) for carts and filters"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.notifications.react-hot-toast
+    package: "react-hot-toast"
+    category: ui
+    provides: ["ui.notifications"]
+    does: "Toast notifications"
+    does_not: "Not for persistent alerts"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.form.hookform-resolvers
+    package: "@hookform/resolvers"
+    category: ui
+    provides: ["ui.form"]
+    does: "Connects react-hook-form with Zod schemas for typed client validation"
+    does_not: "Requires react-hook-form"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.url-state.nuqs
+    package: "nuqs"
+    category: ui
+    provides: ["ui.url-state"]
+    does: "Type-safe state in the URL query (filters, search, pagination) for Next.js"
+    does_not: "Not for private data"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: commerce.cart.zustand
+    package: "zustand"
+    category: commerce
+    provides: ["commerce.cart"]
+    does: "Small client state store for carts, wizards and UI state"
+    does_not: "Not a database"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.money.currency-js
+    package: "currency.js"
+    category: data
+    provides: ["data.money"]
+    does: "Exact money arithmetic and formatting"
+    does_not: "Does not convert currencies"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.money.dinero
+    package: "dinero.js"
+    category: data
+    provides: ["data.money"]
+    does: "Immutable money objects with currency, allocation and integer minor units"
+    does_not: "Does not fetch exchange rates"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.countries.i18n-iso-countries
+    package: "i18n-iso-countries"
+    category: data
+    provides: ["data.countries"]
+    does: "ISO 3166 country codes and localised country names for addresses and shipping"
+    does_not: "Does not validate postal addresses"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: storage.objects.aws-s3
+    package: "@aws-sdk/client-s3"
+    category: storage
+    provides: ["storage.objects"]
+    does: "Stores files in S3-compatible object storage (AWS, Scaleway, Cloudflare R2)"
+    does_not: "Does not resize images"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: storage.objects.s3-presigner
+    package: "@aws-sdk/s3-request-presigner"
+    category: storage
+    provides: ["storage.objects"]
+    does: "Short-lived signed URLs to upload or download private files directly"
+    does_not: "Requires the S3 client"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: storage.objects.vercel-blob
+    package: "@vercel/blob"
+    category: storage
+    provides: ["storage.objects"]
+    does: "Stores files in Vercel Blob storage"
+    does_not: "Vercel-specific"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.search-index.minisearch
+    package: "minisearch"
+    category: data
+    provides: ["data.search-index"]
+    does: "In-memory full-text search with prefix and fuzzy matching for catalogs and docs"
+    does_not: "Not for millions of records"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.fetching.react-query
+    package: "@tanstack/react-query"
+    category: data
+    provides: ["data.fetching"]
+    does: "Client data fetching with caching, retries and background refresh"
+    does_not: "Does not define the API"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.ids.cuid2
+    package: "@paralleldrive/cuid2"
+    category: data
+    provides: ["data.ids"]
+    does: "Collision-resistant, unguessable ids"
+    does_not: "Not sortable by time"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.ids.ulid
+    package: "ulid"
+    category: data
+    provides: ["data.ids"]
+    does: "Time-sortable unique ids"
+    does_not: "Encodes creation time"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: files.barcode.bwip-js
+    package: "bwip-js"
+    category: files
+    provides: ["files.barcode"]
+    does: "Barcodes (EAN, UPC, Code 128, QR, DataMatrix) as PNG or SVG for products and labels"
+    does_not: "Does not scan barcodes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: data.xml.fast-xml-parser
+    package: "fast-xml-parser"
+    category: data
+    provides: ["data.xml"]
+    does: "Parses and builds XML (feeds, product imports, sitemaps)"
+    does_not: "No XSLT"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ops.http-client.ky
+    package: "ky"
+    category: ops
+    provides: ["ops.http-client"]
+    does: "Small fetch-based HTTP client with retries and timeouts for external APIs"
+    does_not: "Server or browser fetch only"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: email.plain-text.html-to-text
+    package: "html-to-text"
+    category: email
+    provides: ["email.plain-text"]
+    does: "Plain-text version of HTML emails (better deliverability)"
+    does_not: "Does not send emails"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+    types: "@types/html-to-text"

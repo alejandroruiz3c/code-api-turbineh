@@ -13,6 +13,8 @@ export interface CurationEntry {
   use_cases: string[];
   /** Optional major version line to stay on (e.g. "8"). */
   major?: string;
+  /** DefinitelyTyped package for libraries without bundled types (version picked like the library, ≥ 14 days). */
+  types?: string;
   pros?: string[];
   cons?: string[];
 }
@@ -117,6 +119,7 @@ export async function evaluate(
   const license =
     typeof meta.license === "string" ? meta.license : (meta.license?.type ?? "UNKNOWN");
   const advisories = await osvAdvisories(entry.package, meta.version);
+  const types = entry.types ? await pickVersion(entry.types, new Date(), 14) : null;
   const manifest = {
     schema: "turbineh.component/v0.1",
     id: entry.id,
@@ -150,6 +153,7 @@ export async function evaluate(
     integration: {
       strategy: "dependency",
       install: `pnpm add ${entry.package}@${meta.version}`,
+      ...(types && entry.types ? { types: `${entry.types}@${types.version}` } : {}),
       config: [],
       migrations: false,
     },

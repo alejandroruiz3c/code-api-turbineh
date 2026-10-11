@@ -1,0 +1,84 @@
+schema: turbineh.component/v0.1
+id: ui.url-state.nuqs
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/nuqs@2.10.1
+  repo: https://github.com/47ng/nuqs
+  integrity: sha512-7lPZrPJVOsD0VvfQSKtodYBBPGPLsLzkFU8ueYIap9yMMJvSw6UC12p8luA5NW7aKe7AbPHKxcxb3OluH6iAJA==
+capability:
+  does: Type-safe state in the URL query (filters, search, pagination) for Next.js
+  does_not: Not for private data
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    next: ">=14.2.0"
+    react: ">=18.2.0 || ^19.0.0-0"
+    react-router: ^5 || ^6 || ^7 || ^8
+    "@remix-run/react": ">=2"
+    react-router-dom: ^5 || ^6 || ^7
+    "@tanstack/react-router": ^1
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add nuqs@2.10.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata nuqs@2.10.1
+  - claim: 0 OSV advisories for nuqs@2.10.1 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-4.json
+relations:
+  requires: []
+  provides:
+    - ui.url-state
+  conflicts: []
+  tested_with:
+    - contract-harness
