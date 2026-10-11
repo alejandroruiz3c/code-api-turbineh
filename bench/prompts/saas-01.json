@@ -1,0 +1,5 @@
+{
+  "id": "saas-01",
+  "expected_recipe": "saas-crud",
+  "prompt": "A SaaS for language schools: schools are workspaces with admin and teacher roles. Manage students (name, email, level, enrolled on) and courses (title, teacher, weekly hours, price)."
+}

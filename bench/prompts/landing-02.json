@@ -1,0 +1,5 @@
+{
+  "id": "landing-02",
+  "expected_recipe": "landing-waitlist",
+  "prompt": "A pre-launch page for a coworking space opening in Valencia: visitors join the waitlist with name and email, get a confirmation email, and the team sees the list in an admin area."
+}

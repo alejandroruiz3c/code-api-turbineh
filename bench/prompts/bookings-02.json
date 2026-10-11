@@ -1,0 +1,5 @@
+{
+  "id": "bookings-02",
+  "expected_recipe": "bookings",
+  "prompt": "A booking system for a hair salon: the owner defines opening hours, staff book 30 to 90 minute appointments for customers, overlapping appointments are not allowed, and the week is shown as a calendar."
+}

@@ -1,0 +1,5 @@
+{
+  "id": "portal-02",
+  "expected_recipe": "client-portal",
+  "prompt": "A portal for a law firm's clients to send document requests with attachments (PDF or images) and see whether each request is submitted, in review, waiting for information or completed."
+}
