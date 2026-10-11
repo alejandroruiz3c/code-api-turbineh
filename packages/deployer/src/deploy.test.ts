@@ -79,6 +79,27 @@ describe("deploy for me", () => {
     expect(steps.at(-1)).toContain("responds");
   });
 
+  it("asks for the admin email before creating anything when the app has an admin panel", async () => {
+    const dir = repo(false);
+    writeFileSync(join(dir, ".env.example"), "DATABASE_URL=\nADMIN_EMAILS=\n");
+    const fetchSpy = vi.fn(
+      async (_url: string) =>
+        new Response(JSON.stringify({ user: { username: "c" } }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(
+      deployToClient({
+        repoDir: dir,
+        slug: "x",
+        buildId: "b",
+        vercel: { token: "t".repeat(24) },
+        database: { mode: "url", url: "postgres://u:p@h/db" },
+        onStep: async () => {},
+      }),
+    ).rejects.toThrow(/admin email/);
+    expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("/v11/projects"))).toBe(false);
+  });
+
   it("never repeats credentials in error messages", () => {
     expect(
       safeMessage('{"error":{"message":"bad token vercel_abcdefghijklmnopqrstuvwxyz123"}}'),

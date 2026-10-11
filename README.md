@@ -16,8 +16,9 @@ verification (+ corrections) → security remediation → report → delivery`
   request ([ADR-0004](docs/adr/0004-decider.md), [best practices](docs/DECIDER_BEST_PRACTICES.md)).
 - **Compiler:** a small open-weights model writes the `BuildSpec` in small, validated parts ([ADR-0010](docs/adr/0010-decomposition-principle.md)).
 - **Catalog:** approved components only — manifest, contract tests (run and type-checked), OSV scan and allowed
-  licence ([ADR-0012](docs/adr/0012-catalog-curation.md)). Five recipes: SaaS CRUD, internal tool, landing + waitlist,
-  bookings, client portal.
+  licence ([ADR-0012](docs/adr/0012-catalog-curation.md)). Seven recipes: SaaS CRUD, internal tool, landing page,
+  bookings, client portal, corporate website and online shop ([ADR-0018](docs/adr/0018-public-site-recipes-geo.md)),
+  with security and GEO (llms.txt, JSON-LD, AI-crawler-aware robots) built in.
 - **Integration and Backup Coder:** approved libraries are installed at exact versions with their contract tests
   running inside the app; open-weights coders fill only small, self-contained gaps; a corrector patches failing
   generated files and swaps out what cannot be made green ([ADR-0015](docs/adr/0015-integration-backup-coder-corrector.md)).
@@ -27,8 +28,10 @@ verification (+ corrections) → security remediation → report → delivery`
 - **Security remediation and report:** findings are fixed before delivery and everything is verified again; the
   user gets `SECURITY.md` and a plain-language `TURBINEH_REPORT.md`, and can ask once for "Improve & redeliver"
   ([ADR-0014](docs/adr/0014-security-remediation-and-report.md)).
-- **Delivery:** the complete package (zip + git bundle) and "Push to my GitHub" into the user's own account
-  ([ADR-0013](docs/adr/0013-delivery-scope.md)).
+- **Delivery:** the complete package (zip + git bundle, `START_HERE.html`, `DEPLOY.md`), "Push to my GitHub" into
+  the user's own account ([ADR-0013](docs/adr/0013-delivery-scope.md)) and an optional **Deploy for me** into the
+  user's own Vercel account and database ([ADR-0017](docs/adr/0017-deploy-for-me.md)). Optional client brand
+  (colour, typeface, logo; [ADR-0016](docs/adr/0016-client-brand-theme.md)).
 
 Model policy: open-weights models only, except JEV ([ADR-0001](docs/adr/0001-architecture.md)); a closed frontier
 model is used only as the benchmark baseline ([ADR-0009](docs/adr/0009-benchmark-baseline.md)).
