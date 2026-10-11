@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { writeReports } from "@turbineh/assembler";
+import { writeReports, writeStartHere } from "@turbineh/assembler";
 import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
@@ -299,6 +299,17 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     improvement,
     report: { writer: report.writer },
   };
+  writeStartHere(input.repoDir, {
+    appName: input.facts.appName,
+    summary: input.facts.summary,
+    verified: result.ok,
+    checksPassed: result.steps.filter((s) => s.ok).length,
+    checksTotal: result.steps.length,
+    criteriaVerified: report.criteria.filter((c) => c.verified).length,
+    criteriaTotal: report.criteria.length,
+    alerts: alerts.length,
+    fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
+  });
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),

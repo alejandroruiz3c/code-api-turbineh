@@ -44,7 +44,14 @@ const workerId = `${hostname()}-${process.pid}`;
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 2);
 const DAILY_CAP_EUR = Number(process.env.DAILY_COST_CAP_EUR ?? 100);
 const EST_EUR_PER_BUILD = Number(process.env.EST_COST_EUR_PER_BUILD ?? 0.02);
-const DOCS = ["README.md", "COMPONENTS.md", "ARCHITECTURE.md", "SECURITY.md", "TURBINEH_REPORT.md"];
+const DOCS = [
+  "TURBINEH_REPORT.md",
+  "DEPLOY.md",
+  "SECURITY.md",
+  "README.md",
+  "COMPONENTS.md",
+  "ARCHITECTURE.md",
+];
 
 /** Channel A artefact: everything a user needs even if GitHub is unavailable. */
 async function storeArtifact(
