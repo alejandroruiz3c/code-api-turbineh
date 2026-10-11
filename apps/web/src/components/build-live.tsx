@@ -216,7 +216,20 @@ function Result({
   result: BuildResult;
   onReload: () => void;
 }) {
-  const docs = useMemo(() => Object.keys(result.artifact?.docs ?? {}), [result]);
+  // Fixed reading order (the database does not keep key order).
+  const docs = useMemo(() => {
+    const order = [
+      "DEPLOYED.md",
+      "TURBINEH_REPORT.md",
+      "DEPLOY.md",
+      "SECURITY.md",
+      "README.md",
+      "COMPONENTS.md",
+      "ARCHITECTURE.md",
+    ];
+    const keys = Object.keys(result.artifact?.docs ?? {});
+    return [...order.filter((d) => keys.includes(d)), ...keys.filter((k) => !order.includes(k))];
+  }, [result]);
   const [tab, setTab] = useState(docs[0] ?? "README.md");
   if (!result.artifact) {
     return (
