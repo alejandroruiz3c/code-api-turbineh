@@ -1,0 +1,11 @@
+id: bookings
+description: Bookings and appointments with weekly availability, conflict-free booking, a calendar and email confirmations
+extends: saas-crud
+providedEntities:
+  [Booking, Appointment, Reservation, Visit, Session, Availability, AvailabilitySlot, Slot, TimeSlot, Schedule,
+   OpeningHour, OpeningHours, WorkingHour, WorkingHours, BusinessHour, BusinessHours, Calendar, CalendarEvent]
+defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
+nav:
+  - { label: Bookings, href: /dashboard/bookings }
+  - { label: Calendar, href: /dashboard/calendar }
+  - { label: Availability, href: /dashboard/availability }
