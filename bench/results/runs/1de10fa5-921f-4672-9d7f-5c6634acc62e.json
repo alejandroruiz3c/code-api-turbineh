@@ -2,7 +2,7 @@
   "prompt": "A SaaS for a dental clinic network: clinics as workspaces with admins and staff roles; manage patients (name, email, phone, birth date) and treatments (patient name, procedure, cost, date, paid).",
   "buildId": "1de10fa5-921f-4672-9d7f-5c6634acc62e",
   "status": "failed",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/1de10fa5-921f-4672-9d7f-5c6634acc62e/dentalflow-saas",
+  "repoDir": "builds/1de10fa5-921f-4672-9d7f-5c6634acc62e/dentalflow-saas",
   "steps": [
     {
       "name": "install",

@@ -2,7 +2,7 @@
   "prompt": "A course management app for a small music academy: teachers create courses with title, level and price, students enroll, admins see enrollments per course.",
   "buildId": "125b2422-3a3f-41a1-b3f3-e332c6a5e628",
   "status": "done",
-  "repoDir": "/Users/alexruiz/TURBINEH/YES-IF-API-PRODUCT/code-api-turbineh/builds/125b2422-3a3f-41a1-b3f3-e332c6a5e628/melody-academy-manager",
+  "repoDir": "builds/125b2422-3a3f-41a1-b3f3-e332c6a5e628/melody-academy-manager",
   "steps": [
     {
       "name": "install",
