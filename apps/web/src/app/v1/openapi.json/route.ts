@@ -117,6 +117,26 @@ const spec = {
         },
       },
     },
+    "/v1/builds/{id}/deploy-app": {
+      post: {
+        summary:
+          "Deploy for me (optional): deploy the build into your own Vercel account and database (Neon or an existing Postgres). Credentials are erased when the job ends.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "202": { description: "Deployment queued" },
+          "409": { description: "Not finished or already running" },
+        },
+      },
+      get: {
+        summary: "Latest deployment: status, step, live URL",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "Deployment status" } },
+      },
+    },
     "/v1/components": {
       get: {
         summary: "Search the catalog",
