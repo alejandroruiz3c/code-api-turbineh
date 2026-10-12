@@ -200,9 +200,15 @@ const words = (q: string) =>
 export function matchUseCases(q: string): UseCase[] {
   const ws = words(q);
   if (ws.length === 0) return USE_CASES;
+  // An AI agent/assistant need is an AI flow first: the domain (bookings, shop…) becomes its tools and data.
+  const wantsAi = ws.some((w) =>
+    ["ai", "agent", "agents", "assistant", "chatbot", "llm"].includes(w),
+  );
   return USE_CASES.map((u) => {
     const hay = `${u.keywords.join(" ")} ${u.name} ${u.summary}`.toLowerCase();
-    return { u, score: ws.filter((w) => hay.includes(w)).length };
+    const score =
+      ws.filter((w) => hay.includes(w)).length + (wantsAi && u.id === "ai-agents" ? 10 : 0);
+    return { u, score };
   })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
