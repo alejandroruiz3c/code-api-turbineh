@@ -134,7 +134,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     csvImport: chosen.has("data.csv-import"),
   };
   const generated: GeneratedFile[] = [
-    ...entities.flatMap((e) => generateEntity(e, features)),
+    ...entities.flatMap((e) => generateEntity(e, features, entities)),
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
       componentTables,

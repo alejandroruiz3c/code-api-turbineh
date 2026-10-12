@@ -10,6 +10,7 @@ import {
   hasRecipe,
   mergedRecipe,
   recipeChain,
+  referencedEntities,
   ruleFiles,
   type SelectedComponent,
 } from "@turbineh/assembler";
@@ -390,6 +391,7 @@ export async function runBuild(
       // The entity's rules module goes back to the assembled stub; its tests did not exist there.
       for (const r of dropped) {
         git(repoDir, "checkout", "-q", assembledCommit, "--", r.module);
+        if (r.relatedModule) git(repoDir, "checkout", "-q", assembledCommit, "--", r.relatedModule);
         for (const f of [r.test, r.fixtures]) rmSync(join(repoDir, f), { force: true });
       }
       rules = rules.filter((r) => !dropped.includes(r));
@@ -409,6 +411,7 @@ export async function runBuild(
       rules: rules.map((r) => ({
         entity: r.entity,
         rules: r.rules,
+        specs: r.specs,
         module: r.module,
         model: r.model,
       })),
@@ -470,6 +473,8 @@ export async function runBuild(
     businessRules: t3.candidates.map((c) => ({
       criterion: c.criterion,
       entity: c.entity,
+      operations: c.operations,
+      related: c.related,
       selected: c.selected,
       reason: c.reason,
     })),
@@ -500,6 +505,7 @@ export async function runBuild(
           capability: rulesCapability(slugOf(r.module)),
           entity: r.entity,
           rules: r.rules,
+          specs: r.specs,
           file: r.module,
           test: r.test,
         })),
@@ -524,7 +530,7 @@ export async function runBuild(
           ...rules.map((r) => ({
             capability: rulesCapability(slugOf(r.module)),
             kind: "rules" as const,
-            files: [r.module, r.test, r.fixtures],
+            files: [r.module, r.test, r.fixtures, ...(r.relatedModule ? [r.relatedModule] : [])],
           })),
         ],
       },
@@ -722,6 +728,7 @@ function ruleActivation(r: WrittenRules, kept: boolean) {
     usage: r.usage,
     module: r.module,
     rules: r.rules,
+    specs: r.specs,
     kept,
   };
 }
@@ -745,63 +752,81 @@ async function businessRules(
   const entities = entitiesToGenerate(spec, recipe.providedEntities);
   if (entities.length === 0) return { candidates: [], written: [] };
   const lib = readFileSync(join(repoDir, "src/lib/rules.ts"), "utf8");
-  const targets = new Map<string, RuleTarget>();
+  const read = (rel: string) => readFileSync(join(repoDir, rel), "utf8");
+  // Which generated entities each one references (reference fields): the only cross-entity reads T3 implements.
+  const links = Object.fromEntries(entities.map((e) => [e.name, referencedEntities(e, entities)]));
+  const candidates = await decideRules(
+    {
+      summary: spec.summary,
+      recipe:
+        `${recipe.description}. Every other entity gets create and edit forms with typed, required-field ` +
+        "validation, a searchable list and delete, scoped to the workspace.",
+      criteria: spec.acceptance_criteria,
+      entities: Object.fromEntries(
+        entities.map((e) => [e.name, fieldsOf(e).map((f) => `${f.name} (${f.type})`)]),
+      ),
+      links,
+    },
+    deps.decider,
+  );
+  await deps.emit(buildId, "integrating", "rules-decided", {
+    candidates: candidates.map((c) => ({
+      criterion: c.criterion,
+      entity: c.entity,
+      operations: c.operations,
+      related: c.related,
+      reason: c.reason,
+    })),
+  });
+  const targets: RuleTarget[] = [];
   for (const e of entities) {
-    const f = ruleFiles(e);
-    targets.set(e.name, {
+    const chosen = candidates.filter((c) => c.selected && c.entity === e.name);
+    if (chosen.length === 0) continue;
+    const relatedNames = [...new Set(chosen.flatMap((c) => c.related))];
+    const f = ruleFiles(e, entities, relatedNames);
+    targets.push({
       entity: e.name,
       pascal: f.pascal,
       slug: f.slug,
-      rules: [],
+      rules: chosen.map((c) => c.criterion),
+      specs: chosen.map((c) => ({
+        rule: c.criterion,
+        operations: c.operations,
+        related: c.related.filter((r) => f.relatedEntities.some((x) => x.entity === r)),
+      })),
       files: {
         rules: f.rules,
         schema: f.schema,
         table: f.table,
+        related: f.related,
         test: f.test,
         fixtures: f.fixtures,
       },
       samples: f.samples,
       formats: f.formats,
       fixturesTest: f.fixturesTest,
-      contracts: {
-        schema: readFileSync(join(repoDir, f.schema), "utf8"),
-        table: readFileSync(join(repoDir, f.table), "utf8"),
-        lib,
-      },
+      relatedModule: f.relatedModule,
+      related: f.relatedEntities.map((r) => ({
+        entity: r.entity,
+        pascal: r.pascal,
+        slug: r.slug,
+        key: r.key,
+        referencedBy: r.referencedBy,
+        displayField: r.displayField,
+        sample: r.sample,
+        schema: read(r.schema),
+      })),
+      contracts: { schema: read(f.schema), table: read(f.table), lib },
     });
   }
-  const candidates = await decideRules(
-    {
-      summary: spec.summary,
-      recipe:
-        `${recipe.description}. Every other entity gets a create form with typed, required-field validation, ` +
-        "a searchable list and delete, scoped to the workspace.",
-      criteria: spec.acceptance_criteria,
-      entities: Object.fromEntries(
-        entities.map((e) => [e.name, fieldsOf(e).map((f) => `${f.name} (${f.type})`)]),
-      ),
-    },
-    deps.decider,
-  );
-  for (const c of candidates)
-    if (c.selected && c.entity) targets.get(c.entity)?.rules.push(c.criterion);
-  await deps.emit(buildId, "integrating", "rules-decided", {
-    candidates: candidates.map((c) => ({
-      criterion: c.criterion,
-      entity: c.entity,
-      reason: c.reason,
-    })),
-  });
   const written = await Promise.all(
-    [...targets.values()]
-      .filter((t) => t.rules.length > 0)
-      .map((t) =>
-        writeRules(t, deps.backupCoder, {
-          buildId,
-          summary: spec.summary,
-          gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
-        }).catch(() => null),
-      ),
+    targets.map((t) =>
+      writeRules(t, deps.backupCoder, {
+        buildId,
+        summary: spec.summary,
+        gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
+      }).catch(() => null),
+    ),
   );
   return { candidates, written: written.filter((w): w is WrittenRules => w !== null) };
 }

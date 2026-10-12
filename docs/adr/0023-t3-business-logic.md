@@ -53,3 +53,8 @@ decided by the decider's complexity score and a threshold.
 A fifth atomic question per criterion (`other`: the check needs records of a different kind) with threshold 0.5, plus a
 deterministic backstop (the rule text names another generated entity), excludes cross-entity rules up front. Seen on
 staging: "the assigned teacher must exist" was selected, failed three corrections and was dropped.
+
+## Amendment (2026-10-12, later)
+
+Superseded in part by ADR-0026: cross-entity rules are no longer excluded when a reference field links the entities
+(read-only, code-written loaders), and rules also run on edits.

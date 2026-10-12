@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- T3 business rules on edits and across entities (ADR-0026): every generated entity gets an edit page and `update` action (role-checked, workspace-scoped, E2E-tested); rules receive the operation, the previous record and read-only, code-written loaders of related entities linked by reference fields; the decider decides create/update/both and the related entity; the report shows when each rule runs and what it reads.
 - Curated glue: a component may ship `glue.ts` (written by TurbineH, type-checked at certification) that is copied into apps instead of model-written glue. First one: `email.plain-text.html-to-text`, whose generated glue used options removed in html-to-text 9+ and failed the build in every app that selected it (3 wasted corrections, then dropped).
 - AWS extra worker groundwork (ADR-0024): `infra/aws/worker.ts check` (identity and instance types, read-only).
 - "Connect Vercel" active in production (integration `turbine-deploy`).
