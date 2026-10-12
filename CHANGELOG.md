@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Backup Coder trigger T3 (ADR-0020): business rules from the request (limits, uniqueness, no overlaps, value ranges) on generated entities are selected by the decider with fixed thresholds, written by the Backup Coder as a server-side rules module with its own tests, checked on create and CSV import, and guarded by a code-written fixture test. Rules that cannot be made green are removed before delivery and reported as not implemented. The report lists every rule with its tests; the benchmark counts them.
 - API keys in the UI (`/keys`): create (shown once), list and revoke; `GET/POST /v1/keys`, `DELETE /v1/keys/{id}` (max 5 active keys per account).
 - Real cost per build: measured tokens × Scaleway list prices per model plus a fixed overhead (`COST_OVERHEAD_EUR_PER_BUILD`), stored in the build metrics and the daily cost ledger.
 - Screen previews: after E2E the sandbox captures home, dashboard and the first module; shown in the build result and in the API (`artifact.previews`).

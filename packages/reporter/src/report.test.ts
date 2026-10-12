@@ -1,6 +1,12 @@
 import type { Decider } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
-import { buildReport, improvementText, reportMarkdown, type ReportFacts } from "./report.js";
+import {
+  buildReport,
+  businessRulesMarkdown,
+  improvementText,
+  reportMarkdown,
+  type ReportFacts,
+} from "./report.js";
 
 const facts: ReportFacts = {
   appName: "Course Hub",
@@ -73,5 +79,32 @@ describe("improvementText", () => {
     expect(
       improvementText({ improvement: { ...base, fixable: 0 }, finalVersion: false }),
     ).toContain("no improvement is offered");
+  });
+});
+
+describe("business rules section (T3)", () => {
+  it("lists delivered rules with their tests and dropped rules as not implemented", () => {
+    const md = businessRulesMarkdown({
+      businessRules: [
+        {
+          entity: "Membership",
+          rules: ["A member cannot have two active memberships"],
+          file: "src/entities/memberships/rules.ts",
+          test: "tests/unit/rules/memberships.test.ts",
+          implemented: true,
+        },
+        {
+          entity: "Loan",
+          rules: ["At most 2 open loans per borrower"],
+          file: "src/entities/loans/rules.ts",
+          test: "tests/unit/rules/loans.test.ts",
+          implemented: false,
+        },
+      ],
+    });
+    expect(md).toContain("✅ **Membership**");
+    expect(md).toContain("tests/unit/rules/memberships.test.ts");
+    expect(md).toContain("⬜ **Loan**: At most 2 open loans per borrower — not implemented");
+    expect(businessRulesMarkdown({ businessRules: [] })).toBe("");
   });
 });

@@ -22,6 +22,18 @@ export interface ReportFacts {
   reusedShare: number | null;
   /** Helpers written by the Backup Coder for capabilities without a catalog component (verified like the rest). */
   backupGenerated?: { capability: string; label: string; file: string }[];
+  /**
+   * Business rules from the request written by the Backup Coder (trigger T3) with their tests. `implemented` is false
+   * when the rules could not be made green and were removed before delivery.
+   */
+  businessRules?: {
+    capability: string;
+    entity: string;
+    rules: string[];
+    file: string;
+    test: string;
+    implemented?: boolean;
+  }[];
   /** Estimate for "Improve & redeliver" (null when it is not offered). */
   improvement?: ImprovementEstimate | null;
   /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
@@ -39,6 +51,14 @@ export interface BuildReport {
     fixedBeforeDelivery: number;
   };
   nextSteps: string[];
+  /** Deterministic (from verified facts): T3 business rules, where they live and whether they were delivered. */
+  businessRules: {
+    entity: string;
+    rules: string[];
+    file: string;
+    test: string;
+    implemented: boolean;
+  }[];
   improvement: ImprovementEstimate | null;
   finalVersion: boolean;
   writer: { model: string; fallback: boolean };
@@ -172,7 +192,14 @@ function fallbackText(facts: ReportFacts): {
  */
 function stepFacts(facts: ReportFacts): string[] {
   const fixable = (facts.improvement?.fixable ?? 0) > 0;
+  const dropped = (facts.businessRules ?? []).filter((r) => r.implemented === false);
   return [
+    ...dropped
+      .slice(0, 1)
+      .map(
+        (r) =>
+          `Not implemented automatically: ${r.rules.join("; ")} (${r.entity}). The checks could not be made to pass, so the app accepts these records as usual; add the rule yourself or ask for it in a new build.`,
+      ),
     ...facts.gaps
       .slice(0, 2)
       .map(
@@ -277,6 +304,13 @@ export async function buildReport(
       fixedBeforeDelivery: facts.remediation.length,
     },
     nextSteps: steps?.next_steps ?? fb.nextSteps,
+    businessRules: (facts.businessRules ?? []).map((r) => ({
+      entity: r.entity,
+      rules: r.rules,
+      file: r.file,
+      test: r.test,
+      implemented: r.implemented !== false,
+    })),
     improvement: facts.improvement ?? null,
     finalVersion: facts.finalVersion ?? false,
     writer: { model: writer.model, fallback: !summary || !security || !steps },
@@ -293,7 +327,7 @@ ${r.overview}
 
 ${r.criteria.map((c) => `- ${c.verified ? "✅" : "⬜"} ${c.criterion} — _${c.evidence}_`).join("\n") || "- (none)"}
 
-## Security
+${businessRulesMarkdown(r)}## Security
 
 **${r.security.statusLine}**${r.security.fixedBeforeDelivery ? ` (${r.security.fixedBeforeDelivery} issue(s) fixed automatically before delivery)` : ""}
 
@@ -337,6 +371,23 @@ export function improvementText(
     `It takes about ${i.minutes.min}–${i.minutes.max} min, uses 1 build of your daily quota, re-runs every check and ` +
     "can be requested only once. Your current package stays available."
   );
+}
+
+/** Section listing the business rules written by the backup code model (T3) and the tests that check them. */
+export function businessRulesMarkdown(r: Pick<BuildReport, "businessRules">): string {
+  if (r.businessRules.length === 0) return "";
+  const rows = r.businessRules.map((b) =>
+    b.implemented
+      ? `- ✅ **${b.entity}**: ${b.rules.join("; ")} — \`${b.file}\`, tested in \`${b.test}\``
+      : `- ⬜ **${b.entity}**: ${b.rules.join("; ")} — not implemented (could not be made to pass; removed before delivery)`,
+  );
+  return `## Business rules
+
+Written by the backup code model because no audited component covers them. They run on the server before a record is created or imported, have their own unit tests and passed the same verification as the rest of the app.
+
+${rows.join("\n")}
+
+`;
 }
 
 function improvementMarkdown(r: BuildReport): string {

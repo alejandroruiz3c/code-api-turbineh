@@ -179,6 +179,14 @@ const summary = {
   criteriaVerified: `${ok.reduce((a, r) => a + r.criteria.verified, 0)}/${ok.reduce((a, r) => a + r.criteria.total, 0)}`,
   avgReusedShare: +avg(green.map((r) => r.reuse.reusedShare ?? 0)).toFixed(3),
   buildsWithBackup: ok.filter((r) => r.backupActivations.length > 0 || r.compilerBackup).length,
+  // T3: business-rule modules written by the Backup Coder, and how many survived verification.
+  businessRules: {
+    written: ok.reduce(
+      (a, r) => a + r.backupActivations.filter((x) => x.startsWith("T3")).length,
+      0,
+    ),
+    kept: ok.reduce((a, r) => a + r.backupActivations.filter((x) => x === "T3").length, 0),
+  },
   avgCorrections: +avg(ok.map((r) => r.corrections)).toFixed(2),
   avgCostEur: +avg(ok.map((r) => r.costEur)).toFixed(5),
   avgTokens: Math.round(

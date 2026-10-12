@@ -41,6 +41,23 @@ describe("corrector scope", () => {
     );
     expect(correctableFiles(dir, log)).toEqual(["src/integrations/a.ts"]);
   });
+
+  it("corrects a business-rules module when its tests fail, never the fixture test written by code", () => {
+    const dir = mkdtempSync(join(tmpdir(), "corrector-"));
+    const write = (rel: string, body: string) => {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    };
+    write("src/entities/loans/rules.ts", "// turbineh:generated-backup trigger=T3\nexport {};\n");
+    write("tests/unit/rules/loans.test.ts", "// turbineh:generated-backup trigger=T3\n");
+    write("tests/unit/rules/loans.fixtures.test.ts", "// turbineh:generated\n");
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    execFileSync("git", ["add", "-A"], { cwd: dir });
+    const log = failureLog(
+      result([step("unit", false, "FAIL tests/unit/rules/loans.fixtures.test.ts > accepts")]),
+    );
+    expect(correctableFiles(dir, log)).toEqual(["src/entities/loans/rules.ts"]);
+  });
 });
 
 describe("policies", () => {
