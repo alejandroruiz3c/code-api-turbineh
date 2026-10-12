@@ -3,21 +3,20 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
-import { SignInButton, SignOutButton } from "@/components/sign-in-button";
-import { currentUser } from "@/server/session";
+import { ProductNav } from "@/components/product-nav";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CODE-API-TURBINEH · prompt to verified repo",
+  title: "YES IF for Builders · TurbineH",
   description:
-    "Describe an app. We select audited components instead of generating everything, then build, test and security-scan it, and deliver a private GitHub repository.",
+    "Secured software flows. In seconds. Almost free. Verified capabilities, ready to integrate — as a downloadable package or directly in your project.",
+  robots: { index: false, follow: false },
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const user = await currentUser();
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <head>
@@ -30,38 +29,23 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="min-h-screen">
-        <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link
-            href="/"
-            className="flex items-center gap-3 text-ice-2"
-            aria-label="CODE-API-TURBINEH home"
-          >
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-teal focus:px-3 focus:py-1 focus:text-navy"
+        >
+          Skip to content
+        </a>
+        <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
+          <Link href="/" className="flex items-center gap-3 text-ice-2" aria-label="Home">
             <Logo className="h-7 w-auto" />
-            <span className="eyebrow hidden sm:inline">code · api</span>
+            <span className="eyebrow hidden sm:inline">YES IF for Builders</span>
           </Link>
-          <nav className="flex items-center gap-6 text-sm text-muted">
-            <Link href="/catalog" className="hover:text-ice-2">
-              Catalog
-            </Link>
-            <Link href="/keys" className="hover:text-ice-2">
-              API keys
-            </Link>
-            <Link href="/docs" className="hover:text-ice-2">
-              API
-            </Link>
-            {user ? (
-              <span className="flex items-center gap-3">
-                <span className="text-ice-2">{user.name}</span>
-                <SignOutButton />
-              </span>
-            ) : (
-              <SignInButton label="Sign in" />
-            )}
-          </nav>
+          <ProductNav />
         </header>
-        {children}
-        <footer className="mx-auto mt-24 max-w-6xl border-t border-line px-6 py-8 text-xs text-muted">
-          <p>TurbineH · European sovereign AI lab · open-weights models, decisions by JEV · beta</p>
+        <div id="main">{children}</div>
+        <footer className="mx-auto mt-24 flex max-w-6xl flex-wrap justify-between gap-2 border-t border-line px-6 py-8 text-xs text-muted">
+          <p>TurbineH · Secured software flows. In seconds. Almost free.</p>
+          <p>Invitation beta · European sovereign AI lab · open-weights models</p>
         </footer>
       </body>
     </html>

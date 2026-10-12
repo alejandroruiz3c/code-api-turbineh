@@ -11,7 +11,7 @@ const fmt = (n: number) => n.toLocaleString("en");
 
 /**
  * AI access for apps built with the orchestrator (ADR-0029): the app uses TurbineH's AI through a per-app token, so the
- * client configures no model or decider keys. The token is shown once; usage is shown in calls and tokens.
+ * client configures no AI keys. The token is shown once; usage is shown in calls and tokens.
  */
 export function AiAccess({ id }: { id: string }) {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -45,7 +45,7 @@ export function AiAccess({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-3 text-sm">
       <p className="text-muted">
-        This app uses AI through TurbineH: no AI provider or decider keys to configure. Set{" "}
+        This app uses AI through TurbineH — no AI keys to configure. Set{" "}
         <code className="text-teal">TURBINEH_AI_TOKEN</code> in your app (Deploy for me does it for
         you).
       </p>

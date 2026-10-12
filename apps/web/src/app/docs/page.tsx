@@ -1,29 +1,47 @@
-const curl = `curl -X POST https://software.turbineh.com/v1/builds \\
-  -H "Authorization: Bearer $TURBINEH_API_KEY" \\
-  -H "Idempotency-Key: $(uuidgen)" \\
-  -H "Content-Type: application/json" \\
-  -d '{"prompt":"An internal tool to track inventory with CSV import and export"}'
+import type { Metadata } from "next";
 
-# → 202 {"build_id":"…","events_url":"/v1/builds/…/events"}
+export const metadata: Metadata = { title: "API · YES IF for Builders" };
 
-curl -N https://software.turbineh.com/v1/builds/$BUILD_ID/events \\
-  -H "Authorization: Bearer $TURBINEH_API_KEY"`;
+const curl = `# Your invitation access token is your API key during the beta.
+export TURBINEH_TOKEN=…                      # never commit it
+H='Authorization: Bearer '"$TURBINEH_TOKEN"
+
+# 1 · Search by need
+curl -s "https://software.turbineh.com/v1/capabilities?q=booking%20agent" -H "$H"
+
+# 2 · Plan for your environment (stack detected from your manifests)
+curl -s -X POST https://software.turbineh.com/v1/plans -H "$H" -H "Content-Type: application/json" \\
+  -d '{"need":"AI booking agent for a clinic","environment":{"files":{"package.json":"…"}}}'
+
+# 3 · Generate and verify, then read the result (what works, what needs configuration)
+curl -s -X POST https://software.turbineh.com/v1/plans/$PLAN_ID/generate -H "$H"
+curl -s https://software.turbineh.com/v1/plans/$PLAN_ID -H "$H"`;
 
 const ENDPOINTS: [method: string, path: string, description: string][] = [
-  ["POST", "/v1/builds", "Queue a build from a prompt (Idempotency-Key supported)"],
-  ["GET", "/v1/builds/{id}", "Status, metrics, artefact links, repository URL and documentation"],
-  ["GET", "/v1/builds/{id}/events", "Live trace as Server-Sent Events"],
-  ["POST", "/v1/builds/{id}/deliver", "Push to your GitHub (browser session)"],
+  [
+    "GET",
+    "/v1/capabilities?q=",
+    "Search by need: complete flows and verified components, requirements, examples",
+  ],
+  ["GET", "/v1/capabilities/{id}", "Inspect a capability: components, versions, compatibility"],
   [
     "POST",
-    "/v1/builds/{id}/improve",
-    "Fix the remaining security alerts and deliver a new verified version",
+    "/v1/plans",
+    "Plan for your environment: components, files, dependencies, config, decisions, estimate",
   ],
-  ["GET", "/v1/keys", "Your API keys (browser session)"],
-  ["POST", "/v1/keys", "Create an API key (shown once)"],
-  ["DELETE", "/v1/keys/{id}", "Revoke an API key"],
-  ["GET", "/v1/components", "Search the catalog"],
-  ["GET", "/v1/components/{id}", "Component manifest"],
+  ["POST", "/v1/plans/{id}/generate", "Generate the package and verify it in the sandbox"],
+  ["GET", "/v1/plans/{id}", "State and result: works, needs, checks, package, continue, revert"],
+  ["GET", "/v1/activity", "Your workspace history and measured figures"],
+  ["POST", "/v1/builds", "Complete flow from a description (Idempotency-Key supported)"],
+  ["GET", "/v1/builds/{id}", "Flow status, evidence, package links and documents"],
+  ["GET", "/v1/builds/{id}/events", "Live trace as Server-Sent Events"],
+  [
+    "POST",
+    "/v1/builds/{id}/deliver",
+    "Integrate into your GitHub repository (optional GitHub connection)",
+  ],
+  ["GET", "/v1/components", "Search verified components"],
+  ["GET", "/v1/components/{id}", "Component manifest: provenance, version, licence, audit"],
 ];
 
 export default function Docs() {
@@ -31,16 +49,24 @@ export default function Docs() {
     <main className="mx-auto max-w-4xl px-6 pt-8">
       <p className="eyebrow">API</p>
       <h1 className="display mt-2 text-3xl font-semibold text-cream">
-        Build apps from your own code
+        One engine for people and agents
       </h1>
       <p className="mt-3 text-sm text-muted">
-        The web app uses the same API. Errors follow RFC 9457. Machine-readable spec:{" "}
+        The web app, the API and the{" "}
+        <a href="/cli" className="text-teal underline">
+          CLI
+        </a>{" "}
+        share the same states and errors. Every error says what happened, what to do and how to
+        resume. Send your access token as <code className="text-teal">Authorization: Bearer</code>;
+        add <code className="text-teal">x-turbineh-workspace</code> to keep one history per project.
+        Machine-readable spec:{" "}
         <a className="text-teal underline" href="/v1/openapi.json">
           /v1/openapi.json
         </a>
         .
       </p>
       <table className="mt-8 w-full text-left text-sm">
+        <caption className="sr-only">Endpoints</caption>
         <tbody>
           {ENDPOINTS.map(([m, p, d]) => (
             <tr key={p + m} className="border-b border-line">
@@ -51,6 +77,13 @@ export default function Docs() {
           ))}
         </tbody>
       </table>
+      <h2 className="eyebrow mt-10">States</h2>
+      <p className="mt-2 text-sm text-ice-2">
+        <code>planned</code> → <code>generated</code> → <code>verified</code> (package verified in
+        the sandbox) → <code>integrated</code> → <code>integration_verified</code> (checked inside
+        your project) → <code>deployed</code>. Nothing is reported as ready while credentials or
+        checks are missing.
+      </p>
       <pre className="prose-doc mt-8 overflow-auto rounded-xl border border-line bg-navy-900/70 p-5 text-ice-2">
         {curl}
       </pre>
