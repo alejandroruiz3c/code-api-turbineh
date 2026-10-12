@@ -497,12 +497,90 @@ Cada día cierra con un **Gate**. Claude Code no avanza al siguiente bloque sin 
 
 | Fase | Contenido | Condición de entrada |
 |---|---|---|
-| F2 | Conectar repos GitHub existentes | Diseño en profundidad de la auditoría de ciberseguridad de entrada (modelo open especializado + JEV) **antes** de implementar |
+| F2 | ~~Conectar repos GitHub existentes~~ → sustituida por la **Fase Producto (§16)** el 2026-10-12 | Diseño en profundidad de la auditoría de ciberseguridad de entrada (modelo open especializado + JEV) **antes** de implementar |
 | F3 | Sistemas IA en el resultado: component #001 + AI Safety Pack | F2 estable |
 | F4 | Contribuciones de terceros con manifiesto público, identidad del publicador y versiones inmutables | Proceso de evaluación automatizado |
 | F5 | Ingesta masiva multi-registro y nuevas pilas | Métricas de F2–F3 |
 
 ---
+
+## 16. Fase Producto · "YES IF for Builders" (2026-10-12, sustituye a F2)
+
+Fuente: actualización del propietario en `docs/PRODUCT_DESCRIPTION.md` (2026-10-12) y deck
+`../inputs/2026-10-12-yesif-for-builders-deck.pdf` (workspace, fuera del repo público). Objetivo inmediato: demo de Frontiers en ~30 h.
+
+### 16.1 Qué cambia
+
+| Antes | Ahora |
+|---|---|
+| Prompt → app completa (repo o ZIP) | Necesidad → **capacidad** (flujo completo, parcial o componente) integrable en el proyecto del usuario |
+| Web con landing + login GitHub | `software.turbineh.com` = solo área de producto, **token de acceso de invitación**; GitHub opcional (solo para integrar en un repo) |
+| Entregable = repo de app | Entregable = **paquete de capacidad** (ZIP jerarquizado o cambios en un repo conectado), mismo contenido |
+| UI centrada en el build | UX centrada en **descubrir → instalar → evaluar → integrar → verificar → continuar → actualizar/revertir** |
+| Solo API web | **Un mismo motor para humanos y agentes**: API + CLI (`turbineh`) con salida legible y `--json` |
+
+### 16.2 Recorrido y estados
+
+Describir necesidad → indicar entorno (repo conectado | código subido | stack y versiones) → revisar plan → generar →
+probar → elegir entrega (ZIP | integrar en repo | instrucciones para el agente).
+Estados precisos y distintos: `planned` → `generated` → `verified` (paquete generado y verificado en sandbox) →
+`integrated` (aplicado en el proyecto del cliente) → `integration_verified` (comprobado dentro del proyecto) →
+`deployed`. Nunca "listo" con credenciales o comprobaciones pendientes: cada resultado lista `needs` (variables,
+pasos) con la acción concreta para resolverlas. Si se indica solo el stack, la adaptación al proyecto concreto queda
+explícitamente pendiente.
+
+### 16.3 Paquete de capacidad (entregable)
+
+```
+<capability-slug>/
+├── README.md              empezar en minutos
+├── manifest.json          versión, stack compatible, dependencias, capacidades, componentes (procedencia), estado
+├── src/                   código de la capacidad, puntos de entrada claros, editable
+├── examples/              ejemplo ejecutable con datos de ejemplo (probar antes de integrar)
+├── tests/                 pruebas incluidas
+├── config/.env.example    dependencias y variables, sin secretos
+├── docs/integration.md    pasos, archivos a modificar, conexiones
+├── docs/architecture.md   decisiones (por qué cada componente), calidad, safety, coste, tiempo
+├── docs/verification.md   qué se comprobó, resultados, límites
+├── agent/INTEGRATE.md     contexto para Claude Code/Codex: integrar, verificar, continuar, revertir
+└── LICENSES/              licencias de los componentes
+```
+
+### 16.4 Contrato del motor (API `/v1`, autenticación `Authorization: Bearer <token de acceso>`)
+
+| Operación | Endpoint | CLI |
+|---|---|---|
+| Buscar por necesidad | `GET /v1/capabilities?q=` (casos de uso + componentes, ejemplos, requisitos) | `turbineh search "<need>"` |
+| Inspeccionar | `GET /v1/capabilities/{id}` · `GET /v1/components/{id}` | `turbineh inspect <id>` |
+| Planificar | `POST /v1/plans` {need, environment: {stack \| files \| repo}} → componentes, compatibilidad, incompatibilidades, faltantes, archivos, dependencias, config, coste/tiempo estimados, decisiones con motivo | `turbineh plan "<need>"` (detecta el stack local) |
+| Generar | `POST /v1/plans/{id}/generate` → paquete (estado y eventos en vivo) | (incluido en `apply`) |
+| Aplicar | paquete → cambios en el proyecto (rama + commit; o PR en repo conectado) | `turbineh apply <plan>` |
+| Verificar | pruebas del paquete en el proyecto (local) o sandbox (remoto) | `turbineh verify` |
+| Revertir | revertir el commit de integración sin perder trabajo posterior | `turbineh revert <integration>` |
+| Estado e informes | `GET /v1/activity`, `GET /v1/plans/{id}` | `turbineh status` |
+
+Errores accionables y estructurados: `{code, message, action, resume}` (p. ej. "falta STRIPE_SECRET_KEY; configúrala
+y reanuda con `turbineh apply --resume <id>`"). Preferencias por proyecto en `.turbineh/project.json` (stack,
+componentes aprobados, convenciones, política de cambios); `turbineh init` las crea y propone las instrucciones para
+`CLAUDE.md`/`AGENTS.md`. Instalación con un comando: `curl -fsSL https://software.turbineh.com/install.sh | sh`.
+
+### 16.5 Bloques de trabajo (prioridad para la demo)
+
+| # | Bloque | Contenido | Demo |
+|---|---|---|---|
+| P1 | Acceso y área de producto | Gate por token (cookie + `Bearer`), sin landing ni login; GitHub solo opcional | ✅ |
+| P2 | Motor de capacidades | Búsqueda, plan con detección de stack, paquete de capacidad (16.3), estados, errores accionables, actividad | ✅ |
+| P3 | CLI `turbineh` | search · inspect · plan · apply · verify · revert · status · init; humano + `--json`; instalador | ✅ |
+| P4 | UI de producto | Descubrir, nuevo flujo (necesidad → entorno → plan → generar en vivo con decisiones → resultado: probar, ZIP, integrar, copiar instrucciones), actividad e informes | ✅ |
+| P5 | Integración en repo (antigua F2) | Conectar GitHub (opcional) → analizar repo → plan → PR con los cambios; o ZIP del código subido | ✅ |
+| P6 | Benchmarks comerciales | (a) e-commerce + agente de reservas: Claude Code solo vs Claude Code + nosotros; (b) cerebro del agente: modelo frontera vs nuestro orquestador (tiempo y coste por 1.000 conversaciones) | ✅ |
+| P7 | Landing api.turbineh.com | Copy CMO con métricas reales, CTA "Already invited? Use it now", deck nuevo | ✅ |
+| P8 | Superficies limpias | Ningún nombre de proveedor del decisor en UI, API, CLI ni entregables; el orquestador del cliente habla solo con nuestra pasarela | ✅ |
+
+### 16.6 Reglas que siguen vigentes
+
+Secretos fuera de git (el token de acceso vive en variables de entorno, nunca en el repo público); Security Pack y
+AI Safety Pack siempre; solo cifras de `bench/`; decisiones deterministas fuera de los modelos; ADR por decisión.
 
 ## 14. Protocolo director ↔ ejecutor
 
