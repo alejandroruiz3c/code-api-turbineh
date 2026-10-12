@@ -19,6 +19,9 @@ const ENDPOINTS: [method: string, path: string, description: string][] = [
     "/v1/builds/{id}/improve",
     "Fix the remaining security alerts and deliver a new verified version",
   ],
+  ["GET", "/v1/keys", "Your API keys (browser session)"],
+  ["POST", "/v1/keys", "Create an API key (shown once)"],
+  ["DELETE", "/v1/keys/{id}", "Revoke an API key"],
   ["GET", "/v1/components", "Search the catalog"],
   ["GET", "/v1/components/{id}", "Component manifest"],
 ];

@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- API keys in the UI (`/keys`): create (shown once), list and revoke; `GET/POST /v1/keys`, `DELETE /v1/keys/{id}` (max 5 active keys per account).
+- Real cost per build: measured tokens × Scaleway list prices per model plus a fixed overhead (`COST_OVERHEAD_EUR_PER_BUILD`), stored in the build metrics and the daily cost ledger.
+- Screen previews: after E2E the sandbox captures home, dashboard and the first module; shown in the build result and in the API (`artifact.previews`).
+- Weekly catalog watch (`pnpm catalog:watch`, GitHub Actions): re-checks every approved component against OSV and opens or updates an issue when an advisory appears.
+- Worker heartbeat: `/health` reports workers alive in the last 90 s, running builds and queue length.
+
+### Fixed
+
+- Entity plurals: words already plural or uncountable (`Stats`, `Settings`, `Data`) are no longer pluralized again; `-is` → `-es`.
+
 - Native component `payments.subscriptions.turbineh` (ADR-0019): Stripe Billing subscriptions per workspace (hosted Checkout, Customer Portal, signed webhook, `requirePlan`), verified against stripe-mock; native components can add menu entries. 31 benchmark prompts across 10 recipes.
 
 - Recipes from the use-case research (top 5 of AI-built software): `projects` (kanban boards, tasks with assignees, priorities, due dates, comments, my tasks), `analytics-dashboard` (CSV import validated per row, KPIs with previous-period comparison, accessible native SVG charts, filters, CSV export), `tracker` (habits and daily amounts, goals, streaks, 30-day history). Ten recipes in total.

@@ -32,6 +32,7 @@ interface BuildResult {
     zip_url: string;
     files: string[];
     docs: Record<string, string>;
+    previews?: { name: string; url: string }[];
   } | null;
 }
 
@@ -266,6 +267,31 @@ function Result({
           ) : null}
         </div>
       </Panel>
+      {result.artifact.previews && result.artifact.previews.length > 0 ? (
+        <Panel title="Preview · your app as verified">
+          <ul className="grid gap-4 md:grid-cols-3">
+            {result.artifact.previews.map((p) => (
+              <li key={p.name}>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-lg border border-line hover:border-teal"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- signed artefact URL, already sized */}
+                  <img
+                    src={p.url}
+                    alt={`Screenshot of the ${p.name.replace(/-/g, " ")} page`}
+                    className="w-full"
+                    loading="lazy"
+                  />
+                </a>
+                <p className="mt-1 text-xs capitalize text-muted">{p.name.replace(/-/g, " ")}</p>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         <Panel title={`Files · ${result.artifact.files.length}`}>
           <ul className="max-h-[480px] overflow-auto font-mono text-xs text-muted">
