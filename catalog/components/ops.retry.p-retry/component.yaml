@@ -44,7 +44,7 @@ quality:
   tests:
     command: contract.test.ts (vitest + tsc strict, sandbox --network none)
     passed: true
-    date: 2026-10-11
+    date: 2026-10-12
 security:
   scanned_at: 2026-10-10
   tools:
@@ -65,7 +65,7 @@ evidence:
     ref: https://api.osv.dev/v1/query
   - claim: Contract tests pass and type-check (strict) in the sandbox without network
     origin: tested
-    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+    ref: bench/results/2026-10-12-certify-recertify-curated-glue-4.json
 relations:
   requires: []
   provides:
