@@ -1,12 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShopShell } from "@/components/shop-shell";
-import { env } from "@/env";
 import { checkoutCountries, countryName, isCountry } from "@/lib/countries";
-import { formatPrice, formatRate, MAX_QTY, shippingCost, shipsTo, cartTotal } from "@/lib/shop";
-import { cartLines, currentCartId, lineLabel, needsCountry, quote, shopRules } from "@/server/cart";
-import { updateQuantity } from "./actions";
-import { CheckoutForm } from "./form";
+import {
+  cartTotal,
+  describeCoupon,
+  formatPrice,
+  formatRate,
+  MAX_QTY,
+  shippingCost,
+  shipsTo,
+} from "@/lib/shop";
+import {
+  cartCoupon,
+  cartLines,
+  currentCartId,
+  lineLabel,
+  needsCountry,
+  pricedLines,
+  quote,
+  shopRules,
+} from "@/server/cart";
+import { currentCurrency } from "@/server/currency";
+import { removeCoupon, updateQuantity } from "./actions";
+import { CheckoutForm, CouponForm } from "./form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Cart — __APP_NAME__", robots: { index: false } };
@@ -15,13 +32,15 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function Cart({ searchParams }: { searchParams: SearchParams }) {
   const id = await currentCartId();
-  const [lines, rules, sp] = await Promise.all([
-    id ? cartLines(id) : [],
-    shopRules(),
+  const currency = await currentCurrency();
+  const [lines, rules, coupon, sp] = await Promise.all([
+    id ? cartLines(id, currency) : [],
+    shopRules(currency),
+    id ? cartCoupon(id) : null,
     searchParams,
   ]);
   const count = lines.reduce((n, l) => n + l.quantity, 0);
-  const money = (c: number) => formatPrice(c, env.SHOP_CURRENCY);
+  const money = (c: number) => formatPrice(c, currency);
   const countries = checkoutCountries(rules.rates);
   const askCountry = needsCountry(rules);
   const country =
@@ -35,10 +54,11 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
     typeof sp.rate === "string" && options.some((r) => r.id === sp.rate)
       ? sp.rate
       : (options[0]?.id ?? null);
-  const q = lines.length > 0 ? quote(lines, rules, country, rateId) : null;
-  const subtotal = cartTotal(lines);
+  const q = lines.length > 0 ? quote(lines, rules, country, rateId, { currency, coupon }) : null;
+  const subtotal = cartTotal(pricedLines(lines));
+  const goods = q && !("error" in q) ? subtotal - q.discountCents : subtotal;
   return (
-    <ShopShell cartCount={count}>
+    <ShopShell cartCount={count} back="/cart">
       <section className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="mb-6 text-4xl font-bold">Your cart</h1>
         {lines.length === 0 ? (
@@ -72,7 +92,11 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                       Update
                     </button>
                   </form>
-                  <span>{money(l.unitPriceCents * l.quantity)}</span>
+                  <span>
+                    {l.unitPriceCents === null
+                      ? `Not sold in ${currency.toUpperCase()}`
+                      : money(l.unitPriceCents * l.quantity)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -105,7 +129,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                   <fieldset className="grid gap-2">
                     <legend className="mb-1 text-sm font-medium">Shipping</legend>
                     {options.map((r) => {
-                      const cost = shippingCost(r, subtotal);
+                      const cost = shippingCost(r, goods);
                       return (
                         <label key={r.id} className="flex items-center gap-2 text-sm">
                           <input
@@ -137,6 +161,12 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
               <dd data-testid="cart-subtotal">{money(subtotal)}</dd>
               {q && !("error" in q) ? (
                 <>
+                  {q.discountCents > 0 ? (
+                    <>
+                      <dt className="text-left text-slate-600">Discount ({q.coupon?.code})</dt>
+                      <dd data-testid="cart-discount">−{money(q.discountCents)}</dd>
+                    </>
+                  ) : null}
                   {q.shipping ? (
                     <>
                       <dt className="text-left text-slate-600">Shipping ({q.shipping.name})</dt>
@@ -153,6 +183,11 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                       </dt>
                       <dd data-testid="cart-tax">{money(q.taxCents)}</dd>
                     </>
+                  ) : null}
+                  {q.taxMode === "stripe" ? (
+                    <dd className="col-span-2 text-sm text-slate-600">
+                      Tax is calculated on the secure payment page from your address.
+                    </dd>
                   ) : null}
                   <dt className="text-left text-xl font-semibold">Total</dt>
                   <dd className="text-xl font-semibold" data-testid="cart-total">
@@ -171,10 +206,29 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                 </>
               )}
             </dl>
+            <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+              {coupon ? (
+                <form action={removeCoupon} className="flex items-center gap-3 text-sm">
+                  <span>
+                    Code <b>{coupon.code}</b> — {describeCoupon(coupon)}
+                  </span>
+                  <button type="submit" className="underline">
+                    Remove code
+                  </button>
+                </form>
+              ) : (
+                <CouponForm />
+              )}
+              {q && !("error" in q) && q.couponError ? (
+                <p role="alert" className="mt-2 text-sm text-red-600">
+                  {q.couponError}
+                </p>
+              ) : null}
+            </div>
             <CheckoutForm
               country={country}
               rateId={q && !("error" in q) ? (q.shipping?.id ?? null) : null}
-              ready={!!q && !("error" in q)}
+              ready={!!q && !("error" in q) && !q.couponError}
             />
           </>
         )}

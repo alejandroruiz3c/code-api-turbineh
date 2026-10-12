@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { shippingRates, taxRates } from "@/db/schema";
+import { env } from "@/env";
 import { isCountry } from "@/lib/countries";
 import { parseCountries, parsePrice, parseRatePercent } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
 import { requireAdmin } from "@/server/admin";
+import { enabledCurrencies } from "@/server/currency";
 
 const text = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
 
@@ -30,11 +32,16 @@ export async function saveShippingRate(formData: FormData): Promise<void> {
   const freeOver = text(formData.get("freeOver"));
   const freeOverCents = freeOver ? parsePrice(freeOver) : null;
   if (freeOver && !freeOverCents) throw new UserFacingError("Enter an amount such as 50.");
+  const currency = text(formData.get("currency")).toLowerCase() || env.SHOP_CURRENCY;
+  if (!enabledCurrencies().includes(currency))
+    throw new UserFacingError("Choose one of the shop's currencies.");
   await db.insert(shippingRates).values({
     name: name.data,
     countries: countries.join(","),
     priceCents,
     freeOverCents,
+    // null = the base currency, so rates keep working if the base currency setting changes.
+    currency: currency === env.SHOP_CURRENCY ? null : currency,
   });
   revalidatePath("/dashboard/shipping");
 }

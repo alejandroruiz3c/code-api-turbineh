@@ -8,6 +8,8 @@ import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { env } from "@/env";
 import { faqJsonLd, websiteJsonLd } from "@/lib/geo";
+import { currentCurrency } from "@/server/currency";
+import { inCurrency } from "@/server/prices";
 import { cartCount } from "@/server/shop";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +21,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const featured = await db
+  const currency = await currentCurrency();
+  const rows = await db
     .select({
       id: products.id,
       slug: products.slug,
@@ -31,8 +34,9 @@ export default async function Home() {
     .where(eq(products.active, true))
     .orderBy(desc(products.createdAt))
     .limit(8);
+  const featured = await inCurrency(rows, currency);
   return (
-    <ShopShell cartCount={await cartCount()}>
+    <ShopShell cartCount={await cartCount()} back="/">
       {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by the GEO helpers, "<" escaped */}
       <script
         type="application/ld+json"
@@ -64,7 +68,7 @@ export default async function Home() {
         {featured.length === 0 ? <p className="text-slate-600">Products are coming soon.</p> : null}
         <ul className="grid grid-cols-2 gap-6 md:grid-cols-4">
           {featured.map((p) => (
-            <ProductCard key={p.id} p={p} currency={env.SHOP_CURRENCY} />
+            <ProductCard key={p.id} p={p} currency={currency} />
           ))}
         </ul>
       </section>

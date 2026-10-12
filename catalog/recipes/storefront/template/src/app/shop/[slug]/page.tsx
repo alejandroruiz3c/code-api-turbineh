@@ -5,10 +5,11 @@ import { addToCart } from "@/app/cart/actions";
 import { ShopShell } from "@/components/shop-shell";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db/client";
-import { products, productVariants } from "@/db/schema";
+import { productPrices, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
-import { formatPrice, MAX_QTY } from "@/lib/shop";
+import { formatPrice, MAX_QTY, priceIn } from "@/lib/shop";
 import { jsonLd } from "@/lib/text";
+import { currentCurrency, enabledCurrencies } from "@/server/currency";
 import { cartCount } from "@/server/shop";
 
 export const dynamic = "force-dynamic";
@@ -44,40 +45,81 @@ const available = (stock: number | null) => stock === null || stock > 0;
 export default async function ProductPage({ params }: { params: Params }) {
   const p = await load((await params).slug);
   if (!p) notFound();
-  const variants = (
-    await db
+  const [rawVariants, local, currency] = await Promise.all([
+    db
       .select()
       .from(productVariants)
       .where(and(eq(productVariants.productId, p.id), eq(productVariants.active, true)))
-      .orderBy(asc(productVariants.createdAt))
-  ).map((v) => ({ ...v, price: v.priceCents ?? p.priceCents, inStock: available(v.stock) }));
+      .orderBy(asc(productVariants.createdAt)),
+    db.select().from(productPrices).where(eq(productPrices.productId, p.id)),
+    currentCurrency(),
+  ]);
+  /** Price of the product (variantId null) or of an option in a currency, by the shop's rule (priceIn). */
+  const price = (c: string, v: { id: string; priceCents: number | null } | null) =>
+    priceIn({
+      base: c === env.SHOP_CURRENCY,
+      productBase: p.priceCents,
+      variant: v !== null,
+      variantBase: v?.priceCents ?? null,
+      productLocal: local.find((l) => l.variantId === null && l.currency === c)?.priceCents ?? null,
+      variantLocal: v
+        ? (local.find((l) => l.variantId === v.id && l.currency === c)?.priceCents ?? null)
+        : null,
+    });
+  const variants = rawVariants.map((v) => ({
+    ...v,
+    price: price(currency, v),
+    inStock: available(v.stock),
+  }));
   const base = env.BETTER_AUTH_URL.replace(/\/$/, "");
   const inStock = variants.length > 0 ? variants.some((v) => v.inStock) : available(p.stock);
-  const prices = variants.length > 0 ? variants.map((v) => v.price) : [p.priceCents];
-  const firstAvailable = variants.findIndex((v) => v.inStock);
-  const offer = (o: { price: number; inStock: boolean; sku?: string | null; name?: string }) => ({
-    "@type": "Offer",
-    ...(o.name ? { name: o.name } : {}),
-    ...(o.sku ? { sku: o.sku } : {}),
-    price: (o.price / 100).toFixed(2),
-    priceCurrency: env.SHOP_CURRENCY.toUpperCase(),
-    availability: o.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    url: `${base}/shop/${p.slug}`,
-  });
+  const prices = (
+    variants.length > 0 ? variants.map((v) => v.price) : [price(currency, null)]
+  ).filter((x): x is number => x !== null);
+  const sold = prices.length > 0;
+  const firstAvailable = variants.findIndex((v) => v.inStock && v.price !== null);
+  const offer = (
+    c: string,
+    o: { price: number | null; inStock: boolean; sku?: string | null; name?: string },
+  ) =>
+    o.price === null
+      ? []
+      : [
+          {
+            "@type": "Offer",
+            ...(o.name ? { name: o.name } : {}),
+            ...(o.sku ? { sku: o.sku } : {}),
+            price: (o.price / 100).toFixed(2),
+            priceCurrency: c.toUpperCase(),
+            availability: o.inStock
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+            url: `${base}/shop/${p.slug}`,
+          },
+        ];
+  // One offer per option and currency with a price, so answer engines can quote each one exactly.
+  const offers = enabledCurrencies().flatMap((c) =>
+    rawVariants.length > 0
+      ? rawVariants.flatMap((v) =>
+          offer(c, {
+            price: price(c, v),
+            inStock: available(v.stock),
+            sku: v.sku,
+            name: `${p.name} — ${v.name}`,
+          }),
+        )
+      : offer(c, { price: price(c, null), inStock }),
+  );
   const product = jsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
     name: p.name,
     description: p.description,
     ...(p.imageMime ? { image: `${base}/shop/images/${p.id}` } : {}),
-    // One offer per variant (with its SKU), so answer engines can quote each option's price and stock.
-    offers:
-      variants.length > 0
-        ? variants.map((v) => offer({ ...v, name: `${p.name} — ${v.name}` }))
-        : offer({ price: p.priceCents, inStock }),
+    offers: offers.length === 1 ? offers[0] : offers,
   });
   return (
-    <ShopShell cartCount={await cartCount()}>
+    <ShopShell cartCount={await cartCount()} back={`/shop/${p.slug}`}>
       {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by jsonLd(), "<" escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: product }} />
       <article className="mx-auto grid max-w-5xl gap-10 px-6 py-12 md:grid-cols-2">
@@ -96,11 +138,12 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="flex flex-col gap-4">
           <h1 className="text-4xl font-bold">{p.name}</h1>
           <p className="text-2xl" data-testid="price">
-            {new Set(prices).size > 1 ? "From " : ""}
-            {formatPrice(Math.min(...prices), env.SHOP_CURRENCY)}
+            {sold
+              ? `${new Set(prices).size > 1 ? "From " : ""}${formatPrice(Math.min(...prices), currency)}`
+              : `Not sold in ${currency.toUpperCase()}`}
           </p>
           <p className="whitespace-pre-line text-slate-700">{p.description}</p>
-          {inStock ? (
+          {inStock && sold ? (
             <form action={addToCart} className="flex flex-col items-start gap-4">
               <input type="hidden" name="productId" value={p.id} />
               {variants.length > 0 ? (
@@ -110,17 +153,20 @@ export default async function ProductPage({ params }: { params: Params }) {
                   {variants.map((v, i) => (
                     <label
                       key={v.id}
-                      className={`flex items-center gap-2 text-sm ${v.inStock ? "" : "text-slate-400"}`}
+                      className={`flex items-center gap-2 text-sm ${v.inStock && v.price !== null ? "" : "text-slate-400"}`}
                     >
                       <input
                         type="radio"
                         name="variantId"
                         value={v.id}
                         required
-                        disabled={!v.inStock}
+                        disabled={!v.inStock || v.price === null}
                         defaultChecked={i === firstAvailable}
                       />
-                      {v.name} — {formatPrice(v.price, env.SHOP_CURRENCY)}
+                      {v.name} —{" "}
+                      {v.price === null
+                        ? `not sold in ${currency.toUpperCase()}`
+                        : formatPrice(v.price, currency)}
                       {v.inStock ? "" : " (sold out)"}
                     </label>
                   ))}
@@ -142,7 +188,7 @@ export default async function ProductPage({ params }: { params: Params }) {
               </div>
             </form>
           ) : (
-            <p className="font-medium text-red-600">Out of stock</p>
+            <p className="font-medium text-red-600">{sold ? "Out of stock" : ""}</p>
           )}
         </div>
       </article>
