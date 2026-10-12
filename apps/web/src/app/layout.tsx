@@ -43,6 +43,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Link href="/catalog" className="hover:text-ice-2">
               Catalog
             </Link>
+            <Link href="/keys" className="hover:text-ice-2">
+              API keys
+            </Link>
             <Link href="/docs" className="hover:text-ice-2">
               API
             </Link>

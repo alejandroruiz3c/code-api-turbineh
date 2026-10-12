@@ -10,8 +10,15 @@ export function words(name: string): string[] {
     .filter(Boolean);
 }
 
+/** Words that are already plural or have no plural form ("Stats", "Settings", "Data"). */
+const UNCOUNTABLE = new Set(["data", "info", "news", "series", "species", "equipment", "feedback"]);
+
 export function pluralize(word: string): string {
-  if (/(s|x|z|ch|sh)$/.test(word)) return `${word}es`;
+  if (UNCOUNTABLE.has(word)) return word;
+  if (/(ss|us|x|z|ch|sh)$/.test(word)) return `${word}es`;
+  if (/is$/.test(word)) return `${word.slice(0, -2)}es`;
+  // Any other trailing "s" is taken as already plural (stats, settings, analytics).
+  if (/s$/.test(word)) return word;
   if (/[^aeiou]y$/.test(word)) return `${word.slice(0, -1)}ies`;
   return `${word}s`;
 }

@@ -6,7 +6,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { hostname } from "node:os";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -17,12 +17,14 @@ import {
   finishBuild,
   getBuild,
   getPool,
+  heartbeat,
   requeueStale,
   type BuildRow,
 } from "@turbineh/db";
 import { deciderFromEnv } from "@turbineh/decider";
 import { createLogger, loadLocalEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
+import { buildCost } from "./cost.js";
 import { processDeployment } from "./deploy-job.js";
 import { processDelivery } from "./delivery.js";
 import { modelSlotsFromEnv } from "./models.js";
@@ -44,7 +46,8 @@ const decider = deciderFromEnv(env);
 const workerId = `${hostname()}-${process.pid}`;
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 2);
 const DAILY_CAP_EUR = Number(process.env.DAILY_COST_CAP_EUR ?? 100);
-const EST_EUR_PER_BUILD = Number(process.env.EST_COST_EUR_PER_BUILD ?? 0.02);
+/** Per-build overhead for costs not metered per build (decider, writer, fixer, compute). */
+const COST_OVERHEAD_EUR = Number(process.env.COST_OVERHEAD_EUR_PER_BUILD ?? 0.01);
 const DOCS = [
   "DEPLOYED.md",
   "TURBINEH_REPORT.md",
@@ -82,7 +85,20 @@ async function storeArtifact(
   const bundleKey = `builds/${build.id}/${slug}.bundle`;
   await store.put(zipKey, zip, "application/zip");
   await store.put(bundleKey, readFileSync(bundlePath), "application/octet-stream");
-  return { slug, zipKey, bundleKey, files, docs, sizeBytes: zip.length };
+  // Screen previews captured by the verification (not part of the repository: .gitignore).
+  const previewDir = join(repoDir, ".turbineh-previews");
+  const previews: { name: string; key: string }[] = [];
+  if (existsSync(previewDir)) {
+    for (const f of readdirSync(previewDir)
+      .filter((x) => /^[\w-]+\.png$/.test(x))
+      .sort()
+      .slice(0, 6)) {
+      const key = `builds/${build.id}/previews/${f}`;
+      await store.put(key, readFileSync(join(previewDir, f)), "image/png");
+      previews.push({ name: f.replace(/^\d-/, "").replace(/\.png$/, ""), key });
+    }
+  }
+  return { slug, zipKey, bundleKey, files, docs, previews, sizeBytes: zip.length };
 }
 
 async function handle(build: BuildRow): Promise<void> {
@@ -117,7 +133,9 @@ async function handle(build: BuildRow): Promise<void> {
       files: (artifact.files as string[]).length,
     });
   }
-  await addCost(db, EST_EUR_PER_BUILD);
+  const cost = buildCost(outcome.metrics, env.COMPILER_MODEL, COST_OVERHEAD_EUR);
+  outcome.metrics.cost = cost;
+  await addCost(db, cost.totalEur);
   await finishBuild(db, build.id, {
     status: outcome.status,
     ...(outcome.spec ? { spec: outcome.spec } : {}),
@@ -198,6 +216,9 @@ async function tick(): Promise<void> {
 
 log.info("worker started", { workerId, concurrency: CONCURRENCY });
 setInterval(() => void requeueStale(db).catch(() => undefined), 60_000);
+const beat = () => void heartbeat(db, workerId, running).catch(() => undefined);
+beat();
+setInterval(beat, 30_000);
 const tokenKey = process.env.DELIVERY_TOKEN_KEY;
 if (tokenKey) {
   // Deliveries are short and I/O-bound: a separate loop so they never wait behind builds.

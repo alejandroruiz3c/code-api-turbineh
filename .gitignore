@@ -4,6 +4,9 @@
 !.env.example
 *.rtf
 KEYS*
+# Code routes for API key management (not key files): case-insensitive filesystems match KEYS*.
+!apps/web/src/app/keys/
+!apps/web/src/app/v1/keys/
 *.pem
 *.key
 

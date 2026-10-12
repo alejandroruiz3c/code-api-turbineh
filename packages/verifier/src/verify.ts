@@ -316,6 +316,32 @@ cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit /tmp/out.build
 grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit && grep -q "STEP build 0" /tmp/out.build || exit 1
 for i in $(seq 1 40); do node -e "require('net').connect(5432,process.env.DB_HOST).on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" && break; sleep 0.5; done
 step e2e sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+# Screen previews for the result page (best effort: never changes the verification outcome).
+if [ -f playwright/.auth/owner.json ]; then
+  mkdir -p /src/.turbineh-previews
+  (pnpm -s start --port 3100 > /tmp/preview-server.log 2>&1 &)
+  for i in $(seq 1 60); do node -e "fetch('http://127.0.0.1:3100').then(()=>process.exit(0),()=>process.exit(1))" && break; sleep 0.5; done
+  cat > preview.mjs <<'JS'
+import { chromium } from "@playwright/test";
+const base = "http://127.0.0.1:3100";
+const out = "/src/.turbineh-previews/";
+const b = await chromium.launch();
+const shot = async (page, path, name) => {
+  await page.goto(base + path, { waitUntil: "networkidle" });
+  await page.screenshot({ path: out + name + ".png" });
+};
+const visitor = await b.newPage({ viewport: { width: 1280, height: 800 } });
+await shot(visitor, "/", "1-home");
+const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, storageState: "playwright/.auth/owner.json" });
+const owner = await ctx.newPage();
+await shot(owner, "/dashboard", "2-dashboard");
+const links = await owner.locator('nav[aria-label="Main"] a').evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+const first = links.find((h) => h && h.startsWith("/dashboard/"));
+if (first) await shot(owner, first, "3-" + first.split("/").filter(Boolean).slice(1).join("-").replace(/[^a-z0-9-]/gi, ""));
+await b.close();
+JS
+  timeout 90 node preview.mjs > /tmp/preview.log 2>&1 && echo "PREVIEWS ok" || echo "PREVIEWS skipped"
+fi
 `;
 
 /** Base image with the recipe dependencies pre-installed, keyed by lockfile hash (built once, reused by every build). */

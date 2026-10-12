@@ -217,6 +217,34 @@ export async function createApiKey(
   return { id: res.rows[0]?.id ?? "", key };
 }
 
+/** Active keys of an owner (never the key itself: only prefix and metadata). */
+export async function listApiKeys(
+  db: pg.Pool,
+  ownerId: string,
+): Promise<
+  { id: string; name: string; prefix: string; daily_quota: number; created_at: string }[]
+> {
+  const res = await db.query<{
+    id: string;
+    name: string;
+    prefix: string;
+    daily_quota: number;
+    created_at: string;
+  }>(
+    "SELECT id, name, prefix, daily_quota, created_at FROM api_keys WHERE owner_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC",
+    [ownerId],
+  );
+  return res.rows;
+}
+
+export async function revokeApiKey(db: pg.Pool, ownerId: string, id: string): Promise<boolean> {
+  const res = await db.query(
+    "UPDATE api_keys SET revoked_at = now() WHERE id = $1 AND owner_id = $2 AND revoked_at IS NULL",
+    [id, ownerId],
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
 export async function verifyApiKey(
   db: pg.Pool,
   key: string,
@@ -254,4 +282,28 @@ export async function costToday(db: pg.Pool): Promise<{ builds: number; eur: num
     "SELECT builds, eur FROM cost_ledger WHERE day = current_date",
   );
   return { builds: res.rows[0]?.builds ?? 0, eur: Number(res.rows[0]?.eur ?? 0) };
+}
+
+// ── Worker heartbeat (/health) ─────────────────────────────────────────────────────────────────────────────
+
+export async function heartbeat(db: pg.Pool, workerId: string, running: number): Promise<void> {
+  await db.query(
+    `INSERT INTO worker_heartbeats (worker_id, seen_at, running) VALUES ($1, now(), $2)
+     ON CONFLICT (worker_id) DO UPDATE SET seen_at = now(), running = $2`,
+    [workerId, running],
+  );
+  await db.query("DELETE FROM worker_heartbeats WHERE seen_at < now() - interval '1 day'");
+}
+
+/** Workers seen in the last 90 s, builds they are running and builds waiting in the queue. */
+export async function workerStatus(
+  db: pg.Pool,
+): Promise<{ workers: number; running: number; queued: number }> {
+  const res = await db.query<{ workers: number; running: number; queued: number }>(
+    `SELECT
+       (SELECT count(*)::int FROM worker_heartbeats WHERE seen_at > now() - interval '90 seconds') AS workers,
+       (SELECT coalesce(sum(running), 0)::int FROM worker_heartbeats WHERE seen_at > now() - interval '90 seconds') AS running,
+       (SELECT count(*)::int FROM builds WHERE status = 'queued') AS queued`,
+  );
+  return res.rows[0] ?? { workers: 0, running: 0, queued: 0 };
 }

@@ -8,3 +8,5 @@ test-results/
 *.tsbuildinfo
 next-env.d.ts
 playwright/.auth/
+# Screen previews captured during verification (not part of the app)
+.turbineh-previews/
