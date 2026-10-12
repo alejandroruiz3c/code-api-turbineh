@@ -1,5 +1,5 @@
 /**
- * Business rules hook (Backup Coder trigger T3, ADR-0020). Every generated entity has a `check<Entity>Rules`
+ * Business rules hook (Backup Coder trigger T3, ADR-0023). Every generated entity has a `check<Entity>Rules`
  * function in `src/entities/<entity>/rules.ts` that runs on the server before a record is created or imported.
  * It returns a user-facing message when the record breaks a rule, otherwise null.
  */

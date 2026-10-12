@@ -276,7 +276,7 @@ export async function runBuild(
   // 4b · integrate external components + Backup Coder fills (T1/T2), in parallel; swap point = assembled commit
   t = performance.now();
   const assembledCommit = git(repoDir, "rev-parse", "HEAD").toString().trim();
-  // T3 (ADR-0020) runs in parallel with integration: decider batch → Backup Coder per entity. Files stay in memory
+  // T3 (ADR-0023) runs in parallel with integration: decider batch → Backup Coder per entity. Files stay in memory
   // until the integration step has committed, so the two never race on the working tree.
   const rulesTask = businessRules(repoDir, spec, recipe, deps, buildId).catch(() => ({
     candidates: [] as RuleCandidate[],

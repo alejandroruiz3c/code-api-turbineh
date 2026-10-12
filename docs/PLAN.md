@@ -110,7 +110,7 @@ if (d.meets_acceptance.p < 0.6 || d.security_concern.p > 0.3) escalate(); else s
 |---|---|---|
 | T1 | Capacidad del `BuildSpec` sin ningún componente `approved` | Selector (determinista) |
 | T2 | JEV indica que los candidatos no cubren la capacidad: `meets_acceptance.p < umbral` en todos | Selector + JEV |
-| T3 | Glue de complejidad alta (varios componentes, migraciones, lógica de negocio). Implementado para reglas de negocio sobre entidades generadas (ADR-0020) | JEV (`Score` de complejidad) + umbral |
+| T3 | Glue de complejidad alta (varios componentes, migraciones, lógica de negocio). Implementado para reglas de negocio sobre entidades generadas (ADR-0023) | JEV (`Score` de complejidad) + umbral |
 | T4 | Bucle de corrección agotado (3 intentos) y swap de componente sin éxito | Corrector |
 | T5 | El modelo compilador no produce `BuildSpec` válido tras 2 reintentos | Compiler |
 | T6 | Cualquier fase pide ayuda explícita tras fallo no clasificado | Orquestación del worker |

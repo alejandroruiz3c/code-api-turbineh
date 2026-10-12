@@ -19,7 +19,7 @@ const FORMATS: Record<Entity["fields"][number]["type"], string> = {
   file: "https URL",
 };
 
-/** Where the business rules of one generated entity live (Backup Coder trigger T3, ADR-0020). */
+/** Where the business rules of one generated entity live (Backup Coder trigger T3, ADR-0023). */
 export interface RuleFiles {
   entity: string;
   pascal: string;

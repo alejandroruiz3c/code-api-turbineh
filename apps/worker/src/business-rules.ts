@@ -1,7 +1,7 @@
 import { choice, noul, score, type Answer, type Decider, type Questions } from "@turbineh/decider";
 
 /**
- * Trigger T3 (PLAN §2.4, ADR-0020): business rules in the request that the recipe does not cover. The decider answers
+ * Trigger T3 (PLAN §2.4, ADR-0023): business rules in the request that the recipe does not cover. The decider answers
  * atomic questions per acceptance criterion in ONE batched request; this code applies fixed thresholds. A model never
  * decides whether a rule is implemented correctly: that is what the rule's tests and the full verification do.
  */

@@ -47,6 +47,9 @@ importers:
       '@turbineh/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@turbineh/deployer':
+        specifier: workspace:*
+        version: link:../../packages/deployer
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -172,6 +175,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: 3.1141.0
         version: 3.1141.0
+      '@turbineh/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../packages/shared

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { products } from "@/db/schema";
+import { products, productVariants } from "@/db/schema";
 import { IMAGE_MAX_BYTES, imageType, parsePrice } from "@/lib/shop";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
@@ -64,6 +64,78 @@ export async function saveProduct(formData: FormData): Promise<void> {
   revalidatePath("/shop");
   revalidatePath("/dashboard/products");
   redirect("/dashboard/products");
+}
+
+const variantInput = z.object({
+  productId: z.uuid(),
+  name: z.string().trim().min(1).max(80),
+  sku: z
+    .string()
+    .trim()
+    .max(64)
+    .regex(/^[A-Za-z0-9._-]*$/),
+  price: z.string().trim().max(12),
+  stock: z.string().trim().max(9),
+});
+
+/** Adds a variant (size, colour…). Empty price = product price; empty stock = unlimited. */
+export async function saveVariant(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = variantInput.safeParse({
+    productId: formData.get("productId"),
+    name: formData.get("name"),
+    sku: formData.get("sku") ?? "",
+    price: formData.get("price") ?? "",
+    stock: formData.get("stock") ?? "",
+  });
+  if (!parsed.success)
+    throw new UserFacingError("Give the option a name; SKU uses letters, digits, . _ -");
+  const priceCents = parsed.data.price ? parsePrice(parsed.data.price) : null;
+  if (parsed.data.price && !priceCents) throw new UserFacingError("Enter a price such as 19.90.");
+  const stock = parsed.data.stock
+    ? z.coerce.number().int().min(0).max(1_000_000).parse(parsed.data.stock)
+    : null;
+  const sku = parsed.data.sku || null;
+  const taken = sku
+    ? await db
+        .select({ id: productVariants.id })
+        .from(productVariants)
+        .where(eq(productVariants.sku, sku))
+    : [];
+  if (taken.length > 0) throw new UserFacingError("Another option already uses this SKU.");
+  await db.insert(productVariants).values({
+    productId: parsed.data.productId,
+    name: parsed.data.name,
+    sku,
+    priceCents,
+    stock,
+  });
+  revalidatePath(`/dashboard/products`);
+  redirect(`/dashboard/products?edit=${parsed.data.productId}`);
+}
+
+/** Sets a variant's stock (restock or correction). */
+export async function setVariantStock(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = z.uuid().parse(formData.get("id"));
+  const raw = z
+    .string()
+    .trim()
+    .max(9)
+    .parse(formData.get("stock") ?? "");
+  const stock = raw ? z.coerce.number().int().min(0).max(1_000_000).parse(raw) : null;
+  await db.update(productVariants).set({ stock }).where(eq(productVariants.id, id));
+  revalidatePath("/dashboard/products");
+}
+
+/** Variants with orders keep their history: hidden, never deleted. */
+export async function hideVariant(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await db
+    .update(productVariants)
+    .set({ active: false })
+    .where(eq(productVariants.id, z.uuid().parse(formData.get("id"))));
+  revalidatePath("/dashboard/products");
 }
 
 export async function deleteProduct(formData: FormData): Promise<void> {

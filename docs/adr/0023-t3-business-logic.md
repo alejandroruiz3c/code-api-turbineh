@@ -1,4 +1,4 @@
-# ADR-0020 · Backup Coder trigger T3: business rules from the request, implemented and verified
+# ADR-0023 · Backup Coder trigger T3: business rules from the request, implemented and verified
 
 - Status: accepted (owner request, 2026-10-12)
 - Date: 2026-10-12

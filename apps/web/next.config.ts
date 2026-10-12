@@ -16,7 +16,12 @@ const csp = [
 const config: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
-  transpilePackages: ["@turbineh/db", "@turbineh/shared", "@turbineh/storage"],
+  transpilePackages: [
+    "@turbineh/db",
+    "@turbineh/deployer",
+    "@turbineh/shared",
+    "@turbineh/storage",
+  ],
   serverExternalPackages: ["pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
   async headers() {
     return [

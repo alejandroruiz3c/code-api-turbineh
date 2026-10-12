@@ -1,7 +1,7 @@
 import { recordGap, type BackupCoder } from "@turbineh/backup-coder";
 import { CODE_RULES, withoutTurbinehHeader, type Usage } from "./model.js";
 
-/** One generated entity with the business rules the decider selected for it (trigger T3, ADR-0020). */
+/** One generated entity with the business rules the decider selected for it (trigger T3, ADR-0023). */
 export interface RuleTarget {
   entity: string;
   pascal: string;

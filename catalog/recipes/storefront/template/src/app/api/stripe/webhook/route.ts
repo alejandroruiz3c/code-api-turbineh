@@ -1,9 +1,9 @@
 import { and, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { cartItems, orderItems, orders, products } from "@/db/schema";
+import { cartItems, orderItems, orders, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
 import { sendEmail } from "@/lib/email";
-import { formatPrice, verifyStripeSignature } from "@/lib/shop";
+import { formatPrice, orderSummary, verifyStripeSignature } from "@/lib/shop";
 
 interface CheckoutCompleted {
   type: string;
@@ -52,23 +52,30 @@ export async function POST(req: Request): Promise<Response> {
     if (!order) return null;
     const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
     for (const it of items) {
-      if (!it.productId) continue;
-      await tx
-        .update(products)
-        .set({ stock: sql`greatest(${products.stock} - ${it.quantity}, 0)` })
-        .where(and(eq(products.id, it.productId), isNotNull(products.stock)));
+      // A variant line takes stock from its variant; other lines from the product (null stock = unlimited).
+      if (it.variantId) {
+        await tx
+          .update(productVariants)
+          .set({ stock: sql`greatest(${productVariants.stock} - ${it.quantity}, 0)` })
+          .where(and(eq(productVariants.id, it.variantId), isNotNull(productVariants.stock)));
+      } else if (it.productId) {
+        await tx
+          .update(products)
+          .set({ stock: sql`greatest(${products.stock} - ${it.quantity}, 0)` })
+          .where(and(eq(products.id, it.productId), isNotNull(products.stock)));
+      }
     }
     if (order.cartId) await tx.delete(cartItems).where(inArray(cartItems.cartId, [order.cartId]));
     return { order, items };
   });
   if (paid) {
-    const summary = paid.items.map((i) => `${i.quantity} × ${i.name}`).join("\n");
+    const summary = orderSummary(paid.order, paid.items);
     const total = formatPrice(paid.order.totalCents, paid.order.currency);
     if (paid.order.email) {
       await sendEmail({
         to: paid.order.email,
         subject: "Your order is confirmed",
-        text: `Thank you for your order.\n\n${summary}\n\nTotal: ${total}`,
+        text: `Thank you for your order.\n\n${summary}`,
       });
     }
     for (const to of env.ADMIN_EMAILS.split(",")
