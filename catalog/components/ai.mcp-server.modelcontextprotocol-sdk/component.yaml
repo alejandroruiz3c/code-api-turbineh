@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: ai.mcp-server.modelcontextprotocol-sdk
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:npm/@modelcontextprotocol/sdk@1.31.0
+  repo: https://github.com/modelcontextprotocol/typescript-sdk
+  integrity: sha512-UvTMgnNlnIBO/22ob2RcVGDlcvOslQs8T59+FTGdA0L27a39fdGF/EDETNtDVK4DZGpwomlsYpRdA8UXcVL/pw==
+capability:
+  does: Exposes the app's own tools and data to AI agents through the Model Context Protocol (server side)
+  does_not: Does not call models; tool permissions and confirmation come from the AI Safety Pack
+  use_cases:
+    - ai-agents
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    zod: ^3.25 || ^4.0
+    "@cfworker/json-schema": ^4.1.1
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add @modelcontextprotocol/sdk@1.31.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata @modelcontextprotocol/sdk@1.31.0
+  - claim: 0 OSV advisories for @modelcontextprotocol/sdk@1.31.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - ai.mcp-server
+  conflicts: []
+  tested_with:
+    - contract-harness

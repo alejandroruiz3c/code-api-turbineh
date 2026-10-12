@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: files.docx-text.mammoth
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/mammoth@1.13.0
+  repo: https://github.com/mwilliamson/mammoth.js
+  integrity: sha512-2cawcYFcP7ISfXbBcL9lmVgTNWo88v/52ND1gnywHtVT/pX0//puPnf0iMPV9ZgmuvNOE+zkIhDgZ9M2c2dDDg==
+capability:
+  does: Extracts plain text or clean HTML from Word .docx documents
+  does_not: Does not read legacy .doc files or keep complex layout
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add mammoth@1.13.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: BSD-2-Clause
+  detected: BSD-2-Clause
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License BSD-2-Clause
+    origin: maintainer
+    ref: npm registry metadata mammoth@1.13.0
+  - claim: 0 OSV advisories for mammoth@1.13.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - files.docx-text
+  conflicts: []
+  tested_with:
+    - contract-harness

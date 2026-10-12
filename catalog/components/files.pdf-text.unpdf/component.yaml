@@ -1,0 +1,76 @@
+schema: turbineh.component/v0.1
+id: files.pdf-text.unpdf
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/unpdf@1.8.1
+  repo: https://github.com/unjs/unpdf
+  integrity: sha512-xkURhy2SoGpOIH0a1gLHNkASPIQYonadDJs2AQwPEfUakafeD9EA1WTWWsaR++gfTCXJpV27W7tU1nXuk82UKQ==
+capability:
+  does: Extracts text and metadata from PDF files on the server (serverless PDF.js build)
+  does_not: "Does not run OCR: scanned PDFs without a text layer return no text"
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    "@napi-rs/canvas": ^0.1.69 || ^1.0.0
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add unpdf@1.8.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata unpdf@1.8.1
+  - claim: 0 OSV advisories for unpdf@1.8.1 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - files.pdf-text
+  conflicts: []
+  tested_with:
+    - contract-harness

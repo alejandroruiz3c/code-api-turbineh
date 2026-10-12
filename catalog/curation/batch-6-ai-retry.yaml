@@ -1,0 +1,4 @@
+name: batch-6-ai-retry
+description: "F3 batch, officeparser contract fixed (ConversionResult.value)"
+entries:
+  - id: files.office-text.officeparser

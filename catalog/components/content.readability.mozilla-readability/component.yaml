@@ -1,0 +1,73 @@
+schema: turbineh.component/v0.1
+id: content.readability.mozilla-readability
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:npm/@mozilla/readability@0.6.0
+  repo: https://github.com/mozilla/readability
+  integrity: sha512-juG5VWh4qAivzTAeMzvY9xs9HY5rAcr2E4I7tiSSCokRFi7XIZCAu92ZkSTsIj1OPceCifL3cpfteP3pDT9/QQ==
+capability:
+  does: Extracts the main article content of a web page, dropping navigation, ads and boilerplate
+  does_not: Needs a DOM document (use content.html-dom); does not fetch pages
+  use_cases:
+    - ai-agents
+    - internal-tool
+    - corporate-site
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add @mozilla/readability@0.6.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License Apache-2.0
+    origin: maintainer
+    ref: npm registry metadata @mozilla/readability@0.6.0
+  - claim: 0 OSV advisories for @mozilla/readability@0.6.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - content.readability
+  conflicts: []
+  tested_with:
+    - contract-harness

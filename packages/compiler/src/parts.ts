@@ -139,6 +139,40 @@ export const CAPABILITY_QUESTIONS: Partial<Record<(typeof CAPABILITIES)[number],
   "ui.color-picker": "Users choose colours (branding, product options).",
   "payments.subscriptions":
     "Customers pay a recurring subscription (monthly or yearly plan) to use the product.",
+  "ai.token-count": "Text sent to an AI model must be counted or cut to a token budget.",
+  "files.pdf-text": "The app reads the text of uploaded PDF documents.",
+  "files.docx-text": "The app reads the text of uploaded Word (.docx) documents.",
+  "files.office-text":
+    "The app reads the text of uploaded PowerPoint, Excel or OpenDocument files.",
+  "content.html-to-markdown":
+    "The app converts web pages or HTML emails to Markdown or compact text.",
+  "content.readability":
+    "The app extracts the main article text of web pages, without menus or ads.",
+  "content.html-dom": "The app parses HTML pages on the server to read or clean their content.",
+  "content.html-parse":
+    "The app extracts structured data (prices, tables, links) from HTML pages or emails.",
+  "ai.json-repair": "The app turns AI model answers into structured JSON data.",
+  "ai.partial-json": "The app shows structured AI results progressively while they are generated.",
+  "ai.sse-parsing":
+    "The app reads streamed responses (Server-Sent Events), such as AI answers shown as they arrive.",
+  "ai.schema-validation": "The app validates structured data or AI output against a JSON Schema.",
+  "ai.vector-store":
+    "The app searches documents or records by meaning (semantic search, retrieval for an AI assistant).",
+  "ai.language-detection": "The app detects the language of texts (messages, documents, tickets).",
+  "ai.prompt-templates":
+    "The app fills reusable templates for AI prompts or messages with record values.",
+  "ops.queue-throttle":
+    "The app processes many items in batches against a rate-limited service (for example AI processing of a list).",
+  "ai.mcp-server":
+    "AI agents or assistants must be able to use the app's own tools or data through the Model Context Protocol (MCP).",
+  "ai.text-chunking":
+    "Long texts must be split into sentences or chunks (for summaries, search or an AI assistant's knowledge base).",
+  "ai.stopwords": "The app extracts keywords or tags from texts.",
+  "content.markdown-to-text":
+    "Markdown text (for example an AI answer) must be turned into plain text for SMS, notifications or speech.",
+  "data.yaml":
+    "The app reads or writes YAML (configuration, agent definitions or human-edited structured data).",
+  "email.parsing": "The app processes incoming emails (sender, subject, body, attachments).",
 };
 
 const fieldType = z.enum([
