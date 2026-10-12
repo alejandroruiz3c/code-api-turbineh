@@ -6,6 +6,16 @@ export const POSTGRES_IMAGE =
   "pgvector/pgvector:0.8.6-pg17@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f";
 
 /** Synthetic configuration only: real secrets never enter a sandbox (PLAN §1.6). */
+/** Official Stripe API simulator (MIT), used only inside the isolated verification network of shop apps. */
+export const STRIPE_MOCK_IMAGE =
+  "stripe/stripe-mock:v0.205.0@sha256:ff32647993847be491e68533e2881c90434fa8d5df40246ee5f7d41253422081";
+
+/** Synthetic Stripe settings for verification (never real keys; the simulator accepts any test key). */
+export const STRIPE_SYNTHETIC = {
+  STRIPE_SECRET_KEY: "sk_test_123",
+  STRIPE_WEBHOOK_SECRET: "whsec_sandbox_synthetic_0123456789abcdef",
+};
+
 export const SYNTHETIC_ENV = {
   BETTER_AUTH_SECRET: "sandbox-synthetic-secret-0123456789abcdef",
   BETTER_AUTH_URL: "http://127.0.0.1:3000",

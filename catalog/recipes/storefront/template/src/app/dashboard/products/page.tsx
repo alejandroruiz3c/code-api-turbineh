@@ -100,7 +100,9 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                 </Link>
               </td>
               <td className="px-3 py-2">{formatPrice(p.priceCents, env.SHOP_CURRENCY)}</td>
-              <td className="px-3 py-2">{p.stock ?? "∞"}</td>
+              <td className="px-3 py-2" data-testid={`stock-${p.name}`}>
+                {p.stock ?? "∞"}
+              </td>
               <td className="px-3 py-2">{p.active ? "Visible" : "Hidden"}</td>
               <td className="px-3 py-2 text-right">
                 {p.active ? (

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { cartItems, orderItems, orders, products } from "@/db/schema";
 import { env } from "@/env";
@@ -8,7 +8,12 @@ import { formatPrice, verifyStripeSignature } from "@/lib/shop";
 interface CheckoutCompleted {
   type: string;
   data: {
-    object: { id: string; payment_status?: string; customer_details?: { email?: string | null } };
+    object: {
+      id: string;
+      client_reference_id?: string | null;
+      payment_status?: string;
+      customer_details?: { email?: string | null };
+    };
   };
 }
 
@@ -27,6 +32,13 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ received: true });
   }
   const session = event.data.object;
+  // The event is signed by Stripe: our order id travels as client_reference_id (set when the session was created).
+  const ref = /^[0-9a-f-]{36}$/.test(session.client_reference_id ?? "")
+    ? session.client_reference_id
+    : null;
+  const match = ref
+    ? or(eq(orders.stripeSessionId, session.id), eq(orders.id, ref))
+    : eq(orders.stripeSessionId, session.id);
   const paid = await db.transaction(async (tx) => {
     const [order] = await tx
       .update(orders)
@@ -35,7 +47,7 @@ export async function POST(req: Request): Promise<Response> {
         paidAt: new Date(),
         email: sql`coalesce(${orders.email}, ${session.customer_details?.email ?? null})`,
       })
-      .where(and(eq(orders.stripeSessionId, session.id), eq(orders.status, "pending")))
+      .where(and(match, eq(orders.status, "pending")))
       .returning();
     if (!order) return null;
     const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));

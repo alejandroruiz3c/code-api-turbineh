@@ -23,7 +23,12 @@ export default async function Orders({ searchParams }: { searchParams: SearchPar
     <Card title={`Orders (${total})`}>
       <Table head={["Date", "Customer", "Total", "Status", ""]}>
         {rows.map((o) => (
-          <tr key={o.id} className="border-b border-slate-100">
+          <tr
+            key={o.id}
+            data-order-id={o.id}
+            data-status={o.status}
+            className="border-b border-slate-100"
+          >
             <td className="px-3 py-2">
               {o.createdAt.toISOString().slice(0, 16).replace("T", " ")}
             </td>

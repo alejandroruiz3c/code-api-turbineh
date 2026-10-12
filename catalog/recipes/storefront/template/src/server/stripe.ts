@@ -23,7 +23,7 @@ export async function createCheckoutSession(input: {
     form.set(`line_items[${i}][price_data][unit_amount]`, String(l.unitPriceCents));
     form.set(`line_items[${i}][price_data][product_data][name]`, l.name);
   });
-  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+  const res = await fetch(`${env.STRIPE_API_BASE.replace(/\/$/, "")}/v1/checkout/sessions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,

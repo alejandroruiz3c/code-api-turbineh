@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Payments verified in every shop build: the verification starts Stripe's official API simulator (stripe-mock, pinned digest) on the isolated network; the E2E creates a real Checkout Session against it, sends signed webhooks (twice, idempotency) and checks order paid, stock decremented and cart emptied. `STRIPE_API_BASE` (defaults to the real API); webhook also matches the order by `client_reference_id`.
+
 - Pre-commit secret barrier for model-written code: glue, Backup Coder modules and tests, corrector patches and security fixes are scanned with gitleaks before they enter git history; leaking parts are removed or reverted (found by the final benchmark: a generated test with a key-like literal). Code rules forbid key-like literals in tests.
 
 - Catalog batch 5: 17 more approved components (123 manifests): maps (MapLibre), image processing (Jimp), cookie consent, image lightbox, PDF from React, QR codes as components, file drop zones, colour picker and the remaining accessible controls (slider, checkbox, switch, progress, avatar, scroll area, toggle group, confirmation dialog, hover card); 14 new capabilities.
