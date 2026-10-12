@@ -39,7 +39,7 @@ export function run(
   return new Promise((resolve) => {
     // Own process group: a graceful worker stop (SIGTERM to the worker) must not reach docker clients, which would
     // forward it to the sandbox container and break a verification in progress.
-    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], detached: true });
+    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     const keep = (d: Buffer) => {
       out = fullOutput ? out + d.toString() : (out + d.toString()).slice(-8000);
