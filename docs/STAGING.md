@@ -41,7 +41,7 @@ ssh root@<worker> 'cd /opt/code-api-turbineh && chown -R turbineh:turbineh . \
 Worker-only settings in `/etc/turbineh/worker.env` besides the keys: `WORKER_CONCURRENCY`, `SANDBOX_MEMORY`,
 `SANDBOX_CPUS`, `DAILY_COST_CAP_EUR`, `REPORT_WRITER_MODEL` (default `glm-5.2`) and `GAPS_DIR`
 (`/var/lib/turbineh/gaps`: Backup Coder flywheel records, outside the deployed tree because deploys replace it).
-Sandbox base images (`turbineh/sandbox-base:<lockfile hash>`) are built on first use and reused.
+The sandbox image `turbineh/sandbox:1` (`services/sandbox/Dockerfile`) is built by `deploy.sh` on a new host when missing; a worker without it fails every build at `install`. Sandbox base images (`turbineh/sandbox-base:<lockfile hash>`) are built on first use and reused.
 
 ## Benchmark against staging
 
