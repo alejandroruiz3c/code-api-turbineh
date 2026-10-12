@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
-import { env } from "@/env";
 import { PAGE_SIZE, parsePage, parseQuery } from "@/lib/pagination";
+import { currentCurrency } from "@/server/currency";
+import { inCurrency } from "@/server/prices";
 import { cartCount } from "@/server/shop";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,8 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
     eq(products.active, true),
     q ? ilike(products.name, `%${q.replace(/[%_\\]/g, "\\$&")}%`) : undefined,
   );
-  const [rows, [{ total } = { total: 0 }]] = await Promise.all([
+  const currency = await currentCurrency();
+  const [baseRows, [{ total } = { total: 0 }]] = await Promise.all([
     db
       .select({
         id: products.id,
@@ -42,10 +44,11 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
       .offset(offset),
     db.select({ total: count() }).from(products).where(where),
   ]);
+  const rows = await inCurrency(baseRows, currency);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const link = (p: number) => `/shop?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
   return (
-    <ShopShell cartCount={await cartCount()}>
+    <ShopShell cartCount={await cartCount()} back={link(page)}>
       <section className="mx-auto max-w-6xl px-6 py-12">
         <h1 className="mb-6 text-4xl font-bold">Shop</h1>
         <form role="search" className="mb-8 flex max-w-md gap-2">
@@ -60,7 +63,7 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
         {rows.length === 0 ? <p className="text-slate-600">No products found.</p> : null}
         <ul className="grid grid-cols-2 gap-6 md:grid-cols-4">
           {rows.map((p) => (
-            <ProductCard key={p.id} p={p} currency={env.SHOP_CURRENCY} />
+            <ProductCard key={p.id} p={p} currency={currency} />
           ))}
         </ul>
         <nav aria-label="Pagination" className="mt-8 flex gap-4 text-sm">

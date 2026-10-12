@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 - Viral capacity (ADR-0027): per-IP daily build quota for browser sessions (`IP_DAILY_BUILDS`, IP stored only as an HMAC) and a selection cache (same normalized spec + same catalog candidates → no decider call; 7-day validity).
 - AWS worker management (ADR-0024): `infra/aws/worker.ts create|status|stop|start|terminate` (IMDSv2, encrypted disk, SSH from the operator IP only, fixed IP).
+- Storefront (ADR-0025): optional automatic Stripe Tax (`SHOP_TAX_MODE=stripe`; tax and total recorded from the signed payment event), discount codes (percent or fixed amount, minimum order, usage limit counted atomically on payment, last valid day, rate-limited attempts) and several currencies with explicit prices per currency (`SHOP_CURRENCIES`, no exchange rates; shipping per currency; JSON-LD offer per option and currency). Benchmark prompt `shop-05`.
 - Curated glue: a component may ship `glue.ts` (written by TurbineH, type-checked at certification) that is copied into apps instead of model-written glue. First one: `email.plain-text.html-to-text`, whose generated glue used options removed in html-to-text 9+ and failed the build in every app that selected it (3 wasted corrections, then dropped).
 - AWS extra worker groundwork (ADR-0024): `infra/aws/worker.ts check` (identity and instance types, read-only).
 - "Connect Vercel" active in production (integration `turbine-deploy`).

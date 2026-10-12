@@ -3,7 +3,31 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { checkout, type CheckoutState } from "./actions";
+import { applyCoupon, checkout, type CheckoutState, type CouponState } from "./actions";
+
+/** Discount code: checked and recomputed on the server; the cart summary updates when it applies. */
+export function CouponForm() {
+  const [state, action, pending] = useActionState<CouponState, FormData>(applyCoupon, null);
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-2">
+      <div>
+        <Label htmlFor="co-code">Discount code</Label>
+        <Input id="co-code" name="code" autoComplete="off" maxLength={40} />
+      </div>
+      <Button type="submit" disabled={pending}>
+        Apply
+      </Button>
+      {state ? (
+        <p
+          role="status"
+          className={`w-full text-sm ${state.ok ? "text-green-700" : "text-red-600"}`}
+        >
+          {state.message}
+        </p>
+      ) : null}
+    </form>
+  );
+}
 
 /** The country and shipping option come from the summary above; the server recomputes every amount. */
 export function CheckoutForm({

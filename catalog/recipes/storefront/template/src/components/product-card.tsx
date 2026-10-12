@@ -5,7 +5,13 @@ export function ProductCard({
   p,
   currency,
 }: {
-  p: { id: string; slug: string; name: string; priceCents: number; imageMime: string | null };
+  p: {
+    id: string;
+    slug: string;
+    name: string;
+    priceCents: number | null;
+    imageMime: string | null;
+  };
   currency: string;
 }) {
   return (
@@ -26,7 +32,11 @@ export function ProductCard({
         )}
         <div className="p-4">
           <h3 className="font-semibold">{p.name}</h3>
-          <p className="text-slate-700">{formatPrice(p.priceCents, currency)}</p>
+          <p className="text-slate-700">
+            {p.priceCents === null
+              ? `Not sold in ${currency.toUpperCase()}`
+              : formatPrice(p.priceCents, currency)}
+          </p>
         </div>
       </Link>
     </li>

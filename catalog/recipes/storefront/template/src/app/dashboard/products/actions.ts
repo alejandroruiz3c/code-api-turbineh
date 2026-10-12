@@ -1,14 +1,15 @@
 "use server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { products, productVariants } from "@/db/schema";
+import { productPrices, products, productVariants } from "@/db/schema";
 import { IMAGE_MAX_BYTES, imageType, parsePrice } from "@/lib/shop";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
 import { requireAdmin } from "@/server/admin";
+import { enabledCurrencies } from "@/server/currency";
 
 const base = z.object({
   name: z.string().trim().min(2).max(160),
@@ -112,6 +113,67 @@ export async function saveVariant(formData: FormData): Promise<void> {
   });
   revalidatePath(`/dashboard/products`);
   redirect(`/dashboard/products?edit=${parsed.data.productId}`);
+}
+
+/**
+ * Prices of a product and its options in the extra currencies (fields "price:<variantId|product>:<currency>").
+ * Empty removes the price (not sold in that currency). Options must belong to the product; currencies must be
+ * the shop's own extra ones.
+ */
+export async function saveLocalPrices(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const productId = z.uuid().parse(formData.get("productId"));
+  const extras = new Set(enabledCurrencies().slice(1));
+  const own = new Set(
+    (
+      await db
+        .select({ id: productVariants.id })
+        .from(productVariants)
+        .where(eq(productVariants.productId, productId))
+    ).map((v) => v.id),
+  );
+  const changes: { variantId: string | null; currency: string; priceCents: number | null }[] = [];
+  for (const [key, value] of formData.entries()) {
+    const m = /^price:(product|[0-9a-f-]{36}):([a-z]{3})$/.exec(key);
+    if (!m || typeof value !== "string") continue;
+    const [, target = "", currency = ""] = m;
+    if (!extras.has(currency)) continue;
+    const variantId = target === "product" ? null : target;
+    if (variantId && !own.has(variantId)) throw new UserFacingError("Unknown option.");
+    const raw = value.trim();
+    const priceCents = raw ? parsePrice(raw) : null;
+    if (raw && !priceCents)
+      throw new UserFacingError(`Enter prices such as 19.90 (${currency.toUpperCase()}).`);
+    changes.push({ variantId, currency, priceCents });
+  }
+  await db.transaction(async (tx) => {
+    for (const c of changes) {
+      const same = and(
+        eq(productPrices.productId, productId),
+        c.variantId ? eq(productPrices.variantId, c.variantId) : isNull(productPrices.variantId),
+        eq(productPrices.currency, c.currency),
+      );
+      if (c.priceCents === null) {
+        await tx.delete(productPrices).where(same);
+        continue;
+      }
+      await tx
+        .insert(productPrices)
+        .values({
+          productId,
+          variantId: c.variantId,
+          currency: c.currency,
+          priceCents: c.priceCents,
+        })
+        .onConflictDoUpdate({
+          target: [productPrices.productId, productPrices.variantId, productPrices.currency],
+          set: { priceCents: c.priceCents },
+        });
+    }
+  });
+  revalidatePath("/shop");
+  revalidatePath("/dashboard/products");
+  redirect(`/dashboard/products?edit=${productId}`);
 }
 
 /** Sets a variant's stock (restock or correction). */

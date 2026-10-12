@@ -77,31 +77,148 @@ const divRound = (num: number, den: number) => Math.floor((2 * num + den) / (2 *
 
 export interface Totals {
   subtotalCents: number;
+  discountCents: number;
   shippingCents: number;
   taxCents: number;
   totalCents: number;
 }
 
 /**
- * Order totals in integer cents. Tax applies to goods and shipping together and is computed once on that sum
- * (not per line), rounded half up to the cent:
+ * Order totals in integer cents. The discount applies to goods only; tax applies to discounted goods plus shipping,
+ * computed once on that sum (not per line) and rounded half up to the cent:
  * - prices exclude tax: tax = round(base × rate), total = base + tax;
  * - prices include tax: total = base, tax = base − round(base ÷ (1 + rate)) (the tax contained in the price).
  */
 export function orderTotals(input: {
   subtotalCents: number;
+  discountCents?: number;
   shippingCents: number;
   rateBp: number;
   pricesIncludeTax: boolean;
 }): Totals {
   const { subtotalCents, shippingCents, rateBp } = input;
-  const base = subtotalCents + shippingCents;
+  const discountCents = Math.min(Math.max(input.discountCents ?? 0, 0), subtotalCents);
+  const base = subtotalCents - discountCents + shippingCents;
   if (input.pricesIncludeTax) {
     const taxCents = base - divRound(base * 10_000, 10_000 + rateBp);
-    return { subtotalCents, shippingCents, taxCents, totalCents: base };
+    return { subtotalCents, discountCents, shippingCents, taxCents, totalCents: base };
   }
   const taxCents = divRound(base * rateBp, 10_000);
-  return { subtotalCents, shippingCents, taxCents, totalCents: base + taxCents };
+  return { subtotalCents, discountCents, shippingCents, taxCents, totalCents: base + taxCents };
+}
+
+/** Smallest card payment Stripe accepts is about 0.50 in most currencies: below it there is nothing to charge. */
+export const MIN_CHARGE_CENTS = 50;
+
+/** The shop's currencies: the base one first, then the extra ones (lower-case ISO codes, no duplicates). */
+export function shopCurrencies(base: string, extras: string): string[] {
+  const list = [base, ...extras.split(",")]
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => /^[a-z]{3}$/.test(c));
+  return [...new Set(list)];
+}
+
+/** The requested currency when the shop sells in it, otherwise the base currency. */
+export function pickCurrency(requested: string | null | undefined, enabled: string[]): string {
+  const c = (requested ?? "").trim().toLowerCase();
+  return enabled.includes(c) ? c : (enabled[0] ?? "eur");
+}
+
+/**
+ * Price of a product or option in a currency. Base currency: the option's own price, else the product's.
+ * Extra currency (explicit prices only, no exchange rates): the option's own price there; an option that inherits
+ * the product's base price also inherits the product's price there; otherwise not sold in that currency (null).
+ */
+export function priceIn(p: {
+  base: boolean;
+  productBase: number;
+  variant: boolean;
+  variantBase: number | null;
+  productLocal: number | null;
+  variantLocal: number | null;
+}): number | null {
+  if (p.base) return p.variant ? (p.variantBase ?? p.productBase) : p.productBase;
+  if (!p.variant) return p.productLocal;
+  return p.variantLocal ?? (p.variantBase === null ? p.productLocal : null);
+}
+
+/** Discount codes are case-insensitive: stored and compared upper-case, spaces removed. */
+export const normalizeCode = (input: string) => input.trim().toUpperCase().replace(/\s+/g, "");
+export const COUPON_CODE = /^[A-Z0-9_-]{3,40}$/;
+
+export interface Coupon {
+  code: string;
+  kind: string;
+  percentBp: number | null;
+  amountCents: number | null;
+  currency: string | null;
+  minSubtotalCents: number | null;
+  maxRedemptions: number | null;
+  redemptions: number;
+  expiresAt: Date | null;
+  active: boolean;
+}
+
+/**
+ * Discount of a code on a goods subtotal, or the reason it cannot be used. Percent: round half up of
+ * subtotal × rate; fixed amount: in the code's currency only. Never more than the subtotal.
+ */
+export function couponDiscount(
+  c: Coupon,
+  subtotalCents: number,
+  currency: string,
+  now = new Date(),
+): { discountCents: number } | { error: string } {
+  if (!c.active) return { error: "This code is not valid." };
+  if (c.expiresAt && now.getTime() >= c.expiresAt.getTime())
+    return { error: "This code has expired." };
+  if (c.maxRedemptions !== null && c.redemptions >= c.maxRedemptions)
+    return { error: "This code has been fully used." };
+  if (c.currency && c.currency !== currency)
+    return { error: `This code is valid for payments in ${c.currency.toUpperCase()} only.` };
+  if (c.minSubtotalCents !== null && subtotalCents < c.minSubtotalCents)
+    return {
+      error: `This code needs an order of at least ${formatPrice(c.minSubtotalCents, currency)}.`,
+    };
+  const raw =
+    c.kind === "percent"
+      ? divRound(subtotalCents * (c.percentBp ?? 0), 10_000)
+      : c.kind === "amount"
+        ? (c.amountCents ?? 0)
+        : 0;
+  return { discountCents: Math.min(Math.max(raw, 0), subtotalCents) };
+}
+
+/** Human description of a code, e.g. "10 % off" or "€5.00 off (from €40.00)". */
+export function describeCoupon(
+  c: Pick<Coupon, "kind" | "percentBp" | "amountCents" | "currency" | "minSubtotalCents">,
+): string {
+  const cur = c.currency ?? "";
+  const off =
+    c.kind === "percent"
+      ? `${formatRate(c.percentBp ?? 0)} off`
+      : `${cur ? formatPrice(c.amountCents ?? 0, cur) : "?"} off`;
+  return c.minSubtotalCents !== null && cur
+    ? `${off} (from ${formatPrice(c.minSubtotalCents, cur)})`
+    : off;
+}
+
+/**
+ * Amounts from Stripe's signed checkout.session.completed event (used with Stripe Tax, where Stripe computes the
+ * tax): accepted only when they are whole non-negative cents in the order's currency.
+ */
+export function stripePaidAmounts(
+  session: { amount_total?: unknown; currency?: unknown; total_details?: { amount_tax?: unknown } },
+  orderCurrency: string,
+): { taxCents: number; totalCents: number } | null {
+  const total = session.amount_total;
+  const tax = session.total_details?.amount_tax;
+  const ok = (n: unknown): n is number =>
+    typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 100_000_000;
+  if (!ok(total) || !ok(tax) || tax > total) return null;
+  if (typeof session.currency !== "string" || session.currency.toLowerCase() !== orderCurrency)
+    return null;
+  return { taxCents: tax, totalCents: total };
 }
 
 /** Plain-text order breakdown for emails: lines, subtotal, shipping, tax and total. */
@@ -109,6 +226,8 @@ export function orderSummary(
   order: {
     currency: string;
     subtotalCents: number;
+    discountCents?: number;
+    couponCode?: string | null;
     shippingCents: number;
     shippingName: string | null;
     taxCents: number;
@@ -126,6 +245,11 @@ export function orderSummary(
     ),
     "",
     `Subtotal: ${money(order.subtotalCents)}`,
+    ...(order.discountCents
+      ? [
+          `Discount${order.couponCode ? ` (${order.couponCode})` : ""}: −${money(order.discountCents)}`,
+        ]
+      : []),
     ...(order.shippingName
       ? [
           `Shipping (${order.shippingName}): ${order.shippingCents === 0 ? "Free" : money(order.shippingCents)}`,
