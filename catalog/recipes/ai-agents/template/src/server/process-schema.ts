@@ -19,8 +19,11 @@ export function parseLabels(input: string): string[] {
   return labels;
 }
 
+/** What a processed item can return (one of the three shapes below). */
+export type ProcessOutput = { label?: string; summary?: string; data?: Record<string, string> };
+
 /** Structured output each kind must return; validated by the orchestrator before it is stored. */
-export function schemaFor(kind: ProcessKind, labels: readonly string[]) {
+export function schemaFor(kind: ProcessKind, labels: readonly string[]): z.ZodType<ProcessOutput> {
   if (kind === "classify") {
     const [first, ...rest] = labels;
     if (!first) throw new Error("classification needs labels");

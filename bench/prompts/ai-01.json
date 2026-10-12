@@ -1,0 +1,5 @@
+{
+  "id": "ai-01",
+  "expected_recipe": "ai-agents",
+  "prompt": "Support assistant for our customer service team: an AI agent that answers customer questions from our help-center documents (knowledge base), can escalate a conversation to a person, and shows AI usage and an audit log to admins."
+}

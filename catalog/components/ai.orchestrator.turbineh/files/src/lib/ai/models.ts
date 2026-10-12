@@ -80,7 +80,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function post(path: string, body: unknown): Promise<unknown> {
   const cfg = aiConfig();
   for (let attempt = 0; ; attempt++) {
-    let status = 0;
+    // 0 = network failure, timeout or an unreadable body.
+    let status: number;
     try {
       const res = await fetch(`${cfg.AI_BASE_URL.replace(/\/$/, "")}${path}`, {
         method: "POST",

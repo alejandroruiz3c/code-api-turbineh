@@ -17,6 +17,19 @@ providedEntities:
     Ticket,
     Usage,
     AuditLog,
+    AiUsage,
+    AiUsageMetric,
+    UsageMetric,
+    AuditEntry,
+    AiAudit,
+    KnowledgeBaseDocument,
+    KnowledgeDocument,
+    HelpArticle,
+    Escalation,
+    EscalationRequest,
+    Classification,
+    Batch,
+    BatchJob,
   ]
 defaultCapabilities: [data.pagination, ops.rate-limit, ai.orchestrator, security.ai-safety]
 # Implemented by the template itself: batch AI processing runs through its own runner (POST /api/jobs/run with
