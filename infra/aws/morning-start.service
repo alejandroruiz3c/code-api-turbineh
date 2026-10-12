@@ -1,0 +1,11 @@
+[Unit]
+Description=Start the TurbineH AWS worker instance (schedule, ADR-0024)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=turbineh
+WorkingDirectory=/opt/code-api-turbineh/infra
+# Dedicated IAM key limited to ec2:DescribeInstances + ec2:StartInstances on the worker instance (root-only file).
+EnvironmentFile=/etc/turbineh/aws-scheduler.env
+ExecStart=/opt/code-api-turbineh/node_modules/.bin/tsx aws/worker.ts start

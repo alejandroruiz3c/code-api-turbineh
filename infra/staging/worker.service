@@ -5,11 +5,17 @@ Wants=network-online.target
 
 [Service]
 User=turbineh
-WorkingDirectory=/opt/code-api-turbineh
+WorkingDirectory=/opt/code-api-turbineh/apps/worker
 EnvironmentFile=/etc/turbineh/worker.env
-ExecStart=/usr/bin/pnpm --filter @turbineh/worker run service
+# The worker is the main process (no pnpm wrapper): SIGTERM reaches it and only it.
+ExecStart=/opt/code-api-turbineh/node_modules/.bin/tsx src/service.ts
 Restart=always
 RestartSec=5
+# Graceful stop: running builds finish first (the worker drains on SIGTERM, up to 25 min)
+TimeoutStopSec=1800
+KillSignal=SIGTERM
+# Only the main process gets SIGTERM; sandbox containers and their docker clients keep running until the drain ends.
+KillMode=mixed
 NoNewPrivileges=true
 
 [Install]
