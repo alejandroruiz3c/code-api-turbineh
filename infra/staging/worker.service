@@ -10,6 +10,9 @@ EnvironmentFile=/etc/turbineh/worker.env
 ExecStart=/usr/bin/pnpm --filter @turbineh/worker run service
 Restart=always
 RestartSec=5
+# Graceful stop: running builds finish first (the worker drains on SIGTERM, up to 25 min)
+TimeoutStopSec=1800
+KillSignal=SIGTERM
 NoNewPrivileges=true
 
 [Install]

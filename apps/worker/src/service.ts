@@ -195,8 +195,11 @@ async function improveFromParent(
 }
 
 let running = 0;
+/** Set on SIGTERM/SIGINT: no new work is claimed; running builds, deliveries and deployments finish first. */
+let stopping = false;
+let busyJobs = 0;
 async function tick(): Promise<void> {
-  if (running >= CONCURRENCY) return;
+  if (stopping || running >= CONCURRENCY) return;
   if ((await costToday(db)).eur >= DAILY_CAP_EUR) {
     log.warn("daily cost cap reached; not claiming new builds", { cap: DAILY_CAP_EUR });
     return;
@@ -234,32 +237,60 @@ const tokenKey = process.env.DELIVERY_TOKEN_KEY;
 if (tokenKey) {
   // Deliveries are short and I/O-bound: a separate loop so they never wait behind builds.
   void (async () => {
-    for (;;) {
-      const worked = await processDelivery(db, storage, tokenKey).catch((err: unknown) => {
-        log.error("delivery loop failed", { error: String(err) });
-        return false;
-      });
+    while (!stopping) {
+      busyJobs++;
+      const worked = await processDelivery(db, storage, tokenKey)
+        .catch((err: unknown) => {
+          log.error("delivery loop failed", { error: String(err) });
+          return false;
+        })
+        .finally(() => busyJobs--);
       if (!worked) await new Promise((r) => setTimeout(r, 1000));
     }
   })();
   // "Deploy for me": own loop (minutes per job, mostly waiting on the client's Vercel build).
   void (async () => {
-    for (;;) {
+    while (!stopping) {
+      busyJobs++;
       const worked = await processDeployment(db, storage, tokenKey, async (buildId, repoDir) => {
         const build = await getBuild(db, buildId);
         if (!build) throw new Error("build not found");
         return storeArtifact(build, repoDir, storage);
-      }).catch((err: unknown) => {
-        log.error("deployment loop failed", { error: String(err) });
-        return false;
-      });
+      })
+        .catch((err: unknown) => {
+          log.error("deployment loop failed", { error: String(err) });
+          return false;
+        })
+        .finally(() => busyJobs--);
       if (!worked) await new Promise((r) => setTimeout(r, 2000));
     }
   })();
 } else {
   log.warn("DELIVERY_TOKEN_KEY not set: GitHub deliveries and deployments disabled");
 }
-for (;;) {
+/** Graceful stop (deploys, the AWS schedule): finish what is running, up to DRAIN_TIMEOUT_MS, then exit. */
+const DRAIN_TIMEOUT_MS = Number(process.env.DRAIN_TIMEOUT_MS ?? 25 * 60_000);
+function drain(signal: string): void {
+  if (stopping) return;
+  stopping = true;
+  log.info("stopping: no new builds; finishing running work", { signal, running, busyJobs });
+  const deadline = Date.now() + DRAIN_TIMEOUT_MS;
+  const check = setInterval(() => {
+    if ((running === 0 && busyJobs === 0) || Date.now() > deadline) {
+      clearInterval(check);
+      void heartbeat(db, workerId, 0)
+        .catch(() => undefined)
+        .finally(() => {
+          log.info("stopped", { unfinished: running });
+          process.exit(0);
+        });
+    }
+  }, 1000);
+}
+process.on("SIGTERM", () => drain("SIGTERM"));
+process.on("SIGINT", () => drain("SIGINT"));
+
+while (!stopping) {
   await tick().catch((err: unknown) => log.error("tick failed", { error: String(err) }));
   await new Promise((r) => setTimeout(r, running >= CONCURRENCY ? 1000 : 500));
 }

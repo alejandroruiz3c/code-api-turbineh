@@ -25,3 +25,14 @@
 2. After approval: create key pair, security group and instance; run `infra/staging/setup-host.sh`; deploy with
    `WORKER_HOST=<ip> infra/staging/deploy.sh production worker`.
 3. Load test (two workers) and full benchmark for the G3 report.
+
+## Schedule (owner decision 2026-10-12): available 09:00–21:00 Pacific Time
+
+- **21:00 PT, on the AWS instance:** `nightly-stop.timer` stops the worker gracefully (it finishes running builds; the
+  unit allows 30 minutes) and powers the instance off. No credentials needed.
+- **09:00 PT, on the Scaleway production host:** `morning-start.timer` starts the instance with a dedicated IAM key
+  limited to `ec2:DescribeInstances` and `ec2:StartInstances` on the instance tagged `turbineh-worker-prod-aws`
+  (`infra/aws/scheduler-policy.json`), in `/etc/turbineh/aws-scheduler.env` (root only).
+- Outside those hours Scaleway serves alone; nothing is lost: builds queue and the database is shared.
+- Measured benefit (load test, 2026-10-12): AWS builds averaged 102 s vs 208 s on Scaleway; 83.7 builds/hour with
+  both workers.

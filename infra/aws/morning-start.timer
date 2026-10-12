@@ -1,0 +1,9 @@
+[Unit]
+Description=TurbineH AWS worker available 09:00-21:00 Pacific Time: start at 09:00 (runs on the Scaleway host)
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 America/Los_Angeles
+Persistent=false
+
+[Install]
+WantedBy=timers.target

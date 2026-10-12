@@ -14,12 +14,12 @@ TEAM="team_BBQ9Gyb31uDAzUkxSLx2AJqs"
 cd "$(dirname "$0")/../.."
 
 case "$TARGET" in
-  staging) DIR=/opt/code-api-turbineh-staging; UNIT=turbineh-worker-staging; ENVFILE=/etc/turbineh/worker-staging.env
+  staging) DIR=/opt/code-api-turbineh-staging; UNIT=turbineh-worker-staging; UNITFILE=worker-staging.service; ENVFILE=/etc/turbineh/worker-staging.env
            PROJECT=code-frontiers-web-staging; URL=https://staging.software.turbineh.com ;;
   production)
     [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "production deploys only from main"; exit 1; }
     git diff --quiet HEAD || { echo "uncommitted changes: commit or stash first"; exit 1; }
-    DIR=/opt/code-api-turbineh; UNIT=turbineh-worker; ENVFILE=/etc/turbineh/worker.env
+    DIR=/opt/code-api-turbineh; UNIT=turbineh-worker; UNITFILE=worker.service; ENVFILE=/etc/turbineh/worker.env
     PROJECT=code-frontiers-web; URL=https://software.turbineh.com ;;
   *) echo "unknown target $TARGET"; exit 1 ;;
 esac
@@ -34,6 +34,7 @@ if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
     && (docker image inspect turbineh/sandbox:1 >/dev/null 2>&1 || docker build -q -t turbineh/sandbox:1 services/sandbox >/dev/null) \
     && set -a && . $ENVFILE && set +a \
     && sudo -E -H -u turbineh env PATH=\$PATH pnpm -s db:migrate \
+    && install -m 644 infra/staging/$UNITFILE /etc/systemd/system/$UNIT.service \
     && systemctl daemon-reload && systemctl enable --now $UNIT >/dev/null 2>&1; systemctl restart $UNIT \
     && sleep 5 && echo \"$UNIT: \$(systemctl is-active $UNIT)\""
 fi

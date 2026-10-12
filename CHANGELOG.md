@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Graceful worker stop: on SIGTERM the worker claims nothing new and finishes running builds, deliveries and deployments (units allow 30 min; `deploy.sh` installs the unit files from the repo). Deploys no longer interrupt builds.
+- AWS worker schedule 09:00–21:00 Pacific Time (ADR-0024): self power-off timer on the instance, start timer on the Scaleway host with a start-only IAM key.
 - `infra/aws/worker.ts allow-ssh`: replaces the operator SSH rule with the current IP (the operator's IP changes; SSH is never opened to everyone).
 - T3 business rules on edits and across entities (ADR-0026): every generated entity gets an edit page and `update` action (role-checked, workspace-scoped, E2E-tested); rules receive the operation, the previous record and read-only, code-written loaders of related entities linked by reference fields; the decider decides create/update/both and the related entity; the report shows when each rule runs and what it reads.
 - `pnpm load`: load test that submits one prompt per recipe at once and records wall clock, throughput, green rate and queue depth (`bench/results/*-load.json`).
