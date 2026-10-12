@@ -68,13 +68,47 @@ const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
 
 /**
  * SPDX semantics for dependency licences: "A OR B" lets us choose, so it blocks only when every alternative blocks
- * (e.g. jszip "MIT OR GPL-3.0-or-later" is used under MIT); "A AND B" blocks when any part blocks.
+ * (e.g. jszip "MIT OR GPL-3.0-or-later" is used under MIT); "A AND B" blocks when any part blocks. Parentheses and
+ * precedence (AND binds tighter than OR) are respected; an expression that cannot be parsed blocks.
  */
 export function licenseBlocks(expression: string): boolean {
-  const expr = expression.replace(/[()]/g, " ").trim();
-  if (/\sOR\s/i.test(expr)) return expr.split(/\s+OR\s+/i).every((alt) => licenseBlocks(alt));
-  if (/\sAND\s/i.test(expr)) return expr.split(/\s+AND\s+/i).some((part) => licenseBlocks(part));
-  return BLOCKING_LICENSE.test(expr);
+  const tokens = expression.match(/\(|\)|[^\s()]+/g) ?? [];
+  let i = 0;
+  const atom = (): boolean => {
+    const t = tokens[i++];
+    if (t === undefined) throw new Error("unexpected end");
+    if (t === "(") {
+      const v = or();
+      if (tokens[i++] !== ")") throw new Error("missing )");
+      return v;
+    }
+    if (/^(AND|OR|\))$/i.test(t)) throw new Error("unexpected operator");
+    // "GPL-2.0 WITH Classpath-exception-2.0": the exception does not remove the copyleft licence.
+    if (tokens[i]?.toUpperCase() === "WITH") i += 2;
+    return BLOCKING_LICENSE.test(t);
+  };
+  const and = (): boolean => {
+    let v = atom();
+    while (tokens[i]?.toUpperCase() === "AND") {
+      i++;
+      v = atom() || v;
+    }
+    return v;
+  };
+  const or = (): boolean => {
+    let v = and();
+    while (tokens[i]?.toUpperCase() === "OR") {
+      i++;
+      v = and() && v;
+    }
+    return v;
+  };
+  try {
+    const v = or();
+    return i === tokens.length ? v : true;
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -191,7 +225,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
   const blockingLicenses = licenseLines
     .map((l) => l.slice(12))
     // "name@version EXPRESSION": the SPDX expression decides, not a substring match.
-    .filter((l) => licenseBlocks(l.slice(l.indexOf(" ") + 1)));
+    // "LICENSE_BAD name@version EXPRESSION": only the SPDX expression decides (not the package name).
+    .filter((l) => licenseBlocks(l.split(" ").slice(2).join(" ")));
   steps.push(secrets);
   steps.push({
     name: "static",
