@@ -15,6 +15,11 @@ export interface RecipeMeta {
    * sent to selection and never reported as gaps.
    */
   providedCapabilities?: string[];
+  /**
+   * Native components the template code depends on (capability → component id), e.g. the AI orchestrator and its
+   * AI Safety Pack (ADR-0028). Selected by code in every build of the recipe, never left to the decider.
+   */
+  requiredComponents?: Record<string, string>;
   /** Extra dashboard navigation entries. */
   nav: { label: string; href: string }[];
 }
@@ -59,6 +64,10 @@ export function mergedRecipe(chain: RecipeMeta[]): Omit<RecipeMeta, "extends"> {
     providedEntities: [...new Set(chain.flatMap((m) => m.providedEntities))],
     defaultCapabilities: [...new Set(chain.flatMap((m) => m.defaultCapabilities))],
     providedCapabilities: [...new Set(chain.flatMap((m) => m.providedCapabilities ?? []))],
+    requiredComponents: Object.assign(
+      {},
+      ...chain.map((m) => m.requiredComponents ?? {}),
+    ) as Record<string, string>,
     nav: chain.flatMap((m) => m.nav),
   };
 }

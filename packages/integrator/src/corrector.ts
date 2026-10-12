@@ -34,6 +34,9 @@ export function failureLog(v: VerifyResult): string {
  * Files the corrector may touch: tracked files mentioned in the failing log that the system generated
  * (`// turbineh:generated…` header). Recipe code, catalog code and copied contract tests are never edited.
  */
+/** Never correctable by a model (see correctableFiles). */
+export const PROTECTED_DIRS = ["src/security/", "src/lib/ai/"];
+
 export function correctableFiles(dir: string, log: string): string[] {
   const tracked = execFileSync("git", ["ls-files"], { cwd: dir })
     .toString()
@@ -45,7 +48,10 @@ export function correctableFiles(dir: string, log: string): string[] {
         /\.(ts|tsx)$/.test(f) &&
         !f.startsWith("tests/unit/components/") &&
         !f.endsWith(".fixtures.test.ts") &&
-        !/^src\/entities\/[^/]+\/related\.ts$/.test(f),
+        !/^src\/entities\/[^/]+\/related\.ts$/.test(f) &&
+        // Security Pack, AI orchestrator and AI Safety Pack are certified TurbineH code: a model never edits them
+        // (they are also the only files allowed to talk to models, so editing them would bypass the AI rules).
+        !PROTECTED_DIRS.some((d) => f.startsWith(d)),
     );
   // A failing generated test and the module it tests are corrected together (the bug may be in either).
   const mentioned = new Set(tracked.filter((f) => log.includes(f)));

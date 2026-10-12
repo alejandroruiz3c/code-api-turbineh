@@ -1,0 +1,5 @@
+{
+  "id": "ai-02",
+  "expected_recipe": "ai-agents",
+  "prompt": "Ticket triage with AI for a software company: paste or import incoming support tickets, classify each one as billing, bug, feature request or other in a batch, export the results to CSV, and track how many AI requests the team uses."
+}

@@ -10,11 +10,15 @@ import {
   POSTGRES_IMAGE,
   run,
   SANDBOX_IMAGE,
+  aiSynthetic,
   STRIPE_MOCK_IMAGE,
   STRIPE_SYNTHETIC,
   SYNTHETIC_ENV,
   type RunResult,
 } from "./sandbox.js";
+
+/** Deterministic AI simulator mounted read-only into the sandbox image (services/ai-mock). */
+const AI_MOCK_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../services/ai-mock");
 
 export type StepName =
   | "install"
@@ -162,6 +166,25 @@ export async function verify(dir: string): Promise<VerifyResult> {
       STRIPE_MOCK_IMAGE,
     ]);
   }
+  // AI apps (orchestrator component): a deterministic model + decider simulator on the same isolated network.
+  const aiHost = `${net}-ai`;
+  const aiApp = existsSync(join(dir, "src/lib/ai/orchestrator.ts"));
+  if (aiApp) {
+    await run("docker", [
+      "run",
+      "-d",
+      "--rm",
+      "--name",
+      aiHost,
+      "--network",
+      net,
+      "-v",
+      `${AI_MOCK_DIR}:/mock:ro`,
+      SANDBOX_IMAGE,
+      "node",
+      "/mock/server.mjs",
+    ]);
+  }
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
   // Awaited later: mark it handled now so a failure surfaces at the await instead of crashing the process.
   scans.catch(() => undefined);
@@ -192,6 +215,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
           BASE_HASH: lockHash,
           DB_HOST: dbHost,
           ...(shop ? { ...STRIPE_SYNTHETIC, STRIPE_API_BASE: `http://${stripeHost}:12111` } : {}),
+          ...(aiApp ? aiSynthetic(aiHost) : {}),
         }).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
         baseImage ?? SANDBOX_IMAGE,
         "sh",
@@ -203,6 +227,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
   } finally {
     await run("docker", ["rm", "-f", dbHost]);
     if (shop) await run("docker", ["rm", "-f", stripeHost]);
+    if (aiApp) await run("docker", ["rm", "-f", aiHost]);
     await run("docker", ["network", "rm", net]);
   }
   const [secrets, staticFindings, advisories] = await scans;

@@ -180,7 +180,10 @@ export async function runBuild(
       acceptance_criteria: spec.acceptance_criteria,
     },
     candidates: candidatesFor(
-      spec.capabilities.filter((c) => !recipe.providedCapabilities?.includes(c)),
+      spec.capabilities.filter(
+        (c) =>
+          !recipe.providedCapabilities?.includes(c) && !(c in (recipe.requiredComponents ?? {})),
+      ),
       catalog,
     ),
   };
@@ -204,11 +207,14 @@ export async function runBuild(
 
   // 3 · resolve (deterministic)
   t = performance.now();
-  const baseTemplate = join(
-    recipesDir,
-    recipeChain(recipesDir, recipeId)[0]?.id ?? recipeId,
-    "template",
-  );
+  // The effective package.json: the last template in the chain that ships one (overlays win, e.g. ai-agents adds the
+  // decider SDK to the base dependencies).
+  const baseTemplate =
+    recipeChain(recipesDir, recipeId)
+      .map((m) => join(recipesDir, m.id, "template"))
+      .reverse()
+      .find((dir) => existsSync(join(dir, "package.json"))) ??
+    join(recipesDir, recipeId, "template");
   const pkg = JSON.parse(readFileSync(join(baseTemplate, "package.json"), "utf8")) as {
     dependencies: Stack;
     devDependencies: Stack;
@@ -224,7 +230,18 @@ export async function runBuild(
       [...d.ranked.filter(native), ...d.ranked.filter((c) => !native(c))],
     ]),
   );
-  const resolution = resolveSet(ranked, stack);
+  // Components the recipe's code depends on (e.g. AI orchestrator + AI Safety Pack, ADR-0028) are selected by code.
+  const required = Object.fromEntries(
+    Object.entries(recipe.requiredComponents ?? {}).map(([capability, id]) => {
+      const c = catalog.find(
+        (x) => x.id === id && x.status === "approved" && x.provides.includes(capability),
+      );
+      if (!c)
+        throw new Error(`recipe ${recipeId} requires ${id}, which is not an approved component`);
+      return [capability, c];
+    }),
+  );
+  const resolution = resolveSet(ranked, stack, required);
   lap("resolve", t);
   const triggers = Object.fromEntries(selection.decisions.map((d) => [d.capability, d.trigger]));
   const gaps = resolution.gaps.map((capability) => ({

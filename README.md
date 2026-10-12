@@ -16,9 +16,13 @@ verification (+ corrections) → security remediation → report → delivery`
   request ([ADR-0004](docs/adr/0004-decider.md), [best practices](docs/DECIDER_BEST_PRACTICES.md)).
 - **Compiler:** a small open-weights model writes the `BuildSpec` in small, validated parts ([ADR-0010](docs/adr/0010-decomposition-principle.md)).
 - **Catalog:** approved components only — manifest, contract tests (run and type-checked), OSV scan and allowed
-  licence ([ADR-0012](docs/adr/0012-catalog-curation.md)). Seven recipes: SaaS CRUD, internal tool, landing page,
-  bookings, client portal, corporate website and online shop ([ADR-0018](docs/adr/0018-public-site-recipes-geo.md)),
-  with security and GEO (llms.txt, JSON-LD, AI-crawler-aware robots) built in.
+  licence ([ADR-0012](docs/adr/0012-catalog-curation.md)). Eleven recipes: SaaS CRUD, internal tool, landing page,
+  bookings, client portal, corporate website, online shop ([ADR-0018](docs/adr/0018-public-site-recipes-geo.md)),
+  projects, analytics dashboard, tracker and AI assistants, with security and GEO (llms.txt, JSON-LD,
+  AI-crawler-aware robots) built in.
+- **AI in client apps:** only through TurbineH's orchestrator (component #001: small open model plans, JEV decides,
+  open models answer) with the AI Safety Pack always on; a verification rule fails any build that calls a model
+  directly ([ADR-0028](docs/adr/0028-f3-orchestrator-ai-safety.md)).
 - **Integration and Backup Coder:** approved libraries are installed at exact versions with their contract tests
   running inside the app; open-weights coders fill only small, self-contained gaps; a corrector patches failing
   generated files and swaps out what cannot be made green ([ADR-0015](docs/adr/0015-integration-backup-coder-corrector.md)).

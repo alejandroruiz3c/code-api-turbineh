@@ -27,8 +27,10 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
     "Dashboard to analyse business data: import or enter figures, KPIs, charts over time and by category, filters and export",
   tracker:
     "Personal tracker app: habits, health, fitness, money or any daily quantity with goals, streaks and history",
+  "ai-agents":
+    "AI assistants and AI processing for a team: assistants or agents with instructions and allowed tools, chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), AI usage and audit; every AI call goes through the TurbineH orchestrator",
   out_of_scope:
-    "Anything else: not a web app, mobile/desktop/game, AI features in the app, scraping, or a different product family",
+    "Anything else: not a web app, mobile/desktop/game, training or hosting AI models, autonomous agents acting without human confirmation on payments or external accounts, scraping, or a different product family",
 };
 
 /** One atomic yes/no question per optional capability. Always-on capabilities are added in code. */

@@ -1,0 +1,5 @@
+{
+  "id": "ai-04",
+  "expected_recipe": "ai-agents",
+  "prompt": "AI processing for a real-estate agency: summarise incoming property listings in three sentences and extract price, city and number of bedrooms from each one in batches, with several assistants for different teams."
+}
