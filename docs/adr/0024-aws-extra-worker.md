@@ -1,6 +1,6 @@
 # ADR-0024 · Extra production worker on AWS
 
-- Status: proposed (2026-10-12) · instance creation waits for the owner's cost approval
+- Status: accepted (owner approved the budget, 2026-10-12) · running: `turbineh-worker-prod-aws`, fixed IP 13.36.73.0
 - Date: 2026-10-12
 - Replaces the OVH plan (owner decision). Scaleway stays the primary worker; AWS adds capacity and removes the
   single-provider dependency.
