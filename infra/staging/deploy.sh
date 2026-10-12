@@ -27,7 +27,7 @@ esac
 if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
   rsync -az --delete -e "ssh -i $KEY" --exclude node_modules --exclude .git --exclude '.env*.local' \
     --exclude /builds --exclude /artifacts --exclude .next --exclude .turbo --exclude .vercel \
-    --exclude bench/results/runs ./ "root@$HOST:$DIR/"
+    --exclude bench/results/runs --exclude /.claude ./ "root@$HOST:$DIR/"
   ssh -i "$KEY" "root@$HOST" "set -e; cd $DIR && chown -R turbineh:turbineh . \
     && sudo -u turbineh pnpm install --frozen-lockfile >/dev/null \
     && sudo -u turbineh pnpm turbo build --filter=@turbineh/worker... | grep -E 'Tasks:' \
