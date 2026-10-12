@@ -11,6 +11,8 @@ const schema = z.object({
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   DAILY_COST_CAP_EUR: z.coerce.number().default(100),
   USER_DAILY_BUILDS: z.coerce.number().int().default(10),
+  /** Browser builds per client IP per day, across accounts (PLAN §9 viral capacity). */
+  IP_DAILY_BUILDS: z.coerce.number().int().default(30),
   /** "Connect Vercel" for Deploy for me (ADR-0021). Optional: without them the client pastes a token instead. */
   VERCEL_INTEGRATION_SLUG: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_ID: z.string().optional(),

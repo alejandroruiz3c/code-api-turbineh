@@ -1,6 +1,7 @@
-import { buildsLastDay, costToday, enqueueBuild } from "@turbineh/db";
+import { buildsLastDay, buildsLastDayFromIp, costToday, enqueueBuild } from "@turbineh/db";
 import { z } from "zod";
 import { getCaller } from "@/server/caller";
+import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { problem } from "@/server/problem";
@@ -39,6 +40,11 @@ export async function POST(req: Request): Promise<Response> {
   if ((await buildsLastDay(db, caller.ownerId)) >= quota) {
     return problem(429, "Daily build quota reached", `You can start ${quota} builds per day during the beta.`);
   }
+  // Browser sessions also count per client IP (many accounts from one place); API keys have their own quota.
+  const ipHash = caller.kind === "session" ? clientIpHash(req.headers) : null;
+  if (ipHash && (await buildsLastDayFromIp(db, ipHash)) >= env.IP_DAILY_BUILDS) {
+    return problem(429, "Daily build limit reached for this network", "Please try again tomorrow.");
+  }
   if ((await costToday(db)).eur >= env.DAILY_COST_CAP_EUR) {
     return problem(503, "The beta is at capacity", "Today's build capacity is used up. Please come back tomorrow.", { waitlist: true });
   }
@@ -48,6 +54,7 @@ export async function POST(req: Request): Promise<Response> {
     ownerId: caller.ownerId,
     ...(caller.kind === "api-key" ? { apiKeyId: caller.apiKeyId } : {}),
     ...(idempotencyKey ? { idempotencyKey } : {}),
+    ...(ipHash ? { clientIpHash: ipHash } : {}),
     options: { ...parsed.data.options, ...(parsed.data.github_username ? { github_username: parsed.data.github_username } : {}),
       ...(parsed.data.brand ? { brand: parsed.data.brand } : {}),
     },

@@ -32,6 +32,8 @@ export interface SelectionResult {
     latencyMs: number;
     requests: number;
     questions: number;
+    /** True when the selection came from the selection cache (no decider call). */
+    cached?: boolean;
   };
 }
 
