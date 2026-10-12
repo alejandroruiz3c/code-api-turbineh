@@ -89,3 +89,28 @@ Decisiones de ejecución:
 | Open Git project | Open project                                                               | Private until the D3 release review, then public                                                                                             | 0007       |
 | Delivery         | "proyecto privado en la cuenta que tenemos para dar resultados a clientes" | Only the complete verified package (download) and "Push to my GitHub" into the user's own account; no delivery into TurbineH GitHub accounts | 0013       |
 | Models           | JEV + best open version                                                    | Open-weights only, except JEV; closed frontier only as benchmark baseline                                                                    | 0001, 0009 |
+
+---
+
+## Actualización del propietario · 2026-10-12 · producto comercial "YES IF for Builders" (prevalece sobre lo anterior)
+
+- **No somos un generador prompt → app** (espacio competido por empresas consolidadas y modelos frontera). Somos la
+  **capa de capacidades verificadas** sobre la que construyen equipos humanos y agentes IA (Claude Code, Codex…): en
+  vez de desarrollarlo todo, pasan por nosotros con sus requisitos y se llevan un flujo completo, parcial o un
+  componente integrable.
+- **Valor:** repositorio lo más grande posible de recursos por caso de uso y por componente; auditado y verificado en
+  ciberseguridad, AI safety, eficiencia y calidad; evita rehacer las mismas capacidades (tiempo, tokens, dinero,
+  energía); gran trabajo de integrabilidad y trazabilidad en cada entrega.
+- **Si el usuario trae su repositorio**, se lo entregamos integrado y funcional sobre su sistema (lo que era F2).
+- **Arquitectura híbrida de orquestación** (nuestra tecnología y MOAT): entender intención → orquestar decisiones →
+  ejecutar tareas; predice los trabajos a realizar y decide antes de ejecutar, maximizando safety, security y calidad.
+  **No se nombra a terceros (proveedor del decisor) en ninguna superficie de producto.**
+- **Promesa:** "Obtén capacidades funcionales listas para integrar, como paquete descargable o directamente en tu
+  proyecto." Clave: flujos funcionales de software con calidad y seguridad verificadas, en segundos y casi gratis.
+- **Acceso:** software.turbineh.com es exclusivamente el área de uso del producto, protegida por un token de acceso de
+  invitación (sin login); el mismo token sirve como clave de API durante esta fase. La landing comercial es
+  api.turbineh.com.
+- Necesidades sin caso de uso completo pero con componentes útiles: se integran esos componentes (el orquestador de IA
+  para cualquier trabajo con inferencia es clave).
+- Sin "previsualizar UIs" tipo Lovable: el foco es transparencia, utilidad y diferencial en tiempo, consumo, safety y
+  calidad.
