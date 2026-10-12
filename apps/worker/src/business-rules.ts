@@ -10,6 +10,11 @@ export const T3_POLICY = {
   isRule: 0.7,
   /** p that the recipe already does it (above this, it is the recipe's job, not T3). */
   covered: 0.5,
+  /**
+   * p that checking the rule needs records of another kind (other entities, users, members, roles). Those rules
+   * need more than the entity's own hook, so they are left to the recipe/report instead of costing corrections.
+   */
+  otherRecords: 0.5,
   /** Confidence of the entity choice. */
   entity: 0.5,
   /** Expected complexity on the 0–3 rubric: from "a check on the submitted values" to "same-kind records". */
@@ -38,7 +43,7 @@ export interface RuleCandidate {
 
 const NONE = "none_of_the_above";
 
-/** One batched decider request: four atomic questions per acceptance criterion. */
+/** One batched decider request: five atomic questions per acceptance criterion. */
 export function ruleQuestions(criteria: string[], entities: string[]): Questions {
   const q: Questions = {};
   criteria.forEach((_, i) => {
@@ -48,6 +53,10 @@ export function ruleQuestions(criteria: string[], entities: string[]): Questions
     );
     q[`covered:${i}`] = noul(
       `The rule in \`criteria.c${i}\` is already part of \`app.recipe\` as described there.`,
+    );
+    q[`other:${i}`] = noul(
+      `Checking \`criteria.c${i}\` needs records of a different kind than the one it restricts (for example ` +
+        "another entity, users, team members or roles), not only the record being created and others like it.",
     );
     q[`entity:${i}`] = choice(
       `Which data entity in \`entities\` does \`criteria.c${i}\` restrict when a record is created?`,
@@ -65,6 +74,7 @@ export function ruleQuestions(criteria: string[], entities: string[]): Questions
 export function selectRules(
   criteria: string[],
   answers: Record<string, Answer | undefined>,
+  entities: string[] = [],
 ): RuleCandidate[] {
   let taken = 0;
   return criteria.map((criterion, i) => {
@@ -85,6 +95,8 @@ export function selectRules(
       entityConfidence,
       complexity,
     };
+    const otherRecords =
+      p("other") >= T3_POLICY.otherRecords || mentionsOtherEntity(criterion, entity, entities);
     const reason =
       c.isRule < T3_POLICY.isRule
         ? "not a business rule"
@@ -94,7 +106,7 @@ export function selectRules(
             ? "no generated entity it applies to"
             : complexity < T3_POLICY.complexity.min
               ? "covered by the generated form"
-              : complexity > T3_POLICY.complexity.max
+              : complexity > T3_POLICY.complexity.max || otherRecords
                 ? "needs more than one kind of record or an external service"
                 : taken >= T3_POLICY.maxRules
                   ? "over the per-build limit"
@@ -103,6 +115,26 @@ export function selectRules(
     if (selected) taken++;
     return { ...c, selected, reason };
   });
+}
+
+/** Deterministic backstop: the rule text names another generated entity (e.g. "teacher" while restricting Course). */
+export function mentionsOtherEntity(
+  criterion: string,
+  entity: string | null,
+  entities: string[],
+): boolean {
+  const text = ` ${criterion.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
+  const words = (name: string) =>
+    name
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .toLowerCase()
+      .trim();
+  return entities
+    .filter((e) => e !== entity)
+    .some((e) => {
+      const w = words(e);
+      return [w, `${w}s`, `${w}es`, w.replace(/y$/, "ies")].some((f) => text.includes(` ${f} `));
+    });
 }
 
 /** Asks the decider and applies the policy. Errors mean no T3 (the build goes on with the recipe's behaviour). */
@@ -125,5 +157,5 @@ export async function decideRules(
     },
     ruleQuestions(input.criteria, names),
   );
-  return selectRules(input.criteria, d.answers as Record<string, Answer | undefined>);
+  return selectRules(input.criteria, d.answers as Record<string, Answer | undefined>, names);
 }
