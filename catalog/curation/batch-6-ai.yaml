@@ -1,0 +1,160 @@
+name: batch-6-ai
+description: "F3 batch: utilities for AI agents and inference processes. None calls a model: every model call goes through the TurbineH orchestrator (component #001)."
+entries:
+  - id: ai.token-count.gpt-tokenizer
+    package: "gpt-tokenizer"
+    category: ai
+    provides: ["ai.token-count"]
+    does: "Counts and truncates text by tokens (BPE) to keep prompts and context within a budget"
+    does_not: "Counts are exact for BPE-family tokenizers and an estimate for other model families"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "client-portal"]
+  - id: files.pdf-text.unpdf
+    package: "unpdf"
+    category: files
+    provides: ["files.pdf-text"]
+    does: "Extracts text and metadata from PDF files on the server (serverless PDF.js build)"
+    does_not: "Does not run OCR: scanned PDFs without a text layer return no text"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "client-portal"]
+  - id: files.docx-text.mammoth
+    package: "mammoth"
+    category: files
+    provides: ["files.docx-text"]
+    does: "Extracts plain text or clean HTML from Word .docx documents"
+    does_not: "Does not read legacy .doc files or keep complex layout"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "client-portal"]
+  - id: files.office-text.officeparser
+    package: "officeparser"
+    category: files
+    provides: ["files.office-text"]
+    does: "Extracts text from PowerPoint, Excel and OpenDocument files for search and AI processing"
+    does_not: "Text only: no formatting, charts or images"
+    use_cases: ["ai-agents", "internal-tool", "client-portal"]
+  - id: content.html-to-markdown.node-html-markdown
+    package: "node-html-markdown"
+    category: content
+    provides: ["content.html-to-markdown"]
+    does: "Converts HTML to Markdown fast and without a browser DOM (compact context for models, imports)"
+    does_not: "Does not execute scripts or fetch pages"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "corporate-site"]
+  - id: content.readability.mozilla-readability
+    package: "@mozilla/readability"
+    category: content
+    provides: ["content.readability"]
+    does: "Extracts the main article content of a web page, dropping navigation, ads and boilerplate"
+    does_not: "Needs a DOM document (use content.html-dom); does not fetch pages"
+    use_cases: ["ai-agents", "internal-tool", "corporate-site"]
+  - id: content.html-dom.linkedom
+    package: "linkedom"
+    category: content
+    provides: ["content.html-dom"]
+    does: "Lightweight server-side DOM to parse and query HTML without a browser"
+    does_not: "Does not run scripts or lay out pages"
+    use_cases: ["ai-agents", "internal-tool", "corporate-site"]
+  - id: content.html-parse.cheerio
+    package: "cheerio"
+    category: content
+    provides: ["content.html-parse"]
+    does: "Parses HTML and extracts data with CSS selectors (structured extraction from pages and emails)"
+    does_not: "Does not fetch pages or run scripts"
+    use_cases: ["ai-agents", "internal-tool", "saas-crud"]
+  - id: ai.json-repair.jsonrepair
+    package: "jsonrepair"
+    category: ai
+    provides: ["ai.json-repair"]
+    does: "Repairs almost-valid JSON produced by models (missing quotes, trailing commas, code fences)"
+    does_not: "Does not validate the shape: validate the repaired value with a schema"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: ai.partial-json.partial-json
+    package: "partial-json"
+    category: ai
+    provides: ["ai.partial-json"]
+    does: "Parses incomplete JSON while it is still streaming, to show structured results progressively"
+    does_not: "The final value still needs full validation once the stream ends"
+    use_cases: ["ai-agents"]
+  - id: ai.sse-parsing.eventsource-parser
+    package: "eventsource-parser"
+    category: ai
+    provides: ["ai.sse-parsing"]
+    does: "Parses Server-Sent Events streams (streamed model answers, progress events)"
+    does_not: "Does not open connections: feed it the bytes of a fetch response"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: ai.schema-validation.ajv
+    package: "ajv"
+    category: ai
+    provides: ["ai.schema-validation"]
+    does: "Validates JSON against JSON Schema (structured model output, tool arguments, imported data)"
+    does_not: "Does not repair invalid data"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: ai.vector-store.pgvector
+    package: "pgvector"
+    category: ai
+    provides: ["ai.vector-store"]
+    does: "Stores and searches embeddings in Postgres with pgvector (Drizzle and SQL helpers), no extra database"
+    does_not: "Does not compute embeddings: they come from the orchestrator"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "client-portal"]
+  - id: ai.language-detection.franc-min
+    package: "franc-min"
+    category: ai
+    provides: ["ai.language-detection"]
+    does: "Detects the language of a text offline (route to the right prompt or model, label documents)"
+    does_not: "Short texts (a few words) are unreliable"
+    use_cases: ["ai-agents", "internal-tool", "client-portal"]
+  - id: ai.prompt-templates.mustache
+    package: "mustache"
+    category: ai
+    provides: ["ai.prompt-templates"]
+    does: "Logic-less templates for prompts and messages: values are inserted, never executed"
+    does_not: "Templates must be written by the app owner, never by end users"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+    types: "@types/mustache"
+  - id: ops.queue-throttle.p-queue
+    package: "p-queue"
+    category: ops
+    provides: ["ops.queue-throttle"]
+    does: "In-process queue with concurrency and requests-per-interval limits (batch inference, external APIs)"
+    does_not: "Not durable: use jobs.queue for work that must survive restarts"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: ai.mcp-server.modelcontextprotocol-sdk
+    package: "@modelcontextprotocol/sdk"
+    category: ai
+    provides: ["ai.mcp-server"]
+    does: "Exposes the app's own tools and data to AI agents through the Model Context Protocol (server side)"
+    does_not: "Does not call models; tool permissions and confirmation come from the AI Safety Pack"
+    use_cases: ["ai-agents"]
+  - id: ai.text-chunking.sentence-splitter
+    package: "sentence-splitter"
+    category: ai
+    provides: ["ai.text-chunking"]
+    does: "Splits text into sentences and size-bounded chunks with overlap for retrieval (RAG) and summaries"
+    does_not: "Sizes are measured in characters; count tokens with ai.token-count when exact budgets matter"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool", "client-portal"]
+  - id: ai.stopwords.stopword
+    package: "stopword"
+    category: ai
+    provides: ["ai.stopwords"]
+    does: "Removes stopwords in many languages for keyword extraction and keyword search"
+    does_not: "No stemming or lemmatisation"
+    use_cases: ["ai-agents", "internal-tool"]
+    types: "@types/stopword"
+  - id: content.markdown-to-text.remove-markdown
+    package: "remove-markdown"
+    category: content
+    provides: ["content.markdown-to-text"]
+    does: "Turns Markdown (e.g. a model answer) into plain text for SMS, notifications or speech"
+    does_not: "Not a sanitizer: escape or sanitize before rendering as HTML"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: data.yaml.yaml
+    package: "yaml"
+    category: data
+    provides: ["data.yaml"]
+    does: "Parses and writes YAML (agent and prompt configuration, structured output that humans edit)"
+    does_not: "Custom tags are disabled by default (safe parsing)"
+    use_cases: ["ai-agents", "saas-crud", "internal-tool"]
+  - id: email.parsing.mailparser
+    package: "mailparser"
+    category: email
+    provides: ["email.parsing"]
+    does: "Parses raw emails (MIME): headers, text, HTML and attachments, for inbox-processing agents"
+    does_not: "Does not fetch mail (IMAP/POP); attachments are untrusted input"
+    use_cases: ["ai-agents", "internal-tool", "client-portal"]
+    types: "@types/mailparser"

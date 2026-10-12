@@ -1,0 +1,73 @@
+schema: turbineh.component/v0.1
+id: content.html-parse.cheerio
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:npm/cheerio@1.2.0
+  repo: https://github.com/cheeriojs/cheerio
+  integrity: sha512-WDrybc/gKFpTYQutKIK6UvfcuxijIZfMfXaYm8NMsPQxSYvf+13fXUJ4rztGGbJcBQ/GF55gvrZ0Bc0bj/mqvg==
+capability:
+  does: Parses HTML and extracts data with CSS selectors (structured extraction from pages and emails)
+  does_not: Does not fetch pages or run scripts
+  use_cases:
+    - ai-agents
+    - internal-tool
+    - saas-crud
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add cheerio@1.2.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata cheerio@1.2.0
+  - claim: 0 OSV advisories for cheerio@1.2.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - content.html-parse
+  conflicts: []
+  tested_with:
+    - contract-harness

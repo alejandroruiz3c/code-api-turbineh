@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: ai.vector-store.pgvector
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:npm/pgvector@0.3.0
+  repo: https://github.com/pgvector/pgvector-node
+  integrity: sha512-+t7qcQD2us8fO8YIq/3lA0gUrD+bVO70MG1MhcDcxJz/OlRGGIIHzFq/4x57Vn/LpzX5wFdfOTLQp9QMPd4ljQ==
+capability:
+  does: Stores and searches embeddings in Postgres with pgvector (Drizzle and SQL helpers), no extra database
+  does_not: "Does not compute embeddings: they come from the orchestrator"
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add pgvector@0.3.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata pgvector@0.3.0
+  - claim: 0 OSV advisories for pgvector@0.3.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - ai.vector-store
+  conflicts: []
+  tested_with:
+    - contract-harness

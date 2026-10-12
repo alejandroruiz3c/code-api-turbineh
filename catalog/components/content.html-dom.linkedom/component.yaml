@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: content.html-dom.linkedom
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:npm/linkedom@0.18.13
+  repo: https://github.com/WebReflection/linkedom
+  integrity: sha512-ES/o9qotMpzpN2MHs+Iq/JcVoOj8Fa5wiQYrTdFpvAnwXL0g66XHHUc9WUMk6nAlBtGsFQ24ne+SYnvnaQ2FSw==
+capability:
+  does: Lightweight server-side DOM to parse and query HTML without a browser
+  does_not: Does not run scripts or lay out pages
+  use_cases:
+    - ai-agents
+    - internal-tool
+    - corporate-site
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    canvas: ">= 2"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add linkedom@0.18.13
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: ISC
+  detected: ISC
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License ISC
+    origin: maintainer
+    ref: npm registry metadata linkedom@0.18.13
+  - claim: 0 OSV advisories for linkedom@0.18.13 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - content.html-dom
+  conflicts: []
+  tested_with:
+    - contract-harness
