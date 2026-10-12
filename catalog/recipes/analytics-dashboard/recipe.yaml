@@ -1,0 +1,9 @@
+id: analytics-dashboard
+description: Analytics dashboards for a team — import data from CSV or enter it, KPIs with period comparison, time series and breakdown charts, filters and export
+extends: saas-crud
+providedEntities: [Dataset, DataPoint, Metric, Kpi, Report, Chart, Dashboard, Record, Measurement, Entry]
+defaultCapabilities: [data.csv-import, data.csv-export, data.pagination]
+# Implemented by the template itself (native SVG charts, no extra dependencies).
+providedCapabilities: [ui.charts]
+nav:
+  - { label: Analytics, href: /dashboard/analytics }

@@ -21,6 +21,12 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
     "Company or professional website: home, services, about, blog or news, contact form, edited by the team",
   storefront:
     "Online shop: product catalog with prices and images, cart, online payment, orders and stock managed by the owner",
+  projects:
+    "Project and task management for a team: projects, kanban boards, tasks with assignees, priorities, due dates and comments",
+  "analytics-dashboard":
+    "Dashboard to analyse business data: import or enter figures, KPIs, charts over time and by category, filters and export",
+  tracker:
+    "Personal tracker app: habits, health, fitness, money or any daily quantity with goals, streaks and history",
   out_of_scope:
     "Anything else: not a web app, mobile/desktop/game, AI features in the app, scraping, or a different product family",
 };
