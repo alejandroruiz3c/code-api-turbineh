@@ -38,14 +38,16 @@ export const STATE_LABEL: Record<string, string> = {
 
 export function print(result: CommandResult, json: boolean): void {
   if (json) {
-    const { lines: _lines, ...rest } = result;
-    process.stdout.write(`${JSON.stringify(rest, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ...result, lines: undefined }, null, 2)}\n`);
     return;
   }
   for (const l of result.lines ?? []) process.stdout.write(`${l}\n`);
-  if (result.state) process.stdout.write(`\n${bold("State:")} ${STATE_LABEL[result.state] ?? result.state}\n`);
+  if (result.state)
+    process.stdout.write(`\n${bold("State:")} ${STATE_LABEL[result.state] ?? result.state}\n`);
   if (result.error) {
-    process.stderr.write(`\n${red("✖")} ${result.error.message}\n  ${bold("Do:")} ${result.error.action}\n`);
+    process.stderr.write(
+      `\n${red("✖")} ${result.error.message}\n  ${bold("Do:")} ${result.error.action}\n`,
+    );
     if (result.error.resume) process.stderr.write(`  ${bold("Resume:")} ${result.error.resume}\n`);
   }
   if (result.next) process.stdout.write(`\n${cyan("→")} ${result.next}\n`);

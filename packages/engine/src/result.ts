@@ -53,7 +53,8 @@ const CHECK_LABEL: Record<string, string> = {
   static: "Security rules (injection, authorization, XSS…)",
   dependencies: "No known vulnerable dependencies",
   licenses: "Licences allowed",
-  certification: "Components certified (contract tests, strict types, licences, known vulnerabilities)",
+  certification:
+    "Components certified (contract tests, strict types, licences, known vulnerabilities)",
 };
 
 export const checkLabel = (name: string) => CHECK_LABEL[name] ?? name;

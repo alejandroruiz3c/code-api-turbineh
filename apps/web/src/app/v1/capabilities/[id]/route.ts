@@ -1,4 +1,10 @@
-import { componentSummary, ERRORS, productText, USE_CASES, summarizeUseCase } from "@turbineh/engine";
+import {
+  componentSummary,
+  ERRORS,
+  productText,
+  USE_CASES,
+  summarizeUseCase,
+} from "@turbineh/engine";
 import { db } from "@/server/db";
 import { catalog, productProblem, requireCaller } from "@/server/product";
 

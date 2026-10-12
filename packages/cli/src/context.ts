@@ -58,7 +58,8 @@ export function token(): string {
   return t as string;
 }
 
-export const baseUrl = () => (process.env.TURBINEH_URL ?? readUserConfig().url ?? DEFAULT_URL).replace(/\/$/, "");
+export const baseUrl = () =>
+  (process.env.TURBINEH_URL ?? readUserConfig().url ?? DEFAULT_URL).replace(/\/$/, "");
 
 // ── project (.turbineh/project.json) ───────────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,9 @@ export function ensureProject(cwd: string): ProjectFile {
   return (
     readProject(cwd) ?? {
       workspace: randomUUID(),
-      preferences: { changePolicy: { autoApply: "never", allowDependencyChanges: true, allowNewEnv: true } },
+      preferences: {
+        changePolicy: { autoApply: "never", allowDependencyChanges: true, allowNewEnv: true },
+      },
       integrations: [],
     }
   );

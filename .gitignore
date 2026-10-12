@@ -47,3 +47,6 @@ catalog/gaps/*.json
 
 # Agent worktrees (local only)
 .claude/
+
+# CLI bundle served by the web app (built by @turbineh/cli before the web build)
+apps/web/public/cli/

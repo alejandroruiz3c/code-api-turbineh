@@ -4,7 +4,7 @@ import { baseUrl, CliError, token, VERSION } from "./context.js";
 /** Thin client of the product API (PLAN §16.4). Errors come back as the API's actionable ProductError. */
 export async function api<T>(
   path: string,
-  init: { method?: string; body?: unknown; workspace?: string; raw?: boolean } = {},
+  init: { method?: string; body?: unknown; workspace?: string | undefined; raw?: boolean } = {},
 ): Promise<T> {
   let res: Response;
   try {
@@ -28,7 +28,11 @@ export async function api<T>(
     });
   }
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: ProductError; title?: string; detail?: string } | null;
+    const body = (await res.json().catch(() => null)) as {
+      error?: ProductError;
+      title?: string;
+      detail?: string;
+    } | null;
     throw new CliError(
       body?.error ?? {
         code: res.status === 401 ? "unauthorized" : `http_${res.status}`,

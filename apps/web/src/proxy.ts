@@ -19,6 +19,6 @@ export async function proxy(req: NextRequest) {
 export const config = {
   // Everything except the access page, the API (Bearer), health, OAuth callbacks, the CLI installer and static files.
   matcher: [
-    "/((?!access|api/access|api/auth|v1/|health|install\\.sh|_next/|icon|favicon|opengraph-image|robots\\.txt).*)",
+    "/((?!access|api/access|api/auth|v1/|health|install\\.sh|cli/|_next/|icon|favicon|opengraph-image|robots\\.txt).*)",
   ],
 };
