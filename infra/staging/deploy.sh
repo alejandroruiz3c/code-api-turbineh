@@ -11,6 +11,8 @@ WHAT="${2:-all}"
 HOST="${WORKER_HOST:-78.232.56.12}"
 KEY="${WORKER_SSH_KEY:-$HOME/.ssh/id_ed25519_turbineh_staging}"
 TEAM="team_BBQ9Gyb31uDAzUkxSLx2AJqs"
+# The operator's network to the workers can drop connections: retry and keep sessions alive.
+SSH_OPTS="-o ConnectTimeout=15 -o ConnectionAttempts=6 -o ServerAliveInterval=30 -o ServerAliveCountMax=6"
 cd "$(dirname "$0")/../.."
 
 case "$TARGET" in
@@ -25,10 +27,10 @@ case "$TARGET" in
 esac
 
 if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
-  rsync -az --delete -e "ssh -i $KEY" --exclude node_modules --exclude .git --exclude '.env*.local' \
+  rsync -az --delete -e "ssh -i $KEY $SSH_OPTS" --exclude node_modules --exclude .git --exclude '.env*.local' \
     --exclude /builds --exclude /artifacts --exclude .next --exclude .turbo --exclude .vercel \
     --exclude bench/results/runs --exclude /.claude --exclude /ingest/.cache ./ "root@$HOST:$DIR/"
-  ssh -i "$KEY" "root@$HOST" "set -e; cd $DIR && chown -R turbineh:turbineh . \
+  ssh -i "$KEY" $SSH_OPTS "root@$HOST" "set -e; cd $DIR && chown -R turbineh:turbineh . \
     && sudo -u turbineh pnpm install --frozen-lockfile >/dev/null \
     && sudo -u turbineh pnpm turbo build --filter=@turbineh/worker... | grep -E 'Tasks:' \
     && (docker image inspect turbineh/sandbox:1 >/dev/null 2>&1 || docker build -q -t turbineh/sandbox:1 services/sandbox >/dev/null) \
