@@ -30,6 +30,9 @@ providedEntities:
     Classification,
     Batch,
     BatchJob,
+    Export,
+    ExportBatch,
+    ImportBatch,
   ]
 defaultCapabilities: [data.pagination, ops.rate-limit, ai.orchestrator, security.ai-safety]
 # Implemented by the template itself: batch AI processing runs through its own runner (POST /api/jobs/run with
