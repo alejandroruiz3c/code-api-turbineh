@@ -118,6 +118,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
     ]);
   }
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
+  // Awaited later: mark it handled now so a failure surfaces at the await instead of crashing the process.
+  scans.catch(() => undefined);
   let main: RunResult;
   try {
     main = await run(
@@ -181,9 +183,12 @@ export async function verify(dir: string): Promise<VerifyResult> {
   steps.push(secrets);
   steps.push({
     name: "static",
-    ok: !staticFindings.some((f) => f.severity === "ERROR"),
+    ok: staticFindings !== null && !staticFindings.some((f) => f.severity === "ERROR"),
     ms: 0,
-    detail: staticFindings.map((f) => `${f.severity} ${f.rule} ${f.path}:${f.line}`).join("\n"),
+    detail:
+      staticFindings === null
+        ? "static scanner gave no result (retried once)"
+        : staticFindings.map((f) => `${f.severity} ${f.rule} ${f.path}:${f.line}`).join("\n"),
   });
   steps.push({
     name: "dependencies",
@@ -206,7 +211,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
       secrets: secrets.ok ? 0 : 1,
       advisories,
       licenses: blockingLicenses,
-      static: staticFindings,
+      static: staticFindings ?? [],
     },
     scannedAt: new Date().toISOString(),
   };
@@ -377,8 +382,16 @@ const SEMGREP_IMAGE =
   "semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b";
 const RULES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../rules");
 
-/** Own security rules with the Semgrep OSS engine: read-only mount, no network, no metrics. */
-export async function staticScan(dir: string): Promise<StaticFinding[]> {
+/**
+ * Own security rules with the Semgrep OSS engine: read-only mount, no network, no metrics. Returns null when the
+ * scanner gives no valid result (killed, timed out under load): one retry, then the "static" step fails — a scan
+ * that did not run never counts as clean.
+ */
+export async function staticScan(dir: string): Promise<StaticFinding[] | null> {
+  return (await staticScanOnce(dir)) ?? (await staticScanOnce(dir));
+}
+
+async function staticScanOnce(dir: string): Promise<StaticFinding[] | null> {
   const r = await run(
     "docker",
     [
@@ -411,8 +424,13 @@ export async function staticScan(dir: string): Promise<StaticFinding[]> {
     10 * 60_000,
     true,
   );
-  const json = r.tail.slice(r.tail.indexOf("{"));
-  const data = JSON.parse(json || "{}") as {
+  return parseSemgrep(r.tail);
+}
+
+/** Semgrep JSON → findings; null when the output is not a complete result (the scan did not run). */
+export function parseSemgrep(output: string): StaticFinding[] | null {
+  const start = output.indexOf("{");
+  let data: {
     results?: {
       check_id: string;
       path: string;
@@ -420,7 +438,14 @@ export async function staticScan(dir: string): Promise<StaticFinding[]> {
       extra: { severity: string; message: string; metadata?: { explain?: string } };
     }[];
   };
-  return (data.results ?? []).map((x) => ({
+  try {
+    if (start < 0) return null;
+    data = JSON.parse(output.slice(start)) as typeof data;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(data.results)) return null;
+  return data.results.map((x) => ({
     rule: x.check_id.replace(/^.*turbineh\./, "turbineh."),
     severity: x.extra.severity === "ERROR" ? "ERROR" : "WARNING",
     path: x.path.replace(/^\/src\//, ""),

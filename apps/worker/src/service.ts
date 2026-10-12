@@ -221,6 +221,10 @@ async function tick(): Promise<void> {
     });
 }
 
+// A failure inside one build must never take down the others running in this process.
+process.on("unhandledRejection", (reason: unknown) => {
+  log.error("unhandled rejection", { error: String(reason).slice(0, 500) });
+});
 log.info("worker started", { workerId, concurrency: CONCURRENCY });
 setInterval(() => void requeueStale(db).catch(() => undefined), 60_000);
 const beat = () => void heartbeat(db, workerId, running).catch(() => undefined);
