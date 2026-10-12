@@ -1,12 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { VerifyResult } from "@turbineh/verifier";
 import { describe, expect, it } from "vitest";
 import { correctableFiles, failureLog, qualityFailed } from "./corrector.js";
 import { isFillable } from "./gaps.js";
-import { glueFile } from "./integrate.js";
+import { copyCuratedGlue, glueFile } from "./integrate.js";
 import { withHeader } from "./model.js";
 
 const step = (name: string, ok: boolean, detail = "") => ({ name, ok, ms: 1, detail });
@@ -82,5 +82,28 @@ describe("policies", () => {
     expect(
       withHeader("// turbineh:generated glue", "// turbineh:generated old\nexport {};\n"),
     ).toBe("// turbineh:generated glue\nexport {};\n");
+  });
+});
+
+describe("curated glue", () => {
+  it("copies glue.ts shipped with the component (no model call) and leaves others to the model", () => {
+    const catalogDir = mkdtempSync(join(tmpdir(), "comp-"));
+    writeFileSync(join(catalogDir, "glue.ts"), "export const ok = true;\n");
+    const app = mkdtempSync(join(tmpdir(), "app-"));
+    const comp = {
+      id: "email.plain-text.html-to-text",
+      capability: "email.plain-text",
+      label: "Plain text",
+      pkg: { name: "html-to-text", version: "10.0.1" },
+      does: "",
+      doesNot: "",
+      dir: catalogDir,
+    };
+    const file = copyCuratedGlue(app, comp);
+    expect(file).toBe(glueFile("email.plain-text"));
+    const written = readFileSync(join(app, file ?? ""), "utf8");
+    expect(written).toContain("source=catalog");
+    expect(written).toContain("export const ok = true;");
+    expect(copyCuratedGlue(app, { ...comp, dir: mkdtempSync(join(tmpdir(), "none-")) })).toBeNull();
   });
 });

@@ -68,6 +68,22 @@ export function copyContractTest(dir: string, c: ExternalComponent): string | nu
   return rel;
 }
 
+/** `glue.ts` next to the manifest: written by TurbineH, type-checked at certification, used as-is. */
+export function copyCuratedGlue(dir: string, c: ExternalComponent): string | null {
+  const src = join(c.dir, "glue.ts");
+  if (!existsSync(src)) return null;
+  const file = glueFile(c.capability);
+  mkdirSync(dirname(join(dir, file)), { recursive: true });
+  writeFileSync(
+    join(dir, file),
+    withHeader(
+      `// turbineh:generated glue component=${c.id} source=catalog`,
+      readFileSync(src, "utf8"),
+    ),
+  );
+  return file;
+}
+
 const GLUE_SYSTEM = `You write ONE small TypeScript module that lets a Next.js app use one npm library.
 Export 1 to 3 small, typed helper functions with JSDoc. Import only from the given package (and "zod" if you validate
 input). No side effects at import time, no network calls, no environment variables, no secrets, no default export.
@@ -122,6 +138,17 @@ export async function integrateComponents(
           component: c.id,
           capability: c.capability,
           glue: null,
+          contractTest,
+          usage: { input_tokens: 0, output_tokens: 0 },
+        };
+      }
+      // Curated glue shipped with the component (reviewed, certified with it): copied, no model call.
+      const curated = copyCuratedGlue(dir, c);
+      if (curated) {
+        return {
+          component: c.id,
+          capability: c.capability,
+          glue: curated,
           contractTest,
           usage: { input_tokens: 0, output_tokens: 0 },
         };

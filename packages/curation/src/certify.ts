@@ -80,6 +80,9 @@ export async function certify(
     if (types?.[1] && types[2]) typeDeps[types[1]] = types[2];
     const contract = join(componentsDir, id, "contract.test.ts");
     if (existsSync(contract)) cpSync(contract, join(work, "tests", `${id}.test.ts`));
+    // Curated glue (copied verbatim into apps instead of model-written glue) is type-checked here too.
+    const glue = join(componentsDir, id, "glue.ts");
+    if (existsSync(glue)) cpSync(glue, join(work, "tests", `${id}.glue.ts`));
   }
   writeFileSync(
     join(work, "package.json"),
@@ -137,7 +140,7 @@ export async function certify(
   const typeErrors = (id: string) =>
     typecheck.tail
       .split("\n")
-      .filter((l) => l.startsWith(`tests/${id}.test.ts(`))
+      .filter((l) => l.startsWith(`tests/${id}.test.ts(`) || l.startsWith(`tests/${id}.glue.ts(`))
       .join(" | ");
   const results = existsSync(join(work, "results.json"))
     ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
