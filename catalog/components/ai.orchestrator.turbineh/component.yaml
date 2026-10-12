@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ai.orchestrator.turbineh
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, JEV by TypeSafe decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace"
+  does_not: "Does not host models or store prices; does not let app code call model providers directly (TurbineH rule turbineh.ai-direct-model-call)"
+  use_cases: [ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Open models from any OpenAI-compatible provider (EU defaults)",
+      "Decisions with calibrated probabilities instead of free-form routing",
+    ]
+  cons: ["Needs the client's own TypeSafe and model-provider keys"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "orchestrate({ task, input, purpose, organizationId, userId, instructions?, context?, history?, schema?, tools? })",
+      "embed(texts, { purpose, organizationId, userId })",
+    ]
+  outputs:
+    [
+      "{ output (validated value or text), route, model, tool: { spec, confirm } | null, flags, usage }",
+      "usageSummary(organizationId, days) → totals, by purpose, by day",
+    ]
+  errors:
+    [
+      "AiSafetyError (user-facing) when the AI Safety Pack refuses a request; UserFacingError 'not available' on provider failures (details never shown)",
+    ]
+  limits:
+    [
+      "decider unsafe threshold 0.5 and tool threshold 0.5 (code); 2 transport retries; one repair attempt for structured output; embeddings fixed at 1024 dimensions",
+    ]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: [typesafe-jev, openai-compatible-model-endpoint]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/ when selected (recipe ai-agents requires it, always with security.ai-safety.turbineh): src/lib/ai/{orchestrator,models,decider,plan,usage}.ts, src/db/component-ai-orchestrator.ts, tests/unit/ai-orchestrator.test.ts. Dependency @typesafe-ai/sdk@0.6.0 (MIT) is in the recipe lockfile."
+  config: [TYPESAFE_API_KEY, TYPESAFE_BASE_URL, AI_BASE_URL, AI_API_KEY, AI_STRUCTURER_MODEL, AI_ROUTES, AI_EMBEDDING_MODEL]
+  migrations: true
+quality:
+  tests:
+    {
+      command: "unit tests in the app (routes, plan parsing, JSON extraction, embeddings) + full builds of recipe ai-agents with E2E against the deterministic simulator (services/ai-mock)",
+      passed: true,
+      date: 2026-10-12,
+    }
+security:
+  scanned_at: 2026-10-12
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: keys only from environment, provider responses never echoed, documents delimited as data, output scanned before returning, usage and audit recorded for blocked and failed calls too."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Apps built with recipe ai-agents pass the full verification with every AI call through the orchestrator"
+    origin: tested
+    ref: "bench/results/2026-10-12-f3-ai-agents.md"
+relations:
+  requires: [security.ai-safety.turbineh]
+  provides: [ai.orchestrator]
+  conflicts: []
+  tested_with: [recipe.ai-agents]

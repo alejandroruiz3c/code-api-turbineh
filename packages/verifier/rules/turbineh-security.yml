@@ -142,3 +142,39 @@ rules:
       - pattern: redirect($P.get(...))
       - pattern: redirect(searchParams.$K)
       - pattern: redirect((await searchParams).$K)
+
+  # ADR-0028: every model or decider call in a client app goes through the TurbineH orchestrator (component #001,
+  # ai.orchestrator.turbineh) and its AI Safety Pack. Only the orchestrator's own transport files may talk to models.
+  - id: turbineh.ai-direct-model-call
+    languages: [typescript]
+    severity: ERROR
+    paths:
+      exclude:
+        [
+          "src/lib/ai/models.ts",
+          "src/lib/ai/decider.ts",
+          "tests/",
+          "e2e/",
+          "*.test.ts",
+          "*.spec.ts",
+        ]
+    message: Model or decider called directly; use orchestrate()/embed() from src/lib/ai/orchestrator (AI Safety Pack, usage and audit).
+    metadata:
+      {
+        explain: "This code talks to an AI model without going through the orchestrator, so its safety checks, budgets, usage records and audit log are skipped.",
+      }
+    pattern-either:
+      - pattern-regex: (from\s+|import\s*\(\s*|require\s*\(\s*)["'](openai|@anthropic-ai/[\w.-]+|@ai-sdk/[\w.-]+|ai|@google/generative-ai|@google/genai|@mistralai/[\w.-]+|cohere-ai|groq-sdk|ollama|@huggingface/inference|replicate|together-ai|langchain|@langchain/[\w.-]+|llamaindex|@typesafe-ai/sdk)(/[\w./-]*)?["']
+      - pattern-regex: (?i)["'`][^"'`\n]*(/chat/completions|/v1/completions|/v1/embeddings|/v1/systemone|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.mistral\.ai|api\.groq\.com|api\.together\.xyz|api\.scaleway\.ai|api\.typesafe\.ai)
+
+  - id: turbineh.ai-sdk-dependency
+    languages: [generic]
+    severity: ERROR
+    paths:
+      include: ["package.json"]
+    message: A model SDK is declared as a dependency; AI goes only through the orchestrator (its decider SDK is the only one allowed).
+    metadata:
+      {
+        explain: "The app depends on an AI provider's SDK, which would let code bypass the orchestrator's safety checks and usage records.",
+      }
+    pattern-regex: '"(openai|@anthropic-ai/[\w.-]+|@ai-sdk/[\w.-]+|ai|@google/generative-ai|@google/genai|@mistralai/[\w.-]+|cohere-ai|groq-sdk|ollama|@huggingface/inference|replicate|together-ai|langchain|@langchain/[\w.-]+|llamaindex)"\s*:'

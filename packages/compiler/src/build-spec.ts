@@ -12,9 +12,13 @@ export const RECIPES = [
   "projects",
   "analytics-dashboard",
   "tracker",
+  "ai-agents",
 ] as const;
 
-/** Capability ids the Selector can resolve (category.capability). `ai.*` is blocked until Phase 3. */
+/**
+ * Capability ids the Selector can resolve (category.capability). AI in client apps (F3, ADR-0028) goes only through
+ * the orchestrator (`ai.orchestrator`) with its AI Safety Pack (`security.ai-safety`), required by recipe ai-agents.
+ */
 export const CAPABILITIES = [
   "auth.session",
   "auth.oauth",
@@ -112,6 +116,8 @@ export const CAPABILITIES = [
   "ui.hover-card",
   "ui.color-picker",
   "payments.subscriptions",
+  "ai.orchestrator",
+  "security.ai-safety",
 ] as const;
 
 const item = (t: number, x: number) =>

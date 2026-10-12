@@ -17,6 +17,17 @@ export const STRIPE_SYNTHETIC = {
   STRIPE_PRICE_PRO: "price_123",
 };
 
+/**
+ * Synthetic AI settings for apps that use the orchestrator (ADR-0028): every model and decider call goes to the
+ * deterministic simulator (services/ai-mock) on the isolated network. Never real keys.
+ */
+export const aiSynthetic = (host: string) => ({
+  AI_BASE_URL: `http://${host}:8080/v1`,
+  AI_API_KEY: "sandbox-synthetic-ai",
+  TYPESAFE_BASE_URL: `http://${host}:8080`,
+  TYPESAFE_API_KEY: "sandbox-synthetic-decider",
+});
+
 export const SYNTHETIC_ENV = {
   BETTER_AUTH_SECRET: "sandbox-synthetic-secret-0123456789abcdef",
   BETTER_AUTH_URL: "http://127.0.0.1:3000",

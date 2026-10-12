@@ -99,6 +99,8 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "ui.hover-card": "preview cards on hover",
   "ui.color-picker": "a colour picker",
   "payments.subscriptions": "recurring subscription plans",
+  "ai.orchestrator": "AI orchestration (planner, decider, open models)",
+  "security.ai-safety": "AI safety checks, limits and audit",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;
