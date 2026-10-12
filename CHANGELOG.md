@@ -24,6 +24,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Correction commits no longer include migrations generated during verification: those go in their own `chore(db)` commit first.
+- T3 rules: "after/before/more than/less than" are strict and "from/until/at least/at most" inclusive; rule tests include the boundary case.
+- `pnpm bench` targets staging by default with the staging smoke key (ADR-0022); production only with `BENCH_API_URL`.
 - T3 skips rules that need other kinds of records (another entity, users, members): one more atomic decider question plus a deterministic check for other entity names in the rule text, so they no longer spend correction attempts before being dropped.
 - Entity plurals: words already plural or uncountable (`Stats`, `Settings`, `Data`) are no longer pluralized again; `-is` → `-es`.
 
