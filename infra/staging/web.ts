@@ -90,8 +90,6 @@ async function env(): Promise<void> {
     ...optional("VERCEL_INTEGRATION_SLUG"),
     ...optional("VERCEL_INTEGRATION_CLIENT_ID"),
     ...optional("VERCEL_INTEGRATION_CLIENT_SECRET"),
-    ...optional("NEON_OAUTH_CLIENT_ID"),
-    ...optional("NEON_OAUTH_CLIENT_SECRET"),
   };
   const body = Object.entries(vars).map(([key, value]) => ({
     key,

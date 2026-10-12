@@ -42,10 +42,45 @@ test.describe.serial("storefront", () => {
     await expect(page.getByRole("button", { name: "Add to cart" })).toHaveCount(0);
   });
 
+  test("the admin sets shipping by country and a tax rate", async ({ page }) => {
+    await page.goto("/dashboard/shipping");
+    await page.getByLabel("Shipping name").fill("Standard");
+    await page.getByLabel(/^Countries/).fill("es, pt");
+    await page.getByLabel(/^Shipping price/).fill("4.90");
+    await page.getByLabel(/^Free shipping from/).fill("150");
+    await page.getByRole("button", { name: "Add shipping option" }).click();
+    await expect(page.getByRole("cell", { name: "Standard" })).toBeVisible();
+    await page.getByLabel(/^Tax country/).fill("ES");
+    await page.getByLabel("Tax name").fill("VAT");
+    await page.getByLabel(/^Tax rate/).fill("21");
+    await page.getByRole("button", { name: "Save tax rate" }).click();
+    await expect(page.getByRole("cell", { name: "21 %" })).toBeVisible();
+  });
+
+  test("the admin adds options with their own SKU, price and stock", async ({ page }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name", { exact: true }).fill("Cotton Tee");
+    await page.getByLabel(/^Price/).fill("20.00");
+    await page.getByLabel("Description").fill("Organic cotton t-shirt in two sizes.");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await page.getByRole("link", { name: "Cotton Tee", exact: true }).click();
+    for (const o of [
+      { name: "S", sku: "TEE-S", price: "", stock: "1" },
+      { name: "L", sku: "TEE-L", price: "22.00", stock: "3" },
+    ]) {
+      await page.getByLabel("Option name").fill(o.name);
+      await page.getByLabel(/^SKU/).fill(o.sku);
+      await page.getByLabel(/^Option price/).fill(o.price);
+      await page.getByLabel(/^Option stock/).fill(o.stock);
+      await page.getByRole("button", { name: "Add option" }).click();
+      await expect(page.getByRole("cell", { name: o.sku, exact: true })).toBeVisible();
+    }
+  });
+
   test.describe("shopper", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
-    test("buys with card: checkout, signed payment webhook, order paid, stock and cart updated", async ({
+    test("buys an option with card: shipping, tax, signed payment webhook, order paid, stock and cart updated", async ({
       page,
       browser,
       request,
@@ -61,6 +96,21 @@ test.describe.serial("storefront", () => {
       await page.getByRole("button", { name: "Add to cart" }).click();
       await expect(page.getByTestId("cart-total")).toContainText("99.80");
 
+      await page.goto("/shop/cotton-tee");
+      await expect(page.getByTestId("price")).toContainText("From");
+      await page.getByLabel(/^L —/).check();
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await expect(page.getByText("Cotton Tee — L")).toBeVisible();
+      await expect(page.getByTestId("cart-subtotal")).toContainText("121.80");
+
+      // Country and shipping are chosen on the cart page (plain GET form); every amount is computed on the server.
+      await page.getByLabel("Ship to").selectOption("ES");
+      await page.getByRole("button", { name: "Update shipping" }).click();
+      await expect(page.getByTestId("cart-shipping")).toContainText("4.90");
+      // Prices include tax by default: 126.70 contains 21.99 of VAT at 21 %.
+      await expect(page.getByTestId("cart-tax")).toContainText("21.99");
+      await expect(page.getByTestId("cart-total")).toContainText("126.70");
+
       // The hosted Stripe page is outside the sandbox: answer it locally and check we were sent there.
       await page.route("https://checkout.stripe.com/**", (route) =>
         route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
@@ -75,6 +125,7 @@ test.describe.serial("storefront", () => {
       const row = adminPage.locator('tr[data-status="pending"]').first();
       const orderId = (await row.getAttribute("data-order-id")) ?? "";
       expect(orderId).toMatch(/^[0-9a-f-]{36}$/);
+      await expect(row).toContainText("126.70");
 
       const event = JSON.stringify({
         type: "checkout.session.completed",
@@ -106,6 +157,10 @@ test.describe.serial("storefront", () => {
       );
       await adminPage.goto("/dashboard/products");
       await expect(adminPage.getByTestId("stock-Linen Shirt")).toHaveText("3");
+      // The option's own stock went down, not the product's.
+      await adminPage.getByRole("link", { name: "Cotton Tee", exact: true }).click();
+      await expect(adminPage.getByTestId("variant-stock-L")).toHaveValue("2");
+      await expect(adminPage.getByTestId("variant-stock-S")).toHaveValue("1");
       await admin.close();
 
       await page.unroute("https://checkout.stripe.com/**");
@@ -127,6 +182,10 @@ test.describe.serial("storefront", () => {
       expect(robots).toContain("GPTBot");
       expect(robots).toContain("Disallow: /cart");
       expect(await (await request.get("/sitemap.xml")).text()).toContain("/shop/linen-shirt");
+      // One schema.org offer per option, with its SKU and price.
+      const tee = await (await request.get("/shop/cotton-tee")).text();
+      expect(tee).toContain('"sku":"TEE-L"');
+      expect(tee).toContain('"price":"22.00"');
     });
   });
 });

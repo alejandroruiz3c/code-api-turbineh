@@ -8,11 +8,11 @@
 
 Coverage now includes websites and online shops, not only management apps:
 
-| Recipe                        | What it is                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `landing-waitlist` (extended) | Hero, benefits, how it works, FAQ, call to action, waitlist with confirmation email                     |
-| `corporate-site` (new)        | Home, services, about, blog (safe Markdown, RSS), contact form, admin to edit texts, posts and messages |
-| `storefront` (new)            | Catalog with images, search, cart, Stripe Checkout (hosted), signed webhook, orders and stock, admin    |
+| Recipe                        | What it is                                                                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `landing-waitlist` (extended) | Hero, benefits, how it works, FAQ, call to action, waitlist with confirmation email                                                          |
+| `corporate-site` (new)        | Home, services, about, blog (safe Markdown, RSS), contact form, admin to edit texts, posts and messages                                      |
+| `storefront` (new)            | Catalog with images, search, cart, Stripe Checkout (hosted), signed webhook, orders and stock, admin (options, shipping and taxes: ADR-0020) |
 
 Copy for public pages comes from a new optional, validated `site` part of the BuildSpec (small model), only awaited
 for public-site recipes, with a deterministic fallback.

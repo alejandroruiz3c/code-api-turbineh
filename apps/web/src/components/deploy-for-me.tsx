@@ -13,7 +13,7 @@ interface Connection {
   connected: boolean;
   label: string | null;
 }
-type Connections = { vercel: Connection; neon: Connection };
+type Connections = { vercel: Connection };
 
 const NOTICE: Record<string, string> = {
   connected: "Connected. You can deploy now.",
@@ -41,7 +41,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [vercelToken, setVercelToken] = useState("");
   const [teamId, setTeamId] = useState("");
-  const [dbMode, setDbMode] = useState<"neon-connect" | "neon" | "url">("neon");
+  const [dbMode, setDbMode] = useState<"neon" | "url">("neon");
   const [dbSecret, setDbSecret] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [consent, setConsent] = useState(false);
@@ -63,7 +63,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
     queueMicrotask(() => void poll());
   }, [poll]);
 
-  // Back from signing in with Vercel or Neon: reopen the window with the outcome.
+  // Back from "Connect Vercel": reopen the window with the outcome.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const outcome = q.get("deploy");
@@ -74,12 +74,6 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
     });
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
-
-  // Prefer signing in when it is available on this TurbineH deployment.
-  useEffect(() => {
-    if (connections?.neon.enabled && dbMode === "neon")
-      queueMicrotask(() => setDbMode("neon-connect"));
-  }, [connections, dbMode]);
 
   const vercelSignIn = Boolean(connections?.vercel.enabled) && !pasteVercel;
 
@@ -104,12 +98,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
               vercel_token: vercelToken.trim(),
               ...(teamId.trim() ? { vercel_team_id: teamId.trim() } : {}),
             }),
-        database:
-          dbMode === "neon-connect"
-            ? { neon_connection: true }
-            : dbMode === "neon"
-              ? { neon_api_key: dbSecret.trim() }
-              : { url: dbSecret.trim() },
+        database: dbMode === "neon" ? { neon_api_key: dbSecret.trim() } : { url: dbSecret.trim() },
         ...(adminEmail.trim() ? { admin_email: adminEmail.trim() } : {}),
       }),
     });
@@ -292,17 +281,6 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                 <fieldset className="rounded-xl border border-line p-4">
                   <legend className="px-1 text-sm font-semibold text-white">2 · Database</legend>
                   <div className="flex flex-wrap gap-4 text-sm">
-                    {connections?.neon.enabled ? (
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="db"
-                          checked={dbMode === "neon-connect"}
-                          onChange={() => setDbMode("neon-connect")}
-                        />{" "}
-                        Create one for me — sign in with Neon (EU)
-                      </label>
-                    ) : null}
                     <label className="flex items-center gap-2">
                       <input
                         type="radio"
@@ -310,7 +288,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                         checked={dbMode === "neon"}
                         onChange={() => setDbMode("neon")}
                       />{" "}
-                      {connections?.neon.enabled ? "Neon API key" : "Create one for me (Neon, EU)"}
+                      Create one for me (Neon, EU)
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -322,50 +300,33 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                       I have a PostgreSQL database
                     </label>
                   </div>
-                  {dbMode === "neon-connect" ? (
-                    <div className="mt-3 text-sm">
-                      {connections?.neon.connected ? (
-                        <span className="text-teal">✓ Connected · {connections.neon.label}</span>
-                      ) : (
+                  <label htmlFor="dbs" className="mt-3 block text-xs text-muted">
+                    {dbMode === "neon" ? (
+                      <>
+                        Neon API key —{" "}
                         <a
-                          href={`/deploy/neon/connect?build=${id}`}
-                          className="inline-block rounded-full bg-white px-4 py-2 font-semibold text-navy"
+                          className="text-teal underline"
+                          href="https://console.neon.tech/app/settings/api-keys"
+                          target="_blank"
+                          rel="noreferrer"
                         >
-                          Connect Neon
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <label htmlFor="dbs" className="mt-3 block text-xs text-muted">
-                        {dbMode === "neon" ? (
-                          <>
-                            Neon API key —{" "}
-                            <a
-                              className="text-teal underline"
-                              href="https://console.neon.tech/app/settings/api-keys"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              create one
-                            </a>{" "}
-                            (free plan available)
-                          </>
-                        ) : (
-                          "Connection string (postgres://…)"
-                        )}
-                      </label>
-                      <input
-                        id="dbs"
-                        type="password"
-                        autoComplete="off"
-                        required
-                        value={dbSecret}
-                        onChange={(e) => setDbSecret(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
-                      />
-                    </>
-                  )}
+                          create one
+                        </a>{" "}
+                        (free plan available)
+                      </>
+                    ) : (
+                      "Connection string (postgres://…)"
+                    )}
+                  </label>
+                  <input
+                    id="dbs"
+                    type="password"
+                    autoComplete="off"
+                    required
+                    value={dbSecret}
+                    onChange={(e) => setDbSecret(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
+                  />
                 </fieldset>
 
                 <div>
@@ -404,11 +365,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                 ) : null}
                 <button
                   type="submit"
-                  disabled={
-                    !consent ||
-                    (vercelSignIn && !connections?.vercel.connected) ||
-                    (dbMode === "neon-connect" && !connections?.neon.connected)
-                  }
+                  disabled={!consent || (vercelSignIn && !connections?.vercel.connected)}
                   className="rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40"
                 >
                   Deploy now

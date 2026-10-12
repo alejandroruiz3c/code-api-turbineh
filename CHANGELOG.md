@@ -7,9 +7,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ### Added
 
 - Separate staging and production (ADR-0022): `staging.software.turbineh.com` with its own Vercel project, database, artefact bucket, worker and secrets; `infra/staging/deploy.sh <staging|production>` (production only from a clean `main`).
-- "Deploy for me" with sign-in (ADR-0021): "Connect Vercel" (TurbineH integration) and "Connect Neon" (OAuth + PKCE) instead of pasting tokens; tokens encrypted, single use, 30-minute expiry; pasted tokens remain as fallback. Activates when the provider credentials are configured.
+- "Deploy for me" with "Connect Vercel" (ADR-0021): the client authorises the TurbineH integration instead of pasting a token; token encrypted, single use, 30-minute expiry; pasted tokens remain as fallback. Activates when the integration credentials are configured.
 - Screen previews skip the sign-in page: internal tools show the dashboard and two modules instead.
 
+- Storefront recipe (ADR-0020): product options (size, colour…) with own SKU, price override and stock; shipping options by country with free-from amounts; tax rates by country with tax-inclusive or tax-exclusive prices (`SHOP_PRICES_INCLUDE_TAX`), integer-cent rounding documented and unit-tested; breakdown in cart, Stripe Checkout, admin orders and emails; one JSON-LD offer per option. The recipe now ships its own `.env.example` (admin emails, Stripe keys, currency, tax mode), so handover guides and Deploy for me list every setting the shop uses.
 - API keys in the UI (`/keys`): create (shown once), list and revoke; `GET/POST /v1/keys`, `DELETE /v1/keys/{id}` (max 5 active keys per account).
 - Real cost per build: measured tokens × Scaleway list prices per model plus a fixed overhead (`COST_OVERHEAD_EUR_PER_BUILD`), stored in the build metrics and the daily cost ledger.
 - Screen previews: after E2E the sandbox captures home, dashboard and the first module; shown in the build result and in the API (`artifact.previews`).

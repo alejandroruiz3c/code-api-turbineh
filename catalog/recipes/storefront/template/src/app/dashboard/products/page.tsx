@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
-import { products } from "@/db/schema";
+import { products, productVariants } from "@/db/schema";
 import { env } from "@/env";
 import { formatPrice } from "@/lib/shop";
 import { requireAdmin } from "@/server/admin";
-import { deleteProduct, saveProduct } from "./actions";
+import { deleteProduct, hideVariant, saveProduct, saveVariant, setVariantStock } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -21,6 +21,13 @@ export default async function Products({ searchParams }: { searchParams: SearchP
     typeof editId === "string" && /^[0-9a-f-]{36}$/.test(editId)
       ? ((await db.select().from(products).where(eq(products.id, editId)))[0] ?? null)
       : null;
+  const variants = editing
+    ? await db
+        .select()
+        .from(productVariants)
+        .where(and(eq(productVariants.productId, editing.id), eq(productVariants.active, true)))
+        .orderBy(asc(productVariants.createdAt))
+    : [];
   const rows = await db
     .select({
       id: products.id,
@@ -90,6 +97,75 @@ export default async function Products({ searchParams }: { searchParams: SearchP
           </div>
         </form>
       </Card>
+      {editing ? (
+        <Card title={`Options of ${editing.name}`}>
+          <p className="mb-4 text-sm text-slate-600">
+            Sizes, colours or any other choice. Each option has its own SKU and stock and can
+            override the price. Products with options are bought through one of them.
+          </p>
+          {variants.length > 0 ? (
+            <Table head={["Option", "SKU", "Price", "Stock", ""]}>
+              {variants.map((v) => (
+                <tr key={v.id} className="border-b border-slate-100">
+                  <td className="px-3 py-2">{v.name}</td>
+                  <td className="px-3 py-2">{v.sku ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    {formatPrice(v.priceCents ?? editing.priceCents, env.SHOP_CURRENCY)}
+                  </td>
+                  <td className="px-3 py-2">
+                    <form action={setVariantStock} className="flex items-center gap-2">
+                      <input type="hidden" name="id" value={v.id} />
+                      <input
+                        aria-label={`Stock of ${v.name}`}
+                        data-testid={`variant-stock-${v.name}`}
+                        name="stock"
+                        type="number"
+                        min={0}
+                        defaultValue={v.stock ?? ""}
+                        placeholder="∞"
+                        className="w-20 rounded-md border border-slate-300 px-2 py-1"
+                      />
+                      <button type="submit" className="text-sm underline">
+                        Save
+                      </button>
+                    </form>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <form action={hideVariant}>
+                      <input type="hidden" name="id" value={v.id} />
+                      <button className="text-sm text-red-600" type="submit">
+                        Remove
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          ) : null}
+          <form action={saveVariant} className="mt-4 grid gap-4 md:grid-cols-4">
+            <input type="hidden" name="productId" value={editing.id} />
+            <div>
+              <Label htmlFor="va-name">Option name</Label>
+              <Input id="va-name" name="name" placeholder="M / Blue" required maxLength={80} />
+            </div>
+            <div>
+              <Label htmlFor="va-sku">SKU (optional)</Label>
+              <Input id="va-sku" name="sku" maxLength={64} />
+            </div>
+            <div>
+              <Label htmlFor="va-price">Option price (empty = product price)</Label>
+              <Input id="va-price" name="price" inputMode="decimal" />
+            </div>
+            <div>
+              <Label htmlFor="va-stock">Option stock (empty = unlimited)</Label>
+              <Input id="va-stock" name="stock" type="number" min={0} />
+            </div>
+            <div className="md:col-span-4">
+              <Button type="submit">Add option</Button>
+            </div>
+          </form>
+        </Card>
+      ) : null}
       <Card title="Products">
         <Table head={["Name", "Price", "Stock", "Status", ""]}>
           {rows.map((p) => (

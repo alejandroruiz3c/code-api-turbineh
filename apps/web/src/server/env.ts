@@ -11,12 +11,10 @@ const schema = z.object({
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   DAILY_COST_CAP_EUR: z.coerce.number().default(100),
   USER_DAILY_BUILDS: z.coerce.number().int().default(10),
-  /** "Deploy for me" sign-in (ADR-0021). Optional: without them the client pastes a token instead. */
+  /** "Connect Vercel" for Deploy for me (ADR-0021). Optional: without them the client pastes a token instead. */
   VERCEL_INTEGRATION_SLUG: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_ID: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_SECRET: z.string().optional(),
-  NEON_OAUTH_CLIENT_ID: z.string().optional(),
-  NEON_OAUTH_CLIENT_SECRET: z.string().optional(),
 });
 
 type Env = z.infer<typeof schema>;

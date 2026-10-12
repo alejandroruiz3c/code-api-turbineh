@@ -1,13 +1,5 @@
-import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  exchangeNeonCode,
-  exchangeVercelCode,
-  neonAuthorizeUrl,
-  pkce,
-  randomState,
-  vercelInstallUrl,
-} from "./oauth.js";
+import { exchangeVercelCode, randomState, vercelInstallUrl } from "./oauth.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -19,19 +11,6 @@ describe("deploy sign-in (ADR-0021)", () => {
       `https://vercel.com/integrations/turbineh-deploy/new?state=${state}`,
     );
     expect(() => vercelInstallUrl("../evil", state)).toThrow();
-  });
-
-  it("uses PKCE S256 and only the Neon scopes it needs", () => {
-    const { verifier, challenge } = pkce();
-    expect(challenge).toBe(createHash("sha256").update(verifier).digest("base64url"));
-    const u = new URL(
-      neonAuthorizeUrl({ clientId: "c", redirectUri: "https://x/cb", state: "s", challenge }),
-    );
-    expect(u.origin).toBe("https://oauth2.neon.tech");
-    expect(u.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(u.searchParams.get("scope")).toBe(
-      "openid urn:neoncloud:projects:create urn:neoncloud:projects:read",
-    );
   });
 
   it("exchanges the Vercel code server-side and keeps team and installation", async () => {
@@ -59,28 +38,19 @@ describe("deploy sign-in (ADR-0021)", () => {
       "fetch",
       vi.fn(
         async () =>
-          new Response('{"error":"invalid_grant token neon_abcdefghijklmnopqrstuvwxyz0123"}', {
+          new Response('{"error":"invalid_grant token vercel_abcdefghijklmnopqrstuvwxyz0123"}', {
             status: 400,
           }),
       ),
     );
-    await expect(
-      exchangeNeonCode({
+    const call = () =>
+      exchangeVercelCode({
         clientId: "c",
         clientSecret: "s",
         code: "x",
         redirectUri: "https://x/cb",
-        verifier: "v",
-      }),
-    ).rejects.toThrow(/^Neon 400/);
-    await expect(
-      exchangeNeonCode({
-        clientId: "c",
-        clientSecret: "s",
-        code: "x",
-        redirectUri: "https://x/cb",
-        verifier: "v",
-      }),
-    ).rejects.not.toThrow(/abcdefghijklmnop/);
+      });
+    await expect(call()).rejects.toThrow(/^Vercel 400/);
+    await expect(call()).rejects.not.toThrow(/abcdefghijklmnop/);
   });
 });

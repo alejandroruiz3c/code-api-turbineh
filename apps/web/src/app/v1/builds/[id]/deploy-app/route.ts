@@ -11,7 +11,6 @@ const Body = z.object({
   vercel_token: z.string().trim().min(20).max(200).optional(),
   vercel_team_id: z.string().trim().regex(/^team_[A-Za-z0-9]+$/).optional(),
   database: z.union([
-    z.object({ neon_connection: z.literal(true) }),
     z.object({ neon_api_key: z.string().trim().min(20).max(200) }),
     z.object({ url: z.string().trim().regex(/^postgres(ql)?:\/\/\S+$/, "Use a postgres:// connection string").max(1000) }),
   ]),
@@ -38,18 +37,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const status = await connectionStatus(caller.ownerId, id);
   if (d.vercel_connection && !status.vercel.connected)
     return problem(409, "Your Vercel sign-in expired", "Connect Vercel again.");
-  if ("neon_connection" in d.database && !status.neon.connected)
-    return problem(409, "Your Neon sign-in expired", "Connect Neon again.");
-  const vercelConn = d.vercel_connection ? await takeConnection(caller.ownerId, id, "vercel") : null;
-  const neonConn = "neon_connection" in d.database ? await takeConnection(caller.ownerId, id, "neon") : null;
+  const vercelConn = d.vercel_connection ? await takeConnection(caller.ownerId, id) : null;
+  if (d.vercel_connection && !vercelConn)
+    return problem(409, "Your Vercel sign-in expired", "Connect Vercel again.");
   const vercelTokenEnc = vercelConn?.tokenEnc ?? seal(d.vercel_token ?? "");
   const teamId = vercelConn ? vercelConn.teamId : (d.vercel_team_id ?? null);
   const dbMode = "url" in d.database ? "url" : "neon";
-  const dbSecretEnc =
-    neonConn?.tokenEnc ??
-    seal("neon_api_key" in d.database ? d.database.neon_api_key : "url" in d.database ? d.database.url : "");
-  if ((d.vercel_connection && !vercelConn) || ("neon_connection" in d.database && !neonConn))
-    return problem(409, "Your sign-in expired", "Connect again.");
+  const dbSecretEnc = seal("neon_api_key" in d.database ? d.database.neon_api_key : d.database.url);
   const res = await db.query<{ id: string }>(
     `INSERT INTO deployments (build_id, owner_id, vercel_token_enc, vercel_team_id, db_mode, db_secret_enc, admin_email, vercel_via)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
