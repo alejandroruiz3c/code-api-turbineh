@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deployToClient, vercelConfig } from "./deploy.js";
+import { deployToClient, shopSettings, vercelConfig } from "./deploy.js";
 import { safeMessage } from "./vercel.js";
 
 function repo(withJobs: boolean): string {
@@ -104,5 +104,17 @@ describe("deploy for me", () => {
     expect(
       safeMessage('{"error":{"message":"bad token vercel_abcdefghijklmnopqrstuvwxyz123"}}'),
     ).not.toContain("abcdefghijklmnopqrstuvwxyz");
+  });
+
+  it("carries the shop settings chosen at build time, never local defaults or secrets", () => {
+    expect(
+      shopSettings(
+        "DATABASE_URL=postgres://localhost/app\nSHOP_CURRENCY=gbp\nSHOP_CURRENCIES=eur,usd\nSHOP_TAX_MODE=manual\nSTRIPE_SECRET_KEY=\nSHOP_EMPTY=\n",
+      ),
+    ).toEqual([
+      ["SHOP_CURRENCY", "gbp"],
+      ["SHOP_CURRENCIES", "eur,usd"],
+      ["SHOP_TAX_MODE", "manual"],
+    ]);
   });
 });

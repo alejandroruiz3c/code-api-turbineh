@@ -11,6 +11,7 @@ import {
 import { dirname, extname, join, relative } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
+import { applyRequestedCurrencies } from "./currencies.js";
 import {
   entitiesToGenerate,
   providedTables,
@@ -127,6 +128,7 @@ export function assemble(input: AssembleInput): AssembleResult {
 
   if (input.brand) applyBrand(outDir, input.brand);
   writeSiteContent(outDir, spec);
+  applyRequestedCurrencies(outDir, spec);
 
   const entities = entitiesToGenerate(spec, [
     ...recipe.providedEntities,

@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Curated glue for `data.countries.i18n-iso-countries` (validation, localised names, select options in en/es); re-certified.
+- Storefront currencies from the request: the assembler reads the currencies the spec names (deterministic, no model; first = base) into `SHOP_CURRENCY`/`SHOP_CURRENCIES`, and Deploy for me carries the `SHOP_*` settings to the client's Vercel project.
 - Graceful worker stop: on SIGTERM the worker claims nothing new and finishes running builds, deliveries and deployments (units allow 30 min; `deploy.sh` installs the unit files from the repo). Deploys no longer interrupt builds.
 - AWS worker schedule 09:00–21:00 Pacific Time (ADR-0024): self power-off timer on the instance, start timer on the Scaleway host with a start-only IAM key.
 - `infra/aws/worker.ts allow-ssh`: replaces the operator SSH rule with the current IP (the operator's IP changes; SSH is never opened to everyone).

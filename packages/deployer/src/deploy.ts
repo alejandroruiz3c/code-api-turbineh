@@ -36,6 +36,15 @@ const KEYS_IN = (envExample: string) =>
 
 const secret = () => randomBytes(36).toString("base64url");
 
+/** Non-empty SHOP_* settings of .env.example (explicit allow-list: other defaults are local values like localhost). */
+export function shopSettings(envExample: string): [string, string][] {
+  return envExample
+    .split("\n")
+    .map((l) => /^(SHOP_[A-Z0-9_]+)=([a-z0-9,._-]+)\s*$/i.exec(l.trim()))
+    .filter((m): m is RegExpExecArray => Boolean(m?.[1] && m[2]))
+    .map((m) => [m[1] ?? "", m[2] ?? ""]);
+}
+
 /** vercel.json for the client's project: EU functions next to the EU database; daily job runner when present. */
 export function vercelConfig(cron: boolean): Record<string, unknown> {
   return {
@@ -82,6 +91,12 @@ export async function deployToClient(input: DeployInput): Promise<DeployResult> 
   ];
   if (keys.includes("ADMIN_EMAILS") && input.adminEmail) {
     env.push({ key: "ADMIN_EMAILS", value: input.adminEmail, sensitive: false });
+  }
+  // Shop configuration chosen at build time (currencies from the request, tax mode): plain settings, never secrets.
+  for (const [key, value] of shopSettings(
+    readFileSync(join(input.repoDir, ".env.example"), "utf8"),
+  )) {
+    env.push({ key, value, sensitive: false });
   }
   if (cron) {
     const s = secret();

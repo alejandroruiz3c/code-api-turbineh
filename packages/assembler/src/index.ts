@@ -6,3 +6,4 @@ export * from "./handover.js";
 export * from "./brand-theme.js";
 export * from "./site-content.js";
 export * from "./rule-fixtures.js";
+export * from "./currencies.js";
