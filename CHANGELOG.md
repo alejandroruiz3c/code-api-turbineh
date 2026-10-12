@@ -6,6 +6,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Separate staging and production (ADR-0022): `staging.software.turbineh.com` with its own Vercel project, database, artefact bucket, worker and secrets; `infra/staging/deploy.sh <staging|production>` (production only from a clean `main`).
+- "Deploy for me" with sign-in (ADR-0021): "Connect Vercel" (TurbineH integration) and "Connect Neon" (OAuth + PKCE) instead of pasting tokens; tokens encrypted, single use, 30-minute expiry; pasted tokens remain as fallback. Activates when the provider credentials are configured.
+- Screen previews skip the sign-in page: internal tools show the dashboard and two modules instead.
+
 - API keys in the UI (`/keys`): create (shown once), list and revoke; `GET/POST /v1/keys`, `DELETE /v1/keys/{id}` (max 5 active keys per account).
 - Real cost per build: measured tokens × Scaleway list prices per model plus a fixed overhead (`COST_OVERHEAD_EUR_PER_BUILD`), stored in the build metrics and the daily cost ledger.
 - Screen previews: after E2E the sandbox captures home, dashboard and the first module; shown in the build result and in the API (`artifact.previews`).

@@ -8,6 +8,19 @@ interface Deployment {
   error: string | null;
 }
 
+interface Connection {
+  enabled: boolean;
+  connected: boolean;
+  label: string | null;
+}
+type Connections = { vercel: Connection; neon: Connection };
+
+const NOTICE: Record<string, string> = {
+  connected: "Connected. You can deploy now.",
+  cancelled: "Sign-in cancelled. You can try again or paste a token instead.",
+  error: "We could not complete the sign-in. Try again or paste a token instead.",
+};
+
 const STEPS = [
   "Checking your Vercel access",
   "Creating your database",
@@ -22,10 +35,13 @@ const STEPS = [
 /** Optional "Deploy for me" (ADR-0017): into the client's own Vercel account and database. */
 export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) {
   const [open, setOpen] = useState(false);
+  const [connections, setConnections] = useState<Connections | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pasteVercel, setPasteVercel] = useState(false);
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [vercelToken, setVercelToken] = useState("");
   const [teamId, setTeamId] = useState("");
-  const [dbMode, setDbMode] = useState<"neon" | "url">("neon");
+  const [dbMode, setDbMode] = useState<"neon-connect" | "neon" | "url">("neon");
   const [dbSecret, setDbSecret] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [consent, setConsent] = useState(false);
@@ -34,14 +50,38 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
   const poll = useCallback(async () => {
     const res = await fetch(`/v1/builds/${id}/deploy-app`);
     if (!res.ok) return null;
-    const body = (await res.json()) as { deployment: Deployment | null };
+    const body = (await res.json()) as {
+      deployment: Deployment | null;
+      connections?: Connections;
+    };
     setDeployment(body.deployment);
+    if (body.connections) setConnections(body.connections);
     return body.deployment;
   }, [id]);
 
   useEffect(() => {
     queueMicrotask(() => void poll());
   }, [poll]);
+
+  // Back from signing in with Vercel or Neon: reopen the window with the outcome.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const outcome = q.get("deploy");
+    if (!outcome) return;
+    queueMicrotask(() => {
+      setOpen(true);
+      setNotice(NOTICE[outcome] ?? null);
+    });
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
+  // Prefer signing in when it is available on this TurbineH deployment.
+  useEffect(() => {
+    if (connections?.neon.enabled && dbMode === "neon")
+      queueMicrotask(() => setDbMode("neon-connect"));
+  }, [connections, dbMode]);
+
+  const vercelSignIn = Boolean(connections?.vercel.enabled) && !pasteVercel;
 
   useEffect(() => {
     if (!deployment || (deployment.status !== "queued" && deployment.status !== "running")) return;
@@ -58,9 +98,18 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        vercel_token: vercelToken.trim(),
-        ...(teamId.trim() ? { vercel_team_id: teamId.trim() } : {}),
-        database: dbMode === "neon" ? { neon_api_key: dbSecret.trim() } : { url: dbSecret.trim() },
+        ...(vercelSignIn
+          ? { vercel_connection: true }
+          : {
+              vercel_token: vercelToken.trim(),
+              ...(teamId.trim() ? { vercel_team_id: teamId.trim() } : {}),
+            }),
+        database:
+          dbMode === "neon-connect"
+            ? { neon_connection: true }
+            : dbMode === "neon"
+              ? { neon_api_key: dbSecret.trim() }
+              : { url: dbSecret.trim() },
         ...(adminEmail.trim() ? { admin_email: adminEmail.trim() } : {}),
       }),
     });
@@ -183,42 +232,77 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                   <legend className="px-1 text-sm font-semibold text-white">
                     1 · Hosting — Vercel
                   </legend>
-                  <label htmlFor="vt" className="mt-1 block text-xs text-muted">
-                    Access token —{" "}
-                    <a
-                      className="text-teal underline"
-                      href="https://vercel.com/account/settings/tokens"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      create one
-                    </a>{" "}
-                    (set expiration to 1 day)
-                  </label>
-                  <input
-                    id="vt"
-                    type="password"
-                    autoComplete="off"
-                    required
-                    value={vercelToken}
-                    onChange={(e) => setVercelToken(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
-                  />
-                  <details className="mt-2 text-xs text-muted">
-                    <summary className="cursor-pointer">Deploy into a team (optional)</summary>
-                    <input
-                      aria-label="Vercel team ID"
-                      placeholder="team_…"
-                      value={teamId}
-                      onChange={(e) => setTeamId(e.target.value)}
-                      className="mt-2 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
-                    />
-                  </details>
+                  {vercelSignIn ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
+                      {connections?.vercel.connected ? (
+                        <span className="text-teal">✓ Connected · {connections.vercel.label}</span>
+                      ) : (
+                        <a
+                          href={`/deploy/vercel/connect?build=${id}`}
+                          className="rounded-full bg-white px-4 py-2 font-semibold text-navy"
+                        >
+                          ▲ Connect Vercel
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPasteVercel(true)}
+                        className="text-xs text-muted underline"
+                      >
+                        Paste a token instead
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <label htmlFor="vt" className="mt-1 block text-xs text-muted">
+                        Access token —{" "}
+                        <a
+                          className="text-teal underline"
+                          href="https://vercel.com/account/settings/tokens"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          create one
+                        </a>{" "}
+                        (set expiration to 1 day)
+                      </label>
+                      <input
+                        id="vt"
+                        type="password"
+                        autoComplete="off"
+                        required
+                        value={vercelToken}
+                        onChange={(e) => setVercelToken(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
+                      />
+                      <details className="mt-2 text-xs text-muted">
+                        <summary className="cursor-pointer">Deploy into a team (optional)</summary>
+                        <input
+                          aria-label="Vercel team ID"
+                          placeholder="team_…"
+                          value={teamId}
+                          onChange={(e) => setTeamId(e.target.value)}
+                          className="mt-2 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
+                        />
+                      </details>
+                    </>
+                  )}
                 </fieldset>
 
                 <fieldset className="rounded-xl border border-line p-4">
                   <legend className="px-1 text-sm font-semibold text-white">2 · Database</legend>
                   <div className="flex flex-wrap gap-4 text-sm">
+                    {connections?.neon.enabled ? (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="db"
+                          checked={dbMode === "neon-connect"}
+                          onChange={() => setDbMode("neon-connect")}
+                        />{" "}
+                        Create one for me — sign in with Neon (EU)
+                      </label>
+                    ) : null}
                     <label className="flex items-center gap-2">
                       <input
                         type="radio"
@@ -226,7 +310,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                         checked={dbMode === "neon"}
                         onChange={() => setDbMode("neon")}
                       />{" "}
-                      Create one for me (Neon, EU)
+                      {connections?.neon.enabled ? "Neon API key" : "Create one for me (Neon, EU)"}
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -238,33 +322,50 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                       I have a PostgreSQL database
                     </label>
                   </div>
-                  <label htmlFor="dbs" className="mt-3 block text-xs text-muted">
-                    {dbMode === "neon" ? (
-                      <>
-                        Neon API key —{" "}
+                  {dbMode === "neon-connect" ? (
+                    <div className="mt-3 text-sm">
+                      {connections?.neon.connected ? (
+                        <span className="text-teal">✓ Connected · {connections.neon.label}</span>
+                      ) : (
                         <a
-                          className="text-teal underline"
-                          href="https://console.neon.tech/app/settings/api-keys"
-                          target="_blank"
-                          rel="noreferrer"
+                          href={`/deploy/neon/connect?build=${id}`}
+                          className="inline-block rounded-full bg-white px-4 py-2 font-semibold text-navy"
                         >
-                          create one
-                        </a>{" "}
-                        (free plan available)
-                      </>
-                    ) : (
-                      "Connection string (postgres://…)"
-                    )}
-                  </label>
-                  <input
-                    id="dbs"
-                    type="password"
-                    autoComplete="off"
-                    required
-                    value={dbSecret}
-                    onChange={(e) => setDbSecret(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
-                  />
+                          Connect Neon
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <label htmlFor="dbs" className="mt-3 block text-xs text-muted">
+                        {dbMode === "neon" ? (
+                          <>
+                            Neon API key —{" "}
+                            <a
+                              className="text-teal underline"
+                              href="https://console.neon.tech/app/settings/api-keys"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              create one
+                            </a>{" "}
+                            (free plan available)
+                          </>
+                        ) : (
+                          "Connection string (postgres://…)"
+                        )}
+                      </label>
+                      <input
+                        id="dbs"
+                        type="password"
+                        autoComplete="off"
+                        required
+                        value={dbSecret}
+                        onChange={(e) => setDbSecret(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm"
+                      />
+                    </>
+                  )}
                 </fieldset>
 
                 <div>
@@ -288,10 +389,14 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                     className="mt-0.5"
                     required
                   />
-                  I authorise TurbineH to create a project and a database in my accounts. The token
-                  and key are used once, encrypted while in use and deleted when the deployment
-                  ends.
+                  I authorise TurbineH to create a project and a database in my accounts. Access is
+                  used once, encrypted while in use and deleted when the deployment ends.
                 </label>
+                {notice ? (
+                  <p role="status" className="text-sm text-teal">
+                    {notice}
+                  </p>
+                ) : null}
                 {error ? (
                   <p role="alert" className="text-sm text-bad">
                     {error}
@@ -299,7 +404,11 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                 ) : null}
                 <button
                   type="submit"
-                  disabled={!consent}
+                  disabled={
+                    !consent ||
+                    (vercelSignIn && !connections?.vercel.connected) ||
+                    (dbMode === "neon-connect" && !connections?.neon.connected)
+                  }
                   className="rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-navy disabled:opacity-40"
                 >
                   Deploy now

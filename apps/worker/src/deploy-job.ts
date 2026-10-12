@@ -22,6 +22,7 @@ interface DeploymentRow {
   db_mode: "neon" | "url";
   db_secret_enc: string;
   admin_email: string | null;
+  vercel_via: "token" | "integration";
   artifact: { bundleKey?: string; slug?: string } | null;
   metrics: Record<string, unknown>;
   spec: { app_name?: string; summary?: string } | null;
@@ -45,7 +46,7 @@ export async function processDeployment(
      FROM builds b
      WHERE d.id = (SELECT id FROM deployments WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
        AND b.id = d.build_id
-     RETURNING d.id, d.build_id, d.vercel_token_enc, d.vercel_team_id, d.db_mode, d.db_secret_enc, d.admin_email,
+     RETURNING d.id, d.build_id, d.vercel_token_enc, d.vercel_team_id, d.db_mode, d.db_secret_enc, d.admin_email, d.vercel_via,
                b.artifact, b.metrics, b.spec`,
   );
   const job = claimed.rows[0];
@@ -79,7 +80,11 @@ export async function processDeployment(
     });
 
     await step("Updating your documents");
-    const live: LiveInfo = { ...result, deployedAt: new Date().toISOString() };
+    const live: LiveInfo = {
+      ...result,
+      deployedAt: new Date().toISOString(),
+      viaIntegration: job.vercel_via === "integration",
+    };
     const appName = job.spec?.app_name ?? slug;
     const handover = (job.metrics.handover as HandoverFacts | undefined) ?? {
       appName,

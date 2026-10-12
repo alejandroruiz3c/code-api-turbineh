@@ -140,6 +140,8 @@ export interface LiveInfo {
   settings: string[];
   cron: boolean;
   deployedAt: string;
+  /** Vercel access came from the TurbineH integration (sign-in) instead of a pasted token. */
+  viaIntegration?: boolean | undefined;
 }
 
 /** DEPLOYED.md: what TurbineH set up in the client's accounts and what is left for them to do. */
@@ -152,7 +154,16 @@ export function deployedGuide(appName: string, live: LiveInfo): string {
 
 **${live.url}** — deployed for you on ${live.deployedAt.slice(0, 10)} into **your own accounts**. TurbineH keeps no access:
 the credentials you gave us were used once and deleted.
-
+${
+  live.viaIntegration
+    ? `
+> **About the TurbineH integration in your Vercel account:** our access token was deleted after this deployment, so
+> we cannot act on your account. Vercel may delete the settings an integration created when you uninstall it: before
+> removing it (Vercel → Settings → Integrations), open your project → Settings → Environment Variables and re-save
+> each value listed below as your own, then redeploy.
+`
+    : ""
+}
 ## What we set up
 
 | What | Where |

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.example.append
 *.rtf
 KEYS*
 # Code routes for API key management (not key files): case-insensitive filesystems match KEYS*.
@@ -29,9 +30,10 @@ __pycache__/
 
 # Local caches
 ingest/.cache/
-builds/
+# Root-level only: source folders with these names (e.g. app/v1/builds) must stay tracked.
+/builds/
 
-artifacts/
+/artifacts/
 
 # Next.js build output
 .next/
@@ -39,7 +41,9 @@ next-env.d.ts
 *.tsbuildinfo
 .vercel/
 .vercel
-.env*
 
 # Backup Coder flywheel records from local runs
 catalog/gaps/*.json
+
+# Agent worktrees (local only)
+.claude/

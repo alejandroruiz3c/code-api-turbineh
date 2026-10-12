@@ -1,0 +1,16 @@
+[Unit]
+Description=CODE-API-TURBINEH build worker (staging, ADR-0022)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=turbineh
+WorkingDirectory=/opt/code-api-turbineh-staging
+EnvironmentFile=/etc/turbineh/worker-staging.env
+ExecStart=/usr/bin/pnpm --filter @turbineh/worker run service
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
