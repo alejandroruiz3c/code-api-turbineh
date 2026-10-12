@@ -4,7 +4,7 @@ import { auth } from "./auth";
 import { db } from "./db";
 
 export type Caller =
-  | { kind: "session"; ownerId: string; userId: string; name: string }
+  | { kind: "session"; ownerId: string; userId: string; name: string; email: string }
   | { kind: "api-key"; ownerId: string; apiKeyId: string; dailyQuota: number };
 
 /** API key (Authorization: Bearer tbh_…) or browser session. */
@@ -24,6 +24,7 @@ export async function getCaller(): Promise<Caller | null> {
         ownerId: `user:${session.user.id}`,
         userId: session.user.id,
         name: session.user.name,
+        email: session.user.email,
       }
     : null;
 }

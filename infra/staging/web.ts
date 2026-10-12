@@ -87,6 +87,7 @@ async function env(): Promise<void> {
     S3_SECRET_ACCESS_KEY: need("SCW_SECRET_KEY"),
     DAILY_COST_CAP_EUR: STAGING ? "20" : "100",
     USER_DAILY_BUILDS: "10",
+    ...optional("OPS_ADMIN_EMAILS"),
     ...optional("VERCEL_INTEGRATION_SLUG"),
     ...optional("VERCEL_INTEGRATION_CLIENT_ID"),
     ...optional("VERCEL_INTEGRATION_CLIENT_SECRET"),

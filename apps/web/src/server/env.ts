@@ -13,6 +13,9 @@ const schema = z.object({
   USER_DAILY_BUILDS: z.coerce.number().int().default(10),
   /** Browser builds per client IP per day, across accounts (PLAN §9 viral capacity). */
   IP_DAILY_BUILDS: z.coerce.number().int().default(30),
+  /** Internal operations access (cost and fleet data): GitHub account emails and API-key owners, comma-separated. */
+  OPS_ADMIN_EMAILS: z.string().default(""),
+  OPS_OWNER_IDS: z.string().default("ops:smoke"),
   /** "Connect Vercel" for Deploy for me (ADR-0021). Optional: without them the client pastes a token instead. */
   VERCEL_INTEGRATION_SLUG: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_ID: z.string().optional(),

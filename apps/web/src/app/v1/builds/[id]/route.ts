@@ -1,6 +1,7 @@
 import { findImprovement, getBuild } from "@turbineh/db";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
+import { clientMetrics, isOps } from "@/server/ops";
 import { problem } from "@/server/problem";
 import { storage } from "@/server/storage";
 
@@ -31,7 +32,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     finished_at: build.finished_at,
     error: build.error,
     spec: build.spec,
-    metrics: build.metrics,
+    // Cost is internal: only TurbineH staff see it.
+    metrics: isOps(caller) ? build.metrics : clientMetrics(build.metrics),
     repo_url: build.repo_url,
     improved_from: build.options.mode === "improve" ? (build.options.parent ?? null) : null,
     improvement_build_id: improvement?.id ?? null,
