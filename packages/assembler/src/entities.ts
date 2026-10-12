@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
 import { camel, entityNames, label, snake } from "./naming.js";
 
@@ -33,6 +35,23 @@ const RESERVED_FIELDS = new Set([
   "orgId",
   "tenantId",
 ]);
+
+/**
+ * Tables already defined in the app by the recipe (`src/db/recipe-tables.ts`) or by native components
+ * (`src/db/component-*.ts`): a generated entity with the same table would collide (e.g. a "Subscription" entity
+ * next to payments.subscriptions), so those entities are covered by what is already there.
+ */
+export function providedTables(appDir: string): string[] {
+  const dbDir = join(appDir, "src/db");
+  if (!existsSync(dbDir)) return [];
+  return readdirSync(dbDir)
+    .filter((f) => f === "recipe-tables.ts" || /^component-[a-z0-9-]+\.ts$/.test(f))
+    .flatMap((f) => [
+      ...readFileSync(join(dbDir, f), "utf8").matchAll(/pgTable\(\s*"([a-z0-9_]+)"/g),
+    ])
+    .map((m) => m[1] ?? "")
+    .filter(Boolean);
+}
 
 export function entitiesToGenerate(spec: BuildSpec, providedByRecipe: string[] = []): Entity[] {
   const seen = new Set<string>(providedByRecipe.map((p) => entityNames(p).table));
