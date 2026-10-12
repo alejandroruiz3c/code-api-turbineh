@@ -1,0 +1,5 @@
+{
+  "id": "shop-04",
+  "expected_recipe": "storefront",
+  "prompt": "Online store for Trail Socks, a running sock brand shipping to Spain and Portugal: each sock comes in sizes S, M and L with its own stock, shipping costs 4.90 and is free over 50 euros, prices include 21% VAT, card payment and an admin to manage products, sizes, shipping and orders."
+}
