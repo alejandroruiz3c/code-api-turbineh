@@ -1,0 +1,27 @@
+/**
+ * Bundles the CLI into one dependency-free file (Node ≥ 20) and copies it where the web app serves it
+ * (`/cli/turbineh.mjs`, installed by `curl -fsSL https://software.turbineh.com/install.sh | sh`).
+ */
+import { chmodSync, copyFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const out = join(here, "..", "dist", "turbineh.mjs");
+await build({
+  entryPoints: [join(here, "..", "src", "index.ts")],
+  outfile: out,
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node20",
+  banner: { js: "#!/usr/bin/env node" },
+  legalComments: "none",
+  logLevel: "warning",
+});
+chmodSync(out, 0o755);
+const publicDir = join(here, "..", "..", "..", "apps", "web", "public", "cli");
+mkdirSync(publicDir, { recursive: true });
+copyFileSync(out, join(publicDir, "turbineh.mjs"));
+console.log("turbineh CLI bundled");

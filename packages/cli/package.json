@@ -1,0 +1,24 @@
+{
+  "name": "@turbineh/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "turbineh — verified software capabilities for people and coding agents: search, inspect, plan, apply, verify, revert (PLAN §16)",
+  "type": "module",
+  "bin": {
+    "turbineh": "./dist/turbineh.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsx scripts/bundle.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@turbineh/engine": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "esbuild": "0.28.2"
+  }
+}
