@@ -41,7 +41,7 @@ export async function POST(req: Request): Promise<Response> {
     return problem(429, "Daily build quota reached", `You can start ${quota} builds per day during the beta.`);
   }
   // Browser sessions also count per client IP (many accounts from one place); API keys have their own quota.
-  const ipHash = caller.kind === "session" ? clientIpHash(req.headers) : null;
+  const ipHash = caller.kind === "api-key" ? null : clientIpHash(req.headers);
   if (ipHash && (await buildsLastDayFromIp(db, ipHash)) >= env.IP_DAILY_BUILDS) {
     return problem(429, "Daily build limit reached for this network", "Please try again tomorrow.");
   }

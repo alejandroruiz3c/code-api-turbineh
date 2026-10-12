@@ -21,7 +21,8 @@ export async function GET(req: Request): Promise<Response> {
   const cookieState = jar.get("tbh_deploy_state")?.value;
   jar.delete({ name: "tbh_deploy_state", path: "/deploy" });
   const caller = await getCaller();
-  if (caller?.kind !== "session") return problem(401, "Sign in first");
+  if (!caller || caller.kind === "api-key")
+    return problem(401, "Open the product with your access first");
   if (!state || state !== cookieState)
     return problem(400, "This sign-in link is not valid any more");
 
