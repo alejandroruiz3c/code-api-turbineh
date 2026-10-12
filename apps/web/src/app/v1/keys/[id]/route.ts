@@ -9,7 +9,8 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const caller = await getCaller();
-  if (!caller || caller.kind !== "session") return problem(401, "Sign in to manage API keys");
+  if (!caller || caller.kind === "api-key")
+    return problem(401, "Use your access to manage API keys");
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return problem(404, "Key not found");
   return (await revokeApiKey(db, caller.ownerId, id))

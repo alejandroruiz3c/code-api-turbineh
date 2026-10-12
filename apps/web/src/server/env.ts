@@ -8,6 +8,8 @@ const schema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   /** 32-byte key (base64) used to encrypt user GitHub tokens while a delivery is pending. */
   DELIVERY_TOKEN_KEY: z.string().min(40),
+  /** Invitation access token for the product area and API (ADR-0030). Never in git: env only. */
+  PRODUCT_ACCESS_TOKEN: z.string().min(12),
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   DAILY_COST_CAP_EUR: z.coerce.number().default(100),
   USER_DAILY_BUILDS: z.coerce.number().int().default(10),

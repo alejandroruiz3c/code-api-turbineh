@@ -18,7 +18,8 @@ const UUID = /^[0-9a-f-]{36}$/;
 export async function GET(req: Request): Promise<Response> {
   if (!vercelSignInEnabled()) return problem(404, "Sign-in not available");
   const caller = await getCaller();
-  if (caller?.kind !== "session") return problem(401, "Sign in first");
+  if (!caller || caller.kind === "api-key")
+    return problem(401, "Open the product with your access first");
   const buildId = new URL(req.url).searchParams.get("build") ?? "";
   if (!UUID.test(buildId)) return problem(422, "Invalid build");
   const build = await getBuild(db, buildId, caller.ownerId);

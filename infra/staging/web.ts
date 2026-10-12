@@ -79,6 +79,8 @@ async function env(): Promise<void> {
         ? need("STG_GITHUB_CLIENT_SECRET")
         : need("GITHUB_CLIENT_SECRET"),
     DELIVERY_TOKEN_KEY: pick("STG_DELIVERY_TOKEN_KEY", "STAGING_DELIVERY_TOKEN_KEY"),
+    // Invitation access token (ADR-0030): product area gate and API key during the Frontiers phase.
+    PRODUCT_ACCESS_TOKEN: pick("STG_PRODUCT_ACCESS_TOKEN", "PRODUCT_ACCESS_TOKEN"),
     STORAGE_DRIVER: "s3",
     S3_ENDPOINT: "https://s3.fr-par.scw.cloud",
     S3_REGION: "fr-par",

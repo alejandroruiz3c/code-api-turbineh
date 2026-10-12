@@ -7,6 +7,7 @@ beforeAll(() => {
   process.env.GITHUB_CLIENT_ID = "x";
   process.env.GITHUB_CLIENT_SECRET = "x";
   process.env.DELIVERY_TOKEN_KEY = "k".repeat(44);
+  process.env.PRODUCT_ACCESS_TOKEN = "TEST_ACCESS_TOKEN_123";
   process.env.OPS_ADMIN_EMAILS = "Staff@Example.test";
   process.env.OPS_OWNER_IDS = "ops:smoke";
 });
