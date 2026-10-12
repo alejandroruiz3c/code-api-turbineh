@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Internal operations panel `/ops` and `GET /v1/ops` (staff only via `OPS_ADMIN_EMAILS`/`OPS_OWNER_IDS`, 404 for everyone else): builds per minute, green rate, average time, queue, live workers, per-worker stats, recent failures, cost today/cap and average cost per build.
 - Curated glue for `data.countries.i18n-iso-countries` (validation, localised names, select options in en/es); re-certified.
 - Storefront currencies from the request: the assembler reads the currencies the spec names (deterministic, no model; first = base) into `SHOP_CURRENCY`/`SHOP_CURRENCIES`, and Deploy for me carries the `SHOP_*` settings to the client's Vercel project.
 - Graceful worker stop: on SIGTERM the worker claims nothing new and finishes running builds, deliveries and deployments (units allow 30 min; `deploy.sh` installs the unit files from the repo). Deploys no longer interrupt builds.
@@ -35,6 +36,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Build cost is internal: `GET /v1/builds/{id}` no longer returns `metrics.cost` to clients (staff and internal keys still see it).
 - Worker hosts filled their disk with sandbox base images (64 GB on the Scaleway host), making every build fail at `install`. Daily `turbineh-maintenance.timer` keeps the 8 newest base images, prunes build cache and anonymous volumes and removes build dirs older than 3 days; workers stop claiming builds below 15 GB free (`MIN_FREE_DISK_GB`).
 - Graceful stop: sandbox processes run in their own process group and units use `KillMode=mixed`, so a stop never reaches a verification in progress.
 - A Semgrep run killed under load (empty or truncated JSON) crashed the whole worker process and stranded the other builds running in it. The scan is retried once and otherwise fails the `static` step (a scan that did not run never counts as clean); the scans promise is handled early and the worker logs unhandled rejections instead of exiting.

@@ -11,6 +11,9 @@ staging mirrors it with its own pieces:
 | Artefacts        | bucket `code-frontiers-artifacts-staging` (`provision staging-bucket`)                                                   |
 | Smoke API key    | `STG_SMOKE_API_KEY` (`TARGET=staging npx tsx infra/staging/api-key.ts`)                                                  |
 
+**Operations panel:** `/ops` (and `GET /v1/ops`) shows throughput, green rate, queue, workers and cost; only the
+emails in `OPS_ADMIN_EMAILS` (session) and the API-key owners in `OPS_OWNER_IDS` see it. Cost is never shown to clients.
+
 **Release flow:** merge the PR → `infra/staging/deploy.sh staging` → smoke build on staging →
 `infra/staging/deploy.sh production` (refuses anything but a clean `main`). Each run syncs the code, builds the
 worker, applies migrations, restarts the unit, deploys the web and checks `/health`.
