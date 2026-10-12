@@ -13,6 +13,23 @@ const step = (name: string, ok: boolean, detail = "") => ({ name, ok, ms: 1, det
 const result = (steps: ReturnType<typeof step>[]) => ({ steps }) as unknown as VerifyResult;
 
 describe("corrector scope", () => {
+  it("never hands the Security Pack, the orchestrator or the AI Safety Pack to a model", () => {
+    const dir = mkdtempSync(join(tmpdir(), "corrector-protected-"));
+    const write = (rel: string, body: string) => {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    };
+    const generated = "// turbineh:generated\nexport const x = 1;\n";
+    write("src/lib/ai/models.ts", generated);
+    write("src/security/headers.ts", generated);
+    write("src/integrations/a.ts", "// turbineh:generated glue\nexport const a = 1;\n");
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    execFileSync("git", ["add", "-A"], { cwd: dir });
+    const log =
+      "src/lib/ai/models.ts(1,1): error\nsrc/security/headers.ts(1,1): error\nsrc/integrations/a.ts(1,1): error";
+    expect(correctableFiles(dir, log)).toEqual(["src/integrations/a.ts"]);
+  });
+
   it("only reacts to quality gates, never to security scans", () => {
     expect(qualityFailed(result([step("lint", false)]))).toBe(true);
     expect(qualityFailed(result([step("static", false), step("lint", true)]))).toBe(false);

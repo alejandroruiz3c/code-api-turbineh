@@ -146,7 +146,7 @@ rules:
   # ADR-0028: every model or decider call in a client app goes through the TurbineH orchestrator (component #001,
   # ai.orchestrator.turbineh) and its AI Safety Pack. Only the orchestrator's own transport files may talk to models.
   - id: turbineh.ai-direct-model-call
-    languages: [typescript]
+    languages: [typescript, javascript]
     severity: ERROR
     paths:
       exclude:

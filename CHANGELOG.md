@@ -39,6 +39,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- The corrector never edits the Security Pack (`src/security/`) or the AI orchestrator and AI Safety Pack (`src/lib/ai/`): they are certified code and the only files allowed to talk to models. The direct-model-call rule also covers JavaScript files.
 - Dependency licence check follows SPDX expressions: "A OR B" blocks only when every option is copyleft (jszip "MIT OR GPL-3.0-or-later", pulled by mammoth, is used under MIT); "A AND B" blocks when any part is. It was a substring match on "GPL".
 - Build cost is internal: `GET /v1/builds/{id}` no longer returns `metrics.cost` to clients (staff and internal keys still see it).
 - Worker hosts filled their disk with sandbox base images (64 GB on the Scaleway host), making every build fail at `install`. Daily `turbineh-maintenance.timer` keeps the 8 newest base images, prunes build cache and anonymous volumes and removes build dirs older than 3 days; workers stop claiming builds below 15 GB free (`MIN_FREE_DISK_GB`).
