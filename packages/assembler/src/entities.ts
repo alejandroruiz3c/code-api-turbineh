@@ -129,8 +129,13 @@ function inputType(f: Field): string {
   }[f.type];
 }
 
+/** A text field that holds an email address (the compiler sometimes types it as plain text). */
+const emailLike = (f: Field) =>
+  f.type === "email" || (f.type === "string" && /e-?mail/i.test(f.name));
+
 /** Sample values used by the generated E2E test (deterministic). */
 export function sampleValue(f: Field, entityLabel: string, nth = 0): string {
+  if (emailLike(f)) return "e2e@example.com";
   switch (f.type) {
     case "email":
       return "e2e@example.com";
@@ -162,7 +167,7 @@ export function nthOfType(fields: Field[], f: Field): number {
  * business rules do not reject the app's own end-to-end fixtures.
  */
 export function importedSample(f: Field, value: string, suffix: string): string {
-  if (f.type === "email") return value.replace("@", `+${suffix}@`);
+  if (emailLike(f)) return value.replace("@", `+${suffix}@`);
   // A reference keeps pointing to the same record (rules may require that it exists).
   if (["string", "text", "enum"].includes(f.type)) return `${value} ${suffix}`;
   return value;
@@ -170,15 +175,18 @@ export function importedSample(f: Field, value: string, suffix: string): string 
 
 /** First plain text field: what people type to identify a record (and what a reference to it holds). */
 export function displayField(e: Entity): Field | undefined {
-  return fieldsOf(e).find((f) => ["string", "text", "enum"].includes(f.type));
+  return fieldsOf(e).find(
+    (f) => ["string", "text", "enum"].includes(f.type) && words(f.name).at(-1) !== "id",
+  );
 }
 
 /**
- * Entity a reference field points to: the field is named after another generated entity ("teacher", "teacherId",
- * "room_id" → Teacher, Room) that has a display field. Deterministic; null when nothing matches.
+ * Entity a reference field points to: a `reference` field, or a text field, named after another generated entity
+ * ("teacher", "teacherId", "room_id" → Teacher, Room) that has a display field. The compiler often types a link as
+ * plain text, so the name decides. Deterministic; null when nothing matches.
  */
 export function referenceTarget(f: Field, self: Entity, all: Entity[]): Entity | null {
-  if (f.type !== "reference") return null;
+  if (!["reference", "string"].includes(f.type)) return null;
   const w = words(f.name);
   const key = (w.at(-1) === "id" ? w.slice(0, -1) : w).join(" ");
   if (!key) return null;
@@ -207,7 +215,12 @@ export function seedSample(
   for (const f of fields) {
     if (!f.required && f !== display) continue;
     const v = sampleFor(target, f, all);
-    out[camel(f.name)] = f.type === "boolean" ? "on" : importedSample(f, v, suffix);
+    out[camel(f.name)] =
+      f.type === "boolean"
+        ? "on"
+        : referenceTarget(f, target, all)
+          ? v
+          : importedSample(f, v, suffix);
   }
   return out;
 }
@@ -551,7 +564,7 @@ ${
 ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
               <td className="flex items-center justify-end gap-3 px-3 py-2">
                 {canUpdate ? (
-                  <Link className="text-sm underline" href={\`/dashboard/${n.slug}/\${row.id}\`}>
+                  <Link className="text-sm underline" href={\`/dashboard/${n.slug}/\${row.id}/edit\`}>
                     Edit
                   </Link>
                 ) : null}
@@ -705,7 +718,9 @@ ${steps.join("\n")}
   await page.getByRole("cell", { name: "${seed[camel(display.name)]}" }).first().waitFor({ timeout: 10_000 }).catch(() => undefined);`,
       ];
     });
-  const editable = fields.find((f) => ["string", "text", "enum"].includes(f.type));
+  const editable = fields.find(
+    (f) => ["string", "text", "enum"].includes(f.type) && !referenceTarget(f, e, all),
+  );
   const fills = fields
     .filter((f) => f.required || f === firstText)
     .map((f) =>
@@ -741,7 +756,15 @@ ${
     ? `
 test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async ({ page }) => {
   await page.goto("/dashboard/${n.slug}");
-  await page.getByRole("row").filter({ hasText: "${sample(editable)}" }).first().getByRole("link", { name: "Edit" }).click();
+  // The record this test created (exact cell), not a record another entity's test seeded with a similar name.
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "${sample(editable)}", exact: true }) })
+    .first()
+    .getByRole("link", { name: "Edit" })
+    .click();
+  // The list page has a create form with the same labels: wait for the edit page before filling.
+  await expect(page.getByRole("heading", { name: "Edit ${n.labelSingular.toLowerCase()}" })).toBeVisible();
   await page.getByLabel("${label(editable.name)}", { exact: true }).fill("${sample(editable)} edited");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("cell", { name: "${sample(editable)} edited" }).first()).toBeVisible();
@@ -779,7 +802,8 @@ ${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await pa
     { path: `src/entities/${n.slug}/rules.ts`, content: rules },
     { path: `src/entities/${n.slug}/related.ts`, content: related },
     { path: `src/app/dashboard/${n.slug}/page.tsx`, content: page },
-    { path: `src/app/dashboard/${n.slug}/[id]/page.tsx`, content: editPage },
+    // Under /<id>/edit (not /<id>): the CSV download link /export must not look like a page route.
+    { path: `src/app/dashboard/${n.slug}/[id]/edit/page.tsx`, content: editPage },
     ...(features.csvExport
       ? [{ path: `src/app/dashboard/${n.slug}/export/route.ts`, content: exportRoute }]
       : []),

@@ -36,17 +36,10 @@ export function bindRelated<L extends Record<string, Loader>>(
   loaders: L,
   organizationId: string,
 ): BoundRelated<L> {
-  const cache = new Map<keyof L, ReturnType<Loader>>();
-  const bound = {} as Record<keyof L, () => ReturnType<Loader>>;
-  for (const key of Object.keys(loaders) as (keyof L)[]) {
-    bound[key] = () => {
-      let rows = cache.get(key);
-      if (!rows) {
-        rows = loaders[key](organizationId);
-        cache.set(key, rows);
-      }
-      return rows;
-    };
+  const bound: Record<string, () => ReturnType<Loader>> = {};
+  for (const [key, load] of Object.entries(loaders) as [string, Loader][]) {
+    let rows: ReturnType<Loader> | undefined;
+    bound[key] = () => (rows ??= load(organizationId));
   }
   return bound as BoundRelated<L>;
 }

@@ -128,7 +128,7 @@ describe("business rules hook (T3)", () => {
       expect.arrayContaining([
         "src/entities/membership-plans/rules.ts",
         "src/entities/membership-plans/related.ts",
-        "src/app/dashboard/membership-plans/[id]/page.tsx",
+        "src/app/dashboard/membership-plans/[id]/edit/page.tsx",
       ]),
     );
     expect(actions).toContain('operation: "create",\n    previous: null,');
@@ -146,7 +146,7 @@ describe("business rules hook (T3)", () => {
     expect(actions).toContain(
       ".where(and(eq(membershipPlans.id, id), eq(membershipPlans.organizationId, ctx.organizationId)))",
     );
-    const edit = files.find((f) => f.path.endsWith("[id]/page.tsx"))?.content ?? "";
+    const edit = files.find((f) => f.path.endsWith("[id]/edit/page.tsx"))?.content ?? "";
     expect(edit).toContain('if (!can(ctx.role, "update")) notFound();');
     expect(edit).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
     const e2e = files.find((f) => f.path.endsWith(".spec.ts"))?.content ?? "";
@@ -168,6 +168,13 @@ describe("business rules hook (T3)", () => {
     const all = [teacher, course];
     expect(referenceTarget(course.fields[1]!, course, all)?.name).toBe("Teacher");
     expect(referenceTarget(course.fields[0]!, course, all)).toBeNull();
+    // The compiler often types a link as plain text: the field name decides.
+    expect(
+      referenceTarget({ name: "teacherId", type: "string", required: true }, course, all)?.name,
+    ).toBe("Teacher");
+    expect(
+      referenceTarget({ name: "teacherNotes", type: "text", required: false }, course, all),
+    ).toBeNull();
     expect(referencedEntities(course, all)).toEqual(["Teacher"]);
     // The course points to the teacher its test creates first; the imported course to a second teacher.
     expect(sampleFor(course, course.fields[1]!, all)).toBe("Teacher Full name sample for-courses");

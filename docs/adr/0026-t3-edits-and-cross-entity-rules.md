@@ -14,7 +14,7 @@ generated entities had no edit flow, and rules such as "a course can only be ass
 
 **Edits.** Every generated entity now has an edit flow: `update<Entity>` server action (role check `can(role,
 "update")`, rate limit, `z.uuid()` id, read and write scoped to the active workspace), an edit page
-`/dashboard/<entity>/<id>` (owners and admins; `notFound()` otherwise) and an E2E test that edits a record. The rules
+`/dashboard/<entity>/<id>/edit` (owners and admins; `notFound()` otherwise) and an E2E test that edits a record. The rules
 hook receives `ctx.operation` (`"create" | "update"`), `ctx.previous` (the record before the change) and `ctx.existing()`
 excludes the record being changed, so uniqueness and overlap checks never compare a record with itself.
 

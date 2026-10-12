@@ -759,8 +759,9 @@ async function businessRules(
     {
       summary: spec.summary,
       recipe:
-        `${recipe.description}. Every other entity gets create and edit forms with typed, required-field ` +
-        "validation, a searchable list and delete, scoped to the workspace.",
+        `${recipe.description}. Every other entity gets create and edit forms that already reject missing ` +
+        "required values and values of the wrong type (emails, numbers, dates), a searchable list and delete, " +
+        "scoped to the workspace.",
       criteria: spec.acceptance_criteria,
       entities: Object.fromEntries(
         entities.map((e) => [e.name, fieldsOf(e).map((f) => `${f.name} (${f.type})`)]),

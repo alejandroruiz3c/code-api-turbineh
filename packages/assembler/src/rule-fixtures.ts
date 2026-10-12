@@ -85,7 +85,9 @@ export function ruleFiles(e: Entity, all: Entity[] = [e], relatedNames: string[]
   const n = entityNames(e.name);
   const fields = fieldsOf(e);
   const firstText = fields.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
-  const editable = fields.find((f) => ["string", "text", "enum"].includes(f.type));
+  const editable = fields.find(
+    (f) => ["string", "text", "enum"].includes(f.type) && !referenceTarget(f, e, all),
+  );
   const created: Record<string, string> = {};
   const imported: Record<string, string> = {};
   const formats: Record<string, string> = {};

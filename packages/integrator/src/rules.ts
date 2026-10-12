@@ -140,6 +140,8 @@ export async function writeRules(
           "record: find it by comparing case-insensitively and trimmed, and treat a missing record as breaking an " +
           '"exists" rule. Call each loader only when needed. '
         : "") +
+      "The create schema already rejects missing required values and wrong value types before the rules run: no code " +
+      "for that (a rule that only says a field is required needs nothing). " +
       "Treat missing optional values (undefined or null) as not matching. Compare text case-insensitively and trimmed. " +
       '"After", "before", "more than" and "less than" are strict (equal values break the rule); "from", "until", ' +
       '"at least" and "at most" include the boundary. ' +
@@ -186,7 +188,10 @@ export async function writeRules(
       "Pass as the context `{ operation, previous, existing: () => Promise.resolve(rows), related: " +
       `${relatedExpr} }` +
       '` with operation "create" and previous null, or operation "update" and previous set to the record before the ' +
-      "change. For EACH rule and each operation in its `applies_on`: one test where a violating record is rejected " +
+      "change. Every input must be one the create schema accepts (never an empty required value or a value of the " +
+      "wrong format: the schema rejects those before the rules run, so such a test would throw); a rule that the " +
+      "schema already enforces gets only its accepted case. " +
+      "For EACH rule and each operation in its `applies_on`: one test where a violating record is rejected " +
       "(the result is a non-empty string) and one where a valid record is accepted (null); for a comparison rule, " +
       "also one test with the two values exactly equal (strict words reject it, inclusive words accept it); for a rule " +
       'that applies only on "create" or only on "update", one test showing the other operation is not restricted. ' +
