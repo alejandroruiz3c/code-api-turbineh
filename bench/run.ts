@@ -2,6 +2,7 @@
  * Benchmark runner (PLAN §12, WP16). Sends every prompt in bench/prompts/ to the public API (staging by default),
  * one at a time, waits for the result and writes a JSON + Markdown report to bench/results/.
  *
+ *   BENCH_RUN=2026-10-12T16 pnpm bench   # resume a run: finished builds are reused, not rebuilt
  *   pnpm bench                      # staging (ADR-0022), API key from BENCH_API_KEY or STG_SMOKE_API_KEY in .env.local
  *   pnpm bench -- --only saas-01    # one prompt
  *
@@ -48,18 +49,34 @@ interface Prompt {
 }
 
 const headers = { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
-const get = async (path: string) =>
-  (await fetch(`${API}${path}`, { headers })).json() as Promise<Record<string, unknown>>;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/**
+ * Run id in the idempotency keys: re-running with the same BENCH_RUN (e.g. after the operator's network dropped)
+ * returns the builds already done instead of building them again.
+ */
+const RUN = process.env.BENCH_RUN ?? new Date().toISOString().slice(0, 13);
+/** Network errors and 5xx are retried with backoff (about 10 minutes in total); builds keep running server-side. */
+async function call(path: string, init: RequestInit = {}): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(`${API}${path}`, {
+        ...init,
+        headers: { ...headers, ...init.headers },
+      });
+      if (res.status < 500 || attempt >= 12) return res;
+    } catch (err) {
+      if (attempt >= 12) throw err;
+    }
+    await sleep(Math.min(60_000, 5000 * 2 ** attempt));
+  }
+}
+const get = async (path: string) => (await call(path)).json() as Promise<Record<string, unknown>>;
 
 async function runOne(p: Prompt) {
   const t0 = Date.now();
-  const res = await fetch(`${API}/v1/builds`, {
+  const res = await call("/v1/builds", {
     method: "POST",
-    headers: {
-      ...headers,
-      "Idempotency-Key": `bench-${p.id}-${new Date().toISOString().slice(0, 13)}`,
-    },
+    headers: { "Idempotency-Key": `bench-${p.id}-${RUN}` },
     body: JSON.stringify({ prompt: p.prompt }),
   });
   const created = (await res.json()) as { build_id?: string; title?: string };

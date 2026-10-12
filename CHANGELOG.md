@@ -24,6 +24,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- `pnpm bench` survives network drops on the operator's machine (retries with backoff) and can resume a run with `BENCH_RUN` (finished builds are reused through their idempotency keys).
 - Correction commits no longer include migrations generated during verification: those go in their own `chore(db)` commit first.
 - T3 rules: "after/before/more than/less than" are strict and "from/until/at least/at most" inclusive; rule tests include the boundary case.
 - `pnpm bench` targets staging by default with the staging smoke key (ADR-0022); production only with `BENCH_API_URL`.
