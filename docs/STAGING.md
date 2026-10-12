@@ -1,4 +1,19 @@
-# Staging runbook
+# Environments runbook (production and staging)
+
+Two separate environments since ADR-0022. The tables below describe **production** (`software.turbineh.com`);
+staging mirrors it with its own pieces:
+
+| Piece            | Staging                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Web + public API | Vercel `code-frontiers-web-staging`, `staging.software.turbineh.com` (`TARGET=staging npx tsx infra/staging/web.ts all`) |
+| Worker           | same host, unit `turbineh-worker-staging`, `/opt/code-api-turbineh-staging`, `/etc/turbineh/worker-staging.env`          |
+| Database         | database `turbineh_staging` in the same managed instance (`provision staging-db`)                                        |
+| Artefacts        | bucket `code-frontiers-artifacts-staging` (`provision staging-bucket`)                                                   |
+| Smoke API key    | `STG_SMOKE_API_KEY` (`TARGET=staging npx tsx infra/staging/api-key.ts`)                                                  |
+
+**Release flow:** merge the PR → `infra/staging/deploy.sh staging` → smoke build on staging →
+`infra/staging/deploy.sh production` (refuses anything but a clean `main`). Each run syncs the code, builds the
+worker, applies migrations, restarts the unit, deploys the web and checks `/health`.
 
 | Piece            | Where                                                                                       | How to (re)create                                                                                                                     |
 | ---------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |

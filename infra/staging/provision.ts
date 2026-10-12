@@ -3,7 +3,8 @@
  * worker instance. Idempotent: existing resources (matched by name) are reused. Secrets come from .env.local and
  * are never printed.
  *
- *   pnpm --filter @turbineh/infra run provision -- <step>   (steps: ssh-key | bucket | db | instance | status)
+ *   pnpm --filter @turbineh/infra run provision -- <step>
+ *   steps: ssh-key | bucket | db | instance | status (production) · staging-bucket | staging-db (ADR-0022)
  */
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -28,6 +29,9 @@ const REGION = "fr-par";
 const ZONE = "fr-par-1";
 const NAME = "code-frontiers-staging";
 const BUCKET = "code-frontiers-artifacts";
+// Staging (ADR-0022): its own bucket and its own database inside the same managed instance (no extra cost).
+const STAGING_BUCKET = "code-frontiers-artifacts-staging";
+const STAGING_DB = "turbineh_staging";
 
 async function scw<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`https://api.scaleway.com${path}`, {
@@ -56,7 +60,8 @@ async function sshKey(): Promise<void> {
   console.log(`ssh key created (${k.id})`);
 }
 
-async function bucket(): Promise<void> {
+async function bucket(name = BUCKET): Promise<void> {
+  const BUCKET = name;
   const s3 = new S3Client({
     region: REGION,
     endpoint: `https://s3.${REGION}.scw.cloud`,
@@ -196,10 +201,39 @@ async function status(): Promise<void> {
   );
 }
 
+/** Staging database in the production instance: separate data, same engine and extensions. */
+async function stagingDb(): Promise<void> {
+  const list = await scw<{ instances: { id: string; name: string }[] }>(
+    "GET",
+    `/rdb/v1/regions/${REGION}/instances?project_id=${PROJECT}&name=${NAME}`,
+  );
+  const inst = list.instances.find((i) => i.name === NAME);
+  if (!inst) throw new Error("database instance not found; run 'db' first");
+  const dbs = await scw<{ databases: { name: string }[] }>(
+    "GET",
+    `/rdb/v1/regions/${REGION}/instances/${inst.id}/databases?name=${STAGING_DB}`,
+  );
+  if (dbs.databases.some((d) => d.name === STAGING_DB)) console.log("staging database exists");
+  else {
+    await scw("POST", `/rdb/v1/regions/${REGION}/instances/${inst.id}/databases`, {
+      name: STAGING_DB,
+    });
+    console.log("staging database created");
+  }
+  await scw("PUT", `/rdb/v1/regions/${REGION}/instances/${inst.id}/privileges`, {
+    database_name: STAGING_DB,
+    user_name: "turbineh",
+    permission: "all",
+  });
+  console.log("privileges set");
+}
+
 const steps: Record<string, () => Promise<void>> = {
   "ssh-key": sshKey,
-  bucket,
+  bucket: () => bucket(),
   db,
+  "staging-bucket": () => bucket(STAGING_BUCKET),
+  "staging-db": stagingDb,
   instance,
   status,
 };

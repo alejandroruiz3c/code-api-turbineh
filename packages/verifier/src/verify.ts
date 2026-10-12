@@ -330,14 +330,19 @@ const shot = async (page, path, name) => {
   await page.goto(base + path, { waitUntil: "networkidle" });
   await page.screenshot({ path: out + name + ".png" });
 };
+// The public home only when it is a real page: internal tools redirect visitors to sign-in, which says nothing.
 const visitor = await b.newPage({ viewport: { width: 1280, height: 800 } });
-await shot(visitor, "/", "1-home");
+await visitor.goto(base + "/", { waitUntil: "networkidle" });
+const isSignIn = (await visitor.locator('input[type="password"]').count()) > 0;
+if (!isSignIn) await visitor.screenshot({ path: out + "1-home.png" });
 const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, storageState: "playwright/.auth/owner.json" });
 const owner = await ctx.newPage();
 await shot(owner, "/dashboard", "2-dashboard");
 const links = await owner.locator('nav[aria-label="Main"] a').evaluateAll((as) => as.map((a) => a.getAttribute("href")));
-const first = links.find((h) => h && h.startsWith("/dashboard/"));
-if (first) await shot(owner, first, "3-" + first.split("/").filter(Boolean).slice(1).join("-").replace(/[^a-z0-9-]/gi, ""));
+const modules = [...new Set(links.filter((h) => h && h.startsWith("/dashboard/")))].slice(0, isSignIn ? 2 : 1);
+for (const [i, href] of modules.entries()) {
+  await shot(owner, href, 3 + i + "-" + href.split("/").filter(Boolean).slice(1).join("-").replace(/[^a-z0-9-]/gi, ""));
+}
 await b.close();
 JS
   timeout 90 node preview.mjs > /tmp/preview.log 2>&1 && echo "PREVIEWS ok" || echo "PREVIEWS skipped"

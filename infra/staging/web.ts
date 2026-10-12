@@ -1,8 +1,12 @@
 /**
- * Web app on Vercel (software.turbineh.com, region cdg1): project, encrypted env vars, domain and the IONOS CNAME.
- * Idempotent. Secrets come from .env.local and are never printed.
+ * Web app on Vercel (region cdg1): project, encrypted env vars, domain and the IONOS CNAME. Idempotent. Secrets come
+ * from .env.local and are never printed.
  *
- *   npx tsx infra/staging/web.ts <step>   (steps: project | env | domain | dns | all)
+ *   npx tsx infra/staging/web.ts <step>                 production: software.turbineh.com
+ *   TARGET=staging npx tsx infra/staging/web.ts <step>  staging: staging.software.turbineh.com (ADR-0022)
+ *   steps: project | env | domain | dns | all
+ *
+ * .env.local names: production uses the legacy STAGING_* names; staging uses STG_* (falls back to shared values).
  */
 import { loadLocalEnv } from "@turbineh/shared";
 
@@ -14,8 +18,17 @@ const need = (k: string) => {
 };
 const TOKEN = need("VERCEL_TOKEN");
 const TEAM = "team_BBQ9Gyb31uDAzUkxSLx2AJqs";
-const PROJECT = "code-frontiers-web";
-const DOMAIN = "software.turbineh.com";
+const STAGING = process.env.TARGET === "staging";
+const PROJECT = STAGING ? "code-frontiers-web-staging" : "code-frontiers-web";
+const DOMAIN = STAGING ? "staging.software.turbineh.com" : "software.turbineh.com";
+const BUCKET = STAGING ? "code-frontiers-artifacts-staging" : "code-frontiers-artifacts";
+/** Environment-specific value: STG_<name> on staging, <legacy production name> otherwise. */
+const pick = (stg: string, prod: string) => (STAGING ? need(stg) : need(prod));
+/** Optional shared settings (Deploy-for-me sign-in): STG_<name> on staging, <name> on production. */
+const optional = (name: string): Record<string, string> => {
+  const v = process.env[STAGING ? `STG_${name}` : name];
+  return v ? { [name]: v } : {};
+};
 const IONOS_ZONE = "5df240aa-e57f-11f0-8802-0a5864440b1b";
 
 async function vercel<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -51,22 +64,32 @@ async function project(): Promise<void> {
 
 async function env(): Promise<void> {
   const vars: Record<string, string> = {
-    DATABASE_URL: need("STAGING_DATABASE_URL"),
+    DATABASE_URL: pick("STG_DATABASE_URL", "STAGING_DATABASE_URL"),
     DATABASE_CA_CERT: need("STAGING_DATABASE_CA_CERT"),
     DATABASE_POOL_MAX: "3",
-    BETTER_AUTH_SECRET: need("STAGING_BETTER_AUTH_SECRET"),
+    BETTER_AUTH_SECRET: pick("STG_BETTER_AUTH_SECRET", "STAGING_BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: `https://${DOMAIN}`,
-    GITHUB_CLIENT_ID: need("GITHUB_CLIENT_ID"),
-    GITHUB_CLIENT_SECRET: need("GITHUB_CLIENT_SECRET"),
-    DELIVERY_TOKEN_KEY: need("STAGING_DELIVERY_TOKEN_KEY"),
+    // GitHub OAuth apps accept one callback domain: staging needs its own app (STG_GITHUB_CLIENT_*).
+    GITHUB_CLIENT_ID:
+      process.env.STG_GITHUB_CLIENT_ID && STAGING
+        ? need("STG_GITHUB_CLIENT_ID")
+        : need("GITHUB_CLIENT_ID"),
+    GITHUB_CLIENT_SECRET:
+      process.env.STG_GITHUB_CLIENT_SECRET && STAGING
+        ? need("STG_GITHUB_CLIENT_SECRET")
+        : need("GITHUB_CLIENT_SECRET"),
+    DELIVERY_TOKEN_KEY: pick("STG_DELIVERY_TOKEN_KEY", "STAGING_DELIVERY_TOKEN_KEY"),
     STORAGE_DRIVER: "s3",
     S3_ENDPOINT: "https://s3.fr-par.scw.cloud",
     S3_REGION: "fr-par",
-    S3_BUCKET: "code-frontiers-artifacts",
+    S3_BUCKET: BUCKET,
     S3_ACCESS_KEY_ID: need("SCW_ACCESS_KEY"),
     S3_SECRET_ACCESS_KEY: need("SCW_SECRET_KEY"),
-    DAILY_COST_CAP_EUR: "100",
+    DAILY_COST_CAP_EUR: STAGING ? "20" : "100",
     USER_DAILY_BUILDS: "10",
+    ...optional("VERCEL_INTEGRATION_SLUG"),
+    ...optional("VERCEL_INTEGRATION_CLIENT_ID"),
+    ...optional("VERCEL_INTEGRATION_CLIENT_SECRET"),
   };
   const body = Object.entries(vars).map(([key, value]) => ({
     key,
