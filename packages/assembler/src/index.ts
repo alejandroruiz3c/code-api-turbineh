@@ -5,3 +5,4 @@ export * from "./recipes.js";
 export * from "./handover.js";
 export * from "./brand-theme.js";
 export * from "./site-content.js";
+export * from "./rule-fixtures.js";

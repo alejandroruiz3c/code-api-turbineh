@@ -1,13 +1,16 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
   assemble,
+  entitiesToGenerate,
+  fieldsOf,
   parseBrand,
   hasRecipe,
   mergedRecipe,
   recipeChain,
+  ruleFiles,
   type SelectedComponent,
 } from "@turbineh/assembler";
 import type { BackupCoder } from "@turbineh/backup-coder";
@@ -21,10 +24,15 @@ import {
   fillGap,
   integrateComponents,
   isFillable,
+  rulesCapability,
+  writeRules,
   type FilledGap,
   type IntegrationResult,
+  type RuleTarget,
+  type WrittenRules,
 } from "@turbineh/integrator";
 import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
+import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 
@@ -49,7 +57,7 @@ export interface PipelineDeps {
   decider: Decider;
   fixers: FixerSlot[];
   writer: WriterConfig;
-  /** Always connected (ADR-0003): fills gaps (T1/T2) and takes over exhausted corrections (T4). */
+  /** Always connected (ADR-0003): fills gaps (T1/T2), writes business rules (T3), takes over corrections (T4). */
   backupCoder: BackupCoder;
   /** Catalog flywheel records (default: catalog/gaps under repoRoot). */
   gapsDir?: string;
@@ -268,6 +276,12 @@ export async function runBuild(
   // 4b · integrate external components + Backup Coder fills (T1/T2), in parallel; swap point = assembled commit
   t = performance.now();
   const assembledCommit = git(repoDir, "rev-parse", "HEAD").toString().trim();
+  // T3 (ADR-0023) runs in parallel with integration: decider batch → Backup Coder per entity. Files stay in memory
+  // until the integration step has committed, so the two never race on the working tree.
+  const rulesTask = businessRules(repoDir, spec, recipe, deps, buildId).catch(() => ({
+    candidates: [] as RuleCandidate[],
+    written: [] as WrittenRules[],
+  }));
   const componentsDir = join(deps.repoRoot, "catalog/components");
   const label = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;
   const toFill = gaps
@@ -360,6 +374,46 @@ export async function runBuild(
       error: integrationError,
     });
   }
+  // T3 files: secret scan before git, then one commit (each entity's rules are kept or dropped as a whole).
+  const t3 = await rulesTask;
+  let rules = t3.written;
+  if (rules.length > 0) {
+    for (const r of rules) for (const f of r.files) writeAt(repoDir, f.path, f.content);
+    const leaking = new Set(
+      leakingFiles(
+        repoDir,
+        rules.flatMap((r) => [r.module, r.test]),
+      ),
+    );
+    const dropped = rules.filter((r) => leaking.has(r.module) || leaking.has(r.test));
+    if (dropped.length > 0) {
+      // The entity's rules module goes back to the assembled stub; its tests did not exist there.
+      for (const r of dropped) {
+        git(repoDir, "checkout", "-q", assembledCommit, "--", r.module);
+        for (const f of [r.test, r.fixtures]) rmSync(join(repoDir, f), { force: true });
+      }
+      rules = rules.filter((r) => !dropped.includes(r));
+      await deps.emit(buildId, "integrating", "secret-scan", { removed: [...leaking] });
+    }
+    git(repoDir, "add", "-A");
+    if (rules.length > 0) {
+      git(
+        repoDir,
+        "commit",
+        "-q",
+        "-m",
+        `feat: business rules for ${rules.length} entit(ies) (T3)`,
+      );
+    }
+    await deps.emit(buildId, "integrating", "rules", {
+      rules: rules.map((r) => ({
+        entity: r.entity,
+        rules: r.rules,
+        module: r.module,
+        model: r.model,
+      })),
+    });
+  }
   lap("integrate", t);
   const integratedCaps = new Set(integrations.map((i) => i.capability));
   const filledCaps = new Set(filled.map((f) => f.capability));
@@ -401,15 +455,24 @@ export async function runBuild(
       usage: i.usage,
     })),
     backup: {
-      activations: filled.map((f) => ({
-        capability: f.capability,
-        trigger: f.trigger,
-        model: f.model,
-        failedOver: f.failedOver,
-        usage: f.usage,
-        module: f.module,
-      })),
+      activations: [
+        ...filled.map((f) => ({
+          capability: f.capability,
+          trigger: f.trigger,
+          model: f.model,
+          failedOver: f.failedOver,
+          usage: f.usage,
+          module: f.module,
+        })),
+        ...rules.map((r) => ruleActivation(r, true)),
+      ],
     },
+    businessRules: t3.candidates.map((c) => ({
+      criterion: c.criterion,
+      entity: c.entity,
+      selected: c.selected,
+      reason: c.reason,
+    })),
     pendingIntegration,
     gaps: gapsWithPending,
   };
@@ -433,11 +496,22 @@ export async function runBuild(
           file: f.module,
         })),
         reusedShare: (metrics.reuse as { reusedShare: number }).reusedShare,
+        businessRules: rules.map((r) => ({
+          capability: rulesCapability(slugOf(r.module)),
+          entity: r.entity,
+          rules: r.rules,
+          file: r.module,
+          test: r.test,
+        })),
       },
       metrics: { ...metrics, timings },
       swap: {
         toCommit: assembledCommit,
-        capabilities: [...integratedCaps, ...filledCaps],
+        capabilities: [
+          ...integratedCaps,
+          ...filledCaps,
+          ...rules.map((r) => rulesCapability(slugOf(r.module))),
+        ],
         parts: [
           ...integrations.flatMap((i) =>
             i.glue ? [{ capability: i.capability, kind: "glue" as const, files: [i.glue] }] : [],
@@ -446,6 +520,11 @@ export async function runBuild(
             capability: f.capability,
             kind: "backup" as const,
             files: [f.module, f.test],
+          })),
+          ...rules.map((r) => ({
+            capability: rulesCapability(slugOf(r.module)),
+            kind: "rules" as const,
+            files: [r.module, r.test, r.fixtures],
           })),
         ],
       },
@@ -473,22 +552,29 @@ export async function runBuild(
       .filter((i) => !fin.swappedOut.includes(i.capability))
       .map((i) => ({ ...i, glue: fin.glueRemoved.includes(i.capability) ? null : i.glue })),
     backup: {
-      activations: filled.map((f) => ({
-        capability: f.capability,
-        trigger: f.trigger,
-        model: f.model,
-        failedOver: f.failedOver,
-        usage: f.usage,
-        module: f.module,
-        kept: !fin.swappedOut.includes(f.capability),
-      })),
+      activations: [
+        ...filled.map((f) => ({
+          capability: f.capability,
+          trigger: f.trigger,
+          model: f.model,
+          failedOver: f.failedOver,
+          usage: f.usage,
+          module: f.module,
+          kept: !fin.swappedOut.includes(f.capability),
+        })),
+        ...rules.map((r) =>
+          ruleActivation(r, !fin.swappedOut.includes(rulesCapability(slugOf(r.module)))),
+        ),
+      ],
     },
     gaps: [
       ...gapsWithPending,
-      ...fin.swappedOut.map((capability) => ({
-        capability,
-        trigger: "removed after failed corrections (T4)",
-      })),
+      ...fin.swappedOut
+        .filter((capability) => !capability.startsWith("rules."))
+        .map((capability) => ({
+          capability,
+          trigger: "removed after failed corrections (T4)",
+        })),
     ],
   };
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
@@ -623,4 +709,99 @@ function appendComponentsDoc(
       : "",
   ].filter(Boolean);
   writeFileSync(path, `${body.trimEnd()}\n\n${sections.join("\n")}`);
+}
+
+const slugOf = (rulesModule: string) => rulesModule.split("/")[2] ?? rulesModule;
+
+function ruleActivation(r: WrittenRules, kept: boolean) {
+  return {
+    capability: rulesCapability(slugOf(r.module)),
+    trigger: "T3" as const,
+    model: r.model,
+    failedOver: r.failedOver,
+    usage: r.usage,
+    module: r.module,
+    rules: r.rules,
+    kept,
+  };
+}
+
+function writeAt(dir: string, rel: string, content: string): void {
+  mkdirSync(dirname(join(dir, rel)), { recursive: true });
+  writeFileSync(join(dir, rel), content);
+}
+
+/**
+ * T3: which acceptance criteria are business rules on entities this build generated (decider + fixed thresholds),
+ * then one Backup Coder module + test per entity. Rules on recipe-provided entities stay the recipe's job.
+ */
+async function businessRules(
+  repoDir: string,
+  spec: Parameters<typeof entitiesToGenerate>[0],
+  recipe: { description: string; providedEntities: string[] },
+  deps: PipelineDeps,
+  buildId: string,
+): Promise<{ candidates: RuleCandidate[]; written: WrittenRules[] }> {
+  const entities = entitiesToGenerate(spec, recipe.providedEntities);
+  if (entities.length === 0) return { candidates: [], written: [] };
+  const lib = readFileSync(join(repoDir, "src/lib/rules.ts"), "utf8");
+  const targets = new Map<string, RuleTarget>();
+  for (const e of entities) {
+    const f = ruleFiles(e);
+    targets.set(e.name, {
+      entity: e.name,
+      pascal: f.pascal,
+      slug: f.slug,
+      rules: [],
+      files: {
+        rules: f.rules,
+        schema: f.schema,
+        table: f.table,
+        test: f.test,
+        fixtures: f.fixtures,
+      },
+      samples: f.samples,
+      formats: f.formats,
+      fixturesTest: f.fixturesTest,
+      contracts: {
+        schema: readFileSync(join(repoDir, f.schema), "utf8"),
+        table: readFileSync(join(repoDir, f.table), "utf8"),
+        lib,
+      },
+    });
+  }
+  const candidates = await decideRules(
+    {
+      summary: spec.summary,
+      recipe:
+        `${recipe.description}. Every other entity gets a create form with typed, required-field validation, ` +
+        "a searchable list and delete, scoped to the workspace.",
+      criteria: spec.acceptance_criteria,
+      entities: Object.fromEntries(
+        entities.map((e) => [e.name, fieldsOf(e).map((f) => `${f.name} (${f.type})`)]),
+      ),
+    },
+    deps.decider,
+  );
+  for (const c of candidates)
+    if (c.selected && c.entity) targets.get(c.entity)?.rules.push(c.criterion);
+  await deps.emit(buildId, "integrating", "rules-decided", {
+    candidates: candidates.map((c) => ({
+      criterion: c.criterion,
+      entity: c.entity,
+      reason: c.reason,
+    })),
+  });
+  const written = await Promise.all(
+    [...targets.values()]
+      .filter((t) => t.rules.length > 0)
+      .map((t) =>
+        writeRules(t, deps.backupCoder, {
+          buildId,
+          summary: spec.summary,
+          gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
+        }).catch(() => null),
+      ),
+  );
+  return { candidates, written: written.filter((w): w is WrittenRules => w !== null) };
 }

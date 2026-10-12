@@ -63,8 +63,11 @@ export interface FinalizeInput {
   swap?: {
     toCommit: string;
     capabilities: string[];
-    /** Optional files per capability (glue, Backup Coder module + test), removable one by one before a full swap. */
-    parts: { capability: string; kind: "glue" | "backup"; files: string[] }[];
+    /**
+     * Optional files per capability (glue, Backup Coder module + test, T3 business rules + tests), removable one by
+     * one before a full swap. Removing restores the file as it was at `toCommit` (a rules stub) or deletes it.
+     */
+    parts: { capability: string; kind: "glue" | "backup" | "rules"; files: string[] }[];
   };
 }
 
@@ -86,12 +89,28 @@ export interface FinalizeResult {
   swappedOut: string[];
 }
 
+/** A file as it was at `commit` when it existed there (e.g. the business-rules stub), otherwise removed. */
+function restoreOrRemove(dir: string, commit: string, file: string): void {
+  try {
+    execFileSync("git", ["cat-file", "-e", `${commit}:${file}`], { cwd: dir, stdio: "ignore" });
+    execFileSync("git", ["checkout", "-q", commit, "--", file], { cwd: dir });
+  } catch {
+    rmSync(join(dir, file), { force: true });
+  }
+}
+
 const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
 
 /** Evidence actually produced by this build's checks: E2E and unit test titles found in the repository. */
 function evidenceOf(repoDir: string): string[] {
   const out = new Set<string>();
-  for (const dir of ["tests/e2e", "tests/unit", "tests/unit/components", "tests/unit/backup"]) {
+  for (const dir of [
+    "tests/e2e",
+    "tests/unit",
+    "tests/unit/components",
+    "tests/unit/backup",
+    "tests/unit/rules",
+  ]) {
     const path = join(repoDir, dir);
     if (!existsSync(path)) continue;
     const files = readdirSync(path);
@@ -157,12 +176,15 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     const remaining = [...(input.swap?.parts ?? [])];
     while (qualityFailed(result) && remaining.length > 0) {
       const log = failureLog(result);
-      const culprits = remaining.filter((p) => p.files.some((f) => log.includes(f)));
+      let culprits = remaining.filter((p) => p.files.some((f) => log.includes(f)));
+      // Business rules change behaviour (an E2E test can fail without naming them): they go before a full swap.
+      if (culprits.length === 0) culprits = remaining.filter((p) => p.kind === "rules");
       if (culprits.length === 0) break;
       for (const c of culprits) remaining.splice(remaining.indexOf(c), 1);
       {
         for (const p of culprits) {
-          for (const f of p.files) rmSync(join(input.repoDir, f), { force: true });
+          for (const f of p.files)
+            restoreOrRemove(input.repoDir, input.swap?.toCommit ?? "HEAD", f);
         }
         execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
         execFileSync(
@@ -180,7 +202,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
           { cwd: input.repoDir },
         );
         glueRemoved.push(...culprits.filter((p) => p.kind === "glue").map((p) => p.capability));
-        swappedOut.push(...culprits.filter((p) => p.kind === "backup").map((p) => p.capability));
+        swappedOut.push(...culprits.filter((p) => p.kind !== "glue").map((p) => p.capability));
         await deps.emit("correcting", "swap", { removed: culprits });
         await reverify({ afterSwap: "partial" });
       }
@@ -279,8 +301,12 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   const facts: ReportFacts = {
     ...input.facts,
     components: input.facts.components.filter((c) => !swapped.has(c.capability)),
-    gaps: [...new Set([...input.facts.gaps, ...swappedOut])],
+    gaps: [...new Set([...input.facts.gaps, ...swappedOut.filter((c) => !c.startsWith("rules."))])],
     backupGenerated: (input.facts.backupGenerated ?? []).filter((b) => !swapped.has(b.capability)),
+    businessRules: (input.facts.businessRules ?? []).map((r) => ({
+      ...r,
+      implemented: !swapped.has(r.capability),
+    })),
     evidence: evidenceOf(input.repoDir),
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,

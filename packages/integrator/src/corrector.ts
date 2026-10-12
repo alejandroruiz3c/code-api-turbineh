@@ -38,12 +38,22 @@ export function correctableFiles(dir: string, log: string): string[] {
   const tracked = execFileSync("git", ["ls-files"], { cwd: dir })
     .toString()
     .split("\n")
-    .filter((f) => /\.(ts|tsx)$/.test(f) && !f.startsWith("tests/unit/components/"));
+    // Contract tests and the business-rule fixture tests (written by code) are oracles: never edited by a model.
+    .filter(
+      (f) =>
+        /\.(ts|tsx)$/.test(f) &&
+        !f.startsWith("tests/unit/components/") &&
+        !f.endsWith(".fixtures.test.ts"),
+    );
   // A failing generated test and the module it tests are corrected together (the bug may be in either).
   const mentioned = new Set(tracked.filter((f) => log.includes(f)));
-  for (const f of [...mentioned]) {
+  for (const f of tracked.filter((x) => log.includes(x))) {
     const m = /^tests\/unit\/backup\/(.+)\.test\.ts$/.exec(f);
     if (m && tracked.includes(`src/backup/${m[1]}.ts`)) mentioned.add(`src/backup/${m[1]}.ts`);
+  }
+  for (const m of log.matchAll(/tests\/unit\/rules\/([a-z0-9-]+)(?:\.fixtures)?\.test\.ts/g)) {
+    const rules = `src/entities/${m[1]}/rules.ts`;
+    if (tracked.includes(rules)) mentioned.add(rules);
   }
   return tracked.filter((f) => {
     if (!mentioned.has(f)) return false;

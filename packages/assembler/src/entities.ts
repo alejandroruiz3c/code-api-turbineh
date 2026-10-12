@@ -101,7 +101,7 @@ function zodField(f: Field): string {
     case "decimal":
       return opt(`z.coerce.number().finite()`);
     case "boolean":
-      return `z.preprocess((v) => v === "on" || v === "true", z.boolean())`;
+      return `z.preprocess((v) => v === true || v === "on" || v === "true", z.boolean())`;
     case "date":
       return f.required
         ? `z.iso.date()`
@@ -130,7 +130,7 @@ function inputType(f: Field): string {
 }
 
 /** Sample values used by the generated E2E test (deterministic). */
-export function sampleValue(f: Field, entityLabel: string): string {
+export function sampleValue(f: Field, entityLabel: string, nth = 0): string {
   switch (f.type) {
     case "email":
       return "e2e@example.com";
@@ -139,9 +139,9 @@ export function sampleValue(f: Field, entityLabel: string): string {
     case "decimal":
       return "12.5";
     case "date":
-      return "2026-10-13";
+      return `2026-10-${String(13 + nth).padStart(2, "0")}`;
     case "datetime":
-      return "2026-10-13T10:30";
+      return `2026-10-${String(13 + nth).padStart(2, "0")}T10:30`;
     case "file":
       return "https://example.com/file.pdf";
     case "boolean":
@@ -149,6 +149,22 @@ export function sampleValue(f: Field, entityLabel: string): string {
     default:
       return `${entityLabel} ${label(f.name)} sample`;
   }
+}
+
+/** Position of a date/datetime field among the entity's fields of that kind (later fields get later sample dates). */
+export function nthOfType(fields: Field[], f: Field): number {
+  if (f.type !== "date" && f.type !== "datetime") return 0;
+  return fields.filter((x) => x.type === f.type).indexOf(f);
+}
+
+/**
+ * The imported sample differs from the created one in every text-like field, so uniqueness or "one per person"
+ * business rules do not reject the app's own end-to-end fixtures.
+ */
+export function importedSample(f: Field, value: string, suffix: string): string {
+  if (f.type === "email") return value.replace("@", `+${suffix}@`);
+  if (["string", "text", "enum", "reference"].includes(f.type)) return `${value} ${suffix}`;
+  return value;
 }
 
 export interface GeneratedFile {
@@ -186,17 +202,6 @@ ${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
 });
 `;
 
-  const schema = `${GENERATED}
-import { z } from "zod";
-
-/** Input validation for ${n.labelPlural} (Security Pack: every boundary is validated). */
-export const create${n.pascal}Schema = z.object({
-${fields.map((f) => `  ${camel(f.name)}: ${zodField(f)},`).join("\n")}
-});
-
-export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
-`;
-
   const toRow = fields
     .map((f) => {
       const k = camel(f.name);
@@ -209,26 +214,69 @@ export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
     })
     .join("\n");
 
+  const schema = `${GENERATED}
+import { z } from "zod";
+import type { ${n.variable} } from "@/db/tables/${n.slug}";
+import type { EntityRules } from "@/lib/rules";
+
+/** Input validation for ${n.labelPlural} (Security Pack: every boundary is validated). */
+export const create${n.pascal}Schema = z.object({
+${fields.map((f) => `  ${camel(f.name)}: ${zodField(f)},`).join("\n")}
+});
+
+export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
+export type ${n.pascal}Row = typeof ${n.variable}.$inferSelect;
+export type ${n.pascal}Rules = EntityRules<Create${n.pascal}Input, ${n.pascal}Row>;
+
+/** Column values of a validated input (the workspace, id and creation date are added by the server). */
+export function to${n.pascal}Values(input: Create${n.pascal}Input) {
+  return {
+${toRow}
+  };
+}
+`;
+
+  const rules = `${GENERATED}
+import type { ${n.pascal}Rules } from "./schema";
+
+/**
+ * Business rules for ${n.labelPlural.toLowerCase()}: none were requested for this app. When the request contains rules,
+ * the Backup Coder (trigger T3) writes them here with their own unit tests.
+ */
+export const check${n.pascal}Rules: ${n.pascal}Rules = () => Promise.resolve(null);
+`;
+
   const actions = `${GENERATED}
 "use server";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 ${features.csvImport ? `import { redirect } from "next/navigation";\n` : ""}import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 ${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { UserFacingError } from "@/security/errors";
+import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-import { create${n.pascal}Schema } from "./schema";
+import { check${n.pascal}Rules } from "./rules";
+import { create${n.pascal}Schema, to${n.pascal}Values, type ${n.pascal}Row } from "./schema";
+
+/** Records the business rules may inspect: same workspace only, newest first, bounded. */
+function existing${n.pascal}(organizationId: string): Promise<${n.pascal}Row[]> {
+  return db
+    .select()
+    .from(${n.variable})
+    .where(eq(${n.variable}.organizationId, organizationId))
+    .orderBy(desc(${n.variable}.createdAt))
+    .limit(RULES_SCAN_LIMIT);
+}
 
 export async function create${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to create ${n.labelPlural.toLowerCase()}.");
   if (!rateLimit(\`create:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
   const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
-  await db.insert(${n.variable}).values({
-    organizationId: ctx.organizationId,
-${toRow}
-  });
+  const violation = await check${n.pascal}Rules(input, { existing: () => existing${n.pascal}(ctx.organizationId) });
+  if (violation) throw new UserFacingError(violation);
+  await db.insert(${n.variable}).values({ organizationId: ctx.organizationId, ...to${n.pascal}Values(input) });
   revalidatePath("/dashboard/${n.slug}");
 }
 
@@ -254,16 +302,19 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   if (file.size > CSV_LIMITS.maxBytes) throw new UserFacingError("The CSV file is too large.");
   const rows = parseCsv(await file.text());
   const valid = rows.map((r) => create${n.pascal}Schema.safeParse(r)).filter((r) => r.success).map((r) => r.data);
-  if (valid.length > 0) {
-    await db.insert(${n.variable}).values(
-      valid.map((input) => ({
-        organizationId: ctx.organizationId,
-${toRow.replace(/^ {4}/gm, " ".repeat(8))}
-      })),
-    );
+  // Business rules apply to imports too: each row is checked against the workspace and the rows accepted before it.
+  let known: ${n.pascal}Row[] | null = null;
+  const existing = async () => (known ??= await existing${n.pascal}(ctx.organizationId));
+  const accepted = [];
+  for (const input of valid) {
+    if (await check${n.pascal}Rules(input, { existing })) continue;
+    const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
+    accepted.push(values);
+    (await existing()).unshift({ id: crypto.randomUUID(), createdAt: new Date(), ...values });
   }
+  if (accepted.length > 0) await db.insert(${n.variable}).values(accepted);
   revalidatePath("/dashboard/${n.slug}");
-  redirect(\`/dashboard/${n.slug}?imported=\${valid.length}&rejected=\${rows.length - valid.length}\`);
+  redirect(\`/dashboard/${n.slug}?imported=\${accepted.length}&rejected=\${rows.length - accepted.length}\`);
 }
 `
     : ""
@@ -419,24 +470,24 @@ export async function GET(): Promise<Response> {
 }
 `;
 
+  const sample = (f: Field) => sampleValue(f, n.labelSingular, nthOfType(fields, f));
   const fills = fields
     .filter((f) => f.required || f === firstText)
     .map((f) =>
       f.type === "boolean"
         ? `  await page.getByLabel("${label(f.name)}", { exact: true }).check();`
-        : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${sampleValue(f, n.labelSingular)}");`,
+        : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${sample(f)}");`,
     )
     .join("\n");
   const expectation = firstText
-    ? `  await expect(page.getByRole("cell", { name: "${sampleValue(firstText, n.labelSingular)}" }).first()).toBeVisible();`
+    ? `  await expect(page.getByRole("cell", { name: "${sample(firstText)}" }).first()).toBeVisible();`
     : `  await expect(page.getByRole("row").nth(1)).toBeVisible();`;
 
   const csvSample = (suffix: string) =>
     `${columns.join(",")}\\n${fields
       .map((f) => {
         if (f.type === "boolean") return "true";
-        const v = sampleValue(f, n.labelSingular);
-        return f === firstText ? `${v} ${suffix}` : v;
+        return importedSample(f, sample(f), suffix);
       })
       .join(",")}\\n`;
 
@@ -477,6 +528,7 @@ test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
     { path: `src/db/tables/${n.slug}.ts`, content: table },
     { path: `src/entities/${n.slug}/schema.ts`, content: schema },
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
+    { path: `src/entities/${n.slug}/rules.ts`, content: rules },
     { path: `src/app/dashboard/${n.slug}/page.tsx`, content: page },
     ...(features.csvExport
       ? [{ path: `src/app/dashboard/${n.slug}/export/route.ts`, content: exportRoute }]
