@@ -5,12 +5,21 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { cartItems, orderItems, orders, products } from "@/db/schema";
+import { cartItems, orderItems, orders, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
-import { cartTotal, MAX_QTY } from "@/lib/shop";
+import { isCountry } from "@/lib/countries";
+import { formatRate, MAX_QTY } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
-import { cartLines, currentCartId, ensureCart } from "@/server/cart";
+import {
+  cartLines,
+  currentCartId,
+  ensureCart,
+  lineLabel,
+  needsCountry,
+  quote,
+  shopRules,
+} from "@/server/cart";
 import { createCheckoutSession } from "@/server/stripe";
 
 async function guard(kind: string): Promise<void> {
@@ -26,6 +35,7 @@ async function guard(kind: string): Promise<void> {
 export async function addToCart(formData: FormData): Promise<void> {
   await guard("cart");
   const productId = z.uuid().parse(formData.get("productId"));
+  const variantId = formData.get("variantId") ? z.uuid().parse(formData.get("variantId")) : null;
   const qty = z.coerce
     .number()
     .int()
@@ -33,16 +43,28 @@ export async function addToCart(formData: FormData): Promise<void> {
     .max(MAX_QTY)
     .parse(formData.get("quantity") ?? 1);
   const [p] = await db
-    .select({ id: products.id, stock: products.stock })
+    .select({ id: products.id })
     .from(products)
     .where(and(eq(products.id, productId), eq(products.active, true)));
   if (!p) throw new UserFacingError("This product is not available.");
+  const variants = await db
+    .select({ id: productVariants.id, stock: productVariants.stock })
+    .from(productVariants)
+    .where(and(eq(productVariants.productId, productId), eq(productVariants.active, true)));
+  // A product with variants is always bought through one of its own variants.
+  if (variants.length > 0) {
+    const v = variants.find((x) => x.id === variantId);
+    if (!v) throw new UserFacingError("Choose an option first.");
+    if (v.stock !== null && v.stock <= 0) throw new UserFacingError("This option is sold out.");
+  } else if (variantId) {
+    throw new UserFacingError("This option is not available.");
+  }
   const cartId = await ensureCart();
   await db
     .insert(cartItems)
-    .values({ cartId, productId, quantity: qty })
+    .values({ cartId, productId, variantId, quantity: qty })
     .onConflictDoUpdate({
-      target: [cartItems.cartId, cartItems.productId],
+      target: [cartItems.cartId, cartItems.productId, cartItems.variantId],
       set: { quantity: sql`least(${cartItems.quantity} + ${qty}, ${MAX_QTY})` },
     });
   revalidatePath("/cart");
@@ -54,17 +76,12 @@ export async function updateQuantity(formData: FormData): Promise<void> {
   await guard("cart");
   const cartId = await currentCartId();
   if (!cartId) return;
-  const productId = z.uuid().parse(formData.get("productId"));
+  const lineId = z.uuid().parse(formData.get("lineId"));
   const qty = z.coerce.number().int().min(0).max(MAX_QTY).parse(formData.get("quantity"));
-  if (qty === 0)
-    await db
-      .delete(cartItems)
-      .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
-  else
-    await db
-      .update(cartItems)
-      .set({ quantity: qty })
-      .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
+  // Scoped to the visitor's own cart: a line id from another cart matches nothing.
+  const own = and(eq(cartItems.cartId, cartId), eq(cartItems.id, lineId));
+  if (qty === 0) await db.delete(cartItems).where(own);
+  else await db.update(cartItems).set({ quantity: qty }).where(own);
   revalidatePath("/cart");
 }
 
@@ -82,7 +99,25 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   const lines = cartId ? await cartLines(cartId) : [];
   if (lines.length === 0) return { ok: false, message: "Your cart is empty." };
   const short = lines.find((l) => l.stock !== null && l.stock < l.quantity);
-  if (short) return { ok: false, message: `Only ${short.stock} left of ${short.name}.` };
+  if (short) return { ok: false, message: `Only ${short.stock} left of ${lineLabel(short)}.` };
+  const rules = await shopRules();
+  const country = z
+    .string()
+    .regex(/^[A-Z]{2}$/)
+    .refine(isCountry)
+    .safeParse(formData.get("country"));
+  // The country matters only when the shop ships or charges tax.
+  if (!country.success && needsCountry(rules))
+    return { ok: false, message: "Choose the country to ship to." };
+  const rateId = z.uuid().safeParse(formData.get("rateId"));
+  // Every amount is recomputed here from the database: nothing the browser sends is trusted.
+  const q = quote(
+    lines,
+    rules,
+    country.success ? country.data : null,
+    rateId.success ? rateId.data : null,
+  );
+  if ("error" in q) return { ok: false, message: q.error };
   const email = z
     .email()
     .max(320)
@@ -93,7 +128,14 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     .values({
       cartId,
       email: email.success ? (email.data ?? null) : null,
-      totalCents: cartTotal(lines),
+      subtotalCents: q.subtotalCents,
+      shippingCents: q.shippingCents,
+      taxCents: q.taxCents,
+      pricesIncludeTax: q.pricesIncludeTax,
+      taxLabel: q.tax ? `${q.tax.label} (${formatRate(q.tax.rateBp)})` : null,
+      shippingName: q.shipping?.name ?? null,
+      country: q.country,
+      totalCents: q.totalCents,
       currency: env.SHOP_CURRENCY,
     })
     .returning({ id: orders.id });
@@ -102,7 +144,10 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     lines.map((l) => ({
       orderId: order.id,
       productId: l.productId,
+      variantId: l.variantId,
       name: l.name,
+      variantName: l.variantName,
+      sku: l.sku,
       unitPriceCents: l.unitPriceCents,
       quantity: l.quantity,
     })),
@@ -110,7 +155,8 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   const base = env.BETTER_AUTH_URL.replace(/\/$/, "");
   const session = await createCheckoutSession({
     orderId: order.id,
-    lines,
+    lines: lines.map((l) => ({ ...l, name: lineLabel(l) })),
+    quote: q,
     successUrl: `${base}/checkout/success?order=${order.id}`,
     cancelUrl: `${base}/cart`,
   }).catch(() => null);

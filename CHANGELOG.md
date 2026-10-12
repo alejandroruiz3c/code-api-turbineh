@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Storefront recipe (ADR-0020): product options (size, colour…) with own SKU, price override and stock; shipping options by country with free-from amounts; tax rates by country with tax-inclusive or tax-exclusive prices (`SHOP_PRICES_INCLUDE_TAX`), integer-cent rounding documented and unit-tested; breakdown in cart, Stripe Checkout, admin orders and emails; one JSON-LD offer per option. The recipe now ships its own `.env.example` (admin emails, Stripe keys, currency, tax mode), so handover guides and Deploy for me list every setting the shop uses.
 - API keys in the UI (`/keys`): create (shown once), list and revoke; `GET/POST /v1/keys`, `DELETE /v1/keys/{id}` (max 5 active keys per account).
 - Real cost per build: measured tokens × Scaleway list prices per model plus a fixed overhead (`COST_OVERHEAD_EUR_PER_BUILD`), stored in the build metrics and the daily cost ledger.
 - Screen previews: after E2E the sandbox captures home, dashboard and the first module; shown in the build result and in the API (`artifact.previews`).

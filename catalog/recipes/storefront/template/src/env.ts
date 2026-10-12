@@ -29,6 +29,11 @@ const schema = z.object({
     .string()
     .regex(/^[a-z]{3}$/)
     .default("eur"),
+  /** true: product prices include tax (tax shown as contained); false: tax is added on top at checkout. */
+  SHOP_PRICES_INCLUDE_TAX: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 export const env = schema.parse(process.env);

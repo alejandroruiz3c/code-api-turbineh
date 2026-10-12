@@ -1,10 +1,11 @@
-import { count, desc } from "drizzle-orm";
+import { count, desc, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
-import { orders } from "@/db/schema";
-import { formatPrice } from "@/lib/shop";
+import { orderItems, orders } from "@/db/schema";
+import { countryName } from "@/lib/countries";
+import { formatPrice, orderSummary } from "@/lib/shop";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { requireAdmin } from "@/server/admin";
 import { setOrderStatus } from "./actions";
@@ -18,6 +19,18 @@ export default async function Orders({ searchParams }: { searchParams: SearchPar
     db.select().from(orders).orderBy(desc(orders.createdAt)).limit(limit).offset(offset),
     db.select({ total: count() }).from(orders),
   ]);
+  const items =
+    rows.length > 0
+      ? await db
+          .select()
+          .from(orderItems)
+          .where(
+            inArray(
+              orderItems.orderId,
+              rows.map((o) => o.id),
+            ),
+          )
+      : [];
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   return (
     <Card title={`Orders (${total})`}>
@@ -33,7 +46,20 @@ export default async function Orders({ searchParams }: { searchParams: SearchPar
               {o.createdAt.toISOString().slice(0, 16).replace("T", " ")}
             </td>
             <td className="px-3 py-2">{o.email ?? "—"}</td>
-            <td className="px-3 py-2">{formatPrice(o.totalCents, o.currency)}</td>
+            <td className="px-3 py-2">
+              <details>
+                <summary className="cursor-pointer">
+                  {formatPrice(o.totalCents, o.currency)}
+                </summary>
+                <pre className="mt-2 whitespace-pre-wrap font-sans text-xs text-slate-600">
+                  {orderSummary(
+                    o,
+                    items.filter((i) => i.orderId === o.id),
+                  )}
+                  {o.country ? `\nShip to: ${countryName(o.country)}` : ""}
+                </pre>
+              </details>
+            </td>
             <td className="px-3 py-2">{o.status}</td>
             <td className="px-3 py-2 text-right">
               {o.status === "paid" || o.status === "pending" ? (
