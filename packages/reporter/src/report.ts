@@ -30,6 +30,8 @@ export interface ReportFacts {
     capability: string;
     entity: string;
     rules: string[];
+    /** When each rule runs and which related entities it reads (ADR-0026). */
+    specs?: RuleSpecFact[];
     file: string;
     test: string;
     implemented?: boolean;
@@ -38,6 +40,12 @@ export interface ReportFacts {
   improvement?: ImprovementEstimate | null;
   /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
   finalVersion?: boolean;
+}
+
+export interface RuleSpecFact {
+  rule: string;
+  operations: ("create" | "update")[];
+  related: string[];
 }
 
 export interface BuildReport {
@@ -55,6 +63,7 @@ export interface BuildReport {
   businessRules: {
     entity: string;
     rules: string[];
+    specs: RuleSpecFact[];
     file: string;
     test: string;
     implemented: boolean;
@@ -307,6 +316,8 @@ export async function buildReport(
     businessRules: (facts.businessRules ?? []).map((r) => ({
       entity: r.entity,
       rules: r.rules,
+      specs:
+        r.specs ?? r.rules.map((rule) => ({ rule, operations: ["create" as const], related: [] })),
       file: r.file,
       test: r.test,
       implemented: r.implemented !== false,
@@ -376,14 +387,25 @@ export function improvementText(
 /** Section listing the business rules written by the backup code model (T3) and the tests that check them. */
 export function businessRulesMarkdown(r: Pick<BuildReport, "businessRules">): string {
   if (r.businessRules.length === 0) return "";
+  const when = (s: RuleSpecFact) =>
+    [
+      s.operations.length === 2
+        ? "on create and edit"
+        : s.operations[0] === "update"
+          ? "on edit"
+          : "on create",
+      ...(s.related.length ? [`reads ${s.related.join(", ")}`] : []),
+    ].join(", ");
+  const list = (b: BuildReport["businessRules"][number]) =>
+    b.specs.map((s) => `${s.rule} (${when(s)})`).join("; ");
   const rows = r.businessRules.map((b) =>
     b.implemented
-      ? `- ✅ **${b.entity}**: ${b.rules.join("; ")} — \`${b.file}\`, tested in \`${b.test}\``
-      : `- ⬜ **${b.entity}**: ${b.rules.join("; ")} — not implemented (could not be made to pass; removed before delivery)`,
+      ? `- ✅ **${b.entity}**: ${list(b)} — \`${b.file}\`, tested in \`${b.test}\``
+      : `- ⬜ **${b.entity}**: ${list(b)} — not implemented (could not be made to pass; removed before delivery)`,
   );
   return `## Business rules
 
-Written by the backup code model because no audited component covers them. They run on the server before a record is created or imported, have their own unit tests and passed the same verification as the rest of the app.
+Written by the backup code model because no audited component covers them. They run on the server before a record is created, imported or edited (as listed), read other records only through read-only, workspace-scoped loaders written by TurbineH, have their own unit tests and passed the same verification as the rest of the app.
 
 ${rows.join("\n")}
 

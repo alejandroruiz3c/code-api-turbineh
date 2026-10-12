@@ -51,11 +51,19 @@ describe("corrector scope", () => {
     write("src/entities/loans/rules.ts", "// turbineh:generated-backup trigger=T3\nexport {};\n");
     write("tests/unit/rules/loans.test.ts", "// turbineh:generated-backup trigger=T3\n");
     write("tests/unit/rules/loans.fixtures.test.ts", "// turbineh:generated\n");
+    write("src/entities/loans/related.ts", "// turbineh:generated\nexport {};\n");
     execFileSync("git", ["init", "-q"], { cwd: dir });
     execFileSync("git", ["add", "-A"], { cwd: dir });
     const log = failureLog(
-      result([step("unit", false, "FAIL tests/unit/rules/loans.fixtures.test.ts > accepts")]),
+      result([
+        step(
+          "unit",
+          false,
+          "FAIL tests/unit/rules/loans.fixtures.test.ts > accepts\nsrc/entities/loans/related.ts(3,1): error",
+        ),
+      ]),
     );
+    // The related-record loaders (workspace scoping, written by code) are never handed to a model either.
     expect(correctableFiles(dir, log)).toEqual(["src/entities/loans/rules.ts"]);
   });
 });

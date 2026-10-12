@@ -9,7 +9,10 @@ import {
   entityNames,
   generateEntity,
   GENERATED,
+  referencedEntities,
+  referenceTarget,
   ruleFiles,
+  sampleFor,
 } from "./index.js";
 
 const spec: BuildSpec = {
@@ -118,14 +121,85 @@ describe("assemble", () => {
 describe("business rules hook (T3)", () => {
   const plan = spec.entities[1]!;
 
-  it("every generated entity checks its rules on the server before create and import", () => {
+  it("every generated entity checks its rules on the server before create, import and update", () => {
     const files = generateEntity(plan, { csvExport: false, csvImport: true });
     const actions = files.find((f) => f.path.endsWith("/actions.ts"))?.content ?? "";
-    expect(files.map((f) => f.path)).toContain("src/entities/membership-plans/rules.ts");
-    expect(actions).toContain("await checkMembershipPlanRules(input, { existing: () =>");
+    expect(files.map((f) => f.path)).toEqual(
+      expect.arrayContaining([
+        "src/entities/membership-plans/rules.ts",
+        "src/entities/membership-plans/related.ts",
+        "src/app/dashboard/membership-plans/[id]/edit/page.tsx",
+      ]),
+    );
+    expect(actions).toContain('operation: "create",\n    previous: null,');
+    expect(actions).toContain('operation: "update",\n    previous,');
+    // The record being changed is never compared with itself.
+    expect(actions).toContain("existing: () => existingMembershipPlan(ctx.organizationId, id)");
+    expect(actions).toContain("exceptId ? ne(membershipPlans.id, exceptId) : undefined");
     expect(actions).toContain("if (violation) throw new UserFacingError(violation);");
-    expect(actions).toContain("if (await checkMembershipPlanRules(input, { existing })) continue;");
-    expect(actions).toContain(".where(eq(membershipPlans.organizationId, organizationId))");
+    expect(actions).toContain(
+      'if (await checkMembershipPlanRules(input, { operation: "create", previous: null, existing, related })) continue;',
+    );
+    expect(actions).toContain("eq(membershipPlans.organizationId, organizationId)");
+    // Update: role check, workspace-scoped read and write.
+    expect(actions).toContain('if (!can(ctx.role, "update"))');
+    expect(actions).toContain(
+      ".where(and(eq(membershipPlans.id, id), eq(membershipPlans.organizationId, ctx.organizationId)))",
+    );
+    const edit = files.find((f) => f.path.endsWith("[id]/edit/page.tsx"))?.content ?? "";
+    expect(edit).toContain('if (!can(ctx.role, "update")) notFound();');
+    expect(edit).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
+    const e2e = files.find((f) => f.path.endsWith(".spec.ts"))?.content ?? "";
+    expect(e2e).toContain("owner edits a membership plan and sees the change");
+  });
+
+  it("links reference fields to generated entities and seeds them in the E2E test", () => {
+    const teacher = {
+      name: "Teacher",
+      fields: [{ name: "fullName", type: "string" as const, required: true }],
+    };
+    const course = {
+      name: "Course",
+      fields: [
+        { name: "title", type: "string" as const, required: true },
+        { name: "teacherId", type: "reference" as const, required: true },
+      ],
+    };
+    const all = [teacher, course];
+    expect(referenceTarget(course.fields[1]!, course, all)?.name).toBe("Teacher");
+    expect(referenceTarget(course.fields[0]!, course, all)).toBeNull();
+    // The compiler often types a link as plain text: the field name decides.
+    expect(
+      referenceTarget({ name: "teacherId", type: "string", required: true }, course, all)?.name,
+    ).toBe("Teacher");
+    expect(
+      referenceTarget({ name: "teacherNotes", type: "text", required: false }, course, all),
+    ).toBeNull();
+    expect(referencedEntities(course, all)).toEqual(["Teacher"]);
+    // The course points to the teacher its test creates first; the imported course to a second teacher.
+    expect(sampleFor(course, course.fields[1]!, all)).toBe("Teacher Full name sample for-courses");
+    expect(sampleFor(course, course.fields[1]!, all, "imported")).toBe(
+      "Teacher Full name sample for-courses-imported",
+    );
+    const e2e =
+      generateEntity(course, { csvExport: false, csvImport: true }, all).find((f) =>
+        f.path.endsWith(".spec.ts"),
+      )?.content ?? "";
+    expect(e2e).toContain('await page.goto("/dashboard/teachers");');
+    expect(e2e).toContain('.fill("Teacher Full name sample for-courses");');
+    expect(e2e).toContain('.fill("Teacher Full name sample for-courses-imported");');
+
+    const f = ruleFiles(course, all, ["Teacher"]);
+    expect(f.relatedEntities).toMatchObject([
+      { entity: "Teacher", key: "teachers", referencedBy: ["teacherId"], displayField: "fullName" },
+    ]);
+    expect(f.relatedModule).toContain(".where(eq(teachers.organizationId, organizationId))");
+    expect(f.relatedModule).toContain(".limit(RULES_SCAN_LIMIT)");
+    expect(f.relatedModule).not.toMatch(/\.(insert|update|delete)\(/);
+    expect(f.fixturesTest).toContain('"fullName":"Teacher Full name sample for-courses"');
+    expect(f.formats.teacherId).toContain("the fullName of a Teacher record");
+    // Related entities that are not linked or unknown are ignored.
+    expect(ruleFiles(course, all, ["Room"]).relatedEntities).toEqual([]);
   });
 
   it("writes a fixture test from the app's own E2E samples, with later dates for later date fields", () => {
@@ -146,6 +220,9 @@ describe("business rules hook (T3)", () => {
     });
     expect(f.samples.imported.borrower).toBe("Loan Borrower sample imported");
     expect(f.samples.imported.email).toBe("e2e+imported@example.com");
+    expect(f.samples.edited?.borrower).toBe("Loan Borrower sample edited");
+    expect(f.fixturesTest).toContain('ctx("update", row(created), [row(imported)])');
+    expect(f.relatedModule).toBeNull();
     expect(f.fixturesTest.startsWith(GENERATED)).toBe(true);
     expect(f.fixtures).toBe("tests/unit/rules/loans.fixtures.test.ts");
   });

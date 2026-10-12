@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
-import { camel, entityNames, label, snake } from "./naming.js";
+import { camel, entityNames, label, snake, words } from "./naming.js";
 
 /** Header on every generated (non-catalog) file, so reused vs generated is measured honestly. */
 export const GENERATED = "// turbineh:generated";
@@ -148,8 +148,13 @@ function inputType(f: Field): string {
   }[f.type];
 }
 
+/** A text field that holds an email address (the compiler sometimes types it as plain text). */
+const emailLike = (f: Field) =>
+  f.type === "email" || (f.type === "string" && /e-?mail/i.test(f.name));
+
 /** Sample values used by the generated E2E test (deterministic). */
 export function sampleValue(f: Field, entityLabel: string, nth = 0): string {
+  if (emailLike(f)) return "e2e@example.com";
   switch (f.type) {
     case "email":
       return "e2e@example.com";
@@ -181,9 +186,86 @@ export function nthOfType(fields: Field[], f: Field): number {
  * business rules do not reject the app's own end-to-end fixtures.
  */
 export function importedSample(f: Field, value: string, suffix: string): string {
-  if (f.type === "email") return value.replace("@", `+${suffix}@`);
-  if (["string", "text", "enum", "reference"].includes(f.type)) return `${value} ${suffix}`;
+  if (emailLike(f)) return value.replace("@", `+${suffix}@`);
+  // A reference keeps pointing to the same record (rules may require that it exists).
+  if (["string", "text", "enum"].includes(f.type)) return `${value} ${suffix}`;
   return value;
+}
+
+/** First plain text field: what people type to identify a record (and what a reference to it holds). */
+export function displayField(e: Entity): Field | undefined {
+  return fieldsOf(e).find(
+    (f) => ["string", "text", "enum"].includes(f.type) && words(f.name).at(-1) !== "id",
+  );
+}
+
+/**
+ * Entity a reference field points to: a `reference` field, or a text field, named after another generated entity
+ * ("teacher", "teacherId", "room_id" → Teacher, Room) that has a display field. The compiler often types a link as
+ * plain text, so the name decides. Deterministic; null when nothing matches.
+ */
+export function referenceTarget(f: Field, self: Entity, all: Entity[]): Entity | null {
+  if (!["reference", "string"].includes(f.type)) return null;
+  const w = words(f.name);
+  const key = (w.at(-1) === "id" ? w.slice(0, -1) : w).join(" ");
+  if (!key) return null;
+  const target = all.find((e) => {
+    if (e.name === self.name) return false;
+    const n = words(e.name).join(" ");
+    return n === key || `${n}s` === key || `${n}es` === key;
+  });
+  return target && displayField(target) ? target : null;
+}
+
+/**
+ * Values with which an entity's end-to-end test creates a record of a referenced entity first (same samples as that
+ * entity's own test, made distinct per referencing entity so uniqueness rules on it accept both).
+ */
+export function seedSample(
+  target: Entity,
+  forEntity: Entity,
+  all: Entity[],
+  variant = "",
+): Record<string, string> {
+  const fields = fieldsOf(target);
+  const display = displayField(target);
+  const suffix = `for-${entityNames(forEntity.name).slug}${variant ? `-${variant}` : ""}`;
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    if (!f.required && f !== display) continue;
+    const v = sampleFor(target, f, all);
+    out[camel(f.name)] =
+      f.type === "boolean"
+        ? "on"
+        : referenceTarget(f, target, all)
+          ? v
+          : importedSample(f, v, suffix);
+  }
+  return out;
+}
+
+/**
+ * Sample of a field; a reference to another generated entity holds that entity's seeded display value. The
+ * "imported" variant points to a second seeded record, so "one per person" rules accept the created and the imported
+ * samples together.
+ */
+export function sampleFor(e: Entity, f: Field, all: Entity[], variant = ""): string {
+  const fields = fieldsOf(e);
+  const target = referenceTarget(f, e, all);
+  if (target) {
+    const display = displayField(target);
+    if (display) {
+      const seed = seedSample(
+        target,
+        e,
+        all.filter((x) => x.name !== e.name),
+        variant,
+      );
+      const value = seed[camel(display.name)];
+      if (value) return value;
+    }
+  }
+  return sampleValue(f, entityNames(e.name).labelSingular, nthOfType(fields, f));
 }
 
 export interface GeneratedFile {
@@ -197,10 +279,15 @@ export interface EntityFeatures {
   csvImport: boolean;
 }
 
-/** All files for one entity: table, form schema, server actions, page, optional CSV routes and E2E tests. */
+/**
+ * All files for one entity: table, form schema, server actions (create, update, delete, optional CSV import), list
+ * and edit pages, optional CSV export route and E2E tests. `all` are the entities generated in the same app (reference
+ * fields to them get coherent samples and seeded records in the E2E test).
+ */
 export function generateEntity(
   e: Entity,
   features: EntityFeatures = { csvExport: false, csvImport: false },
+  all: Entity[] = [e],
 ): GeneratedFile[] {
   const n = entityNames(e.name);
   const fields = fieldsOf(e);
@@ -237,6 +324,7 @@ ${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
 import { z } from "zod";
 import type { ${n.variable} } from "@/db/tables/${n.slug}";
 import type { EntityRules } from "@/lib/rules";
+import type { ${n.pascal}Related } from "./related";
 
 /** Input validation for ${n.labelPlural} (Security Pack: every boundary is validated). */
 export const create${n.pascal}Schema = z.object({
@@ -245,7 +333,7 @@ ${fields.map((f) => `  ${camel(f.name)}: ${zodField(f)},`).join("\n")}
 
 export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
 export type ${n.pascal}Row = typeof ${n.variable}.$inferSelect;
-export type ${n.pascal}Rules = EntityRules<Create${n.pascal}Input, ${n.pascal}Row>;
+export type ${n.pascal}Rules = EntityRules<Create${n.pascal}Input, ${n.pascal}Row, ${n.pascal}Related>;
 
 /** Column values of a validated input (the workspace, id and creation date are added by the server). */
 export function to${n.pascal}Values(input: Create${n.pascal}Input) {
@@ -265,25 +353,46 @@ import type { ${n.pascal}Rules } from "./schema";
 export const check${n.pascal}Rules: ${n.pascal}Rules = () => Promise.resolve(null);
 `;
 
+  const related = `${GENERATED}
+import { bindRelated } from "@/lib/rules";
+
+/**
+ * Related records the business rules of ${n.labelPlural.toLowerCase()} may read (read-only, same workspace, bounded): none
+ * for this app. When a rule needs another entity, TurbineH writes its loader here (code, never a model).
+ */
+export const related${n.pascal}Loaders = {};
+
+export const related${n.pascal} = (organizationId: string) => bindRelated(related${n.pascal}Loaders, organizationId);
+export type ${n.pascal}Related = ReturnType<typeof related${n.pascal}>;
+`;
+
   const actions = `${GENERATED}
 "use server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-${features.csvImport ? `import { redirect } from "next/navigation";\n` : ""}import { db } from "@/db/client";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 ${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { UserFacingError } from "@/security/errors";
 import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
+import { related${n.pascal} } from "./related";
 import { check${n.pascal}Rules } from "./rules";
 import { create${n.pascal}Schema, to${n.pascal}Values, type ${n.pascal}Row } from "./schema";
 
-/** Records the business rules may inspect: same workspace only, newest first, bounded. */
-function existing${n.pascal}(organizationId: string): Promise<${n.pascal}Row[]> {
+/** Records the business rules may inspect: same workspace only, newest first, bounded; never the record being changed. */
+function existing${n.pascal}(organizationId: string, exceptId?: string): Promise<${n.pascal}Row[]> {
   return db
     .select()
     .from(${n.variable})
-    .where(eq(${n.variable}.organizationId, organizationId))
+    .where(
+      and(
+        eq(${n.variable}.organizationId, organizationId),
+        exceptId ? ne(${n.variable}.id, exceptId) : undefined,
+      ),
+    )
     .orderBy(desc(${n.variable}.createdAt))
     .limit(RULES_SCAN_LIMIT);
 }
@@ -293,10 +402,43 @@ export async function create${n.pascal}(formData: FormData): Promise<void> {
   if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to create ${n.labelPlural.toLowerCase()}.");
   if (!rateLimit(\`create:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
   const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
-  const violation = await check${n.pascal}Rules(input, { existing: () => existing${n.pascal}(ctx.organizationId) });
+  const violation = await check${n.pascal}Rules(input, {
+    operation: "create",
+    previous: null,
+    existing: () => existing${n.pascal}(ctx.organizationId),
+    related: related${n.pascal}(ctx.organizationId),
+  });
   if (violation) throw new UserFacingError(violation);
   await db.insert(${n.variable}).values({ organizationId: ctx.organizationId, ...to${n.pascal}Values(input) });
   revalidatePath("/dashboard/${n.slug}");
+}
+
+/** Changes one record of the active workspace; business rules run again with the previous values. */
+export async function update${n.pascal}(formData: FormData): Promise<void> {
+  const ctx = await requireMember();
+  if (!can(ctx.role, "update")) throw new UserFacingError("You are not allowed to change ${n.labelPlural.toLowerCase()}.");
+  if (!rateLimit(\`update:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
+  const id = z.uuid().parse(formData.get("id"));
+  const [previous] = await db
+    .select()
+    .from(${n.variable})
+    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+    .limit(1);
+  if (!previous) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
+  const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
+  const violation = await check${n.pascal}Rules(input, {
+    operation: "update",
+    previous,
+    existing: () => existing${n.pascal}(ctx.organizationId, id),
+    related: related${n.pascal}(ctx.organizationId),
+  });
+  if (violation) throw new UserFacingError(violation);
+  await db
+    .update(${n.variable})
+    .set(to${n.pascal}Values(input))
+    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
+  revalidatePath("/dashboard/${n.slug}");
+  redirect("/dashboard/${n.slug}");
 }
 
 export async function delete${n.pascal}(formData: FormData): Promise<void> {
@@ -324,9 +466,10 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   // Business rules apply to imports too: each row is checked against the workspace and the rows accepted before it.
   let known: ${n.pascal}Row[] | null = null;
   const existing = async () => (known ??= await existing${n.pascal}(ctx.organizationId));
+  const related = related${n.pascal}(ctx.organizationId);
   const accepted = [];
   for (const input of valid) {
-    if (await check${n.pascal}Rules(input, { existing })) continue;
+    if (await check${n.pascal}Rules(input, { operation: "create", previous: null, existing, related })) continue;
     const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
     accepted.push(values);
     (await existing()).unshift({ id: crypto.randomUUID(), createdAt: new Date(), ...values });
@@ -391,6 +534,7 @@ export default async function ${n.pascal}Page({ searchParams }: { searchParams: 
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canDelete = can(ctx.role, "delete");
+  const canUpdate = can(ctx.role, "update");
   const link = (p: number) => \`/dashboard/${n.slug}?page=\${p}\${q ? \`&q=\${encodeURIComponent(q)}\` : ""}\`;
   return (
     <div className="flex flex-col gap-6">
@@ -437,7 +581,12 @@ ${
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-slate-100">
 ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
-              <td className="px-3 py-2 text-right">
+              <td className="flex items-center justify-end gap-3 px-3 py-2">
+                {canUpdate ? (
+                  <Link className="text-sm underline" href={\`/dashboard/${n.slug}/\${row.id}/edit\`}>
+                    Edit
+                  </Link>
+                ) : null}
                 {canDelete ? (
                   <form action={delete${n.pascal}}>
                     <input type="hidden" name="id" value={row.id} />
@@ -457,6 +606,82 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
           </span>
           {page < pages ? <Link href={link(page + 1)}>Next</Link> : null}
         </nav>
+      </Card>
+    </div>
+  );
+}
+`;
+
+  const hasDateTime = fields.some((f) => f.type === "datetime");
+  const editFields = fields
+    .map((f) => {
+      const id = `${n.slug}-edit-${snake(f.name)}`;
+      const k = `row.${camel(f.name)}`;
+      if (f.type === "boolean") {
+        return `          <div className="flex items-center gap-2">
+            <input id="${id}" name="${camel(f.name)}" type="checkbox" defaultChecked={${k}} />
+            <Label htmlFor="${id}">${label(f.name)}</Label>
+          </div>`;
+      }
+      const value = f.type === "datetime" ? `asDateTime(${k})` : f.required ? k : `${k} ?? ""`;
+      const step = f.type === "decimal" ? ` step="0.01"` : "";
+      return `          <div>
+            <Label htmlFor="${id}">${label(f.name)}</Label>
+            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${f.required ? " required" : ""} defaultValue={${value}} />
+          </div>`;
+    })
+    .join("\n");
+
+  const editPage = `${GENERATED}
+import { and, eq } from "drizzle-orm";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { db } from "@/db/client";
+import { ${n.variable} } from "@/db/schema";
+import { update${n.pascal} } from "@/entities/${n.slug}/actions";
+import { can, requireMember } from "@/server/authz";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+${
+  hasDateTime
+    ? `/** A stored date and time as the value of a datetime-local input (server time zone). */
+const asDateTime = (d: Date | null) =>
+  d ? new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : "";
+`
+    : ""
+}
+/** Edit one ${n.labelSingular.toLowerCase()} of the active workspace (owners and admins). */
+export default async function Edit${n.pascal}Page({ params }: { params: Promise<{ id: string }> }) {
+  const ctx = await requireMember();
+  if (!can(ctx.role, "update")) notFound();
+  const { id } = await params;
+  if (!UUID.test(id)) notFound();
+  const [row] = await db
+    .select()
+    .from(${n.variable})
+    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+    .limit(1);
+  if (!row) notFound();
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Edit ${n.labelSingular.toLowerCase()}</h1>
+        <Link className="text-sm underline" href="/dashboard/${n.slug}">
+          Back to ${n.labelPlural.toLowerCase()}
+        </Link>
+      </div>
+      <Card title="${n.labelSingular} details">
+        <form action={update${n.pascal}} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <input type="hidden" name="id" value={row.id} />
+${editFields}
+          <div className="md:col-span-2">
+            <Button type="submit">Save changes</Button>
+          </div>
+        </form>
       </Card>
     </div>
   );
@@ -489,7 +714,32 @@ export async function GET(): Promise<Response> {
 }
 `;
 
-  const sample = (f: Field) => sampleValue(f, n.labelSingular, nthOfType(fields, f));
+  const sample = (f: Field) => sampleFor(e, f, all);
+  // Records the reference fields point to are created first, so the form's values name real records.
+  const seeds = (variant = "") =>
+    fields.flatMap((f) => {
+      const target = referenceTarget(f, e, all);
+      const display = target ? displayField(target) : undefined;
+      if (!target || !display) return [];
+      const t = entityNames(target.name);
+      const seed = seedSample(target, e, all, variant);
+      const steps = fieldsOf(target)
+        .filter((x) => seed[camel(x.name)] !== undefined)
+        .map((x) =>
+          x.type === "boolean"
+            ? `  await page.getByLabel("${label(x.name)}", { exact: true }).check();`
+            : `  await page.getByLabel("${label(x.name)}", { exact: true }).fill("${seed[camel(x.name)]}");`,
+        );
+      return [
+        `  await page.goto("/dashboard/${t.slug}");
+${steps.join("\n")}
+  await page.getByRole("button", { name: "Create ${t.labelSingular.toLowerCase()}" }).click();
+  await page.getByRole("cell", { name: "${seed[camel(display.name)]}" }).first().waitFor({ timeout: 10_000 }).catch(() => undefined);`,
+      ];
+    });
+  const editable = fields.find(
+    (f) => ["string", "text", "enum"].includes(f.type) && !referenceTarget(f, e, all),
+  );
   const fills = fields
     .filter((f) => f.required || f === firstText)
     .map((f) =>
@@ -506,6 +756,7 @@ export async function GET(): Promise<Response> {
     `${columns.join(",")}\\n${fields
       .map((f) => {
         if (f.type === "boolean") return "true";
+        if (referenceTarget(f, e, all)) return sampleFor(e, f, all, suffix);
         return importedSample(f, sample(f), suffix);
       })
       .join(",")}\\n`;
@@ -514,14 +765,34 @@ export async function GET(): Promise<Response> {
 import { expect, test } from "@playwright/test";
 
 test("owner creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
-  await page.goto("/dashboard/${n.slug}");
+${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("/dashboard/${n.slug}");
 ${fills}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
 ${expectation}
 });
 ${
-  features.csvExport
+  editable
     ? `
+test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async ({ page }) => {
+  await page.goto("/dashboard/${n.slug}");
+  // The record this test created (exact cell), not a record another entity's test seeded with a similar name.
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "${sample(editable)}", exact: true }) })
+    .first()
+    .getByRole("link", { name: "Edit" })
+    .click();
+  // The list page has a create form with the same labels: wait for the edit page before filling.
+  await expect(page.getByRole("heading", { name: "Edit ${n.labelSingular.toLowerCase()}" })).toBeVisible();
+  await page.getByLabel("${label(editable.name)}", { exact: true }).fill("${sample(editable)} edited");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("cell", { name: "${sample(editable)} edited" }).first()).toBeVisible();
+});
+`
+    : ""
+}${
+    features.csvExport
+      ? `
 test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ page }) => {
   const res = await page.request.get("/dashboard/${n.slug}/export");
   expect(res.status()).toBe(200);
@@ -529,12 +800,12 @@ test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ 
   expect((await res.text()).split("\\r\\n")[0]).toBe("${columns.join(",")}");
 });
 `
-    : ""
-}${
+      : ""
+  }${
     features.csvImport
       ? `
 test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
-  await page.goto("/dashboard/${n.slug}");
+${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await page.goto("/dashboard/${n.slug}");
   await page.getByLabel(/CSV file/).setInputFiles({ name: "import.csv", mimeType: "text/csv", buffer: Buffer.from("${csvSample("imported")}") });
   await page.getByRole("button", { name: "Import CSV" }).click();
   await expect(page.getByRole("status")).toContainText("Imported 1 rows");
@@ -548,7 +819,10 @@ test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
     { path: `src/entities/${n.slug}/schema.ts`, content: schema },
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
     { path: `src/entities/${n.slug}/rules.ts`, content: rules },
+    { path: `src/entities/${n.slug}/related.ts`, content: related },
     { path: `src/app/dashboard/${n.slug}/page.tsx`, content: page },
+    // Under /<id>/edit (not /<id>): the CSV download link /export must not look like a page route.
+    { path: `src/app/dashboard/${n.slug}/[id]/edit/page.tsx`, content: editPage },
     ...(features.csvExport
       ? [{ path: `src/app/dashboard/${n.slug}/export/route.ts`, content: exportRoute }]
       : []),
