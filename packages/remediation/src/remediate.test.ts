@@ -52,3 +52,32 @@ describe("alertsOf", () => {
     expect(alerts[1]?.explain).toMatch(/not shipped to your users/);
   });
 });
+
+describe("direct model calls are rerouted, not blocked (ADR-0029)", () => {
+  it("asks for the orchestrator when the app has it, otherwise to disable the call", async () => {
+    const { aiRerouteGuidance } = await import("./remediate.js");
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const withAi = mkdtempSync(join(tmpdir(), "ai-"));
+    mkdirSync(join(withAi, "src/lib/ai"), { recursive: true });
+    writeFileSync(join(withAi, "src/lib/ai/orchestrator.ts"), "export {};\n");
+    expect(aiRerouteGuidance(withAi)).toContain('from "@/lib/ai/orchestrator"');
+    expect(aiRerouteGuidance(mkdtempSync(join(tmpdir(), "no-ai-")))).toContain("throw new Error");
+  });
+
+  it("never routes a direct model call to a person", async () => {
+    const { triageFindings, isAiReroute } = await import("./triage.js");
+    const finding = {
+      rule: "turbineh.ai-direct-model-call",
+      severity: "WARNING" as const,
+      path: "src/x.ts",
+      line: 1,
+      message: "m",
+      explain: "e",
+    };
+    expect(isAiReroute(finding)).toBe(true);
+    const routes = await triageFindings([finding], undefined);
+    expect([...routes.values()]).toEqual(["local"]);
+  });
+});

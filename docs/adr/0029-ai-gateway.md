@@ -35,3 +35,13 @@ apps later. TurbineH's keys must never leave TurbineH's infrastructure.
 - AI apps need network access to TurbineH; if a token is revoked or the quota is reached, the app's AI answers with a
   safe error (the rest of the app keeps working).
 - Pricing of AI usage for clients is a later decision; the data to bill it is recorded from day one.
+
+## Amendment (2026-10-12, owner decision): reroute direct model calls instead of blocking
+
+A direct call to a model or model SDK no longer blocks delivery. The rules `turbineh.ai-direct-model-call` and
+`turbineh.ai-sdk-dependency` are warnings; security remediation always attempts the first one (never routed to a
+person) with exact instructions: rewrite it to `orchestrate()`/`embed()` from the app's orchestrator (so the AI Safety
+Pack, the gateway, quotas, usage and audit apply), or — if the app has no orchestrator — disable the call with a clear
+error instead of shipping it unrouted. Rerouted calls are listed in SECURITY.md. Verified on a generated ai-agents app
+with an injected direct OpenAI call: green before (warning), rewritten to `orchestrate()`, green after with no AI
+findings. The same transformation is meant for systems clients bring in F2.

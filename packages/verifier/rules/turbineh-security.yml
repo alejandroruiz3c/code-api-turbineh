@@ -147,7 +147,7 @@ rules:
   # ai.orchestrator.turbineh) and its AI Safety Pack. Only the orchestrator's own transport files may talk to models.
   - id: turbineh.ai-direct-model-call
     languages: [typescript, javascript]
-    severity: ERROR
+    severity: WARNING
     paths:
       exclude:
         [
@@ -158,7 +158,7 @@ rules:
           "*.test.ts",
           "*.spec.ts",
         ]
-    message: Model or decider called directly; use orchestrate()/embed() from src/lib/ai/orchestrator (AI Safety Pack, usage and audit).
+    message: Model or decider called directly; it is rerouted through orchestrate()/embed() from src/lib/ai/orchestrator (AI Safety Pack, gateway, usage and audit).
     metadata:
       {
         explain: "This code talks to an AI model without going through the orchestrator, so its safety checks, budgets, usage records and audit log are skipped.",
@@ -169,7 +169,7 @@ rules:
 
   - id: turbineh.ai-sdk-dependency
     languages: [generic]
-    severity: ERROR
+    severity: WARNING
     paths:
       include: ["package.json"]
     message: A model SDK is declared as a dependency; AI goes only through the orchestrator (its decider SDK is the only one allowed).
