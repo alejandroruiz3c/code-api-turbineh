@@ -87,6 +87,12 @@ async function env(): Promise<void> {
     S3_SECRET_ACCESS_KEY: need("SCW_SECRET_KEY"),
     DAILY_COST_CAP_EUR: STAGING ? "20" : "100",
     USER_DAILY_BUILDS: "10",
+    // TurbineH AI gateway (ADR-0029): our model provider and JEV keys, used server-side only for client AI apps.
+    AI_GATEWAY_UPSTREAM_URL: need("COMPILER_BASE_URL"),
+    AI_GATEWAY_UPSTREAM_KEY: need("COMPILER_API_KEY"),
+    AI_GATEWAY_TYPESAFE_KEY: need("TYPESAFE_API_KEY"),
+    AI_GATEWAY_DAILY_TOKENS: STAGING ? "200000" : "2000000",
+    AI_GATEWAY_RPM: "60",
     // Internal API-key owners (benchmark and smoke keys); production keeps the legacy owner names.
     OPS_OWNER_IDS: STAGING ? "ops:smoke" : "staging-smoke,staging-bench,ops:smoke",
     ...optional("OPS_ADMIN_EMAILS"),

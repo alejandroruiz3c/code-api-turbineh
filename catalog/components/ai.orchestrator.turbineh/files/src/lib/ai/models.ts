@@ -1,14 +1,17 @@
 import { z } from "zod";
 
 /**
- * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028). With decider.ts, the only
- * place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call). Any OpenAI-compatible
- * endpoint works; defaults are documented open models served in the EU (Scaleway Generative APIs).
+ * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029). With decider.ts, the
+ * only place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call). Calls go to the
+ * TurbineH AI gateway with this app's token: no model-provider or decider keys live in the app. Defaults are
+ * documented open models served in the EU.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
-  AI_BASE_URL: z.preprocess(empty, z.url().default("https://api.scaleway.ai/v1")),
-  AI_API_KEY: z.preprocess(empty, z.string().min(1).optional()),
+  /** TurbineH AI gateway (root; endpoints live under /v1/…). */
+  TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
+  /** This app's gateway token (tbh_ai_…): from the build page, or set by "Deploy for me". */
+  TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
   /** Small open model that decomposes each request into a plan for the decider. */
   AI_STRUCTURER_MODEL: z.preprocess(empty, z.string().min(1).default("gemma-4-26b-a4b-it")),
   /** Routes the decider can choose: name=model pairs, from cheapest to most capable. */
@@ -83,11 +86,11 @@ async function post(path: string, body: unknown): Promise<unknown> {
     // 0 = network failure, timeout or an unreadable body.
     let status: number;
     try {
-      const res = await fetch(`${cfg.AI_BASE_URL.replace(/\/$/, "")}${path}`, {
+      const res = await fetch(`${cfg.TURBINEH_AI_URL.replace(/\/$/, "")}/v1${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(cfg.AI_API_KEY ? { Authorization: `Bearer ${cfg.AI_API_KEY}` } : {}),
+          ...(cfg.TURBINEH_AI_TOKEN ? { Authorization: `Bearer ${cfg.TURBINEH_AI_TOKEN}` } : {}),
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(cfg.AI_TIMEOUT_MS),

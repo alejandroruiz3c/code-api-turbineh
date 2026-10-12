@@ -9,7 +9,7 @@ import {
   type HandoverFacts,
   type LiveInfo,
 } from "@turbineh/assembler";
-import { emitEvent } from "@turbineh/db";
+import { createAiAppToken, emitEvent } from "@turbineh/db";
 import { deployToClient } from "@turbineh/deployer";
 import { decrypt } from "@turbineh/shared";
 import type { ArtifactStorage } from "@turbineh/storage";
@@ -17,6 +17,7 @@ import type { ArtifactStorage } from "@turbineh/storage";
 interface DeploymentRow {
   id: string;
   build_id: string;
+  owner_id: string;
   vercel_token_enc: string;
   vercel_team_id: string | null;
   db_mode: "neon" | "url";
@@ -46,7 +47,7 @@ export async function processDeployment(
      FROM builds b
      WHERE d.id = (SELECT id FROM deployments WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
        AND b.id = d.build_id
-     RETURNING d.id, d.build_id, d.vercel_token_enc, d.vercel_team_id, d.db_mode, d.db_secret_enc, d.admin_email, d.vercel_via,
+     RETURNING d.id, d.build_id, d.owner_id, d.vercel_token_enc, d.vercel_team_id, d.db_mode, d.db_secret_enc, d.admin_email, d.vercel_via,
                b.artifact, b.metrics, b.spec`,
   );
   const job = claimed.rows[0];
@@ -65,6 +66,25 @@ export async function processDeployment(
     execFileSync("git", ["clone", "--quiet", bundle, repoDir], { stdio: "pipe" });
 
     const secret = decrypt(job.db_secret_enc, tokenKey);
+    // AI apps (ADR-0029): their own TurbineH AI gateway token, so the client configures no AI keys.
+    const extraEnv: { key: string; value: string; sensitive: boolean }[] = [];
+    if (/^TURBINEH_AI_TOKEN=/m.test(readFileSync(join(repoDir, ".env.example"), "utf8"))) {
+      const t = await createAiAppToken(db, {
+        ownerId: job.owner_id,
+        buildId: job.build_id,
+        name: job.spec?.app_name ?? slug,
+        dailyTokenQuota: Number(process.env.AI_GATEWAY_DAILY_TOKENS ?? 2_000_000),
+        requestsPerMinute: Number(process.env.AI_GATEWAY_RPM ?? 60),
+      });
+      extraEnv.push(
+        { key: "TURBINEH_AI_TOKEN", value: t.token, sensitive: true },
+        {
+          key: "TURBINEH_AI_URL",
+          value: process.env.TURBINEH_AI_PUBLIC_URL ?? "https://software.turbineh.com/v1/ai",
+          sensitive: false,
+        },
+      );
+    }
     const result = await deployToClient({
       repoDir,
       slug,
@@ -76,6 +96,7 @@ export async function processDeployment(
       database:
         job.db_mode === "neon" ? { mode: "neon", apiKey: secret } : { mode: "url", url: secret },
       ...(job.admin_email ? { adminEmail: job.admin_email } : {}),
+      ...(extraEnv.length ? { extraEnv } : {}),
       onStep: step,
     });
 

@@ -11,7 +11,13 @@ interface EnvVar {
   note: string;
 }
 
-const REQUIRED = new Set(["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "ADMIN_EMAILS"]);
+const REQUIRED = new Set([
+  "DATABASE_URL",
+  "BETTER_AUTH_SECRET",
+  "BETTER_AUTH_URL",
+  "ADMIN_EMAILS",
+  "TURBINEH_AI_TOKEN",
+]);
 const EXPLAIN: Record<string, string> = {
   DATABASE_URL: "Connection string of your production PostgreSQL database.",
   BETTER_AUTH_SECRET:
@@ -24,6 +30,9 @@ const EXPLAIN: Record<string, string> = {
     'Sender, for example `"Your App <hello@yourcompany.com>"` (domain verified in Resend).',
   JOBS_RUNNER_SECRET:
     "Random secret (32+ characters) that your scheduler sends to run background jobs.",
+  TURBINEH_AI_TOKEN:
+    "Your app's AI access token (`tbh_ai_…`): **Get AI access token** on your build page (Deploy for me sets it for you). The app uses TurbineH's AI — no AI provider or decider keys needed.",
+  TURBINEH_AI_URL: "TurbineH AI address. Keep the default `https://software.turbineh.com/v1/ai`.",
 };
 
 /** Keys and comments from the app's own .env.example. */
