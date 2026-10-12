@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { leakingFiles, sandbox, type StaticFinding, type VerifyResult } from "@turbineh/verifier";
 import OpenAI from "openai";
 import { z } from "zod";
-import { findingKey, triageFindings } from "./triage.js";
+import { findingKey, isAiReroute, triageFindings } from "./triage.js";
 
 /** A model slot for the security specialist (OpenAI-compatible endpoint serving an open-weights model). */
 export interface FixerSlot {
@@ -160,6 +160,20 @@ async function askFixer(
   throw new Error(`security fixer unavailable: ${String(last)}`);
 }
 
+/**
+ * Instructions for a direct model call (owner decision, ADR-0029: reroute instead of blocking). With the orchestrator
+ * in the app the call is rewritten to it, so the AI Safety Pack, the TurbineH gateway, quotas, usage and audit apply;
+ * without it the call is disabled with a clear error rather than shipped unrouted.
+ */
+export function aiRerouteGuidance(dir: string): string {
+  return existsSync(join(dir, "src/lib/ai/orchestrator.ts"))
+    ? 'This code calls an AI model or SDK directly. Rewrite it to use the app\'s orchestrator instead: import { orchestrate, embed } from "@/lib/ai/orchestrator". ' +
+        'Chat/completion → `const r = await orchestrate({ organizationId, userId, purpose: "<short label>", task: "<what the app wants>", input: <user text or record>, schema?: <zod schema for structured output> })` and use `r.text` (or `r.output` with a schema). ' +
+        'Embeddings → `await embed(texts, { organizationId, userId, purpose: "<label>" })` returning number[][]. Take organizationId/userId from the existing session helpers (require*). ' +
+        "Remove the direct SDK import, client construction, API keys and fetch calls to model endpoints. Keep the function signature and behaviour for callers."
+    : 'This code calls an AI model or SDK directly and this app has no TurbineH orchestrator. Disable the call safely: remove the SDK import, client and any API key usage, and make the function throw new Error("This AI feature is not available: AI calls must go through TurbineH.") instead. Keep the function signature so the app still compiles.';
+}
+
 /** Code remediation: one specialist call per affected file, minimal context, all files in parallel. */
 async function fixCode(
   dir: string,
@@ -167,7 +181,12 @@ async function fixCode(
   opts: RemediationOptions,
 ): Promise<RemediationChange[]> {
   const byFile = new Map<string, StaticFinding[]>();
-  for (const f of findings) byFile.set(f.path, [...(byFile.get(f.path) ?? []), f]);
+  const guidance = aiRerouteGuidance(dir);
+  for (const f of findings) {
+    // A direct model call gets exact instructions: reroute through the orchestrator (or disable it if the app has none).
+    const g = isAiReroute(f) ? { ...f, message: guidance, explain: guidance } : f;
+    byFile.set(f.path, [...(byFile.get(f.path) ?? []), g]);
+  }
   const perFile = await Promise.all(
     [...byFile].map(async ([file, fs]): Promise<RemediationChange[]> => {
       const p = join(dir, file);

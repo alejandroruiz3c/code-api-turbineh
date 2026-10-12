@@ -21,7 +21,8 @@ export async function triageFindings(
   decider: Decider | undefined,
 ): Promise<Map<string, FixStrategy>> {
   const out = new Map<string, FixStrategy>(findings.map((f) => [findingKey(f), "local"]));
-  const warnings = findings.filter((f) => f.severity === "WARNING");
+  // Direct model calls are always rerouted through the orchestrator (owner decision, ADR-0029): never left to a person.
+  const warnings = findings.filter((f) => f.severity === "WARNING" && !isAiReroute(f));
   if (!decider || warnings.length === 0) return out;
   const questions = Object.fromEntries(
     warnings.map((f, i) => [
@@ -126,3 +127,6 @@ export async function estimateImprovement(
     usesOneBuild: true,
   };
 }
+
+/** Findings that are fixed by rerouting the call through the TurbineH orchestrator. */
+export const isAiReroute = (f: { rule: string }) => f.rule === "turbineh.ai-direct-model-call";
