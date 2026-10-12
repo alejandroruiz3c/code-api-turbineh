@@ -35,7 +35,7 @@ export async function GET(req: Request): Promise<Response> {
   ).rows[0];
   if (!row) return problem(400, "This sign-in link is not valid any more");
   const back = (status: string) =>
-    Response.redirect(new URL(`/build/${row.build_id}?deploy=${status}`, env.BETTER_AUTH_URL), 302);
+    Response.redirect(new URL(`/flows/${row.build_id}?deploy=${status}`, env.BETTER_AUTH_URL), 302);
   if (!code) {
     await db.query("DELETE FROM deploy_connections WHERE state = $1", [state]);
     return back("cancelled");
