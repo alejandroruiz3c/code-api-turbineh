@@ -16,7 +16,12 @@ import {
   type SelectedComponent,
 } from "@turbineh/assembler";
 import type { BackupCoder } from "@turbineh/backup-coder";
-import { compileIntent, type CompilerConfig } from "@turbineh/compiler";
+import {
+  compileIntent,
+  type BuildSpec,
+  type CompileResult,
+  type CompilerConfig,
+} from "@turbineh/compiler";
 import type { Decider } from "@turbineh/decider";
 import { resolveSet, type Stack } from "@turbineh/resolver";
 import {
@@ -42,6 +47,7 @@ import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
+import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 
 export type Phase =
   | "compiling"
@@ -105,7 +111,13 @@ export async function runBuild(
   prompt: string,
   deps: PipelineDeps,
   buildId: string = randomUUID(),
-  options: { brand?: unknown } = {},
+  options: {
+    brand?: unknown;
+    /** Generate from an approved plan: the stored spec is used as is (no recompilation, same selection via cache). */
+    spec?: BuildSpec;
+    /** Plan only (PLAN §16.4): stop after selection and resolution and return the plan. */
+    plan?: PlanRequest;
+  } = {},
 ): Promise<BuildOutcome> {
   // Client brand: validated again here (colour format, font list, logo type by magic bytes, size).
   const brand = parseBrand(options.brand);
@@ -116,7 +128,17 @@ export async function runBuild(
   // 1 · compile (decider batch + small parts)
   let t = performance.now();
   await deps.emit(buildId, "compiling", "start", { prompt });
-  let compiled = await compileIntent(prompt, deps.compiler, deps.decider);
+  let compiled: CompileResult = options.spec
+    ? {
+        ok: true,
+        spec: structuredClone(options.spec),
+        attempts: {} as CompileResult["attempts"],
+        latencyMs: 0,
+        usage: { input_tokens: 0, output_tokens: 0 },
+        errors: [],
+        escalate: false,
+      }
+    : await compileIntent(prompt, deps.compiler, deps.decider);
   // T5: the compiler model could not produce a valid BuildSpec after its retries → same decomposed process on the
   // Backup Coder's primary model (open weights), once.
   let t5: { model: string } | null = null;
@@ -153,6 +175,20 @@ export async function runBuild(
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
   const spec = compiled.spec;
+  if (spec.recipe === "out_of_scope" && options.plan) {
+    // No complete use case fits: plan the certified components that cover the need (e.g. the AI orchestrator).
+    const plan = componentPlan(buildId, options.plan, join(deps.repoRoot, "catalog/components"));
+    await deps.emit(buildId, "selecting", "done", {
+      componentOnly: true,
+      selected: plan.components.map((c) => c.id),
+    });
+    return {
+      buildId,
+      status: "done",
+      spec,
+      metrics: { timings, plan, tokens: { compiler: compiled.usage } },
+    };
+  }
   if (spec.recipe === "out_of_scope") {
     return {
       buildId,
@@ -253,6 +289,32 @@ export async function runBuild(
     rejected: resolution.rejected,
     gaps,
   });
+  if (options.plan) {
+    const envTemplate = recipeChain(recipesDir, recipeId)
+      .map((m) => join(recipesDir, m.id, "template", ".env.example"))
+      .reverse()
+      .find((f) => existsSync(f));
+    const plan = flowPlan({
+      buildId,
+      request: options.plan,
+      slug: spec.slug,
+      recipeId,
+      selected: resolution.selected,
+      decisions: selection.decisions,
+      gaps: gaps.map((g) => g.capability),
+      templateDeps: pkg.dependencies,
+      templateEnv: envTemplate ? readFileSync(envTemplate, "utf8") : "",
+      componentsDir: join(deps.repoRoot, "catalog/components"),
+      entities: spec.entities.map((e) => e.name),
+      labels: (cap) => CAPABILITY_LABELS[cap] ?? cap,
+    });
+    return {
+      buildId,
+      status: "done",
+      spec,
+      metrics: { timings, plan, tokens: { compiler: compiled.usage }, decider: selection.decider },
+    };
+  }
 
   // 4 · assemble
   t = performance.now();

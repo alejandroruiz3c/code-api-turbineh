@@ -45,6 +45,10 @@ import {
   type Phase,
   type PipelineDeps,
 } from "./pipeline.js";
+import { catalogEntries, storeCapabilityPackage, type PlanRequest } from "./product.js";
+import type { BuildSpec } from "@turbineh/compiler";
+import { trackedTokens } from "@turbineh/engine";
+import type { Plan } from "@turbineh/shared";
 
 loadLocalEnv();
 const env = readEnv();
@@ -134,17 +138,38 @@ async function handle(build: BuildRow): Promise<void> {
       emitEvent(db, build.id, phase, type, data),
   };
   const parentId = typeof build.options.parent === "string" ? build.options.parent : null;
+  const mode = build.options.mode;
+  // Product flows (PLAN §16.4): the same row first carries the plan, then the generation from that plan.
+  const plan = build.metrics.plan as Plan | undefined;
+  const componentOnly = mode === "generate" && plan?.capability.kind === "component";
   const outcome =
-    build.options.mode === "improve" && parentId
-      ? await improveFromParent(build, parentId, pipelineDeps)
-      : await runBuild(build.prompt, pipelineDeps, build.id, { brand: build.options.brand });
+    componentOnly && plan
+      ? await generateComponentPackage(build, plan)
+      : build.options.mode === "improve" && parentId
+        ? await improveFromParent(build, parentId, pipelineDeps)
+        : await runBuild(build.prompt, pipelineDeps, build.id, {
+            brand: build.options.brand,
+            ...(mode === "plan" ? { plan: build.options.plan as PlanRequest } : {}),
+            ...(mode === "generate" && build.spec ? { spec: build.spec as BuildSpec } : {}),
+          });
+  if (mode === "generate" && plan) outcome.metrics = { ...outcome.metrics, plan };
   let artifact: Record<string, unknown> | undefined;
+  if (componentOnly) {
+    artifact = outcome.metrics.artifact as Record<string, unknown>;
+    delete outcome.metrics.artifact;
+  }
   if (outcome.status === "done" && outcome.repoDir) {
     await emitEvent(db, build.id, "delivering", "start", { channel: "A" });
     artifact = await storeArtifact(build, outcome.repoDir, storage);
+    // The capability package (PLAN §16.3) is the product deliverable: ZIP or changes in a repository.
+    artifact.package = await packageFlow(build, outcome, artifact, plan).catch((err: unknown) => {
+      log.error("capability package failed", { buildId: build.id, error: String(err) });
+      return undefined;
+    });
     await emitEvent(db, build.id, "delivering", "done", {
       channel: "A",
       files: (artifact.files as string[]).length,
+      package: Boolean(artifact.package),
     });
   }
   const cost = buildCost(outcome.metrics, env.COMPILER_MODEL, COST_OVERHEAD_EUR);
@@ -165,6 +190,98 @@ async function handle(build: BuildRow): Promise<void> {
     reason: outcome.reason ?? null,
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
+}
+
+/** Capability package of a verified app (complete flow). */
+async function packageFlow(
+  build: BuildRow,
+  outcome: BuildOutcome,
+  artifact: Record<string, unknown>,
+  plan: Plan | undefined,
+): Promise<Record<string, unknown>> {
+  const verify = (outcome.verify?.steps ?? []).map((x) => ({ name: x.name, ok: x.ok }));
+  const spec = outcome.spec as { slug?: string; app_name?: string; summary?: string } | undefined;
+  const m = outcome.metrics;
+  const docs = Object.fromEntries(
+    Object.entries((artifact.docs ?? {}) as Record<string, string>)
+      .filter(([k]) => ["TURBINEH_REPORT.md", "SECURITY.md", "DEPLOY.md"].includes(k))
+      .map(([k, v]) => [k.toLowerCase().replace("turbineh_", ""), v]),
+  );
+  const pkg = await storeCapabilityPackage(
+    build.id,
+    storage,
+    {
+      slug: spec?.slug ?? String(artifact.slug),
+      name: spec?.app_name ?? String(artifact.slug),
+      need: plan?.need ?? build.prompt,
+      planId: build.id,
+      state: verify.length > 0 && verify.every((x) => x.ok) ? "verified" : "generated",
+      summary: spec?.summary ?? build.prompt,
+      components: (plan?.components ?? []).map((c) => ({
+        ...c,
+        purl: "",
+        capability: plan?.decisions.find((d) => d.choice === c.id)?.topic ?? c.id,
+      })),
+      checks: verify,
+      ...(plan ? { plan } : {}),
+      metrics: {
+        seconds: Math.round(((m.timings as { total?: number } | undefined)?.total ?? 0) / 1000),
+        tokens: trackedTokens(m),
+        reusedShare: (m.reuse as { reusedShare?: number } | undefined)?.reusedShare ?? 0,
+        newLines: (m.reuse as { generatedLines?: number } | undefined)?.generatedLines ?? 0,
+        securityFindings: Number((m.handover as { alerts?: number } | undefined)?.alerts ?? 0),
+      },
+      docs,
+    },
+    { appDir: outcome.repoDir ?? "" },
+  );
+  return pkg;
+}
+
+/** Component-only generation: certified components packaged as is (no app to build), verified at certification. */
+async function generateComponentPackage(build: BuildRow, plan: Plan): Promise<BuildOutcome> {
+  const t0 = performance.now();
+  await emitEvent(db, build.id, "assembling", "start", {
+    components: plan.components.map((c) => c.id),
+  });
+  const entries = catalogEntries(join(repoRoot, "catalog/components")).filter((c) =>
+    plan.components.some((p) => p.id === c.id),
+  );
+  const checks = [{ name: "certification", ok: true }];
+  const pkg = await storeCapabilityPackage(
+    build.id,
+    storage,
+    {
+      slug: plan.capability.id,
+      name: plan.capability.name,
+      need: plan.need,
+      planId: build.id,
+      state: "verified",
+      summary: plan.need,
+      components: entries.map((c) => ({
+        id: c.id,
+        version: c.version,
+        license: c.license,
+        purl: c.purl,
+        capability: c.provides[0] ?? c.category,
+        why: plan.components.find((p) => p.id === c.id)?.why ?? "",
+      })),
+      checks,
+      plan,
+    },
+    { components: entries },
+  );
+  await emitEvent(db, build.id, "delivering", "done", { channel: "package", package: true });
+  return {
+    buildId: build.id,
+    status: "done",
+    metrics: {
+      verify: checks,
+      timings: { total: Math.round(performance.now() - t0) },
+      reuse: { reusedShare: 1, generatedLines: 0 },
+      artifact: { slug: plan.capability.id, package: pkg },
+    },
+  };
 }
 
 /** Restores the parent build's repository from its git bundle and runs "improve and redeliver" on a copy. */

@@ -5,6 +5,7 @@
 
 /** Precise lifecycle states — never "ready" while credentials or checks are missing (PLAN §16.2). */
 export type FlowState =
+  | "planning" // the plan is being prepared (understanding the need, selecting components)
   | "planned" // plan built, not generated yet
   | "generating"
   | "generated" // package produced, not verified yet

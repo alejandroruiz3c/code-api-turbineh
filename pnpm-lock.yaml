@@ -50,6 +50,9 @@ importers:
       '@turbineh/deployer':
         specifier: workspace:*
         version: link:../../packages/deployer
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -129,6 +132,9 @@ importers:
       '@turbineh/deployer':
         specifier: workspace:*
         version: link:../../packages/deployer
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@turbineh/integrator':
         specifier: workspace:*
         version: link:../../packages/integrator
@@ -286,6 +292,16 @@ importers:
         version: 0.6.0
 
   packages/deployer: {}
+
+  packages/engine:
+    dependencies:
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/integrator:
     dependencies:
