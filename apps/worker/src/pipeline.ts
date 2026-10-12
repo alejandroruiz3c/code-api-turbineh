@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import {
   assemble,
   entitiesToGenerate,
+  providedTables,
   fieldsOf,
   parseBrand,
   hasRecipe,
@@ -755,7 +756,10 @@ async function businessRules(
   deps: PipelineDeps,
   buildId: string,
 ): Promise<{ candidates: RuleCandidate[]; written: WrittenRules[] }> {
-  const entities = entitiesToGenerate(spec, recipe.providedEntities);
+  const entities = entitiesToGenerate(spec, [
+    ...recipe.providedEntities,
+    ...providedTables(repoDir),
+  ]);
   if (entities.length === 0) return { candidates: [], written: [] };
   const lib = readFileSync(join(repoDir, "src/lib/rules.ts"), "utf8");
   const targets = new Map<string, RuleTarget>();

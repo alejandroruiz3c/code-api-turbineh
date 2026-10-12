@@ -13,6 +13,7 @@ import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
 import {
   entitiesToGenerate,
+  providedTables,
   generateEntity,
   generateIndexes,
   type GeneratedFile,
@@ -127,7 +128,10 @@ export function assemble(input: AssembleInput): AssembleResult {
   if (input.brand) applyBrand(outDir, input.brand);
   writeSiteContent(outDir, spec);
 
-  const entities = entitiesToGenerate(spec, recipe.providedEntities);
+  const entities = entitiesToGenerate(spec, [
+    ...recipe.providedEntities,
+    ...providedTables(outDir),
+  ]);
   const chosen = new Set(input.selected.map((s) => s.capability));
   const features = {
     csvExport: chosen.has("data.csv-export"),
