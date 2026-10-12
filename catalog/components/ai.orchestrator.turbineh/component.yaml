@@ -70,6 +70,9 @@ evidence:
   - claim: "Apps built with recipe ai-agents pass the full verification with every AI call through the orchestrator"
     origin: tested
     ref: "bench/results/2026-10-12-f3-ai-agents.md"
+  - claim: "Through the TurbineH AI gateway layout (TURBINEH_AI_URL/TURBINEH_AI_TOKEN, ADR-0029), an ai-agents build (ai-01) passes 11/11 checks with 0 corrections against services/ai-mock"
+    origin: tested
+    ref: "bench/results/2026-10-12-ai-gateway.md"
 relations:
   requires: [security.ai-safety.turbineh]
   provides: [ai.orchestrator]

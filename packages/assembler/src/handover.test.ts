@@ -42,4 +42,15 @@ describe("client handover", () => {
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toMatch(/(src|href)="https?:/);
   });
+
+  it("AI apps: the TurbineH AI token is required and no provider or decider key is asked for", () => {
+    const guide = deployGuide(
+      "Support AI",
+      "DATABASE_URL=\nTURBINEH_AI_URL=https://software.turbineh.com/v1/ai\n# token\nTURBINEH_AI_TOKEN=\n",
+    );
+    const required = guide.slice(guide.indexOf("| Required |"), guide.indexOf("| Optional |"));
+    expect(required).toContain("`TURBINEH_AI_TOKEN`");
+    expect(required).toContain("Get AI access token");
+    expect(guide).not.toMatch(/TYPESAFE_API_KEY|AI_API_KEY/);
+  });
 });
