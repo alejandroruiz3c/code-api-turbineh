@@ -1,0 +1,76 @@
+schema: turbineh.component/v0.1
+id: files.office-text.officeparser
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/officeparser@8.0.0
+  repo: https://github.com/harshankur/officeParser
+  integrity: sha512-Hwwx0PoIyEIJl7FqzE6nS5MUDKC3sNhYt9SJKuZ+sM1V30bL2CywYE/cwSC9fToqZrmnp8hR7XvhyWKI/x/1Ig==
+capability:
+  does: Extracts text from PowerPoint, Excel and OpenDocument files for search and AI processing
+  does_not: "Text only: no formatting, charts or images"
+  use_cases:
+    - ai-agents
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    pdf-lib: ^1.17.1
+    puppeteer: ">=22"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add officeparser@8.0.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata officeparser@8.0.0
+  - claim: 0 OSV advisories for officeparser@8.0.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - files.office-text
+  conflicts: []
+  tested_with:
+    - contract-harness

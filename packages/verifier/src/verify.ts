@@ -67,6 +67,17 @@ export interface VerifyResult {
 const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
 
 /**
+ * SPDX semantics for dependency licences: "A OR B" lets us choose, so it blocks only when every alternative blocks
+ * (e.g. jszip "MIT OR GPL-3.0-or-later" is used under MIT); "A AND B" blocks when any part blocks.
+ */
+export function licenseBlocks(expression: string): boolean {
+  const expr = expression.replace(/[()]/g, " ").trim();
+  if (/\sOR\s/i.test(expr)) return expr.split(/\s+OR\s+/i).every((alt) => licenseBlocks(alt));
+  if (/\sAND\s/i.test(expr)) return expr.split(/\s+AND\s+/i).some((part) => licenseBlocks(part));
+  return BLOCKING_LICENSE.test(expr);
+}
+
+/**
  * Full verification gate (PLAN §5.2), optimised for speed without relaxing isolation (ADR-0011, ADR-0014):
  *  - one container on a per-build `--internal` network (no internet) with an ephemeral Postgres started up front;
  *  - dependencies come pre-installed in a base image keyed by the lockfile hash (offline install as fallback);
@@ -179,7 +190,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
   const licenseLines = main.tail.split("\n").filter((l) => l.startsWith("LICENSE_BAD "));
   const blockingLicenses = licenseLines
     .map((l) => l.slice(12))
-    .filter((l) => BLOCKING_LICENSE.test(l));
+    // "name@version EXPRESSION": the SPDX expression decides, not a substring match.
+    .filter((l) => licenseBlocks(l.slice(l.indexOf(" ") + 1)));
   steps.push(secrets);
   steps.push({
     name: "static",

@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: content.html-to-markdown.node-html-markdown
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:npm/node-html-markdown@2.0.0
+  repo: ssh://git@github.com/crosstype/node-html-markdown
+  integrity: sha512-DqUC3GGP7pwSYxS93SwHoP+qCw78xcMP6C6H2DuC8rPD2AweJRjBzQb5SdXpKtDlqAQ7hVotJcfhgU7hU5Gthw==
+capability:
+  does: Converts HTML to Markdown fast and without a browser DOM (compact context for models, imports)
+  does_not: Does not execute scripts or fetch pages
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+    - corporate-site
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add node-html-markdown@2.0.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata node-html-markdown@2.0.0
+  - claim: 0 OSV advisories for node-html-markdown@2.0.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - content.html-to-markdown
+  conflicts: []
+  tested_with:
+    - contract-harness

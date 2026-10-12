@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: email.parsing.mailparser
+version: 0.1.0
+status: approved
+category: email
+source:
+  purl: pkg:npm/mailparser@3.9.31
+  repo: https://github.com/nodemailer/mailparser
+  integrity: sha512-m4G7Dpozc7Qr3Eap80sxZZ6sM79FlpXLCVGJGlRw0swR+iC5QURYytI21TCYc4DK1EXa1kwKIRezDUVEI4XufA==
+capability:
+  does: "Parses raw emails (MIME): headers, text, HTML and attachments, for inbox-processing agents"
+  does_not: Does not fetch mail (IMAP/POP); attachments are untrusted input
+  use_cases:
+    - ai-agents
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add mailparser@3.9.31
+  types: "@types/mailparser@3.4.6"
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata mailparser@3.9.31
+  - claim: 0 OSV advisories for mailparser@3.9.31 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - email.parsing
+  conflicts: []
+  tested_with:
+    - contract-harness
