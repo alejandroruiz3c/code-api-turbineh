@@ -135,6 +135,8 @@ export const CAPABILITY_QUESTIONS: Partial<Record<(typeof CAPABILITIES)[number],
   "ui.alert-dialog": "Destructive actions ask for confirmation first.",
   "ui.hover-card": "Hovering over a name or link shows a preview card.",
   "ui.color-picker": "Users choose colours (branding, product options).",
+  "payments.subscriptions":
+    "Customers pay a recurring subscription (monthly or yearly plan) to use the product.",
 };
 
 const fieldType = z.enum([

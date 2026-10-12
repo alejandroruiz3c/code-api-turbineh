@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Native component `payments.subscriptions.turbineh` (ADR-0019): Stripe Billing subscriptions per workspace (hosted Checkout, Customer Portal, signed webhook, `requirePlan`), verified against stripe-mock; native components can add menu entries. 31 benchmark prompts across 10 recipes.
+
 - Recipes from the use-case research (top 5 of AI-built software): `projects` (kanban boards, tasks with assignees, priorities, due dates, comments, my tasks), `analytics-dashboard` (CSV import validated per row, KPIs with previous-period comparison, accessible native SVG charts, filters, CSV export), `tracker` (habits and daily amounts, goals, streaks, 30-day history). Ten recipes in total.
 
 - Payments verified in every shop build: the verification starts Stripe's official API simulator (stripe-mock, pinned digest) on the isolated network; the E2E creates a real Checkout Session against it, sends signed webhooks (twice, idempotency) and checks order paid, stock decremented and cart emptied. `STRIPE_API_BASE` (defaults to the real API); webhook also matches the order by `client_reference_id`.

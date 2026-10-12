@@ -1,0 +1,5 @@
+{
+  "id": "saas-04",
+  "expected_recipe": "saas-crud",
+  "prompt": "A micro SaaS for freelance photographers to manage client galleries and invoices, with a free plan and a paid Pro monthly subscription that unlocks unlimited galleries."
+}

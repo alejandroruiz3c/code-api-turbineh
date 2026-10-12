@@ -1,0 +1,5 @@
+{
+  "id": "analytics-03",
+  "expected_recipe": "analytics-dashboard",
+  "prompt": "An energy consumption dashboard for facility managers: import daily kWh per building and compare periods and buildings."
+}

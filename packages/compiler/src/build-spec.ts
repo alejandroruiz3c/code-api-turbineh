@@ -111,6 +111,7 @@ export const CAPABILITIES = [
   "ui.alert-dialog",
   "ui.hover-card",
   "ui.color-picker",
+  "payments.subscriptions",
 ] as const;
 
 const item = (t: number, x: number) =>

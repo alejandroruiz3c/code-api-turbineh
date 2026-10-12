@@ -1,0 +1,5 @@
+{
+  "id": "tracker-01",
+  "expected_recipe": "tracker",
+  "prompt": "A habit and fitness tracker: I track habits like meditation and reading, and amounts like running kilometres and glasses of water, with daily goals, streaks and my last 30 days."
+}

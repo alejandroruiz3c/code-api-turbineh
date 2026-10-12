@@ -98,6 +98,7 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "ui.alert-dialog": "confirmation dialogs before deleting",
   "ui.hover-card": "preview cards on hover",
   "ui.color-picker": "a colour picker",
+  "payments.subscriptions": "recurring subscription plans",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;

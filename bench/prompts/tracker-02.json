@@ -1,0 +1,5 @@
+{
+  "id": "tracker-02",
+  "expected_recipe": "tracker",
+  "prompt": "A personal expense tracker where I log what I spend each day against a daily budget and see my streak of days under budget."
+}
