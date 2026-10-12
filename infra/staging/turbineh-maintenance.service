@@ -1,0 +1,6 @@
+[Unit]
+Description=TurbineH worker host disk maintenance (sandbox images, build cache, old build dirs)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/code-api-turbineh-maintenance.sh

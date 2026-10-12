@@ -33,6 +33,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Worker hosts filled their disk with sandbox base images (64 GB on the Scaleway host), making every build fail at `install`. Daily `turbineh-maintenance.timer` keeps the 8 newest base images, prunes build cache and anonymous volumes and removes build dirs older than 3 days; workers stop claiming builds below 15 GB free (`MIN_FREE_DISK_GB`).
+- Graceful stop: sandbox processes run in their own process group and units use `KillMode=mixed`, so a stop never reaches a verification in progress.
 - A Semgrep run killed under load (empty or truncated JSON) crashed the whole worker process and stranded the other builds running in it. The scan is retried once and otherwise fails the `static` step (a scan that did not run never counts as clean); the scans promise is handled early and the worker logs unhandled rejections instead of exiting.
 - `deploy.sh` builds the sandbox image on hosts that do not have it: the new AWS worker failed every build at `install` during the load test (stopped within minutes; Scaleway kept serving).
 - Generated entities that would collide with a table defined by the recipe or a native component (e.g. a "Subscription" entity next to `payments.subscriptions`) are no longer generated: the build failed to compile (benchmark `saas-04`).

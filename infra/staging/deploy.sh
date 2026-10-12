@@ -35,7 +35,10 @@ if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
     && set -a && . $ENVFILE && set +a \
     && sudo -E -H -u turbineh env PATH=\$PATH pnpm -s db:migrate \
     && install -m 644 infra/staging/$UNITFILE /etc/systemd/system/$UNIT.service \
-    && systemctl daemon-reload && systemctl enable --now $UNIT >/dev/null 2>&1; systemctl restart $UNIT \
+    && install -m 755 infra/staging/maintenance.sh /opt/code-api-turbineh-maintenance.sh \
+    && install -m 644 infra/staging/turbineh-maintenance.service infra/staging/turbineh-maintenance.timer /etc/systemd/system/ \
+    && systemctl daemon-reload && systemctl enable --now turbineh-maintenance.timer >/dev/null 2>&1 \
+    && systemctl enable --now $UNIT >/dev/null 2>&1; systemctl restart $UNIT \
     && sleep 5 && echo \"$UNIT: \$(systemctl is-active $UNIT)\""
 fi
 

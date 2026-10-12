@@ -6,7 +6,14 @@
  */
 import { execFileSync } from "node:child_process";
 import { hostname } from "node:os";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statfsSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { SelectionResult } from "@turbineh/selector";
@@ -198,8 +205,26 @@ let running = 0;
 /** Set on SIGTERM/SIGINT: no new work is claimed; running builds, deliveries and deployments finish first. */
 let stopping = false;
 let busyJobs = 0;
+/** Below this free space a build would fail at install: leave it in the queue for a worker that has room. */
+const MIN_FREE_GB = Number(process.env.MIN_FREE_DISK_GB ?? 15);
+let lowDiskLogged = 0;
+function diskFreeGb(): number {
+  const st = statfsSync(repoRoot);
+  return (st.bavail * st.bsize) / 1024 ** 3;
+}
 async function tick(): Promise<void> {
   if (stopping || running >= CONCURRENCY) return;
+  const free = diskFreeGb();
+  if (free < MIN_FREE_GB) {
+    if (Date.now() - lowDiskLogged > 10 * 60_000) {
+      lowDiskLogged = Date.now();
+      log.warn("low disk: not claiming new builds", {
+        freeGb: Math.round(free),
+        minGb: MIN_FREE_GB,
+      });
+    }
+    return;
+  }
   if ((await costToday(db)).eur >= DAILY_CAP_EUR) {
     log.warn("daily cost cap reached; not claiming new builds", { cap: DAILY_CAP_EUR });
     return;

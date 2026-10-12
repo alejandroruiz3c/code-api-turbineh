@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily TurbineH worker host disk maintenance
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 America/Los_Angeles
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
