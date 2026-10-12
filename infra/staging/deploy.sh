@@ -31,6 +31,7 @@ if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
   ssh -i "$KEY" "root@$HOST" "set -e; cd $DIR && chown -R turbineh:turbineh . \
     && sudo -u turbineh pnpm install --frozen-lockfile >/dev/null \
     && sudo -u turbineh pnpm turbo build --filter=@turbineh/worker... | grep -E 'Tasks:' \
+    && (docker image inspect turbineh/sandbox:1 >/dev/null 2>&1 || docker build -q -t turbineh/sandbox:1 services/sandbox >/dev/null) \
     && set -a && . $ENVFILE && set +a \
     && sudo -E -H -u turbineh env PATH=\$PATH pnpm -s db:migrate \
     && systemctl daemon-reload && systemctl enable --now $UNIT >/dev/null 2>&1; systemctl restart $UNIT \

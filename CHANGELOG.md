@@ -30,6 +30,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- `deploy.sh` builds the sandbox image on hosts that do not have it: the new AWS worker failed every build at `install` during the load test (stopped within minutes; Scaleway kept serving).
 - Generated entities that would collide with a table defined by the recipe or a native component (e.g. a "Subscription" entity next to `payments.subscriptions`) are no longer generated: the build failed to compile (benchmark `saas-04`).
 - `pnpm bench` survives network drops on the operator's machine (retries with backoff) and can resume a run with `BENCH_RUN` (finished builds are reused through their idempotency keys).
 - Correction commits no longer include migrations generated during verification: those go in their own `chore(db)` commit first.
