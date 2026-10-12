@@ -38,6 +38,7 @@ for public-site recipes, with a deterministic fallback.
 
 ## Limits
 
-- Payments are verified by signature unit tests and E2E up to checkout; completing a real payment needs the client's
-  Stripe keys (test mode first) and is listed in the report as not verified automatically.
+- Payments are verified in every shop build against Stripe's official simulator (stripe-mock) on the isolated
+  network: Checkout Session creation, signed webhook (sent twice), order paid, stock and cart updated. A live
+  payment with the client's own Stripe keys (test mode first) remains their go-live check.
 - Shipping rates and taxes are not calculated (flat prices); multi-variant products are future work.

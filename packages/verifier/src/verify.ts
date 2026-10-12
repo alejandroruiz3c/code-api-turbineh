@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,8 @@ import {
   POSTGRES_IMAGE,
   run,
   SANDBOX_IMAGE,
+  STRIPE_MOCK_IMAGE,
+  STRIPE_SYNTHETIC,
   SYNTHETIC_ENV,
   type RunResult,
 } from "./sandbox.js";
@@ -98,6 +100,22 @@ export async function verify(dir: string): Promise<VerifyResult> {
     "POSTGRES_DB=app",
     POSTGRES_IMAGE,
   ]);
+  // Shop apps: Stripe's official API simulator on the same isolated network, so checkout and the signed webhook
+  // are exercised end to end without internet or real keys.
+  const stripeHost = `${net}-stripe`;
+  const shop = existsSync(join(dir, "src/server/stripe.ts"));
+  if (shop) {
+    await run("docker", [
+      "run",
+      "-d",
+      "--rm",
+      "--name",
+      stripeHost,
+      "--network",
+      net,
+      STRIPE_MOCK_IMAGE,
+    ]);
+  }
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
   let main: RunResult;
   try {
@@ -125,6 +143,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
           DATABASE_URL: `postgres://app:app@${dbHost}:5432/app`,
           BASE_HASH: lockHash,
           DB_HOST: dbHost,
+          ...(shop ? { ...STRIPE_SYNTHETIC, STRIPE_API_BASE: `http://${stripeHost}:12111` } : {}),
         }).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
         baseImage ?? SANDBOX_IMAGE,
         "sh",
@@ -135,6 +154,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
     );
   } finally {
     await run("docker", ["rm", "-f", dbHost]);
+    if (shop) await run("docker", ["rm", "-f", stripeHost]);
     await run("docker", ["network", "rm", net]);
   }
   const [secrets, staticFindings, advisories] = await scans;

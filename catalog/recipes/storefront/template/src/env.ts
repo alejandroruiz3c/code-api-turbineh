@@ -22,6 +22,8 @@ const schema = z.object({
     .startsWith("whsec_")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** Stripe API address (the real one by default; the verification sandbox points it to Stripe's simulator). */
+  STRIPE_API_BASE: z.url().default("https://api.stripe.com"),
   /** ISO currency for all prices (lowercase, e.g. eur). */
   SHOP_CURRENCY: z
     .string()
