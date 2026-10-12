@@ -75,6 +75,11 @@ const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
  * (e.g. jszip "MIT OR GPL-3.0-or-later" is used under MIT); "A AND B" blocks when any part blocks. Parentheses and
  * precedence (AND binds tighter than OR) are respected; an expression that cannot be parsed blocks.
  */
+/** "LICENSE_BAD name@version EXPRESSION" (one line of the sandbox licence scan): only the expression decides. */
+export function licenseLineBlocks(line: string): boolean {
+  return licenseBlocks(line.split(" ").slice(2).join(" "));
+}
+
 export function licenseBlocks(expression: string): boolean {
   const tokens = expression.match(/\(|\)|[^\s()]+/g) ?? [];
   let i = 0;
@@ -248,10 +253,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
 
   const licenseLines = main.tail.split("\n").filter((l) => l.startsWith("LICENSE_BAD "));
   const blockingLicenses = licenseLines
-    .map((l) => l.slice(12))
-    // "name@version EXPRESSION": the SPDX expression decides, not a substring match.
-    // "LICENSE_BAD name@version EXPRESSION": only the SPDX expression decides (not the package name).
-    .filter((l) => licenseBlocks(l.split(" ").slice(2).join(" ")));
+    .filter(licenseLineBlocks)
+    .map((l) => l.slice("LICENSE_BAD ".length));
   steps.push(secrets);
   steps.push({
     name: "static",

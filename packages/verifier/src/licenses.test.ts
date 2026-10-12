@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { licenseBlocks } from "./verify.js";
+import { licenseBlocks, licenseLineBlocks } from "./verify.js";
 
 describe("dependency licence policy (SPDX)", () => {
   it("blocks copyleft and unknown licences", () => {
@@ -26,5 +26,11 @@ describe("dependency licence policy (SPDX)", () => {
     expect(licenseBlocks("GPL-2.0-only WITH Classpath-exception-2.0")).toBe(true);
     expect(licenseBlocks("MIT OR")).toBe(true);
     expect(licenseBlocks("(MIT")).toBe(true);
+  });
+
+  it("reads the expression from a whole scan line (regression: jszip blocked a build)", () => {
+    expect(licenseLineBlocks("LICENSE_BAD jszip@3.10.2 (MIT OR GPL-3.0-or-later)")).toBe(false);
+    expect(licenseLineBlocks("LICENSE_BAD @scope/pkg@1.0.0 GPL-3.0-only")).toBe(true);
+    expect(licenseLineBlocks("LICENSE_BAD gpl-named-pkg@1.0.0 MIT")).toBe(false);
   });
 });
