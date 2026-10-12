@@ -76,6 +76,8 @@ export async function writeRules(
       "polite, user-facing message (no internal details) when `input` breaks a rule, otherwise return null. " +
       "Call `await ctx.existing()` only when a rule needs the other records of this entity (same workspace). " +
       "Treat missing optional values (undefined or null) as not matching. Compare text case-insensitively and trimmed. " +
+      '"After", "before", "more than" and "less than" are strict (equal values break the rule); "from", "until", ' +
+      '"at least" and "at most" include the boundary. ' +
       "The records in `samples_that_must_be_accepted` (created first, then imported next to it) must be accepted. " +
       "No other imports, no database, no network, no environment variables, no side effects. Do not read the current " +
       "date or time unless a rule explicitly depends on today. JSDoc above the export listing the rules. " +
@@ -101,7 +103,8 @@ export async function writeRules(
       `({ id: "row-1", organizationId: "org-1", createdAt: new Date("2026-10-12T09:00:00Z"), ...to${P}Values(input) }) ` +
       `typed as ${P}Row, all imported from "@/entities/${target.slug}/schema". Pass ` +
       "`{ existing: () => Promise.resolve(rows) }` as the context. For EACH rule: one test where a violating record is " +
-      "rejected (the result is a non-empty string) and one where a valid record is accepted (null). Test titles in " +
+      "rejected (the result is a non-empty string) and one where a valid record is accepted (null); for a comparison " +
+      "rule, also one test with the two values exactly equal (strict words reject it, inclusive words accept it). Test titles in " +
       'double quotes, at most 120 characters, starting with the rule in plain words (for example it("No two active ' +
       'memberships per member: rejects a second active membership", ...)). Import { describe, expect, it } from "vitest". ' +
       "Deterministic: fixed dates only. " +

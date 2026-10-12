@@ -160,9 +160,24 @@ function dropLeaks(dir: string, files: string[]): string[] {
   return files.filter((f) => !leaks.includes(f));
 }
 
-function commit(dir: string, message: string): void {
+/** Commits a correction (migrations first, in their own commit). Exported for tests. */
+export function commit(dir: string, message: string): void {
   if (!existsSync(join(dir, ".git"))) return;
+  // Migrations generated from the schema during verification belong in the app (deploys apply them), but in their
+  // own commit so a correction's history shows only what the correction changed.
+  const migrations = execFileSync("git", ["status", "--porcelain", "--", "drizzle"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  if (migrations.trim()) {
+    execFileSync("git", ["add", "--", "drizzle"], { cwd: dir });
+    gitCommit(dir, "chore(db): migrations generated from the schema");
+  }
   execFileSync("git", ["add", "-A"], { cwd: dir });
+  gitCommit(dir, message);
+}
+
+function gitCommit(dir: string, message: string): void {
   execFileSync(
     "git",
     [

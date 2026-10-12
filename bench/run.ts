@@ -2,7 +2,7 @@
  * Benchmark runner (PLAN §12, WP16). Sends every prompt in bench/prompts/ to the public API (staging by default),
  * one at a time, waits for the result and writes a JSON + Markdown report to bench/results/.
  *
- *   pnpm bench                      # staging, API key from BENCH_API_KEY or STAGING_SMOKE_API_KEY in .env.local
+ *   pnpm bench                      # staging (ADR-0022), API key from BENCH_API_KEY or STG_SMOKE_API_KEY in .env.local
  *   pnpm bench -- --only saas-01    # one prompt
  *
  * Only numbers measured here may be published (CLAUDE.md, "Métricas").
@@ -18,9 +18,14 @@ if (existsSync(join(root, ".env.local"))) {
     if (m?.[1]) env[m[1]] = m[2] ?? "";
   }
 }
-const API = process.env.BENCH_API_URL ?? "https://software.turbineh.com";
-const KEY = process.env.BENCH_API_KEY ?? env.BENCH_API_KEY ?? env.STAGING_SMOKE_API_KEY;
-if (!KEY) throw new Error("Set BENCH_API_KEY (or STAGING_SMOKE_API_KEY in .env.local)");
+const API = process.env.BENCH_API_URL ?? "https://staging.software.turbineh.com";
+// Keys belong to one environment: the staging smoke key by default, the production keys only with BENCH_API_URL.
+const KEY =
+  process.env.BENCH_API_KEY ??
+  (process.env.BENCH_API_URL
+    ? (env.BENCH_API_KEY ?? env.STAGING_SMOKE_API_KEY)
+    : env.STG_SMOKE_API_KEY);
+if (!KEY) throw new Error("Set BENCH_API_KEY (or STG_SMOKE_API_KEY in .env.local)");
 const only = process.argv.includes("--only")
   ? process.argv[process.argv.indexOf("--only") + 1]
   : null;
