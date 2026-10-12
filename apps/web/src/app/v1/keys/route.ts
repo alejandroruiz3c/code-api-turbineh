@@ -24,5 +24,8 @@ export async function POST(req: Request): Promise<Response> {
     return problem(409, "Too many active keys", `Revoke one first (maximum ${MAX_ACTIVE}).`);
   }
   const { id, key } = await createApiKey(db, caller.ownerId, parsed.data.name);
-  return Response.json({ id, key, prefix: key.slice(0, 8) }, { status: 201, headers: { "Cache-Control": "no-store" } });
+  return Response.json(
+    { id, key, prefix: key.slice(0, 8) },
+    { status: 201, headers: { "Cache-Control": "no-store" } },
+  );
 }
