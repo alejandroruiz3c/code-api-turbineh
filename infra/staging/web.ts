@@ -87,6 +87,8 @@ async function env(): Promise<void> {
     S3_SECRET_ACCESS_KEY: need("SCW_SECRET_KEY"),
     DAILY_COST_CAP_EUR: STAGING ? "20" : "100",
     USER_DAILY_BUILDS: "10",
+    // Internal API-key owners (benchmark and smoke keys); production keeps the legacy owner names.
+    OPS_OWNER_IDS: STAGING ? "ops:smoke" : "staging-smoke,staging-bench,ops:smoke",
     ...optional("OPS_ADMIN_EMAILS"),
     ...optional("VERCEL_INTEGRATION_SLUG"),
     ...optional("VERCEL_INTEGRATION_CLIENT_ID"),
