@@ -1,0 +1,5 @@
+name: recertify-curated-glue-4
+description: "Curated glue for p-retry and file-type (model-written glue kept spending corrections)"
+entries:
+  - id: ops.retry.p-retry
+  - id: files.type-detection.file-type
