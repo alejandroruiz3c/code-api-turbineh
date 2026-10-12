@@ -98,13 +98,20 @@ export function assemble(input: AssembleInput): AssembleResult {
 
   // Native components vendored with provenance: their files/ are copied into the app when selected.
   const componentsDir = join(input.recipesDir, "..", "components");
+  const componentNav: { label: string; href: string }[] = [];
   for (const s of input.selected) {
     const files = join(componentsDir, s.component.id, "files");
     if (!s.component.pkg.name.startsWith("turbineh/") || !existsSync(files)) continue;
     cpSync(files, outDir, {
       recursive: true,
-      filter: (src) => !src.endsWith(".env.example.append"),
+      filter: (src) => !src.endsWith(".env.example.append") && !src.endsWith("nav.json"),
     });
+    const navFile = join(files, "nav.json");
+    if (existsSync(navFile)) {
+      componentNav.push(
+        ...(JSON.parse(readFileSync(navFile, "utf8")) as { label: string; href: string }[]),
+      );
+    }
     const extraEnv = join(files, ".env.example.append");
     if (existsSync(extraEnv) && existsSync(join(outDir, ".env.example"))) {
       appendFileSync(join(outDir, ".env.example"), readFileSync(extraEnv, "utf8"));
@@ -131,7 +138,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
       componentTables,
-      extraNav: recipe.nav,
+      extraNav: [...recipe.nav, ...componentNav],
     }),
     ...docs(
       input,

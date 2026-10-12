@@ -9,6 +9,9 @@ export const RECIPES = [
   "client-portal",
   "corporate-site",
   "storefront",
+  "projects",
+  "analytics-dashboard",
+  "tracker",
 ] as const;
 
 /** Capability ids the Selector can resolve (category.capability). `ai.*` is blocked until Phase 3. */
@@ -108,6 +111,7 @@ export const CAPABILITIES = [
   "ui.alert-dialog",
   "ui.hover-card",
   "ui.color-picker",
+  "payments.subscriptions",
 ] as const;
 
 const item = (t: number, x: number) =>

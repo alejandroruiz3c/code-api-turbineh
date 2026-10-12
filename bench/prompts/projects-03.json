@@ -1,0 +1,5 @@
+{
+  "id": "projects-03",
+  "expected_recipe": "projects",
+  "prompt": "A kanban board for a small software team to track bugs and features with priorities, assignees and discussion comments."
+}

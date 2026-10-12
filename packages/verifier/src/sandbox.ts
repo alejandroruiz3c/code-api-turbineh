@@ -14,6 +14,7 @@ export const STRIPE_MOCK_IMAGE =
 export const STRIPE_SYNTHETIC = {
   STRIPE_SECRET_KEY: "sk_test_123",
   STRIPE_WEBHOOK_SECRET: "whsec_sandbox_synthetic_0123456789abcdef",
+  STRIPE_PRICE_PRO: "price_123",
 };
 
 export const SYNTHETIC_ENV = {

@@ -1,0 +1,11 @@
+id: projects
+description: Project and task management for teams with kanban boards, assignees, priorities, due dates, comments and a personal task list
+extends: saas-crud
+providedEntities:
+  [Project, Task, Todo, Issue, Ticket, Card, Board, Column, Comment, Assignment, Sprint, Milestone, Subtask]
+defaultCapabilities: [data.pagination, ops.rate-limit]
+# Implemented by the template itself (native, no extra dependencies).
+providedCapabilities: [ui.drag-drop]
+nav:
+  - { label: Projects, href: /dashboard/projects }
+  - { label: My tasks, href: /dashboard/my-tasks }

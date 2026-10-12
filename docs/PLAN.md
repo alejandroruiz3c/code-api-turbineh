@@ -242,6 +242,9 @@ MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC. Cualquier otra, sin licencia o
 5. **Portal de clientes** con subida de archivos y estados de solicitud.
 6. **Web corporativa** con servicios, blog, contacto y panel de textos (añadida en D3, ADR-0018).
 7. **Tienda online** con catálogo, carrito, pago con Stripe Checkout, pedidos y stock (añadida en D3, ADR-0018).
+8. **Proyectos y tareas** (kanban, responsables, prioridades, fechas, comentarios) — tras el análisis de casos de uso.
+9. **Dashboard de analítica** (importación CSV, KPIs, gráficos, filtros, exportación).
+10. **Tracker personal** (hábitos y cantidades diarias, objetivos, rachas, historial).
 
 Prompts fuera de estas familias → respuesta honesta "fuera del alcance de la beta" con la receta más cercana sugerida.
 

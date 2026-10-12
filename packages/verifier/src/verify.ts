@@ -103,7 +103,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
   // Shop apps: Stripe's official API simulator on the same isolated network, so checkout and the signed webhook
   // are exercised end to end without internet or real keys.
   const stripeHost = `${net}-stripe`;
-  const shop = existsSync(join(dir, "src/server/stripe.ts"));
+  const shop =
+    existsSync(join(dir, "src/server/stripe.ts")) || existsSync(join(dir, "src/lib/billing.ts"));
   if (shop) {
     await run("docker", [
       "run",

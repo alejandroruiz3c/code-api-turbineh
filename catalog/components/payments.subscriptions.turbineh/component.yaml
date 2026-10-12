@@ -1,0 +1,49 @@
+schema: turbineh.component/v0.1
+id: payments.subscriptions.turbineh
+version: 0.1.0
+status: approved
+category: payments
+source:
+  purl: pkg:generic/turbineh/payments.subscriptions.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Workspace subscriptions with Stripe Billing: hosted Checkout in subscription mode, Customer Portal, signed webhooks, requirePlan guard"
+  does_not: "Does not handle usage-based billing, taxes or multiple paid tiers out of the box (one Pro plan)"
+  use_cases: [saas-crud, internal-tool, projects, analytics-dashboard, tracker, client-portal, bookings]
+  pros: ["Maintained by TurbineH", "No SDK and no card data in the app", "Signed, idempotent webhook as the only writer"]
+  cons: ["Needs a Stripe account and a Pro price id"]
+  alternatives: []
+contract:
+  inputs: ["Owner/admin upgrade and manage actions; Stripe webhooks at /api/billing/webhook"]
+  outputs: ["subscriptions table per workspace; requirePlan('pro') redirects non-paying workspaces to /dashboard/billing"]
+  errors: ["Unsigned or forged webhooks are rejected (400); billing pages explain when Stripe is not configured"]
+  limits: ["Stripe-hosted pages only (redirect host checked); 5-minute signature tolerance"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: true, fs: false, db: true, external_services: [stripe] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/ when selected: billing page and actions, webhook, rules, table, tests"
+  config: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_PRO]
+  migrations: true
+quality:
+  tests: { command: "unit (signature, access) + E2E against Stripe's official simulator (stripe-mock) in the sandbox", passed: true, date: 2026-10-11 }
+security:
+  scanned_at: 2026-10-11
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: HMAC-SHA256 signature with constant-time compare and replay tolerance, owner/admin-only plan changes, redirect host checks, no secrets in code."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Upgrade, signed activation and cancellation verified end to end against stripe-mock"
+    origin: tested
+    ref: "bench/results (D3 recipes and components)"
+relations:
+  requires: []
+  provides: [payments.subscriptions]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

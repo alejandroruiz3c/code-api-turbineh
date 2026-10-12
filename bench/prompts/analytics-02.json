@@ -1,0 +1,5 @@
+{
+  "id": "analytics-02",
+  "expected_recipe": "analytics-dashboard",
+  "prompt": "A marketing KPI dashboard where the team uploads weekly ad spend and leads per campaign and sees trends, totals and campaign breakdowns."
+}
