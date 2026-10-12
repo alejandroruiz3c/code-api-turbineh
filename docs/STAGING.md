@@ -14,6 +14,12 @@ staging mirrors it with its own pieces:
 **Operations panel:** `/ops` (and `GET /v1/ops`) shows throughput, green rate, queue, workers and cost; only the
 emails in `OPS_ADMIN_EMAILS` (session) and the API-key owners in `OPS_OWNER_IDS` see it. Cost is never shown to clients.
 
+**AI gateway (ADR-0029):** the web app forwards AI apps' calls with TurbineH's keys. Vercel settings:
+`AI_GATEWAY_UPSTREAM_URL`, `AI_GATEWAY_UPSTREAM_KEY`, `AI_GATEWAY_TYPESAFE_KEY` (set by `infra/staging/web.ts env` from
+`COMPILER_BASE_URL`, `COMPILER_API_KEY`, `TYPESAFE_API_KEY`), `AI_GATEWAY_DAILY_TOKENS`, `AI_GATEWAY_RPM`. The staging
+worker needs `TURBINEH_AI_PUBLIC_URL=https://staging.software.turbineh.com/v1/ai` so Deploy for me points staging
+apps at the staging gateway (production defaults to `https://software.turbineh.com/v1/ai`).
+
 **Release flow:** merge the PR → `infra/staging/deploy.sh staging` → smoke build on staging →
 `infra/staging/deploy.sh production` (refuses anything but a clean `main`). Each run syncs the code, builds the
 worker, applies migrations, restarts the unit, deploys the web and checks `/health`.
