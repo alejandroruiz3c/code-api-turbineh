@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import {
   assemble,
   entitiesToGenerate,
+  providedTables,
   fieldsOf,
   parseBrand,
   hasRecipe,
@@ -18,7 +19,12 @@ import type { BackupCoder } from "@turbineh/backup-coder";
 import { compileIntent, type CompilerConfig } from "@turbineh/compiler";
 import type { Decider } from "@turbineh/decider";
 import { resolveSet, type Stack } from "@turbineh/resolver";
-import { CAPABILITY_LABELS, selectComponents } from "@turbineh/selector";
+import {
+  CAPABILITY_LABELS,
+  selectComponents,
+  selectionCacheKey,
+  type SelectionResult,
+} from "@turbineh/selector";
 import type { FixerSlot } from "@turbineh/remediation";
 import type { WriterConfig } from "@turbineh/reporter";
 import {
@@ -62,6 +68,11 @@ export interface PipelineDeps {
   backupCoder: BackupCoder;
   /** Catalog flywheel records (default: catalog/gaps under repoRoot). */
   gapsDir?: string;
+  /** Selection cache (PLAN §9): same normalized spec + same candidates → same selection, no decider call. */
+  selectionCache?: {
+    get: (key: string) => Promise<SelectionResult | null>;
+    put: (key: string, result: SelectionResult) => Promise<void>;
+  };
   emit: (
     buildId: string,
     phase: Phase,
@@ -162,20 +173,23 @@ export async function runBuild(
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
   const catalog = loadCatalog(join(deps.repoRoot, "catalog/components"));
-  const selection = await selectComponents(
-    {
-      app: {
-        recipe: spec.recipe,
-        summary: spec.summary,
-        acceptance_criteria: spec.acceptance_criteria,
-      },
-      candidates: candidatesFor(
-        spec.capabilities.filter((c) => !recipe.providedCapabilities?.includes(c)),
-        catalog,
-      ),
+  const selectionInput = {
+    app: {
+      recipe: spec.recipe,
+      summary: spec.summary,
+      acceptance_criteria: spec.acceptance_criteria,
     },
-    deps.decider,
-  );
+    candidates: candidatesFor(
+      spec.capabilities.filter((c) => !recipe.providedCapabilities?.includes(c)),
+      catalog,
+    ),
+  };
+  const cacheKey = selectionCacheKey(selectionInput);
+  const cached = await deps.selectionCache?.get(cacheKey).catch(() => null);
+  const selection: SelectionResult = cached
+    ? { ...cached, decider: { ...cached.decider, latencyMs: 0, requests: 0, cached: true } }
+    : await selectComponents(selectionInput, deps.decider);
+  if (!cached) await deps.selectionCache?.put(cacheKey, selection).catch(() => undefined);
   lap("select", t);
   await deps.emit(buildId, "selecting", "done", {
     decider: selection.decider,
@@ -749,7 +763,10 @@ async function businessRules(
   deps: PipelineDeps,
   buildId: string,
 ): Promise<{ candidates: RuleCandidate[]; written: WrittenRules[] }> {
-  const entities = entitiesToGenerate(spec, recipe.providedEntities);
+  const entities = entitiesToGenerate(spec, [
+    ...recipe.providedEntities,
+    ...providedTables(repoDir),
+  ]);
   if (entities.length === 0) return { candidates: [], written: [] };
   const lib = readFileSync(join(repoDir, "src/lib/rules.ts"), "utf8");
   const read = (rel: string) => readFileSync(join(repoDir, rel), "utf8");

@@ -45,6 +45,8 @@ export async function enqueueBuild(
     apiKeyId?: string;
     idempotencyKey?: string;
     options?: Record<string, unknown>;
+    /** HMAC of the client IP (never the IP itself), for the per-IP daily quota. */
+    clientIpHash?: string;
   },
 ): Promise<{ id: string; created: boolean }> {
   if (input.idempotencyKey) {
@@ -56,8 +58,8 @@ export async function enqueueBuild(
   }
   const id = randomUUID();
   await db.query(
-    `INSERT INTO builds (id, prompt, status, owner_id, api_key_id, idempotency_key, options)
-     VALUES ($1, $2, 'queued', $3, $4, $5, $6)
+    `INSERT INTO builds (id, prompt, status, owner_id, api_key_id, idempotency_key, options, client_ip_hash)
+     VALUES ($1, $2, 'queued', $3, $4, $5, $6, $7)
      ON CONFLICT (owner_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`,
     [
       id,
@@ -66,6 +68,7 @@ export async function enqueueBuild(
       input.apiKeyId ?? null,
       input.idempotencyKey ?? null,
       input.options ?? {},
+      input.clientIpHash ?? null,
     ],
   );
   await db.query(
@@ -265,6 +268,40 @@ export async function buildsLastDay(db: pg.Pool, ownerId: string): Promise<numbe
     [ownerId],
   );
   return Number(res.rows[0]?.n ?? 0);
+}
+
+/** Builds started from this client (HMAC of the IP) in the last 24 h, across all accounts. */
+export async function buildsLastDayFromIp(db: pg.Pool, clientIpHash: string): Promise<number> {
+  const res = await db.query<{ n: string }>(
+    "SELECT count(*) AS n FROM builds WHERE client_ip_hash = $1 AND created_at > now() - interval '1 day'",
+    [clientIpHash],
+  );
+  return Number(res.rows[0]?.n ?? 0);
+}
+
+// ── Selection cache (PLAN §9, ADR-0027) ────────────────────────────────────────────────────────────────────
+
+/** Cached selection for this key, if younger than `maxAgeDays` (a hit is counted). */
+export async function getCachedSelection<T>(
+  db: pg.Pool,
+  key: string,
+  maxAgeDays = 7,
+): Promise<T | null> {
+  const res = await db.query<{ result: T }>(
+    `UPDATE selection_cache SET hits = hits + 1, last_hit_at = now()
+     WHERE key = $1 AND created_at > now() - make_interval(days => $2) RETURNING result`,
+    [key, maxAgeDays],
+  );
+  return res.rows[0]?.result ?? null;
+}
+
+export async function putCachedSelection(db: pg.Pool, key: string, result: unknown): Promise<void> {
+  await db.query(
+    `INSERT INTO selection_cache (key, result) VALUES ($1, $2)
+     ON CONFLICT (key) DO UPDATE SET result = EXCLUDED.result, created_at = now(), hits = 0`,
+    [key, JSON.stringify(result)],
+  );
+  await db.query("DELETE FROM selection_cache WHERE created_at < now() - interval '30 days'");
 }
 
 // ── Cost circuit breaker (ADR-0008) ────────────────────────────────────────────────────────────────────────

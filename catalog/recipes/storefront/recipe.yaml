@@ -1,8 +1,8 @@
 id: storefront
-description: Online shop with product catalog and images, product variants (size, colour…) with own SKU, price and stock, cart, shipping options by country, taxes by country, Stripe Checkout payments, orders and stock, and an admin panel
+description: Online shop with product catalog and images, product variants (size, colour…) with own SKU, price and stock, cart, discount codes (percent or fixed amount, minimum order, usage limit, expiry), several currencies with fixed prices per currency, shipping options by country and currency, taxes by country or automatic Stripe Tax, Stripe Checkout payments, orders and stock, and an admin panel
 extends: saas-crud
 providedEntities:
-  [Product, Item, Article, Variant, ProductVariant, ProductOption, Size, Cart, CartItem, Order, OrderItem, OrderLine, Purchase, Payment, Customer, Stock, Inventory, Category, Shipping, ShippingRate, ShippingMethod, Tax, TaxRate]
+  [Product, Item, Article, Variant, ProductVariant, ProductOption, Size, Cart, CartItem, Order, OrderItem, OrderLine, Purchase, Payment, Customer, Stock, Inventory, Category, Shipping, ShippingRate, ShippingMethod, Tax, TaxRate, Coupon, DiscountCode, Discount, Promotion, PromoCode, Voucher, Currency, Price, ProductPrice]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # Implemented by the template itself (native): no SDK, signature verification and money in integer cents.
 providedCapabilities:
@@ -10,4 +10,5 @@ providedCapabilities:
 nav:
   - { label: Products, href: /dashboard/products }
   - { label: Shipping & taxes, href: /dashboard/shipping }
+  - { label: Coupons, href: /dashboard/coupons }
   - { label: Orders, href: /dashboard/orders }

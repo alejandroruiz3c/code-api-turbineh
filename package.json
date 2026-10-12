@@ -27,7 +27,8 @@
     "build:local": "pnpm --filter @turbineh/worker run build:local",
     "catalog:curate": "pnpm --filter @turbineh/curation exec tsx src/cli.ts",
     "catalog:watch": "pnpm --filter @turbineh/curation exec tsx src/watch.ts",
-    "catalog:sync": "pnpm --filter @turbineh/ingest run sync"
+    "catalog:sync": "pnpm --filter @turbineh/ingest run sync",
+    "load": "tsx bench/load.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

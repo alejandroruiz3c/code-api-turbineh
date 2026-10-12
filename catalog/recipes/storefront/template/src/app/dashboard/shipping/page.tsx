@@ -10,6 +10,7 @@ import { env } from "@/env";
 import { countryName } from "@/lib/countries";
 import { formatPrice, formatRate } from "@/lib/shop";
 import { requireAdmin } from "@/server/admin";
+import { enabledCurrencies } from "@/server/currency";
 import { removeShippingRate, removeTaxRate, saveShippingRate, saveTaxRate } from "./actions";
 
 export default async function ShippingAndTaxes() {
@@ -22,7 +23,8 @@ export default async function ShippingAndTaxes() {
       .orderBy(asc(shippingRates.priceCents)),
     db.select().from(taxRates).orderBy(asc(taxRates.country)),
   ]);
-  const money = (c: number) => formatPrice(c, env.SHOP_CURRENCY);
+  const currencies = enabledCurrencies();
+  const money = (c: number, cur: string | null) => formatPrice(c, cur ?? env.SHOP_CURRENCY);
   const where = (countries: string) =>
     countries
       ? countries
@@ -39,13 +41,16 @@ export default async function ShippingAndTaxes() {
         </p>
         {rates.length > 0 ? (
           <Table head={["Option", "Countries", "Price", "Free from", ""]}>
+            {/* Each option charges in its own currency and is offered to buyers paying in it. */}
             {rates.map((r) => (
               <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2">{r.name}</td>
                 <td className="px-3 py-2">{where(r.countries)}</td>
-                <td className="px-3 py-2">{r.priceCents === 0 ? "Free" : money(r.priceCents)}</td>
                 <td className="px-3 py-2">
-                  {r.freeOverCents !== null ? money(r.freeOverCents) : "—"}
+                  {r.priceCents === 0 ? "Free" : money(r.priceCents, r.currency)}
+                </td>
+                <td className="px-3 py-2">
+                  {r.freeOverCents !== null ? money(r.freeOverCents, r.currency) : "—"}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <form action={removeShippingRate}>
@@ -69,9 +74,26 @@ export default async function ShippingAndTaxes() {
             <Input id="sh-countries" name="countries" placeholder="ES, PT" />
           </div>
           <div>
-            <Label htmlFor="sh-price">Shipping price ({env.SHOP_CURRENCY.toUpperCase()})</Label>
+            <Label htmlFor="sh-price">Shipping price</Label>
             <Input id="sh-price" name="price" inputMode="decimal" required />
           </div>
+          {currencies.length > 1 ? (
+            <div>
+              <Label htmlFor="sh-currency">Shipping currency</Label>
+              <select
+                id="sh-currency"
+                name="currency"
+                defaultValue={env.SHOP_CURRENCY}
+                className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+              >
+                {currencies.map((c) => (
+                  <option key={c} value={c}>
+                    {c.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div>
             <Label htmlFor="sh-free">Free shipping from (optional)</Label>
             <Input id="sh-free" name="freeOver" inputMode="decimal" />
@@ -83,6 +105,13 @@ export default async function ShippingAndTaxes() {
       </Card>
 
       <Card title="Taxes">
+        {env.SHOP_TAX_MODE === "stripe" ? (
+          <p className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            Stripe Tax calculates tax at checkout from the buyer&apos;s address
+            (SHOP_TAX_MODE=stripe): the rates below are not used. Keep your tax registrations up to
+            date in your Stripe dashboard.
+          </p>
+        ) : null}
         <p className="mb-4 text-sm text-slate-600">
           {env.SHOP_PRICES_INCLUDE_TAX
             ? "Your prices include tax: the cart shows the tax they contain."

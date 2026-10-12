@@ -77,6 +77,35 @@ test.describe.serial("storefront", () => {
     }
   });
 
+  test("the admin creates a one-use discount code", async ({ page }) => {
+    await page.goto("/dashboard/coupons");
+    await page.getByLabel("Code", { exact: true }).fill("Save10");
+    await page.getByLabel("Percent off").check();
+    await page.getByLabel(/^Discount value/).fill("10");
+    await page.getByLabel(/^Maximum uses/).fill("1");
+    await page.getByRole("button", { name: "Create code" }).click();
+    await expect(page.getByRole("cell", { name: "SAVE10", exact: true })).toBeVisible();
+    await expect(page.getByTestId("coupon-used-SAVE10")).toHaveText("0 / 1");
+  });
+
+  test("the admin sells in a second currency with explicit prices and shipping", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByRole("link", { name: "Linen Shirt", exact: true }).click();
+    await page.getByLabel("Product price in USD").fill("54.00");
+    await page.getByRole("button", { name: "Save prices" }).click();
+    await expect(page.getByLabel("Product price in USD")).toHaveValue("54.00");
+
+    await page.goto("/dashboard/shipping");
+    await page.getByLabel("Shipping name").fill("US Standard");
+    await page.getByLabel(/^Countries/).fill("us");
+    await page.getByLabel(/^Shipping price/).fill("9.00");
+    await page.getByLabel("Shipping currency").selectOption("usd");
+    await page.getByRole("button", { name: "Add shipping option" }).click();
+    await expect(page.getByRole("cell", { name: "US Standard" })).toBeVisible();
+  });
+
   test.describe("shopper", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -166,6 +195,112 @@ test.describe.serial("storefront", () => {
       await page.unroute("https://checkout.stripe.com/**");
       await page.goto("/cart");
       await expect(page.getByText("Your cart is empty")).toBeVisible();
+    });
+
+    test("uses a discount code: applied on the server, counted once on payment, then used up", async ({
+      page,
+      browser,
+      request,
+    }) => {
+      await page.goto("/shop/linen-shirt");
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await page.getByLabel("Ship to").selectOption("ES");
+      await page.getByRole("button", { name: "Update shipping" }).click();
+      await expect(page.getByTestId("cart-total")).toContainText("54.80");
+
+      // Case-insensitive code; 10 % of 49.90 = 4.99, then 4.90 shipping; 49.81 contains 8.64 of VAT at 21 %.
+      await page.getByLabel("Discount code").fill("save10");
+      await page.getByRole("button", { name: "Apply" }).click();
+      await expect(page.getByTestId("cart-discount")).toContainText("4.99");
+      await expect(page.getByTestId("cart-tax")).toContainText("8.64");
+      await expect(page.getByTestId("cart-total")).toContainText("49.81");
+
+      await page.route("https://checkout.stripe.com/**", (route) =>
+        route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
+      );
+      await page.getByRole("button", { name: "Checkout" }).click();
+      await page.waitForURL(/checkout\.stripe\.com/);
+
+      const admin = await browser.newContext({ storageState: ADMIN_STATE });
+      const adminPage = await admin.newPage();
+      await adminPage.goto("/dashboard/orders");
+      const row = adminPage.locator('tr[data-status="pending"]').first();
+      const orderId = (await row.getAttribute("data-order-id")) ?? "";
+      await expect(row).toContainText("49.81");
+
+      const event = JSON.stringify({
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_test_e2e_coupon",
+            client_reference_id: orderId,
+            payment_status: "paid",
+            amount_total: 4981,
+            currency: "eur",
+            total_details: { amount_tax: 864 },
+          },
+        },
+      });
+      for (let i = 0; i < 2; i++) {
+        const res = await request.post("/api/stripe/webhook", {
+          data: event,
+          headers: {
+            "content-type": "application/json",
+            "stripe-signature": stripeSignature(event),
+          },
+        });
+        expect(res.status()).toBe(200);
+      }
+      await adminPage.goto("/dashboard/coupons");
+      // Counted once although Stripe delivered the event twice.
+      await expect(adminPage.getByTestId("coupon-used-SAVE10")).toHaveText("1 / 1");
+      await admin.close();
+
+      // The code reached its limit: a new buyer cannot use it.
+      const other = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const otherPage = await other.newPage();
+      await otherPage.goto("/shop/linen-shirt");
+      await otherPage.getByRole("button", { name: "Add to cart" }).click();
+      await otherPage.getByLabel("Discount code").fill("SAVE10");
+      await otherPage.getByRole("button", { name: "Apply" }).click();
+      await expect(otherPage.getByText("This code has been fully used.")).toBeVisible();
+      await other.close();
+    });
+
+    test("pays in a second currency: fixed prices, shipping in that currency, order in USD", async ({
+      page,
+      browser,
+    }) => {
+      await page.goto("/shop");
+      await page.getByLabel("Currency").selectOption("usd");
+      await page.getByRole("button", { name: "Change" }).click();
+      await expect(page.getByRole("link", { name: /Linen Shirt/ }).first()).toContainText("54.00");
+      // No price in USD for the tee: shown as not sold, never converted.
+      await expect(page.getByRole("link", { name: /Cotton Tee/ }).first()).toContainText(
+        "Not sold in USD",
+      );
+
+      await page.goto("/shop/linen-shirt");
+      await expect(page.getByTestId("price")).toContainText("US$54.00");
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await page.getByLabel("Ship to").selectOption("US");
+      await page.getByRole("button", { name: "Update shipping" }).click();
+      await expect(page.getByTestId("cart-shipping")).toContainText("9.00");
+      await expect(page.getByTestId("cart-total")).toContainText("US$63.00");
+
+      await page.route("https://checkout.stripe.com/**", (route) =>
+        route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
+      );
+      await page.getByRole("button", { name: "Checkout" }).click();
+      await page.waitForURL(/checkout\.stripe\.com/);
+
+      const admin = await browser.newContext({ storageState: ADMIN_STATE });
+      const adminPage = await admin.newPage();
+      await adminPage.goto("/dashboard/orders");
+      await expect(adminPage.locator('tr[data-status="pending"]').first()).toContainText(
+        "US$63.00",
+      );
+      await admin.close();
     });
 
     test("rejects webhooks without a valid signature", async ({ request }) => {

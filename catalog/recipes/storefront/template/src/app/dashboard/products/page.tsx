@@ -6,11 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
-import { products, productVariants } from "@/db/schema";
+import { productPrices, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
 import { formatPrice } from "@/lib/shop";
 import { requireAdmin } from "@/server/admin";
-import { deleteProduct, hideVariant, saveProduct, saveVariant, setVariantStock } from "./actions";
+import { enabledCurrencies } from "@/server/currency";
+import {
+  deleteProduct,
+  hideVariant,
+  saveLocalPrices,
+  saveProduct,
+  saveVariant,
+  setVariantStock,
+} from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -28,6 +36,15 @@ export default async function Products({ searchParams }: { searchParams: SearchP
         .where(and(eq(productVariants.productId, editing.id), eq(productVariants.active, true)))
         .orderBy(asc(productVariants.createdAt))
     : [];
+  const extraCurrencies = enabledCurrencies().slice(1);
+  const local =
+    editing && extraCurrencies.length > 0
+      ? await db.select().from(productPrices).where(eq(productPrices.productId, editing.id))
+      : [];
+  const localValue = (variantId: string | null, c: string) => {
+    const hit = local.find((l) => l.variantId === variantId && l.currency === c);
+    return hit ? (hit.priceCents / 100).toFixed(2) : "";
+  };
   const rows = await db
     .select({
       id: products.id,
@@ -163,6 +180,41 @@ export default async function Products({ searchParams }: { searchParams: SearchP
             <div className="md:col-span-4">
               <Button type="submit">Add option</Button>
             </div>
+          </form>
+        </Card>
+      ) : null}
+      {editing && extraCurrencies.length > 0 ? (
+        <Card title={`Prices of ${editing.name} in other currencies`}>
+          <p className="mb-4 text-sm text-slate-600">
+            Buyers paying in another currency see exactly these prices (no exchange rates). Empty =
+            not sold in that currency; an option without its own price uses the product&apos;s.
+          </p>
+          <form action={saveLocalPrices}>
+            <input type="hidden" name="productId" value={editing.id} />
+            <Table head={["", ...extraCurrencies.map((c) => c.toUpperCase())]}>
+              {[
+                { id: null as string | null, name: "Product" },
+                ...variants.map((v) => ({ id: v.id as string | null, name: `Option ${v.name}` })),
+              ].map((row) => (
+                <tr key={row.id ?? "product"} className="border-b border-slate-100">
+                  <td className="px-3 py-2">{row.name}</td>
+                  {extraCurrencies.map((c) => (
+                    <td key={c} className="px-3 py-2">
+                      <input
+                        aria-label={`${row.name} price in ${c.toUpperCase()}`}
+                        name={`price:${row.id ?? "product"}:${c}`}
+                        inputMode="decimal"
+                        defaultValue={localValue(row.id, c)}
+                        className="w-24 rounded-md border border-slate-300 px-2 py-1"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </Table>
+            <Button type="submit" className="mt-4">
+              Save prices
+            </Button>
           </form>
         </Card>
       ) : null}

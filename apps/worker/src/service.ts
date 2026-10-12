@@ -9,6 +9,7 @@ import { hostname } from "node:os";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { SelectionResult } from "@turbineh/selector";
 import {
   addCost,
   claimBuild,
@@ -16,8 +17,10 @@ import {
   emitEvent,
   finishBuild,
   getBuild,
+  getCachedSelection,
   getPool,
   heartbeat,
+  putCachedSelection,
   requeueStale,
   type BuildRow,
 } from "@turbineh/db";
@@ -109,6 +112,10 @@ async function handle(build: BuildRow): Promise<void> {
     // Flywheel records outside the deployed tree (deploys replace the repository copy).
     ...(process.env.GAPS_DIR ? { gapsDir: process.env.GAPS_DIR } : {}),
     decider,
+    selectionCache: {
+      get: (key: string) => getCachedSelection<SelectionResult>(db, key),
+      put: (key: string, result: SelectionResult) => putCachedSelection(db, key, result),
+    },
     ...modelSlotsFromEnv(env),
     compiler: {
       baseURL: env.COMPILER_BASE_URL,

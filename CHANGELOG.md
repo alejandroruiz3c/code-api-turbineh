@@ -7,6 +7,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ### Added
 
 - T3 business rules on edits and across entities (ADR-0026): every generated entity gets an edit page and `update` action (role-checked, workspace-scoped, E2E-tested); rules receive the operation, the previous record and read-only, code-written loaders of related entities linked by reference fields; the decider decides create/update/both and the related entity; the report shows when each rule runs and what it reads.
+- `pnpm load`: load test that submits one prompt per recipe at once and records wall clock, throughput, green rate and queue depth (`bench/results/*-load.json`).
+- Curated glue for `ops.http-client.ky` (HTTPS only, 10 s timeout, retries only for GET/HEAD, zod-validated JSON) and `files.image-processing.jimp` (bounded input and dimensions, re-encoded thumbnails without EXIF): their model-written glue kept spending corrections. Re-certified in the sandbox.
+- Viral capacity (ADR-0027): per-IP daily build quota for browser sessions (`IP_DAILY_BUILDS`, IP stored only as an HMAC) and a selection cache (same normalized spec + same catalog candidates → no decider call; 7-day validity).
+- AWS worker management (ADR-0024): `infra/aws/worker.ts create|status|stop|start|terminate` (IMDSv2, encrypted disk, SSH from the operator IP only, fixed IP).
+- Storefront (ADR-0025): optional automatic Stripe Tax (`SHOP_TAX_MODE=stripe`; tax and total recorded from the signed payment event), discount codes (percent or fixed amount, minimum order, usage limit counted atomically on payment, last valid day, rate-limited attempts) and several currencies with explicit prices per currency (`SHOP_CURRENCIES`, no exchange rates; shipping per currency; JSON-LD offer per option and currency). Benchmark prompt `shop-05`.
 - Curated glue: a component may ship `glue.ts` (written by TurbineH, type-checked at certification) that is copied into apps instead of model-written glue. First one: `email.plain-text.html-to-text`, whose generated glue used options removed in html-to-text 9+ and failed the build in every app that selected it (3 wasted corrections, then dropped).
 - AWS extra worker groundwork (ADR-0024): `infra/aws/worker.ts check` (identity and instance types, read-only).
 - "Connect Vercel" active in production (integration `turbine-deploy`).
@@ -25,6 +30,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Generated entities that would collide with a table defined by the recipe or a native component (e.g. a "Subscription" entity next to `payments.subscriptions`) are no longer generated: the build failed to compile (benchmark `saas-04`).
+- `pnpm bench` survives network drops on the operator's machine (retries with backoff) and can resume a run with `BENCH_RUN` (finished builds are reused through their idempotency keys).
 - Correction commits no longer include migrations generated during verification: those go in their own `chore(db)` commit first.
 - T3 rules: "after/before/more than/less than" are strict and "from/until/at least/at most" inclusive; rule tests include the boundary case.
 - `pnpm bench` targets staging by default with the staging smoke key (ADR-0022); production only with `BENCH_API_URL`.

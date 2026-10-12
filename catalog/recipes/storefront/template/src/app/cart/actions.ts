@@ -5,28 +5,72 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { cartItems, orderItems, orders, products, productVariants } from "@/db/schema";
+import {
+  cartItems,
+  carts,
+  coupons,
+  orderItems,
+  orders,
+  products,
+  productVariants,
+} from "@/db/schema";
 import { env } from "@/env";
 import { isCountry } from "@/lib/countries";
-import { formatRate, MAX_QTY } from "@/lib/shop";
+import { COUPON_CODE, couponDiscount, formatRate, MAX_QTY, normalizeCode } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import {
+  cartCoupon,
   cartLines,
   currentCartId,
   ensureCart,
   lineLabel,
   needsCountry,
+  pricedLines,
   quote,
   shopRules,
 } from "@/server/cart";
+import { currentCurrency } from "@/server/currency";
 import { createCheckoutSession } from "@/server/stripe";
 
-async function guard(kind: string): Promise<void> {
+async function guard(kind: string, perMinute = 30): Promise<void> {
   const h = await headers();
   const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0]?.trim() ?? "local";
-  if (!rateLimit(`${kind}:${ip}`, 30))
+  if (!rateLimit(`${kind}:${ip}`, perMinute))
     throw new UserFacingError("Too many requests. Try again in a minute.");
+}
+
+export type CouponState = { ok: boolean; message: string } | null;
+
+/**
+ * Attaches a discount code to the visitor's cart after checking it against the current cart. Few attempts per
+ * minute per address, and the same answer for unknown and inactive codes, so codes cannot be guessed by trying.
+ */
+// nosemgrep: turbineh.server-action-without-authz
+export async function applyCoupon(_prev: CouponState, formData: FormData): Promise<CouponState> {
+  await guard("coupon", 8);
+  const code = normalizeCode(String(formData.get("code") ?? ""));
+  const cartId = await currentCartId();
+  if (!cartId) return { ok: false, message: "Your cart is empty." };
+  if (!COUPON_CODE.test(code)) return { ok: false, message: "This code is not valid." };
+  const [c] = await db.select().from(coupons).where(eq(coupons.code, code));
+  if (!c) return { ok: false, message: "This code is not valid." };
+  const currency = await currentCurrency();
+  const lines = await cartLines(cartId, currency);
+  const subtotal = pricedLines(lines).reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
+  const d = couponDiscount(c, subtotal, currency);
+  if ("error" in d) return { ok: false, message: d.error };
+  await db.update(carts).set({ couponId: c.id }).where(eq(carts.id, cartId));
+  revalidatePath("/cart");
+  return { ok: true, message: `Code ${c.code} applied.` };
+}
+
+// nosemgrep: turbineh.server-action-without-authz
+export async function removeCoupon(): Promise<void> {
+  await guard("cart");
+  const cartId = await currentCartId();
+  if (cartId) await db.update(carts).set({ couponId: null }).where(eq(carts.id, cartId));
+  revalidatePath("/cart");
 }
 
 // Shopping is public by design: the cart is identified by an unguessable httpOnly cookie, inputs are validated,
@@ -96,11 +140,12 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
       message: "Online payments are not configured yet. Please contact us to order.",
     };
   const cartId = await currentCartId();
-  const lines = cartId ? await cartLines(cartId) : [];
-  if (lines.length === 0) return { ok: false, message: "Your cart is empty." };
+  const currency = await currentCurrency();
+  const lines = cartId ? await cartLines(cartId, currency) : [];
+  if (!cartId || lines.length === 0) return { ok: false, message: "Your cart is empty." };
   const short = lines.find((l) => l.stock !== null && l.stock < l.quantity);
   if (short) return { ok: false, message: `Only ${short.stock} left of ${lineLabel(short)}.` };
-  const rules = await shopRules();
+  const [rules, coupon] = await Promise.all([shopRules(currency), cartCoupon(cartId)]);
   const country = z
     .string()
     .regex(/^[A-Z]{2}$/)
@@ -116,8 +161,11 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     rules,
     country.success ? country.data : null,
     rateId.success ? rateId.data : null,
+    { currency, coupon },
   );
   if ("error" in q) return { ok: false, message: q.error };
+  // The buyer saw the code fail in the cart: never charge without the discount they expect.
+  if (q.couponError) return { ok: false, message: `${q.couponError} Remove the code to continue.` };
   const email = z
     .email()
     .max(320)
@@ -129,19 +177,29 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
       cartId,
       email: email.success ? (email.data ?? null) : null,
       subtotalCents: q.subtotalCents,
+      discountCents: q.discountCents,
+      couponId: q.coupon?.id ?? null,
+      couponCode: q.coupon?.code ?? null,
       shippingCents: q.shippingCents,
       taxCents: q.taxCents,
+      taxMode: q.taxMode,
       pricesIncludeTax: q.pricesIncludeTax,
-      taxLabel: q.tax ? `${q.tax.label} (${formatRate(q.tax.rateBp)})` : null,
+      taxLabel:
+        q.taxMode === "stripe"
+          ? "Tax (Stripe Tax)"
+          : q.tax
+            ? `${q.tax.label} (${formatRate(q.tax.rateBp)})`
+            : null,
       shippingName: q.shipping?.name ?? null,
       country: q.country,
       totalCents: q.totalCents,
-      currency: env.SHOP_CURRENCY,
+      currency: q.currency,
     })
     .returning({ id: orders.id });
   if (!order) return { ok: false, message: "Could not create the order." };
+  const priced = pricedLines(lines);
   await db.insert(orderItems).values(
-    lines.map((l) => ({
+    priced.map((l) => ({
       orderId: order.id,
       productId: l.productId,
       variantId: l.variantId,
@@ -155,8 +213,16 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
   const base = env.BETTER_AUTH_URL.replace(/\/$/, "");
   const session = await createCheckoutSession({
     orderId: order.id,
-    lines: lines.map((l) => ({ ...l, name: lineLabel(l) })),
-    quote: q,
+    currency: q.currency,
+    lines: priced.map((l) => ({ ...l, name: lineLabel(l) })),
+    subtotalCents: q.subtotalCents,
+    discountCents: q.discountCents,
+    couponCode: q.coupon?.code ?? null,
+    shipping: q.shipping ? { name: q.shipping.name, cents: q.shippingCents } : null,
+    country: q.country,
+    tax: q.tax ? { ...q.tax, cents: q.taxCents } : null,
+    taxMode: q.taxMode,
+    pricesIncludeTax: q.pricesIncludeTax,
     successUrl: `${base}/checkout/success?order=${order.id}`,
     cancelUrl: `${base}/cart`,
   }).catch(() => null);

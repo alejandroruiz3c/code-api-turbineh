@@ -29,6 +29,16 @@ const schema = z.object({
     .string()
     .regex(/^[a-z]{3}$/)
     .default("eur"),
+  /**
+   * Extra currencies the buyer can choose (comma-separated ISO codes, e.g. "usd,gbp"). Each one needs explicit
+   * prices set by the admin: there are no exchange rates. Empty = only SHOP_CURRENCY.
+   */
+  SHOP_CURRENCIES: z
+    .string()
+    .regex(/^\s*([a-zA-Z]{3}\s*(,\s*[a-zA-Z]{3}\s*)*)?$/, "Use ISO codes separated by commas")
+    .default(""),
+  /** manual: the shop's own tax rates by country; stripe: Stripe Tax computes tax at checkout. */
+  SHOP_TAX_MODE: z.enum(["manual", "stripe"]).default("manual"),
   /** true: product prices include tax (tax shown as contained); false: tax is added on top at checkout. */
   SHOP_PRICES_INCLUDE_TAX: z
     .enum(["true", "false"])
