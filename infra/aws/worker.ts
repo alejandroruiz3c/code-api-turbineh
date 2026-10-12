@@ -7,6 +7,7 @@
  *   npx tsx infra/aws/worker.ts check       identity (dedicated IAM user) and candidate instance types (read-only)
  *   npx tsx infra/aws/worker.ts create      key pair, security group (SSH from this machine only), instance, fixed IP
  *   npx tsx infra/aws/worker.ts status|stop|start|terminate
+ *   npx tsx infra/aws/worker.ts allow-ssh   replace the operator SSH rule with this machine's current IP
  *
  * Prices: public on-demand list for eu-west-3 (the IAM user has EC2 permissions only, no pricing/quotas).
  */
@@ -27,6 +28,7 @@ import {
   EC2Client,
   ImportKeyPairCommand,
   ReleaseAddressCommand,
+  RevokeSecurityGroupIngressCommand,
   RunInstancesCommand,
   StartInstancesCommand,
   StopInstancesCommand,
@@ -113,8 +115,7 @@ async function securityGroup(): Promise<string> {
       TagSpecifications: [tag("security-group")],
     }),
   );
-  const ip = (await (await fetch("https://checkip.amazonaws.com")).text()).trim();
-  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) throw new Error("could not detect the operator IP");
+  const ip = await operatorIp();
   await ec2.send(
     new AuthorizeSecurityGroupIngressCommand({
       GroupId: created.GroupId,
@@ -130,6 +131,45 @@ async function securityGroup(): Promise<string> {
   );
   console.log("security group created (SSH from the operator IP only)");
   return created.GroupId ?? "";
+}
+
+async function operatorIp(): Promise<string> {
+  const ip = (await (await fetch("https://checkip.amazonaws.com")).text()).trim();
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) throw new Error("could not detect the operator IP");
+  return ip;
+}
+
+/** The operator's IP changes (home network, travel): replace the SSH rule, never open it to everyone. */
+async function allowSsh(): Promise<void> {
+  const r = await ec2.send(
+    new DescribeSecurityGroupsCommand({ Filters: [{ Name: "group-name", Values: [NAME] }] }),
+  );
+  const sg = r.SecurityGroups?.[0];
+  if (!sg?.GroupId) throw new Error("security group not found; run create first");
+  const ip = await operatorIp();
+  const ssh = (sg.IpPermissions ?? []).filter((p) => p.FromPort === 22);
+  const current = ssh.flatMap((p) => p.IpRanges ?? []).map((x) => x.CidrIp);
+  if (current.includes(`${ip}/32`)) return console.log("SSH already allowed from this IP");
+  if (ssh.length > 0)
+    await ec2.send(
+      new RevokeSecurityGroupIngressCommand({ GroupId: sg.GroupId, IpPermissions: ssh }),
+    );
+  await ec2.send(
+    new AuthorizeSecurityGroupIngressCommand({
+      GroupId: sg.GroupId,
+      IpPermissions: [
+        {
+          IpProtocol: "tcp",
+          FromPort: 22,
+          ToPort: 22,
+          IpRanges: [{ CidrIp: `${ip}/32`, Description: "operator" }],
+        },
+      ],
+    }),
+  );
+  console.log(
+    `SSH allowed from the current operator IP only (${current.length} old rule(s) removed)`,
+  );
 }
 
 async function create(): Promise<void> {
@@ -218,6 +258,7 @@ const steps: Record<string, () => Promise<void>> = {
   stop: () => act("stop"),
   start: () => act("start"),
   terminate: () => act("terminate"),
+  "allow-ssh": allowSsh,
 };
 const step = process.argv.slice(2).find((a) => a !== "--") ?? "check";
 const fn = steps[step];
