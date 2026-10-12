@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { AiAccess } from "./ai-access";
 import { DeployForMe } from "./deploy-for-me";
 
 interface BuildEvent {
@@ -20,7 +21,7 @@ interface BuildResult {
   metrics: {
     timings?: Record<string, number>;
     reuse?: { reusedShare?: number };
-    components?: string[];
+    components?: (string | { id?: string })[];
     gaps?: { capability: string; trigger: string }[];
     alerts?: { id: string; level: string; title: string; explain: string; where: string }[];
     remediation?: { kind: string; target: string; reason: string; detail: string }[];
@@ -267,6 +268,13 @@ function Result({
           ) : null}
         </div>
       </Panel>
+      {(result.metrics.components ?? []).some(
+        (c) => (typeof c === "string" ? c : c.id) === "ai.orchestrator.turbineh",
+      ) ? (
+        <Panel title="AI access">
+          <AiAccess id={id} />
+        </Panel>
+      ) : null}
       {result.artifact.previews && result.artifact.previews.length > 0 ? (
         <Panel title="Preview · your app as verified">
           <ul className="grid gap-4 md:grid-cols-3">

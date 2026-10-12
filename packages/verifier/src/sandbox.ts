@@ -22,10 +22,9 @@ export const STRIPE_SYNTHETIC = {
  * deterministic simulator (services/ai-mock) on the isolated network. Never real keys.
  */
 export const aiSynthetic = (host: string) => ({
-  AI_BASE_URL: `http://${host}:8080/v1`,
-  AI_API_KEY: "sandbox-synthetic-ai",
-  TYPESAFE_BASE_URL: `http://${host}:8080`,
-  TYPESAFE_API_KEY: "sandbox-synthetic-decider",
+  // Same layout as the TurbineH AI gateway: <root>/v1/chat/completions, /v1/embeddings, /v1/systemone.
+  TURBINEH_AI_URL: `http://${host}:8080`,
+  TURBINEH_AI_TOKEN: "sandbox-synthetic-ai-token",
 });
 
 export const SYNTHETIC_ENV = {

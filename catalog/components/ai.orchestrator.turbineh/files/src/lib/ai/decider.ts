@@ -5,27 +5,27 @@ import type { Route } from "./models";
 import type { Plan } from "./plan";
 
 /**
- * Orchestrator decisions with JEV by TypeSafe (component ai.orchestrator.turbineh, ADR-0028), through the official
- * SDK. TYPESAFE_BASE_URL points to an open SystemOne-compatible decider instead (same request shape). One request
- * carries every question; thresholds are applied in code, not by a model.
+ * Orchestrator decisions with JEV by TypeSafe (component ai.orchestrator.turbineh, ADR-0028/ADR-0029), through the
+ * official SDK pointed at the TurbineH AI gateway (same SystemOne request shape; TurbineH holds the JEV key). One
+ * request carries every question; thresholds are applied in code, not by a model.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
-  TYPESAFE_API_KEY: z.preprocess(empty, z.string().min(1).optional()),
-  TYPESAFE_BASE_URL: z.preprocess(empty, z.url().optional()),
+  TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
+  TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
   TYPESAFE_MODEL: z.preprocess(empty, z.string().min(1).default("jev-1.13.0")),
 });
 
 let client: TypeSafeClient | undefined;
 function decider(): { client: TypeSafeClient; model: string } | null {
   const cfg = Env.parse(process.env);
-  if (!cfg.TYPESAFE_API_KEY) return null;
+  if (!cfg.TURBINEH_AI_TOKEN) return null;
   client ??= new TypeSafeClient({
-    apiKey: cfg.TYPESAFE_API_KEY,
+    apiKey: cfg.TURBINEH_AI_TOKEN,
     defaultModel: cfg.TYPESAFE_MODEL,
     timeout: 15_000,
     logLevel: "off",
-    ...(cfg.TYPESAFE_BASE_URL ? { baseURL: cfg.TYPESAFE_BASE_URL } : {}),
+    baseURL: cfg.TURBINEH_AI_URL.replace(/\/$/, ""),
   });
   return { client, model: cfg.TYPESAFE_MODEL };
 }
@@ -52,7 +52,7 @@ export async function decideRoute(
   requestPreview: string,
 ): Promise<RouteDecision> {
   const d = decider();
-  if (!d) throw new DeciderUnavailable("TYPESAFE_API_KEY is not set");
+  if (!d) throw new DeciderUnavailable("TURBINEH_AI_TOKEN is not set");
   const state = {
     request: requestPreview.slice(0, 2000),
     intent: plan.intent,

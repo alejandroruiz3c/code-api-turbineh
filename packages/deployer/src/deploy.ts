@@ -12,6 +12,8 @@ export interface DeployInput {
   vercel: { token: string; teamId?: string };
   database: { mode: "neon"; apiKey: string } | { mode: "url"; url: string };
   adminEmail?: string;
+  /** Settings prepared by TurbineH for this app (e.g. the AI gateway token, ADR-0029). */
+  extraEnv?: { key: string; value: string; sensitive: boolean }[];
   onStep: (step: string) => Promise<void>;
 }
 
@@ -105,6 +107,7 @@ export async function deployToClient(input: DeployInput): Promise<DeployResult> 
       { key: "CRON_SECRET", value: s, sensitive: true },
     );
   }
+  for (const e of input.extraEnv ?? []) env.push(e);
   await vercel.setEnv(project.id, env);
 
   await input.onStep("Uploading your app");

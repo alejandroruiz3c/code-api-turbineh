@@ -14,6 +14,10 @@ staging mirrors it with its own pieces:
 **Operations panel:** `/ops` (and `GET /v1/ops`) shows throughput, green rate, queue, workers and cost; only the
 emails in `OPS_ADMIN_EMAILS` (session) and the API-key owners in `OPS_OWNER_IDS` see it. Cost is never shown to clients.
 
+**AI gateway (ADR-0029):** client AI apps call `/v1/ai/v1/*` with their app token; the web app forwards with our
+model-provider and JEV keys (`AI_GATEWAY_*` in Vercel, set by `infra/staging/web.ts env`). Revoke an app's token to
+stop it; usage per app is in `/ops`.
+
 **Release flow:** merge the PR → `infra/staging/deploy.sh staging` → smoke build on staging →
 `infra/staging/deploy.sh production` (refuses anything but a clean `main`). Each run syncs the code, builds the
 worker, applies migrations, restarts the unit, deploys the web and checks `/health`.

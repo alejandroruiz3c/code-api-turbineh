@@ -51,6 +51,10 @@ describe("deploy for me", () => {
       buildId: "b1",
       vercel: { token: "tok_secret_value_1234567890" },
       database: { mode: "url", url: "postgres://u:p@db.example.com/app" },
+      extraEnv: [
+        { key: "TURBINEH_AI_TOKEN", value: "tbh_ai_x", sensitive: true },
+        { key: "TURBINEH_AI_URL", value: "https://software.turbineh.com/v1/ai", sensitive: false },
+      ],
       onStep: async (s) => void steps.push(s),
     });
     expect(r.url).toBe("https://my-app.vercel.app");
@@ -60,6 +64,8 @@ describe("deploy for me", () => {
       "BETTER_AUTH_URL",
       "JOBS_RUNNER_SECRET",
       "CRON_SECRET",
+      "TURBINEH_AI_TOKEN",
+      "TURBINEH_AI_URL",
     ]);
     expect(r.cron).toBe(true);
     const env = JSON.parse(calls.find((c) => c.url.includes("/env"))?.body ?? "[]") as {
@@ -67,6 +73,8 @@ describe("deploy for me", () => {
       type: string;
     }[];
     expect(env.find((e) => e.key === "DATABASE_URL")?.type).toBe("sensitive");
+    expect(env.find((e) => e.key === "TURBINEH_AI_TOKEN")?.type).toBe("sensitive");
+    expect(env.some((e) => e.key === "TURBINEH_AI_URL")).toBe(true);
     const deployBody = JSON.parse(
       calls.find((c) => c.method === "POST" && c.url.includes("/v13/deployments"))?.body ?? "{}",
     ) as {

@@ -1,10 +1,10 @@
-import { opsSnapshot } from "@turbineh/db";
+import { aiUsageByApp, opsSnapshot } from "@turbineh/db";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
-import { isOps } from "@/server/ops";
+import { aiUsageEur, isOps } from "@/server/ops";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ function Card({ label, value, hint }: { label: string; value: string; hint?: str
 /** Internal operations panel (PLAN §9): TurbineH staff only — clients get a 404 and never see cost data. */
 export default async function OpsPage() {
   if (!isOps(await getCaller())) notFound();
-  const s = await opsSnapshot(db);
+  const [s, ai] = await Promise.all([opsSnapshot(db), aiUsageByApp(db)]);
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
       <p className="eyebrow">Internal · staff only</p>
@@ -92,6 +92,38 @@ export default async function OpsPage() {
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-white">AI gateway usage · 7 d</h2>
+        {ai.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No AI usage yet.</p>
+        ) : (
+          <table className="mt-3 w-full text-left text-sm">
+            <thead className="text-xs text-muted">
+              <tr>
+                <th className="py-2">App</th>
+                <th>Model</th>
+                <th>Calls</th>
+                <th>Tokens in / out</th>
+                <th>Est. cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ai.map((u) => (
+                <tr key={`${u.appId}-${u.model}`} className="border-t border-line">
+                  <td className="py-2 text-ice-2">{u.name}</td>
+                  <td>{u.model}</td>
+                  <td>{u.calls}</td>
+                  <td>
+                    {u.inputTokens} / {u.outputTokens}
+                  </td>
+                  <td>{eur(aiUsageEur(u.model, u.inputTokens, u.outputTokens))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section className="mt-10">
