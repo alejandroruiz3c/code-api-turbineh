@@ -1,6 +1,6 @@
 # ADR-0021 · "Deploy for me" with "Connect Vercel" (integration sign-in)
 
-- Status: accepted (owner decision, 2026-10-12) · activation pending the Vercel integration (see below)
+- Status: accepted and active in production (2026-10-12): integration slug `turbine-deploy`, team turbineh
 - Date: 2026-10-12
 - Extends: ADR-0017 (Deploy for me). Pasting a Vercel token stays available as a fallback.
 
@@ -26,11 +26,10 @@
   created when it is uninstalled, which would break the client's app. Our token is erased after the deployment;
   `DEPLOYED.md` explains how to remove the integration safely (re-save the settings first).
 
-## Activation (owner action, once per environment)
+## Activation (production only; owner decision: no staging integration)
 
-Vercel → team turbineh → Integrations Console → Create (production: Redirect URL
-`https://software.turbineh.com/deploy/vercel/callback`; staging: a second integration with
-`https://staging.software.turbineh.com/deploy/vercel/callback`). Scopes: Projects RW, Deployments RW, Global
+Vercel → team turbineh → Integrations Console → Create, Redirect URL
+`https://software.turbineh.com/deploy/vercel/callback`. Scopes: Projects RW, Deployments RW, Global
 Project Environment Variables RW, User R, Team R. Then `VERCEL_INTEGRATION_SLUG/_CLIENT_ID/_CLIENT_SECRET` in
-`.env.local` (staging: `STG_` prefix) and `infra/staging/web.ts env`. First live test: deploy once, then uninstall
+`.env.local` and `infra/staging/web.ts env`. Staging shows the pasted-token form only. First live test: deploy once, then uninstall
 the integration in a test account and confirm whether Vercel keeps the variables; update `DEPLOYED.md` accordingly.

@@ -6,6 +6,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Curated glue: a component may ship `glue.ts` (written by TurbineH, type-checked at certification) that is copied into apps instead of model-written glue. First one: `email.plain-text.html-to-text`, whose generated glue used options removed in html-to-text 9+ and failed the build in every app that selected it (3 wasted corrections, then dropped).
+- AWS extra worker groundwork (ADR-0024): `infra/aws/worker.ts check` (identity and instance types, read-only).
+- "Connect Vercel" active in production (integration `turbine-deploy`).
+
 - Separate staging and production (ADR-0022): `staging.software.turbineh.com` with its own Vercel project, database, artefact bucket, worker and secrets; `infra/staging/deploy.sh <staging|production>` (production only from a clean `main`).
 - "Deploy for me" with "Connect Vercel" (ADR-0021): the client authorises the TurbineH integration instead of pasting a token; token encrypted, single use, 30-minute expiry; pasted tokens remain as fallback. Activates when the integration credentials are configured.
 - Screen previews skip the sign-in page: internal tools show the dashboard and two modules instead.

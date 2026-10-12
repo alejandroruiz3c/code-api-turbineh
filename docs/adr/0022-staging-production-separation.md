@@ -28,4 +28,5 @@ _SECRET`. Until it exists, staging is used through the API with `STG_SMOKE_API_K
 
 ## Follow-ups
 
-- The OVH worker (when available) joins production as an extra worker; staging stays on Scaleway.
+- The extra production worker runs on AWS (ADR-0024; owner decision 2026-10-12, replaces the OVH plan); staging stays on
+  Scaleway.

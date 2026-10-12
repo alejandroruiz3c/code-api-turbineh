@@ -1,0 +1,4 @@
+name: recertify-curated-glue
+description: "Curated glue for html-to-text (replaces model-written glue that used options removed in v9+)"
+entries:
+  - id: email.plain-text.html-to-text
