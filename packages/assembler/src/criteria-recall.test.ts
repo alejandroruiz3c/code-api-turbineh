@@ -1,9 +1,20 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { proofVerdict, type ProofCandidate } from "@turbineh/shared";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, relative } from "node:path";
+import { detectDomains } from "@turbineh/compiler";
+import { proofVerdict, type ProofAlias, type ProofCandidate } from "@turbineh/shared";
 import { LABELLED_PAIRS as PROOF_PAIRS } from "@turbineh/shared/criterion-proof-pairs";
 import { describe, expect, it } from "vitest";
 import { testBlocks } from "./acceptance.js";
+import { aliasesFor, readAliasDeclaration, resolveAliases } from "./aliases.js";
 
 /**
  * Recall without relaxing the matcher (ADR-0045): the same 109 labelled pairs (criterion, the test a rule cited, human
@@ -25,9 +36,9 @@ const RENAMED: Record<string, string> = {
   "an overlapping booking is rejected":
     "a slot that is already taken cannot be booked again: the overlapping (double) booking is rejected",
   "answers common questions from the business's data":
-    "the assistant answers common questions (prices, services and opening hours) from the business's data",
+    "a customer asks about prices: the assistant responds stating each service with its price, from the business's data",
   "books only a real free time, after the person confirms, and logs the confirmation email":
-    "the assistant books only a real free slot after the person confirms the date, time and staff member; the confirmation email is logged and staff see the booking",
+    "a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking",
   "browses home, services, about and contact":
     "a visitor browses the home page, the services page, about and contact",
   "creates a project and a task assigned to me":
@@ -43,11 +54,11 @@ const RENAMED: Record<string, string> = {
   "pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged":
     "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
   "refuses to cancel inside the notice period":
-    "the assistant refuses to cancel a booking inside the notice period (fewer hours before it starts than the cancellation notice)",
+    "a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation",
   "rejects prompt injection and oversized messages":
     "a user who sends the assistant a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse",
   "reschedules with reference + email after confirmation":
-    "the assistant reschedules (moves) an existing booking to a new free slot, with its reference and email, after the person confirms",
+    "a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms",
   "sends a contact message": "a visitor submits the contact form and gets a confirmation",
   "shoppers search the catalogue by product name: only matching products are listed":
     "shoppers search the catalogue by product name: the list filters to only the matching products",
@@ -84,16 +95,44 @@ function walk(d: string): string[] {
   });
 }
 
-const shipped = new Map<string, ProofCandidate>();
+/** Every catalog test by title, with its path inside the app (tests/…). */
+const shipped = new Map<string, ProofCandidate & { file: string }>();
 for (const f of walk(catalog).filter((p) => existsSync(p)))
-  for (const b of testBlocks(readFileSync(f, "utf8"))) shipped.set(b.title, b);
+  for (const b of testBlocks(readFileSync(f, "utf8")))
+    shipped.set(b.title, { ...b, file: relative(catalog, f).replace(/^.*?\/(tests\/)/, "$1") });
 
-function score(current: boolean) {
+/**
+ * ADR-0046: the agent pairs come from the Flex Physio build; its bookings params give the component's aliases
+ * (customer → patient, staff member → physiotherapist, the services). Resolved exactly as the assembler does.
+ */
+const FLEX_PHYSIO =
+  'Build an AI booking assistant for "Flex Physio", a physiotherapy clinic with three physiotherapists and 45-minute sessions (Monday–Friday 09:00–19:00, Europe/Madrid). Patients chat with the assistant in plain language to: check availability, book a session with a chosen or any physiotherapist, reschedule, cancel (not later than 24 hours before), and ask common questions (prices: first visit 60 €, follow-up 50 €; address; what to bring).';
+function flexPhysioAliases() {
+  const app = mkdtempSync(join(tmpdir(), "recall-aliases-"));
+  const domain = detectDomains(FLEX_PHYSIO, "ai-agents", "Flex Physio").find(
+    (d) => d.component === "domain.bookings.turbineh",
+  );
+  const decl = readAliasDeclaration(join(catalog, "components/domain.bookings.turbineh"));
+  if (!domain || !decl) return [];
+  mkdirSync(join(app, "src/bookings"), { recursive: true });
+  writeFileSync(join(app, decl.file), JSON.stringify(domain.params));
+  const r = resolveAliases("domain.bookings.turbineh", decl, app);
+  return r ? [r] : [];
+}
+const agentAliases = flexPhysioAliases();
+
+function score(current: boolean, aliases = false) {
   let tp = 0;
   let fp = 0;
   let fn = 0;
   for (const p of PROOF_PAIRS) {
-    const test = current ? (shipped.get(RENAMED[p.test.title] ?? p.test.title) ?? p.test) : p.test;
+    const now = current ? shipped.get(RENAMED[p.test.title] ?? p.test.title) : undefined;
+    let test: ProofCandidate = now ?? p.test;
+    const found: ProofAlias[] | undefined =
+      aliases && now && p.id.startsWith("rule-agent-")
+        ? aliasesFor(now.file, agentAliases)
+        : undefined;
+    if (found) test = { ...test, aliases: found };
     const proven = proofVerdict(p.criterion, test).proven;
     if (proven && p.met) tp++;
     else if (proven) fp++;
@@ -110,7 +149,12 @@ describe("criteria recall with the tests as shipped today", () => {
   it("keeps precision at 1.00 and raises recall on the 109 labelled pairs", () => {
     const before = score(false);
     const now = score(true);
-    console.log(JSON.stringify({ pairs: PROOF_PAIRS.length, before, now }));
+    const withAliases = score(true, true);
+    console.log(JSON.stringify({ pairs: PROOF_PAIRS.length, before, now, withAliases }));
+    // ADR-0046: aliases from the app's params never cost precision.
+    expect(agentAliases.length).toBe(1);
+    expect(withAliases.fp).toBe(0);
+    expect(withAliases.recall).toBeGreaterThanOrEqual(now.recall);
     expect(PROOF_PAIRS.length).toBeGreaterThanOrEqual(109);
     expect(now.fp).toBe(0);
     expect(now.precision).toBe(1);

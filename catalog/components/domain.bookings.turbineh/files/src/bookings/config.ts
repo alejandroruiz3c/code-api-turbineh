@@ -20,6 +20,8 @@ export const isTimeZone = (tz: string): boolean => {
 export const BookingParams = z
   .object({
     business: z.string().trim().min(1).max(80),
+    /** The request's word for the business ("clinic", "salon"), or null. */
+    businessKind: z.string().trim().min(1).max(40).nullable().optional(),
     timeZone: z.string().refine(isTimeZone, "unknown IANA time zone"),
     resource: z.object({
       singular: z.string().trim().min(1).max(40),

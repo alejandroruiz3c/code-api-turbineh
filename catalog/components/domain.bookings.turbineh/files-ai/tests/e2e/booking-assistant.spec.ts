@@ -12,7 +12,7 @@ import { signUpOrSignIn } from "./helpers";
 type Params = {
   timeZone: string;
   hours: { weekday: number; open: string; close: string }[];
-  services: { name: string }[];
+  services: { name: string; price: number | null }[];
   policy: { cancelNoticeHours: number; horizonDays: number };
 };
 const params = JSON.parse(
@@ -57,16 +57,22 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
   const email = `patient-${Date.now()}@example.com`;
   let reference = "";
 
-  test("the assistant answers common questions (prices, services and opening hours) from the business's data", async ({
+  test("a customer asks about prices: the assistant responds stating each service with its price, from the business's data", async ({
     page,
   }) => {
     await page.goto("/");
     const reply = await say(page, "What are your prices and opening hours?");
     expect(reply).toContain("Prices:");
-    for (const s of params.services) expect(reply).toContain(s.name);
+    // Each service with its price, exactly as the business's params state them (the fact the criteria aliases cite).
+    for (const s of params.services)
+      expect(reply, "states each service and its price from params.services").toContain(
+        s.price === null
+          ? s.name
+          : `${s.name} ${Number.isInteger(s.price) ? s.price : s.price.toFixed(2)}`,
+      );
   });
 
-  test("the assistant books only a real free slot after the person confirms the date, time and staff member; the confirmation email is logged and staff see the booking", async ({
+  test("a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking", async ({
     page,
     browser,
   }) => {
@@ -96,7 +102,7 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     await staff.close();
   });
 
-  test("the assistant reschedules (moves) an existing booking to a new free slot, with its reference and email, after the person confirms", async ({
+  test("a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms", async ({
     page,
   }) => {
     test.skip(!reference, "needs the booking from the previous test");
@@ -133,7 +139,7 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     await expect(page.getByRole("button", { name: "Confirm" })).toHaveCount(0);
   });
 
-  test("the assistant refuses to cancel a booking inside the notice period (fewer hours before it starts than the cancellation notice)", async ({
+  test("a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation", async ({
     page,
   }) => {
     test.skip(params.policy.cancelNoticeHours <= 0, "no notice period configured");

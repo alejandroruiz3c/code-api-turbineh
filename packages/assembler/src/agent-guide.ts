@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { proofVerdict } from "@turbineh/shared";
+import { aliasesFor } from "./aliases.js";
 import { splitTestRef, testBlocks, writeAcceptance, type CriterionStatus } from "./acceptance.js";
 
 /**
@@ -666,7 +667,10 @@ export function verifiedGuide(
   const proves = (criterion: string, ref: string) => {
     const { file, title } = splitTestRef(ref);
     const block = blocksOf(file).find((b) => b.title === title);
-    return block && proofVerdict(criterion, block).proven ? { file, title } : null;
+    const aliases = aliasesFor(file, outDir);
+    return block && proofVerdict(criterion, aliases ? { ...block, aliases } : block).proven
+      ? { file, title }
+      : null;
   };
   const deterministic = readAcceptanceJson(outDir);
   const criteria: GuideCriterion[] = input.criteria.map((c) => {

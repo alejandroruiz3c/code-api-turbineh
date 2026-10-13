@@ -12,6 +12,7 @@ import { dirname, extname, join, relative } from "node:path";
 import { guideMarkdown, readGuides } from "@turbineh/catalog";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
+import { aliasesFor, componentAliases, writeAliases } from "./aliases.js";
 import { applyRequestedCurrencies } from "./currencies.js";
 import {
   entitiesToGenerate,
@@ -30,6 +31,7 @@ import {
   attachProofs,
   readCoverage,
   sourceIn,
+  splitTestRef,
   testBlocks,
   writeAcceptance,
   type CoverageRule,
@@ -292,6 +294,14 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[f.path] ??= "generated";
   }
   recordOwners(outDir, owners);
+  writeAliases(
+    outDir,
+    componentAliases(
+      join(input.recipesDir, "..", "components"),
+      [...new Set(input.selected.map((s) => s.component.id))],
+      outDir,
+    ),
+  );
   // Criterion → test: only tests shipped in this package, each checked against its title and assertions (ADR-0043, ADR-0044).
   writeAcceptance(
     outDir,
@@ -535,7 +545,14 @@ export function coverageRules(
           join(componentsDir, id, "files-ai"),
         ]),
       );
-  return attachProofs(rules, source);
+  const proven = attachProofs(rules, source);
+  if (!outDir) return proven;
+  // Component aliases resolved from the params this app ships (ADR-0046), on that component's tests only.
+  const resolved = componentAliases(componentsDir, components, outDir);
+  return proven.map((r) => {
+    const aliases = aliasesFor(splitTestRef(r.test).file, resolved);
+    return aliases && r.proof ? { ...r, proof: { ...r.proof, aliases } } : r;
+  });
 }
 
 /** src/lib/ai/toolkits.ts: every installed domain toolkit (src/<domain>/toolkit.ts exporting `toolkit`). */

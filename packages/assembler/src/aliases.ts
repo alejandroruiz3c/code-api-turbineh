@@ -1,0 +1,120 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import type { ProofAlias } from "@turbineh/shared";
+import { parse } from "yaml";
+
+/**
+ * Criteria aliases (ADR-0046). A domain component's tests use generic words ("customer", "staff member", "record");
+ * the request names them its own way ("patient", "physiotherapist", "piece"). A component declares, in
+ * `aliases.yaml`, which of its params hold this app's word for each generic one. The assembler resolves them from the
+ * params the app ships and attaches them to the proofs of that component's tests only. Facts (service names,
+ * prices…) are declared with `asserted`: they count only when the test asserts the values read from params.
+ *
+ *   file: src/bookings/params.json            # the component's params in the app
+ *   tests: [tests/e2e/booking-assistant.spec.ts]
+ *   aliases:
+ *     - { term: customer, from: customer.singular }
+ *     - { term: service, from: "services[].name", asserted: "params\\.services" }
+ */
+export interface AliasDeclaration {
+  file: string;
+  tests: string[];
+  aliases: { term: string; from: string | string[]; asserted?: string }[];
+}
+
+export interface ResolvedAliases {
+  component: string;
+  tests: string[];
+  aliases: ProofAlias[];
+}
+
+const JSON_PATH = ".turbineh/aliases.json";
+
+export function readAliasDeclaration(componentDir: string): AliasDeclaration | null {
+  const file = join(componentDir, "aliases.yaml");
+  if (!existsSync(file)) return null;
+  const raw = parse(readFileSync(file, "utf8")) as Partial<AliasDeclaration> | null;
+  if (
+    !raw ||
+    typeof raw.file !== "string" ||
+    !Array.isArray(raw.tests) ||
+    !Array.isArray(raw.aliases)
+  )
+    throw new Error(`${file}: expected { file, tests[], aliases[] }`);
+  return raw as AliasDeclaration;
+}
+
+/** Values at a params path: "customer.singular", "services[].name", "workflows[].states[].label". */
+export function valuesAt(obj: unknown, path: string): string[] {
+  let cur: unknown[] = [obj];
+  for (const part of path.split(".")) {
+    const many = part.endsWith("[]");
+    const key = many ? part.slice(0, -2) : part;
+    cur = cur.flatMap((o) => {
+      const v = o && typeof o === "object" ? (o as Record<string, unknown>)[key] : undefined;
+      return many ? (Array.isArray(v) ? v : []) : [v];
+    });
+  }
+  return cur
+    .filter((v) => typeof v === "string" || typeof v === "number")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+}
+
+/** The declaration resolved against the params this app ships; null when the app has no such params file. */
+export function resolveAliases(
+  component: string,
+  decl: AliasDeclaration,
+  outDir: string,
+): ResolvedAliases | null {
+  const file = join(outDir, decl.file);
+  if (!existsSync(file)) return null;
+  const params = JSON.parse(readFileSync(file, "utf8")) as unknown;
+  const aliases = decl.aliases
+    .map((a) => ({
+      term: a.term,
+      means: [
+        ...new Set(
+          (Array.isArray(a.from) ? a.from : [a.from])
+            .flatMap((p) => valuesAt(params, p))
+            .map((v) => v.toLowerCase()),
+        ),
+      ].filter((m) => m !== a.term.toLowerCase()),
+      ...(a.asserted ? { asserted: a.asserted } : {}),
+    }))
+    .filter((a) => a.means.length > 0);
+  return { component, tests: decl.tests, aliases };
+}
+
+/** Resolved aliases of every selected component that declares them (written to .turbineh/aliases.json). */
+export function componentAliases(
+  componentsDir: string,
+  componentIds: string[],
+  outDir: string,
+): ResolvedAliases[] {
+  return componentIds.flatMap((id) => {
+    const decl = readAliasDeclaration(join(componentsDir, id));
+    const r = decl ? resolveAliases(id, decl, outDir) : null;
+    return r ? [r] : [];
+  });
+}
+
+export function writeAliases(outDir: string, resolved: ResolvedAliases[]): void {
+  const p = join(outDir, JSON_PATH);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, `${JSON.stringify(resolved, null, 2)}\n`);
+}
+
+/** Aliases that apply to one shipped test file (from .turbineh/aliases.json, or the given list). */
+export function aliasesFor(
+  file: string,
+  resolved: ResolvedAliases[] | string,
+): ProofAlias[] | undefined {
+  let list: ResolvedAliases[] = [];
+  if (typeof resolved === "string") {
+    const p = join(resolved, JSON_PATH);
+    if (existsSync(p)) list = JSON.parse(readFileSync(p, "utf8")) as ResolvedAliases[];
+  } else list = resolved;
+  const found = list.filter((r) => r.tests.includes(file)).flatMap((r) => r.aliases);
+  return found.length ? found : undefined;
+}

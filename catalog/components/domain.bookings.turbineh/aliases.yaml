@@ -1,0 +1,21 @@
+# Criteria aliases (ADR-0046): the words this component's tests use, and which of its params hold this app's word
+# for each. Resolved by the assembler from src/bookings/params.json and applied to these tests' proofs only. Facts
+# (`asserted`) count only when the test asserts the values it reads from params.
+file: src/bookings/params.json
+tests:
+  - tests/e2e/booking-assistant.spec.ts
+  - tests/unit/bookings.test.ts
+aliases:
+  - term: customer
+    from: customer.singular
+  - term: customers
+    from: customer.plural
+  - term: staff member
+    from: resource.singular
+  - term: staff members
+    from: resource.plural
+  - term: business
+    from: [business, businessKind]
+  - term: service
+    from: "services[].name"
+    asserted: "params\\.services"

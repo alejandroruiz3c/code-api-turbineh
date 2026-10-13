@@ -27,6 +27,8 @@ export interface DomainSelection {
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export const bookingParamsSchema = z.object({
   business: z.string().min(1).max(80),
+  /** What kind of business the request says it is ("clinic", "salon", "studio"), or null. */
+  businessKind: z.string().min(1).max(40).nullable().optional(),
   timeZone: z.string().min(1),
   resource: z.object({
     singular: z.string().min(1).max(40),
@@ -376,8 +378,14 @@ export function extractBookingParams(
   }
 
   const slotMinutes = Math.max(5, services.map((s) => s.minutes).reduce(gcd));
+  // "a physiotherapy clinic", "our hair salon": the request's word for the business (criteria use it).
+  const businessKind =
+    /\b(?:a|an|our|the|my)\s+(?:[a-z-]+\s+){0,2}?(clinic|salon|studio|practice|spa|gym|barbershop|shop|office|centre|center|school|restaurant|garage|surgery|academy)\b/i
+      .exec(text)?.[1]
+      ?.toLowerCase() ?? null;
   const params = bookingParamsSchema.parse({
     business: business.slice(0, 80),
+    businessKind,
     timeZone,
     resource,
     customer,

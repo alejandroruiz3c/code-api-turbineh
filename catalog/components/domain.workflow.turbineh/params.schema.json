@@ -5,7 +5,10 @@
   "additionalProperties": false,
   "required": ["workflows"],
   "$defs": {
-    "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$"
+    },
     "role": {
       "type": "string",
       "minLength": 1,
@@ -36,9 +39,26 @@
             "$ref": "#/$defs/key",
             "description": "Record kind, e.g. request, loan, piece, task."
           },
-          "label": { "type": "string", "minLength": 1, "maxLength": 40 },
-          "plural": { "type": "string", "minLength": 1, "maxLength": 40 },
-          "initial": { "$ref": "#/$defs/key", "description": "State of a new record." },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "plural": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "stateNoun": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "The request's word for the state, e.g. stage, status, phase (criteria aliases, ADR-0046)."
+          },
+          "initial": {
+            "$ref": "#/$defs/key",
+            "description": "State of a new record."
+          },
           "dueDate": {
             "type": "boolean",
             "description": "Records carry a due date (overdue = past it and not final)."
@@ -47,7 +67,9 @@
             "type": "array",
             "minItems": 1,
             "maxItems": 10,
-            "items": { "$ref": "#/$defs/role" }
+            "items": {
+              "$ref": "#/$defs/role"
+            }
           },
           "states": {
             "type": "array",
@@ -58,15 +80,24 @@
               "additionalProperties": false,
               "required": ["key", "label", "limitHours", "final"],
               "properties": {
-                "key": { "$ref": "#/$defs/key" },
-                "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+                "key": {
+                  "$ref": "#/$defs/key"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
                 "limitHours": {
                   "type": ["number", "null"],
                   "exclusiveMinimum": 0,
                   "maximum": 8760,
                   "description": "Flag a record stuck after this many hours in the state; null = never."
                 },
-                "final": { "type": "boolean", "description": "No transition leaves a final state." }
+                "final": {
+                  "type": "boolean",
+                  "description": "No transition leaves a final state."
+                }
               }
             }
           },
@@ -83,9 +114,13 @@
                   "type": "array",
                   "minItems": 1,
                   "maxItems": 20,
-                  "items": { "$ref": "#/$defs/key" }
+                  "items": {
+                    "$ref": "#/$defs/key"
+                  }
                 },
-                "to": { "$ref": "#/$defs/key" },
+                "to": {
+                  "$ref": "#/$defs/key"
+                },
                 "label": {
                   "type": "string",
                   "minLength": 1,
@@ -96,7 +131,9 @@
                   "type": "array",
                   "minItems": 1,
                   "maxItems": 10,
-                  "items": { "$ref": "#/$defs/role" }
+                  "items": {
+                    "$ref": "#/$defs/role"
+                  }
                 }
               }
             }
