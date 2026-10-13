@@ -1,6 +1,6 @@
-import { readGuides } from "@turbineh/catalog";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { decisionCard, readDocs, readGuides } from "@turbineh/catalog";
 import type { ExternalComponent } from "@turbineh/integrator";
 import type { CandidateCard } from "@turbineh/selector";
 import { parse } from "yaml";
@@ -16,14 +16,20 @@ interface Manifest {
   relations: { requires: string[]; provides: string[]; conflicts: string[] };
 }
 
-/** Catalog manifests from git (source of truth), as decider-ready candidate cards. */
-export function loadCatalog(componentsDir: string): CandidateCard[] {
+/**
+ * Catalog manifests from git (source of truth), as decider-ready candidate cards. The card is the compact form of the
+ * component's documentation (docs.yaml: what it does, when to use it and not, main trade-off, tested guarantees);
+ * `docs: false` keeps the manifest one-liner (selection bench baseline).
+ */
+export function loadCatalog(componentsDir: string, opts: { docs?: boolean } = {}): CandidateCard[] {
+  const useDocs = opts.docs ?? true;
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
-    .map(
-      (d) => parse(readFileSync(join(componentsDir, d.name, "component.yaml"), "utf8")) as Manifest,
-    )
-    .map((m) => {
+    .map((d) => ({
+      m: parse(readFileSync(join(componentsDir, d.name, "component.yaml"), "utf8")) as Manifest,
+      docs: useDocs ? readDocs(join(componentsDir, d.name)) : null,
+    }))
+    .map(({ m, docs }) => {
       const purl = /^pkg:[a-z]+\/(.+)@([^@]+)$/.exec(m.source.purl);
       return {
         id: m.id,
@@ -34,7 +40,9 @@ export function loadCatalog(componentsDir: string): CandidateCard[] {
         peer: m.compat.peer ?? {},
         conflicts: m.relations.conflicts,
         requires: m.relations.requires,
-        card: `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${guideCard(join(componentsDir, m.id))}`,
+        card: docs
+          ? decisionCard(docs, m.relations.provides)
+          : `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${guideCard(join(componentsDir, m.id))}`,
       };
     });
 }
