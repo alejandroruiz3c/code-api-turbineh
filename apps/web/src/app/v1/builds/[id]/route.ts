@@ -23,7 +23,21 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     docs?: Record<string, string>;
     slug?: string;
     previews?: { name: string; key: string }[];
+    reportOnly?: boolean;
   } | null;
+  // ADR-0037 §D1: what was delivered. `verified` is true only when every check passed; a failed gate may still deliver
+  // the package ("Delivered, not verified: N/M") or, on a security/policy block, only the report.
+  const d = build.metrics.delivery as
+    | {
+        kind: "verified" | "unverified" | "report_only";
+        label: string;
+        checksPassed: number;
+        checksTotal: number;
+        failures: unknown[];
+        blocking: unknown[];
+      }
+    | undefined;
+  const verified = build.status === "done" && (d ? d.kind === "verified" : true);
   return Response.json({
     id: build.id,
     status: build.status,
@@ -31,6 +45,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     created_at: build.created_at,
     finished_at: build.finished_at,
     error: build.error,
+    verified: build.status === "done" || build.status === "failed" ? verified : null,
+    delivery: d
+      ? {
+          kind: d.kind,
+          label: d.label,
+          checks_passed: d.checksPassed,
+          checks_total: d.checksTotal,
+          failures: d.failures,
+          blocking: d.blocking,
+        }
+      : null,
     spec: build.spec,
     // Cost is internal: only TurbineH staff see it.
     metrics: isOps(caller) ? build.metrics : clientMetrics(build.metrics),
@@ -47,7 +72,20 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           previews: await Promise.all(
             (a.previews ?? []).map(async (p) => ({ name: p.name, url: await storage.url(p.key) })),
           ),
+          verified,
         }
-      : null,
+      : a?.reportOnly
+        ? // Security or policy block: the report only, never runnable code.
+          {
+            slug: a.slug,
+            zip_url: null,
+            bundle_url: null,
+            files: [],
+            docs: a.docs ?? {},
+            previews: [],
+            verified: false,
+            report_only: true,
+          }
+        : null,
   });
 }

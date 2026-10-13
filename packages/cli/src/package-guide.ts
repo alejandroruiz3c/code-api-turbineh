@@ -13,6 +13,10 @@ export interface PackageGuideFile {
   buildId: string;
   app: { name: string };
   status: "verified" | "failed" | "unverified";
+  /** False when delivered although the gate failed (ADR-0037). */
+  verified?: boolean;
+  /** "10/11" */
+  checks?: string;
   left: { kind: string; what: string; where: string; how: string }[];
   criteria: { text: string; status: string; test?: { file: string; title: string } }[];
   gate: {
@@ -80,7 +84,9 @@ export function left(cwd: string, guide: PackageGuideFile): CommandResult {
         guide.gate
           ? guide.gate.ok
             ? green(`passed (${guide.gate.verifiedAt})`)
-            : red(`failed (${guide.gate.verifiedAt})`)
+            : red(
+                `delivered, not verified: ${guide.checks ?? `${guide.gate.steps.filter((s) => s.ok).length}/${guide.gate.steps.length}`} checks passed (${guide.gate.verifiedAt})`,
+              )
           : yellow("not verified yet")
       } · Criteria met: ${met}/${guide.criteria.length}`,
       "",

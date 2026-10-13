@@ -42,6 +42,7 @@ import { processDelivery } from "./delivery.js";
 import { adaptationCoderFromEnv, modelSlotsFromEnv } from "./models.js";
 import { processRepoIntegration } from "./repo-integration.js";
 import {
+  forcedFailureRequested,
   improveBuild,
   runBuild,
   type BuildOutcome,
@@ -160,6 +161,7 @@ async function handle(build: BuildRow): Promise<void> {
             brand: build.options.brand,
             ...(mode === "plan" ? { plan: build.options.plan as PlanRequest } : {}),
             ...(mode === "generate" && build.spec ? { spec: build.spec as BuildSpec } : {}),
+            ...(forcedFailureRequested(build.prompt, process.env) ? { forceFailure: true } : {}),
           });
   if (mode === "generate" && plan) outcome.metrics = { ...outcome.metrics, plan };
   let artifact: Record<string, unknown> | undefined;
@@ -167,9 +169,17 @@ async function handle(build: BuildRow): Promise<void> {
     artifact = outcome.metrics.artifact as Record<string, unknown>;
     delete outcome.metrics.artifact;
   }
-  if (outcome.status === "done" && outcome.repoDir) {
-    await emitEvent(db, build.id, "delivering", "start", { channel: "A" });
+  // ADR-0037 §D1: never deliver nothing. A failed gate with only quality failures still delivers the package (marked
+  // not verified, status stays "failed"); a security or policy block delivers only the report.
+  const unverified = outcome.status === "failed" && outcome.delivery?.kind === "unverified";
+  if (outcome.status === "failed" && outcome.delivery?.kind === "report_only" && outcome.repoDir) {
+    artifact = reportOnlyArtifact(outcome.repoDir, outcome.delivery.label);
+    await emitEvent(db, build.id, "delivering", "done", { channel: "A", reportOnly: true });
+  }
+  if ((outcome.status === "done" || unverified) && outcome.repoDir) {
+    await emitEvent(db, build.id, "delivering", "start", { channel: "A", verified: !unverified });
     artifact = await storeArtifact(build, outcome.repoDir, storage);
+    artifact.verified = !unverified;
     // The capability package (PLAN §16.3) is the product deliverable: ZIP or changes in a repository.
     artifact.package = await packageFlow(build, outcome, artifact, plan).catch((err: unknown) => {
       log.error("capability package failed", { buildId: build.id, error: String(err) });
@@ -217,7 +227,18 @@ async function handle(build: BuildRow): Promise<void> {
   }
 }
 
-/** Capability package of a verified app (complete flow). */
+/** Report-only delivery (security or policy block): the reports, never runnable code. */
+function reportOnlyArtifact(repoDir: string, label: string): Record<string, unknown> {
+  const slug = repoDir.split("/").pop() ?? "app";
+  const docs = Object.fromEntries(
+    ["TURBINEH_REPORT.md", "SECURITY.md"]
+      .filter((f) => existsSync(join(repoDir, f)))
+      .map((f) => [f, readFileSync(join(repoDir, f), "utf8").slice(0, 60_000)]),
+  );
+  return { slug, docs, files: [], reportOnly: true, verified: false, label };
+}
+
+/** Capability package of a generated app (complete flow): "verified" only when every check passed. */
 async function packageFlow(
   build: BuildRow,
   outcome: BuildOutcome,

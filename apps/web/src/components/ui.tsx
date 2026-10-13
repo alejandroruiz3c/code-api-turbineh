@@ -38,8 +38,8 @@ export const STATE_LABEL: Record<FlowState, { label: string; hint: string; tone:
     tone: "border-amber/60 text-amber",
   },
   generated: {
-    label: "Generated",
-    hint: "Package produced, checks pending",
+    label: "Delivered, not verified",
+    hint: "Package produced; not every check passed — see what failed",
     tone: "border-amber/60 text-amber",
   },
   verified: {

@@ -22,6 +22,7 @@ import {
   compileIntent,
   detectDomains,
   extractPalette,
+  separateNonFunctional,
   type BuildSpec,
   type CompileResult,
   type CompilerConfig,
@@ -51,6 +52,7 @@ import {
 import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
+import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
@@ -106,6 +108,25 @@ export interface BuildOutcome {
   verify?: VerifyResult;
   spec?: unknown;
   reason?: string;
+  /**
+   * What the build delivers (ADR-0037 §D1). `unverified`: status stays "failed" (never verified, never deployable)
+   * but the package is stored and handed over with the exact failure; `report_only`: only the report.
+   */
+  delivery?: Delivery;
+}
+
+/**
+ * Test-only (ADR-0037): adds one E2E test that always fails, to prove the "delivered, not verified" path end to end.
+ * Honoured only when the worker runs with TURBINEH_TEST_FLAGS=1, which is never set in production (deploy.sh refuses a
+ * production worker whose environment file sets it).
+ */
+export const FORCED_FAILURE_SPEC = "tests/e2e/turbineh-forced-failure.spec.ts";
+export const FORCED_FAILURE_MARKER = "[turbineh-test:force-e2e-failure]";
+export function forcedFailureRequested(
+  prompt: string,
+  env: Record<string, string | undefined>,
+): boolean {
+  return env.TURBINEH_TEST_FLAGS === "1" && prompt.includes(FORCED_FAILURE_MARKER);
 }
 
 const git = (dir: string, ...args: string[]) =>
@@ -151,8 +172,12 @@ export async function runBuild(
     spec?: BuildSpec;
     /** Plan only (PLAN §16.4): stop after selection and resolution and return the plan. */
     plan?: PlanRequest;
+    /** Test-only (see FORCED_FAILURE_SPEC): one E2E test that always fails. */
+    forceFailure?: boolean;
   } = {},
 ): Promise<BuildOutcome> {
+  // The test-only marker never reaches a model (it is honoured only through options.forceFailure).
+  prompt = prompt.split(FORCED_FAILURE_MARKER).join(" ").trim();
   // Client brand: validated again here (colour format, font list, logo type by magic bytes, size).
   const brand = parseBrand(options.brand);
   const t0 = performance.now();
@@ -208,7 +233,19 @@ export async function runBuild(
   if (!compiled.ok || !compiled.spec) {
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
-  const spec = compiled.spec;
+  // Non-functional requirements are capabilities, never entities (ADR-0037 §D3): also for specs stored before the rule.
+  const separated = separateNonFunctional(compiled.spec);
+  const spec = separated.spec;
+  const nonFunctional = [...(compiled.nonFunctional ?? []), ...separated.requirements];
+  if (nonFunctional.length > 0) {
+    await deps.emit(buildId, "compiling", "non-functional", {
+      requirements: nonFunctional.map((r) => ({
+        kind: r.kind,
+        source: r.source,
+        capabilities: r.capabilities,
+      })),
+    });
+  }
   // Specs stored before palettes existed (approved plans) still get the colours stated in the prompt.
   if (spec.palette === undefined) spec.palette = extractPalette(prompt);
   if (spec.recipe === "out_of_scope" && options.plan) {
@@ -415,6 +452,21 @@ export async function runBuild(
     "-m",
     `feat: ${spec.app_name} assembled by CODE-API-TURBINEH (build ${buildId})`,
   );
+  if (options.forceFailure) {
+    writeAt(
+      repoDir,
+      FORCED_FAILURE_SPEC,
+      `import { expect, test } from "@playwright/test";
+
+// Test-only (TURBINEH_TEST_FLAGS): proves that a failing gate still delivers the package, marked not verified.
+test("forced failure for the not-verified delivery test", () => {
+  expect(1, "forced by the TurbineH test flag").toBe(2);
+});
+`,
+    );
+    git(repoDir, "add", "-A");
+    git(repoDir, "commit", "-q", "-m", "test: forced failure (test-only flag)");
+  }
   lap("assemble", t);
   await deps.emit(buildId, "assembling", "done", {
     generatedLines: assembled.generatedLines,
@@ -594,6 +646,7 @@ export async function runBuild(
       ).toFixed(3),
     },
     recipe: { requested: spec.recipe, built: recipeId },
+    nonFunctional,
     brand: brand
       ? { color: brand.primaryColor ?? null, font: brand.font ?? null, logo: Boolean(brand.logo) }
       : null,
@@ -661,15 +714,18 @@ export async function runBuild(
       metrics: { ...metrics, timings },
       swap: {
         toCommit: assembledCommit,
-        capabilities: [
-          ...integratedCaps,
-          ...filledCaps,
-          ...rules.map((r) => rulesCapability(slugOf(r.module))),
-        ],
         parts: [
           ...integrations.flatMap((i) =>
             i.glue ? [{ capability: i.capability, kind: "glue" as const, files: [i.glue] }] : [],
           ),
+          // Integrated libraries (ADR-0037 §D2): implicated only when a failing file imports them or their contract
+          // test fails; removing one drops its contract test and glue (the pinned dependency stays unused).
+          ...integrations.map((i) => ({
+            capability: i.capability,
+            kind: "integration" as const,
+            files: i.contractTest ? [i.contractTest] : [],
+            package: resolution.selected[i.capability]?.pkg.name ?? i.component,
+          })),
           ...filled.map((f) => ({
             capability: f.capability,
             kind: "backup" as const,
@@ -679,6 +735,7 @@ export async function runBuild(
             capability: rulesCapability(slugOf(r.module)),
             kind: "rules" as const,
             files: [r.module, r.test, r.fixtures, ...(r.relatedModule ? [r.relatedModule] : [])],
+            entity: r.entity,
           })),
         ],
       },
@@ -709,6 +766,8 @@ export async function runBuild(
     corrections: fin.corrections,
     swappedOut: fin.swappedOut,
     glueRemoved: fin.glueRemoved,
+    // Failure → owner → implicated parts, per swap round (ADR-0037 §D2).
+    attribution: fin.attribution,
     acceptance: fin.acceptance,
     // What is in the delivered repository after corrections and swaps.
     components: usedComponents
@@ -740,7 +799,7 @@ export async function runBuild(
         .filter((capability) => !capability.startsWith("rules."))
         .map((capability) => ({
           capability,
-          trigger: "removed after failed corrections (T4)",
+          trigger: "removed: a failing check was attributed to it (T4)",
         })),
     ],
   };
@@ -748,14 +807,17 @@ export async function runBuild(
     repoDir,
     alerts: fin.alerts.length,
     remediated: fin.remediation.length,
+    delivery: fin.delivery.kind,
   });
   return {
     buildId,
     status: fin.ok ? "done" : "failed",
     repoDir,
-    metrics: finalMetrics,
+    metrics: { ...finalMetrics, delivery: fin.delivery },
     verify: fin.verify,
     spec,
+    delivery: fin.delivery,
+    ...(fin.ok ? {} : { reason: deliveryReason(fin.delivery) }),
   };
 }
 
@@ -826,14 +888,17 @@ export async function improveBuild(
     repoDir,
     alerts: fin.alerts.length,
     remediated: fin.remediation.length,
+    delivery: fin.delivery.kind,
   });
   return {
     buildId,
     status: fin.ok ? "done" : "failed",
     repoDir,
-    metrics,
+    metrics: { ...metrics, delivery: fin.delivery },
     verify: fin.verify,
     spec: parent.spec,
+    delivery: fin.delivery,
+    ...(fin.ok ? {} : { reason: deliveryReason(fin.delivery) }),
   };
 }
 

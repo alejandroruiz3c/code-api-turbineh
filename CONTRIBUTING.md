@@ -27,7 +27,21 @@ Every recipe template and native component must be **agent-ready** ([ADR-0032](d
   the user's workspace.
 
 Check a template end to end in the local sandbox: `pnpm --filter @turbineh/worker run verify:recipe <recipe>
-["<prompt with colours>"] [--with <component,…>]`.
+["<prompt with colours>"] [--with <component,…>]`. It assembles the recipe the way the pipeline does (required
+components, the domain components the prompt selects, native components for its capabilities —
+[ADR-0037 §D4](docs/adr/0037-robust-builds.md)).
+
+**Before merging any change to `catalog/` or the assembler, run the full gate on every combination:**
+
+```bash
+pnpm --filter @turbineh/worker run verify:recipe --list    # each recipe alone + each recipe with a domain component
+pnpm --filter @turbineh/worker run verify:recipe --all     # full gate (E2E included) for all of them, in the sandbox
+pnpm --filter @turbineh/worker run verify:recipe ai-agents+domain.bookings.turbineh   # one combination
+```
+
+CI runs the fast part (typecheck + unit) of every recipe + domain-component combination on each PR that touches
+`catalog/` or the assembler (`verify:recipe --all --domains --quick`). A new domain component adds its probe request to
+`DOMAIN_PROBES` in `apps/worker/src/combinations.ts` (a test fails otherwise), so its combinations are checked too.
 
 ### Component documentation (every component)
 

@@ -113,6 +113,58 @@ describe("agent-ready package (S9/S10)", () => {
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("**open**");
   });
 
+  it("a failed gate: delivered, not verified, with the exact failure and fix first (ADR-0037)", () => {
+    const dir = build();
+    const failure = {
+      step: "e2e",
+      test: "shop › the admin updates a product's stock",
+      where: "tests/e2e/shop.spec.ts:120",
+      owner: "recipe:storefront",
+      message: "Error: expect(locator).toHaveText(expected) failed",
+      rerun: 'pnpm test:e2e tests/e2e/shop.spec.ts -g "the admin updates a product\'s stock"',
+      fix: "Reproduce with `pnpm test:e2e …`. Fix the code it exercises.",
+    };
+    const guide = verifiedGuide(dir, {
+      gate: {
+        ok: false,
+        verifiedAt: "2026-10-13T00:00:00.000Z",
+        environment: "sandbox",
+        steps: [
+          { name: "unit", ok: true, ms: 1 },
+          { name: "e2e", ok: false, ms: 1 },
+        ],
+        findings: [
+          {
+            category: "quality",
+            rule: "e2e",
+            where: "tests/e2e/shop.spec.ts:120",
+            blocking: true,
+            message: "e2e failed",
+          },
+        ],
+      },
+      criteria: [],
+      failures: [failure],
+    });
+    expect(guide).toMatchObject({ status: "failed", verified: false, checks: "1/2" });
+    expect(guide?.failures).toEqual([failure]);
+    // The failure (with its fix) replaces the generic quality finding in "What is left".
+    expect(guide?.left.filter((l) => l.kind === "gate")).toEqual([
+      {
+        kind: "gate",
+        what: `NOT VERIFIED · e2e · "${failure.test}": ${failure.message}`,
+        where: failure.where,
+        how: failure.fix,
+      },
+    ]);
+    const md = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(md).toContain("**Delivered, not verified: 1/2 checks passed**");
+    expect(md).toContain("Do not treat it as verified");
+    expect(md).not.toContain("**Verified**");
+    const json = JSON.parse(readFileSync(join(dir, "turbineh.json"), "utf8")) as PackageGuide;
+    expect(json.verified).toBe(false);
+  });
+
   it("reads one-line descriptions and ranks files for open criteria deterministically", () => {
     expect(
       aboutOf('import x from "y";\n/** Stripe Checkout (hosted page). More text. */\nexport {}'),

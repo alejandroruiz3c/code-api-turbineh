@@ -34,6 +34,21 @@ export interface GuideGateFinding {
   blocking: boolean;
   message: string;
 }
+/** One failing check of a delivered, not verified package (ADR-0037 §D1): exact place, owner and suggested fix. */
+export interface GuideFailure {
+  step: string;
+  /** Failing test as the runner names it, or null for lint/typecheck/build. */
+  test: string | null;
+  /** file:line, or the step name when the output names no file. */
+  where: string;
+  /** Owner of the failing file (`component:<id>`, `recipe:<id>`, `entity:<Name>`…), from .turbineh/owners.json. */
+  owner: string | null;
+  message: string;
+  /** Cheapest command that reproduces it. */
+  rerun: string;
+  fix: string;
+}
+
 export interface GuideLeft {
   kind: "criterion" | "gap" | "gate" | "setting";
   what: string;
@@ -46,6 +61,15 @@ export interface PackageGuide {
   app: { name: string; summary: string };
   recipe: { id: string; description: string };
   status: "verified" | "failed" | "unverified";
+  /**
+   * False when the package is delivered although the gate failed (ADR-0037 §D1): never present it as verified. Absent
+   * before verification.
+   */
+  verified?: boolean;
+  /** Checks passed / total of the gate ("10/11"), once verified. */
+  checks?: string;
+  /** Exact failures of a delivered, not verified package, each with the suggested fix. */
+  failures?: GuideFailure[];
   /** What a coding agent still has to do. Empty = nothing: the package meets the spec and passed the gate. */
   left: GuideLeft[];
   criteria: GuideCriterion[];
@@ -366,6 +390,16 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
 /** What is left, derived from criteria, gaps, the gate and required settings. */
 export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
   const left: GuideLeft[] = [];
+  // A delivered, not verified package: the exact failures come first, each with its fix.
+  for (const f of g.failures ?? []) {
+    left.push({
+      kind: "gate",
+      what: `NOT VERIFIED · ${f.step}${f.test ? ` · "${f.test}"` : ""}: ${f.message}`,
+      where: f.where,
+      how: f.fix,
+    });
+  }
+  const explained = new Set((g.failures ?? []).map((f) => f.step));
   for (const c of g.criteria.filter((x) => x.status === "open")) {
     const spec = c.testFile ?? "tests/e2e/app.spec.ts";
     left.push({
@@ -383,7 +417,9 @@ export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
       how: gap.reason,
     });
   }
-  for (const f of g.gate?.findings.filter((x) => x.blocking) ?? []) {
+  for (const f of g.gate?.findings.filter(
+    (x) => x.blocking && !(x.category === "quality" && explained.has(x.rule)),
+  ) ?? []) {
     left.push({
       kind: "gate",
       what: `${f.category} · ${f.rule}: ${f.message}`,
@@ -405,7 +441,7 @@ export function agentsMarkdown(g: PackageGuide): string {
     g.status === "verified"
       ? `**Verified**: the TurbineH gate passed on ${g.gate?.verifiedAt} (${g.gate?.environment}).`
       : g.status === "failed"
-        ? `**Gate failed** on ${g.gate?.verifiedAt}: see "What is left".`
+        ? `**Delivered, not verified: ${g.checks ?? "some"} checks passed** (TurbineH gate on ${g.gate?.verifiedAt}). Do not treat it as verified: fix the failure under "What is left" first, then re-run the gate.`
         : "**Not verified yet** (the gate result is added when verification finishes).";
   const crit = g.criteria
     .map((c) => {
@@ -572,6 +608,8 @@ export function verifiedGuide(
     /** Criterion → evidence ("End-to-end test: <title>" / "Unit test: <title>"), as mapped by the report. */
     criteria: { criterion: string; evidence: string; verified: boolean }[];
     gaps?: string[];
+    /** Exact failures with owner and fix when the gate failed (ADR-0037 §D1). */
+    failures?: GuideFailure[];
   },
 ): PackageGuide | null {
   const path = join(outDir, GUIDE_FILE);
@@ -634,6 +672,9 @@ export function verifiedGuide(
   return writeAgentGuide(outDir, {
     ...prev,
     status: input.gate.ok ? "verified" : "failed",
+    verified: input.gate.ok,
+    checks: `${input.gate.steps.filter((x) => x.ok).length}/${input.gate.steps.length}`,
+    failures: input.gate.ok ? [] : (input.failures ?? []),
     criteria,
     gaps,
     gate: input.gate,

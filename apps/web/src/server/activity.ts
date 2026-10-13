@@ -39,12 +39,15 @@ type Row = {
       alerts?: number;
     };
     deployment?: unknown;
+    delivery?: { kind?: string };
   } | null;
+  has_zip: boolean;
 };
 
 export async function workspaceActivity(ownerId: string, limit = 50): Promise<ActivityItem[]> {
   const { rows } = await db.query<Row>(
     `SELECT id, prompt, status, created_at, spec->>'recipe' AS recipe, metrics,
+            (artifact->>'zipKey') IS NOT NULL AS has_zip,
             extract(epoch FROM finished_at - claimed_at)::int AS seconds
      FROM builds WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
     [ownerId, limit],
@@ -59,7 +62,10 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
       id: r.id,
       need: r.prompt,
       useCase: r.recipe,
-      state: integrated && !deployed ? (pr?.state as FlowState) : stateOfBuild(r.status, deployed),
+      state:
+        integrated && !deployed
+          ? (pr?.state as FlowState)
+          : stateOfBuild(r.status, deployed, m.delivery?.kind === "unverified" && r.has_zip),
       createdAt: new Date(r.created_at).toISOString(),
       seconds: r.status === "done" || r.status === "failed" ? r.seconds : null,
       reusedShare: m.reuse?.reusedShare ?? null,
