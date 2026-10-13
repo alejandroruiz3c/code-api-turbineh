@@ -473,6 +473,12 @@ export function entityCoverage(outDir: string, entityNamesList: string[]): Cover
     [/^owner creates a /, "creat|add|new|record|enter|log|submit|register"],
     [/^owner edits a /, "edit|updat|chang|modif|correct"],
     [/ export as CSV/, "export|download|csv"],
+    [/^owner exports the filtered /, "export|download|csv"],
+    [/^owner filters /, "filter|tag"],
+    [/^owner sorts /, "sort|order"],
+    [/^owner adds a /, "add|creat|post|comment|attach|new"],
+    [/ is recorded in its history /, "history|timeline|record|chang"],
+    [/ cannot be changed or deleted/, "cannot|append|immutable|edit|delet"],
     [/ import from CSV/, "import|upload|csv"],
   ];
   return entityNamesList.flatMap((name) => {
