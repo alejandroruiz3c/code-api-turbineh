@@ -20,7 +20,7 @@ const recipesDir = join(catalog, "recipes");
 const componentsDir = join(catalog, "components");
 
 // The bookings package of the learning round (Sala Nueve, build f336da58): the compiler's criteria. Its rule
-// "the owner books a slot and sees it in the calendar" was cited for seven of them.
+// "the owner books a slot and sees it in the calendar" (as the test was titled then) was cited for seven of them.
 const BOOKINGS_CRITERIA = [
   "Given a customer selects a service, they can only choose time slots that match the service duration.",
   "Given a customer provides a name, email, and phone, the system creates a booking and sends a confirmation email.",
@@ -31,6 +31,7 @@ const BOOKINGS_CRITERIA = [
   "Given a staff member is authenticated, they can move an existing booking to a different time slot.",
   "Given a staff member is authenticated, they can cancel a booking, triggering an automated email to the customer.",
 ];
+const DOUBLE_BOOKING = BOOKINGS_CRITERIA[3] as string;
 // What the shipped bookings tests do prove.
 const PROVEN = [
   "The owner books a slot and sees it in the calendar.",
@@ -79,11 +80,20 @@ describe("criteria honesty for hand-written acceptance rules", () => {
       [...BOOKINGS_CRITERIA, ...PROVEN],
       coverageRules({ recipesDir, recipe: "bookings", selected: [] }),
     );
+    const calendar = (t: string) => t.includes("sees it in the calendar");
+    for (const s of statuses.slice(0, BOOKINGS_CRITERIA.length))
+      expect(s.tests.filter(calendar), s.criterion).toEqual([]);
+    // Only the double-booking criterion is proven, by the test that books a taken slot again (ADR-0044 titles).
     expect(statuses.slice(0, BOOKINGS_CRITERIA.length).map((s) => s.status)).toEqual(
-      BOOKINGS_CRITERIA.map(() => "open"),
+      BOOKINGS_CRITERIA.map((c) => (c === DOUBLE_BOOKING ? "covered" : "open")),
     );
+    expect(statuses[BOOKINGS_CRITERIA.indexOf(DOUBLE_BOOKING)]?.tests).toEqual([
+      "tests/e2e/bookings.spec.ts › a slot that is already taken cannot be booked again: the overlapping (double) booking is rejected",
+    ]);
     expect(statuses.slice(BOOKINGS_CRITERIA.length).map((s) => s.tests)).toEqual([
-      ["tests/e2e/bookings.spec.ts › the owner books a slot and sees it in the calendar"],
+      [
+        "tests/e2e/bookings.spec.ts › the owner books a slot for a customer (name and email): the booking is confirmed and the owner sees it in the calendar",
+      ],
       ["tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected"],
     ]);
   });
@@ -96,7 +106,10 @@ describe("criteria honesty for hand-written acceptance rules", () => {
       verified: false,
     }));
     const before = verifiedGuide(dir, { gate, criteria });
-    expect(before?.criteria.filter((c) => c.status === "met").map((c) => c.text)).toEqual(PROVEN);
+    expect(before?.criteria.filter((c) => c.status === "met").map((c) => c.text)).toEqual([
+      DOUBLE_BOOKING,
+      ...PROVEN,
+    ]);
     // What the learning-round agent did: it replaced tests/e2e/bookings.spec.ts with its own specs.
     rmSync(join(dir, "tests/e2e/bookings.spec.ts"));
     const after = verifiedGuide(dir, { gate, criteria });

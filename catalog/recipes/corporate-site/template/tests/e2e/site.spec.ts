@@ -4,7 +4,9 @@ test.describe.serial("corporate site", () => {
   test.describe("public visitor", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
-    test("browses home, services, about and contact", async ({ page }) => {
+    test("a visitor browses the home page, the services page, about and contact", async ({
+      page,
+    }) => {
       await page.goto("/");
       await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "What we do" })).toBeVisible();
@@ -29,7 +31,7 @@ test.describe.serial("corporate site", () => {
       expect(robots).toContain("Disallow: /dashboard");
     });
 
-    test("sends a contact message", async ({ page }) => {
+    test("a visitor submits the contact form and gets a confirmation", async ({ page }) => {
       await page.goto("/contact");
       await page.getByLabel("Name").fill("Grace Visitor");
       await page.getByLabel("Email").fill("grace@example.com");
@@ -39,7 +41,7 @@ test.describe.serial("corporate site", () => {
     });
   });
 
-  test("the admin reads the message", async ({ page }) => {
+  test("the owner (admin) reads the contact message in the dashboard", async ({ page }) => {
     await page.goto("/dashboard/messages");
     await expect(page.getByText("We would like a quote for a new project.")).toBeVisible();
   });
@@ -63,7 +65,9 @@ test.describe.serial("corporate site", () => {
     expect(await (await request.get("/sitemap.xml")).text()).toContain("/blog/our-first-article");
   });
 
-  test("the admin edits the website headline", async ({ page }) => {
+  test("the owner (admin) edits the website headline and the home page shows it", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/site");
     await page.getByLabel("Headline").fill("We build what you need");
     await page.getByRole("button", { name: "Save texts" }).click();

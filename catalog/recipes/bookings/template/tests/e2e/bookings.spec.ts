@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
 test.describe.serial("bookings", () => {
-  test("the owner opens every day from 08:00 to 20:00 (UTC)", async ({ page }) => {
+  test("the owner sets the availability (opening hours): every day from 08:00 to 20:00 (UTC)", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/availability");
     for (const d of [
       "Sunday",
@@ -22,7 +24,9 @@ test.describe.serial("bookings", () => {
     await expect(page.getByRole("cell", { name: "08:00" }).first()).toBeVisible();
   });
 
-  test("the owner books a slot and sees it in the calendar", async ({ page }) => {
+  test("the owner books a slot for a customer (name and email): the booking is confirmed and the owner sees it in the calendar", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/bookings");
     await page.getByLabel("Customer name").fill("Grace Client");
     await page.getByLabel("Customer email").fill("grace@example.com");
@@ -34,7 +38,9 @@ test.describe.serial("bookings", () => {
     await expect(page.getByText("Grace Client")).toBeVisible();
   });
 
-  test("an overlapping booking is rejected", async ({ page }) => {
+  test("a slot that is already taken cannot be booked again: the overlapping (double) booking is rejected", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/bookings");
     await page.getByLabel("Customer name").fill("Overlap Client");
     await page.getByLabel("Customer email").fill("overlap@example.com");
