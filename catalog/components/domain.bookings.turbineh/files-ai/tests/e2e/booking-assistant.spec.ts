@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
+import { signUpOrSignIn } from "./helpers";
 
 /**
  * Booking assistant end to end (component domain.bookings.turbineh + runAgent). The model is the scripted mock in
@@ -171,10 +172,15 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
   });
 });
 
-test("only staff on ADMIN_EMAILS see appointments", async ({ page }) => {
-  // The default E2E owner is not on the allow-list.
-  await page.goto("/dashboard/appointments");
-  await expect(page.getByRole("status")).toContainText("Only staff");
+test.describe("staff only", () => {
+  // A fresh, verified account that is not on ADMIN_EMAILS (the default E2E owner is staff).
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("only staff on ADMIN_EMAILS see appointments", async ({ page }) => {
+    await signUpOrSignIn(page, `patient-${Date.now()}@example.com`);
+    await page.goto("/dashboard/appointments");
+    await expect(page.getByRole("status")).toContainText("Only staff");
+  });
 });
 
 async function signInStaff(page: Page): Promise<void> {

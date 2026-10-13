@@ -83,6 +83,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Booking assistant E2E: the "only staff see appointments" test now uses a fresh verified account that is not on `ADMIN_EMAILS` (since verified-staff E2E setup, the default owner is staff, so every ai-agents booking build failed E2E).
 - **Security, all recipes:** staff/admin access (`ADMIN_EMAILS`) trusted an unverified email, so anyone who signed up
   first with the owner's address became staff. Sign-up now sends a verification link (logged without an email
   provider) and staff rights require `emailVerified`; E2E covers unverified → verified.
