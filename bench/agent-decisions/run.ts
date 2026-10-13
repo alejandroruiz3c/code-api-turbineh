@@ -49,6 +49,9 @@ interface Meter {
   deciderCalls: number;
   deciderTokens: number;
   deciderErrors: number;
+  /** Next-action decisions at or above runAgent's threshold (followed) and below it (left to the model). */
+  nextFollowed: number;
+  nextLow: number;
   waitMs: number;
 }
 const newMeter = (): Meter => ({
@@ -58,6 +61,8 @@ const newMeter = (): Meter => ({
   deciderCalls: 0,
   deciderTokens: 0,
   deciderErrors: 0,
+  nextFollowed: 0,
+  nextLow: 0,
   waitMs: 0,
 });
 const costOf = (m: Meter) =>
@@ -83,12 +88,18 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
         .json()
         .catch(() => ({}))) as {
         usage?: Record<string, number | undefined>;
+        answers?: { next?: { confidence?: number } };
       };
       const u = body.usage ?? {};
       if (url.endsWith("/systemone")) {
         m.deciderCalls++;
         if (!res.ok) m.deciderErrors++;
         m.deciderTokens += (u.input_tokens ?? 0) + (u.output_tokens ?? 0);
+        const next = body.answers?.next;
+        if (next) {
+          if ((next.confidence ?? 0) >= 0.5) m.nextFollowed++;
+          else m.nextLow++;
+        }
       } else if (url.endsWith("/chat/completions")) {
         m.modelCalls++;
         m.modelIn += u.prompt_tokens ?? 0;
@@ -255,6 +266,8 @@ async function main() {
       model: total.modelCalls,
       decider: total.deciderCalls,
       deciderErrors: total.deciderErrors,
+      nextFollowed: total.nextFollowed,
+      nextLeftToModel: total.nextLow,
     },
     tokens: {
       modelInput: total.modelIn,
