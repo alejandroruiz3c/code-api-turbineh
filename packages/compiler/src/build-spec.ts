@@ -147,6 +147,17 @@ export const CAPABILITIES = [
 const item = (t: number, x: number) =>
   z.object({ title: z.string().min(2).max(t), text: z.string().min(5).max(x) });
 
+type FaqItem = { q: string; a: string };
+const isQuestion = (s: string) => /\?\s*$/.test(s);
+
+/**
+ * FAQ items with question and answer in the right place (deterministic). Small models sometimes invert them (Frontiers
+ * shop: every answer was in `q`): an item whose answer is a question and whose question is not gets swapped back.
+ */
+export function normalizeFaq<T extends FaqItem>(faq: readonly T[]): T[] {
+  return faq.map((f) => (!isQuestion(f.q) && isQuestion(f.a) ? { ...f, q: f.a, a: f.q } : f));
+}
+
 /** Public-site copy (landing, corporate site, storefront). Rendered as plain text by the recipes. */
 export const sitePart = z.object({
   tagline: z.string().min(5).max(90),

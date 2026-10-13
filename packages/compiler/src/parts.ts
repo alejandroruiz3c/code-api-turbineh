@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { CAPABILITIES, RECIPES } from "./build-spec.js";
-import { sitePart } from "./build-spec.js";
+import { normalizeFaq, sitePart } from "./build-spec.js";
 
 /**
  * The BuildSpec is produced in small, simple pieces (owner principle: decomposed content and simple tasks degrade
@@ -240,6 +240,27 @@ export const criteriaPart = z.object({
   acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(10),
 });
 
+/**
+ * What the model writes for the site part: explicit `question` / `answer` keys (the terse `q` / `a` keys were inverted
+ * by the model in the Frontiers shop run), mapped to the BuildSpec shape and normalised in code.
+ */
+export const siteModelPart = sitePart
+  .extend({
+    faq: z
+      .array(
+        z.object({
+          question: z.string().min(5).max(140),
+          answer: z.string().min(5).max(400),
+        }),
+      )
+      .min(3)
+      .max(6),
+  })
+  .transform((site) => ({
+    ...site,
+    faq: normalizeFaq(site.faq.map((f) => ({ q: f.question, a: f.answer }))),
+  }));
+
 export const PARTS = {
   meta: {
     schema: metaPart,
@@ -261,10 +282,10 @@ export const PARTS = {
     instruction: "Write 3 to 10 concrete, testable acceptance criteria, one behaviour each.",
   },
   site: {
-    schema: sitePart,
+    schema: siteModelPart,
     instruction:
       "Write the public website copy for this business in plain, specific English: a tagline, a hero subtitle, 3-6 " +
-      "benefits, 3-4 'how it works' steps, 3-6 services, a short 'about us', 3-6 FAQs with answers and a call to " +
+      "benefits, 3-4 'how it works' steps, 3-6 services, a short 'about us', 3-6 FAQs (`question` ends with '?', `answer` answers it) and a call to " +
       "action. No prices, phone numbers, addresses or claims you cannot know from the prompt.",
   },
 } as const;

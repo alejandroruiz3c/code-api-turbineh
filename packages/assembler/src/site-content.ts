@@ -1,6 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { BuildSpec } from "@turbineh/compiler";
+import { normalizeFaq, type BuildSpec } from "@turbineh/compiler";
 
 type Site = NonNullable<BuildSpec["site"]>;
 
@@ -41,7 +41,8 @@ export function fallbackSite(spec: BuildSpec): Site {
 export function writeSiteContent(outDir: string, spec: BuildSpec): boolean {
   const path = join(outDir, "src/content/site.ts");
   if (!existsSync(path)) return false;
-  const site = spec.site ?? fallbackSite(spec);
+  const raw = spec.site ?? fallbackSite(spec);
+  const site = { ...raw, faq: normalizeFaq(raw.faq) };
   writeFileSync(
     path,
     `// turbineh:generated\n/** Public-site copy (rendered as text). Edit freely: every page reads from here. */\nexport const SITE = ${JSON.stringify(site, null, 2)} as const;\n`,
