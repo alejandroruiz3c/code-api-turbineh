@@ -5,7 +5,9 @@ import { OWNER_EMAIL, PASSWORD, signIn, signUp, verifyEmail } from "./helpers";
 // These tests start signed out.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("dashboard requires sign-in", async ({ page }) => {
+test("a user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page", async ({
+  page,
+}) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in/);
 });

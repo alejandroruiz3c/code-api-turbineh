@@ -41,12 +41,11 @@ describe("generated tests prove only what they exercise", () => {
     ENTITIES.map((e) => e.name),
   );
 
-  it("the four production false matches (and two more from the same build) are open", () => {
+  it("the production false matches (and two more from the same build) are open", () => {
     const falseMatches = [
       "Given a viewer, when they attempt to edit a note, the system denies the request.",
       "Given an owner, when they invite a teammate via email, the teammate is assigned the specified role (owner, editor, or viewer).",
       "Given a change to any note, when an owner views the audit log, the change is recorded and visible.",
-      "Given the notes list, when a user searches by text, the list updates to show only matching notes.",
       "Given the notes list, when a tag filter is applied, the list updates to show only notes containing that tag.",
       "Given a new user, when they sign up, a workspace is created and they are assigned the 'owner' role.",
     ];
@@ -57,10 +56,17 @@ describe("generated tests prove only what they exercise", () => {
 
   it("criteria the generated tests do exercise stay met", () => {
     const statuses = acceptanceStatus(
-      ["Owner can create a note.", "Users can edit a note.", "Notes can be exported as CSV."],
+      [
+        "Owner can create a note.",
+        "Users can edit a note.",
+        "Notes can be exported as CSV.",
+        // A false match in f195341c; the generated search test now searches the list itself (ADR-0045).
+        "Given the notes list, when a user searches by text, the list updates to show only matching notes.",
+      ],
       rules,
       true,
     );
-    expect(statuses.map((s) => s.status)).toEqual(["met", "met", "met"]);
+    expect(statuses.map((s) => s.status)).toEqual(["met", "met", "met", "met"]);
+    expect(statuses[3]?.tests[0]).toMatch(/owner searches notes by text/);
   });
 });

@@ -1,9 +1,9 @@
 # Acceptance criteria → tests (ADR-0033, ADR-0035) for every recipe (all extend saas-crud). Each rule: every regex in
 # `covers` must match the criterion (case-insensitive). A criterion no rule matches is listed as open, with the files
 # and the spec where its test belongs. `pnpm catalog:validate` checks that every referenced test exists.
-- test: "tests/e2e/auth.spec.ts › dashboard requires sign-in"
+- test: "tests/e2e/auth.spec.ts › a user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page"
   covers:
-    - "anonymous|unauthenticated|signed[- ]out|not signed in|not logged in|without (signing|logging) in|visitors? (are|is|get)"
+    - "anonymous|unauthenticated|not authenticated|signed[- ]out|not signed in|not logged in|without (signing|logging) in|visitors? (are|is|get)"
     - "sign[- ]?in|log[- ]?in|redirect|denied|blocked|protected"
 - test: "tests/e2e/auth.spec.ts › the stored owner session reaches the dashboard as owner"
   covers:
@@ -17,6 +17,10 @@
   covers:
     - "verif"
     - "e-?mail|address"
+- test: "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+  covers:
+    - "sign[- ]?s? ?up|regist|new (user|account)"
+    - "workspace|owner"
 - test: "tests/e2e/auth.spec.ts › sign-up follows the app's policy (staff-only apps refuse other emails)"
   covers:
     - "sign[- ]?up|regist|create an account"

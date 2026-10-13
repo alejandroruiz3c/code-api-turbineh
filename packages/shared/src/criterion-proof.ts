@@ -118,11 +118,14 @@ function stem(w: string): string {
 }
 
 function words(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/\b(sign|log)[- ](in|out|up)\b/g, "$1$2")
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+  return (
+    text
+      .toLowerCase()
+      // "signs up", "signed in", "logging out" read like "sign up", "sign in", "log out".
+      .replace(/\b(sign|log)(?:s|ed|ged|ing|ging)?[- ](in|out|up)\b/g, "$1$2")
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+  );
 }
 
 /** Salient stems: content words minus generic words, as stems with synonyms folded. */

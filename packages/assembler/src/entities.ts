@@ -317,6 +317,10 @@ export interface EntityOptions {
    * Lists show only visible scopes; single records are checked with canSeeScope (src/server/record-access.ts).
    */
   scope?: { field: string; label: string } | null;
+  /** The app has the audit log page (domain.audit-log.turbineh): the edit test checks the change is recorded there. */
+  auditLog?: boolean;
+  /** The request's name for the owner role (e.g. "Manager"): generated E2E titles name the actor that way. */
+  ownerLabel?: string;
 }
 
 /** An event entity attached to its parent. Field names are camelCase names of the event entity. */
@@ -373,6 +377,11 @@ export function generateEntity(
   const n = entityNames(e.name);
   const fields = fieldsOf(e);
   const settings = opts.variant === "settings";
+  // Who the generated E2E tests act as: the owner, named as the request names that role ("manager (owner)").
+  const actor =
+    opts.ownerLabel && opts.ownerLabel.toLowerCase() !== "owner"
+      ? `${opts.ownerLabel.toLowerCase()} (owner)`
+      : "owner";
   const base = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;
   // The role matrix: can(role, action, resource) (src/server/permissions.ts). Settings need "configure".
   const resource = JSON.stringify(opts.resource ?? n.slug);
@@ -1206,7 +1215,7 @@ ${uniqueFills(marker, extra)}
           .join("\n");
         return [
           `
-test("owner adds a ${cn.labelSingular.toLowerCase()} to a ${n.labelSingular.toLowerCase()} and sees it on that ${n.labelSingular.toLowerCase()}'s page", async ({ page }) => {
+test("${actor} adds a ${cn.labelSingular.toLowerCase()} to a ${n.labelSingular.toLowerCase()} and sees it on that ${n.labelSingular.toLowerCase()}'s page", async ({ page }) => {
 ${createWith(marker)}
 ${openEdit(markerText(marker) ?? "")}
   const section = page.getByTestId("${cn.slug}-section");
@@ -1266,7 +1275,7 @@ test("${en.labelPlural.toLowerCase()} cannot be changed or deleted, not even dir
   const e2e = `${GENERATED}
 import { expect, test } from "@playwright/test";
 ${eventTests.length ? `import pg from "pg";\n${events.some((l) => l.map.actor) ? `import { OWNER_EMAIL } from "./helpers";\n` : ""}` : ""}
-test("owner creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
+test("${actor} creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${fills}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
@@ -1275,7 +1284,7 @@ ${expectation}
 ${
   editable
     ? `
-test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async ({ page }) => {
+test("${actor} edits a ${n.labelSingular.toLowerCase()} and sees the change${opts.auditLog ? "; the change is recorded in the audit log" : ""}", async ({ page }) => {
   await page.goto("${base}");
   // The record this test created (exact cell), not a record another entity's test seeded with a similar name.
   await page
@@ -1288,14 +1297,23 @@ test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async
   await expect(page.getByRole("heading", { name: "Edit ${n.labelSingular.toLowerCase()}" })).toBeVisible();
   await page.getByLabel("${label(editable.name)}", { exact: true }).fill("${sample(editable)} edited");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("cell", { name: "${sample(editable)} edited" }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "${sample(editable)} edited" }).first()).toBeVisible();${
+    opts.auditLog
+      ? `
+  await page.goto("/dashboard/audit");
+  await expect(
+    page.getByTestId("audit-row").filter({ hasText: "${n.slug}.updated" }).first(),
+    "the change to the ${n.labelSingular.toLowerCase()} is recorded in the audit log, visible to the owner",
+  ).toBeVisible();`
+      : ""
+  }
 });
 `
     : ""
 }${
     features.csvExport
       ? `
-test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ page }) => {
+test("${actor} triggers a download of all ${n.labelPlural.toLowerCase()} records in CSV format (export as CSV with a header row)", async ({ page }) => {
   const res = await page.request.get("${base}/export");
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toContain("text/csv");
@@ -1304,11 +1322,15 @@ test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ 
 ${
   search && markerText("exported") && !settings
     ? `
-test("owner exports the filtered ${n.labelPlural.toLowerCase()} list as CSV: only the ${n.labelPlural.toLowerCase()} that match the search", async ({ page }) => {
+test("${actor} searches ${n.labelPlural.toLowerCase()} by text: the list updates to show only the matching ${n.labelPlural.toLowerCase()}, and the CSV export holds only those filtered results", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${uniqueFills("exported", {})}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
   await expect(page.getByRole("cell", { name: "${markerText("exported")}", exact: true }).first()).toBeVisible();
+  await page.goto(\`${base}?q=\${encodeURIComponent("${markerText("exported")}")}\`);
+  await expect(page.getByRole("cell", { name: "${markerText("exported")}", exact: true }).first(), "the search shows the matching ${n.labelSingular.toLowerCase()}").toBeVisible();
+  await page.goto(\`${base}?q=\${encodeURIComponent("no-such-text-e2e")}\`);
+  await expect(page.getByRole("cell", { name: "${markerText("exported")}", exact: true }), "a search that matches nothing hides it").toHaveCount(0);
   const res = await page.request.get(\`${base}/export?q=\${encodeURIComponent("${markerText("exported")}")}\`);
   expect(res.status()).toBe(200);
   const rows = (await res.text()).split("\\r\\n").slice(1).filter(Boolean);
@@ -1333,11 +1355,11 @@ ${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await pa
   }${
     tagField && markerText("tagged") && !settings
       ? `
-test("owner filters ${n.labelPlural.toLowerCase()} by tag", async ({ page }) => {
+test("${actor} filters ${n.labelPlural.toLowerCase()} by tag: when a tag filter is applied, the list updates to show only the ${n.labelPlural.toLowerCase()} with that tag", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${uniqueFills("tagged", { [camel(tagField.name)]: "e2e-filter, research" })}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
-  await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true }).first(), "the ${n.labelSingular.toLowerCase()} is saved with the fields filled in above, tags included").toBeVisible();
   await page.goto("${base}?tag=e2e-filter");
   await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true }).first()).toBeVisible();
   await page.goto("${base}?tag=no-such-tag");
@@ -1348,7 +1370,7 @@ ${uniqueFills("tagged", { [camel(tagField.name)]: "e2e-filter, research" })}
   }${
     sortField && markerText("latest") && !settings
       ? `
-test("owner sorts ${n.labelPlural.toLowerCase()} by ${label(sortField.name).toLowerCase()}", async ({ page }) => {
+test("${actor} sorts ${n.labelPlural.toLowerCase()} by ${label(sortField.name).toLowerCase()}: selecting a sort order reorders the list (newest or oldest first)", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${uniqueFills("latest", { [camel(sortField.name)]: sortField.type === "date" ? "2099-12-31" : "2099-12-31T10:00" })}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
