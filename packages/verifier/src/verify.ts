@@ -229,10 +229,7 @@ export function licenseBlocks(expression: string): boolean {
  * `localDb`: no Postgres container and no DATABASE_URL for migrations and E2E — the package must bring its own
  * zero-setup database (`scripts/local-db.ts`), exactly as a coding agent without PostgreSQL runs it.
  */
-export async function verify(
-  dir: string,
-  opts: { localDb?: boolean } = {},
-): Promise<VerifyResult> {
+export async function verify(dir: string, opts: { localDb?: boolean } = {}): Promise<VerifyResult> {
   const lockHash = createHash("sha256")
     .update(readFileSync(join(dir, "pnpm-lock.yaml")))
     .digest("hex")
@@ -245,21 +242,21 @@ export async function verify(
   ]);
   if (!opts.localDb)
     await run("docker", [
-    "run",
-    "-d",
-    "--rm",
-    "--name",
-    dbHost,
-    "--network",
-    net,
-    "-e",
-    "POSTGRES_USER=app",
-    "-e",
-    "POSTGRES_PASSWORD=app",
-    "-e",
-    "POSTGRES_DB=app",
-    POSTGRES_IMAGE,
-  ]);
+      "run",
+      "-d",
+      "--rm",
+      "--name",
+      dbHost,
+      "--network",
+      net,
+      "-e",
+      "POSTGRES_USER=app",
+      "-e",
+      "POSTGRES_PASSWORD=app",
+      "-e",
+      "POSTGRES_DB=app",
+      POSTGRES_IMAGE,
+    ]);
   // Shop apps: Stripe's official API simulator on the same isolated network, so checkout and the signed webhook
   // are exercised end to end without internet or real keys.
   const stripeHost = `${net}-stripe`;
@@ -449,10 +446,7 @@ export async function quickCheck(dir: string): Promise<VerifyResult> {
         ...SYNTHETIC_ENV,
         BASE_HASH: lockHash,
         ONLY_REQUIRED_UNSET: onlyRequiredUnset(dir, SYNTHETIC_ENV),
-      }).flatMap(([k, v]) => [
-        "-e",
-        `${k}=${v}`,
-      ]),
+      }).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
       baseImage ?? SANDBOX_IMAGE,
       "sh",
       "-c",

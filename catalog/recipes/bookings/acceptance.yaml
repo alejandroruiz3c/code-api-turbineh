@@ -1,0 +1,11 @@
+# Acceptance criteria → tests for bookings (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/bookings.spec.ts › the owner books a slot and sees it in the calendar"
+  covers: ["book|appointment|reserv|schedul", "creat|make|book|calendar|see|slot|confirm"]
+- test: "tests/e2e/bookings.spec.ts › an overlapping booking is rejected"
+  covers: ["overlap|double[- ]book|conflict|same (time|slot)|clash"]
+- test: "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected"
+  covers: ["opening hours|outside|availability|available (hours|times)|working hours|business hours"]
+- test: "tests/e2e/bookings.spec.ts › the owner opens every day from 08:00 to 20:00 (UTC)"
+  covers: ["availability|opening hours|working hours|business hours|weekly", "set|configur|define|manag|edit"]
+- test: "tests/unit/bookings.test.ts › rejects past, too short and too long bookings"
+  covers: ["past|too (short|long)|duration|minimum|maximum"]

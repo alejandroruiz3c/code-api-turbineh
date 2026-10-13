@@ -14,7 +14,15 @@
  * .env.example), which means "the local database".
  */
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createConnection, createServer } from "node:net";
 import { arch, platform, tmpdir, userInfo } from "node:os";
@@ -70,7 +78,11 @@ const freePort = () =>
 function needsVector(): boolean {
   const files = ["scripts/migrate.ts"];
   if (existsSync("drizzle"))
-    files.push(...readdirSync("drizzle").filter((f) => f.endsWith(".sql")).map((f) => join("drizzle", f)));
+    files.push(
+      ...readdirSync("drizzle")
+        .filter((f) => f.endsWith(".sql"))
+        .map((f) => join("drizzle", f)),
+    );
   return files.some(
     (f) => existsSync(f) && /create\s+extension[^;]*\bvector\b/i.test(readFileSync(f, "utf8")),
   );
@@ -95,10 +107,12 @@ function postgresNative(): string | null {
 
 function chooseEngine(): { engine: Engine; why: string } {
   const forced = process.env.LOCAL_DB_ENGINE;
-  if (forced === "postgres" || forced === "pglite") return { engine: forced, why: "LOCAL_DB_ENGINE" };
+  if (forced === "postgres" || forced === "pglite")
+    return { engine: forced, why: "LOCAL_DB_ENGINE" };
   if (needsVector()) return { engine: "pglite", why: "the schema needs pgvector" };
   if (userInfo().uid === 0) return { engine: "pglite", why: "PostgreSQL refuses to run as root" };
-  if (!postgresNative()) return { engine: "pglite", why: `no PostgreSQL binary for ${platform()}-${arch()}` };
+  if (!postgresNative())
+    return { engine: "pglite", why: `no PostgreSQL binary for ${platform()}-${arch()}` };
   return { engine: "postgres", why: "PostgreSQL 17" };
 }
 
@@ -230,7 +244,9 @@ async function main(): Promise<number> {
     console.log(`local-db: DATABASE_URL is not set — using the running local database at ${url}`);
   } else {
     db = await start(false);
-    console.log(`local-db: DATABASE_URL is not set — using the local ${db.label} in ${DATA_DIR} at ${url}`);
+    console.log(
+      `local-db: DATABASE_URL is not set — using the local ${db.label} in ${DATA_DIR} at ${url}`,
+    );
   }
   try {
     if (flags.has("--migrate")) {

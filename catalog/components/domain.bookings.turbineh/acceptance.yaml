@@ -5,7 +5,7 @@
   covers: ["confirm"]
 - test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
   covers: ["e-?mail"]
-- test: "tests/e2e/booking-assistant.spec.ts › finds upcoming bookings by email"
+- test: "tests/e2e/booking-assistant.spec.ts › finds bookings by email without revealing them in the chat"
   covers: ["(find|look ?up|search|retriev).*e-?mail|e-?mail.*(find|look ?up|search)"]
 - test: "tests/e2e/booking-assistant.spec.ts › never books an invented time"
   covers: ["availab|free (time|slot)|slot|invent|real data|never"]
@@ -27,3 +27,5 @@
   covers: ["double|overlap|conflict|same (time|slot)"]
 - test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
   covers: ["physiotherapist|stylist|therapist|staff member|chosen|any (one|available)"]
+- test: "tests/e2e/booking-assistant.spec.ts › rejects prompt injection and oversized messages"
+  covers: ["injection|abuse|input limit|rate limit|too long|oversiz"]

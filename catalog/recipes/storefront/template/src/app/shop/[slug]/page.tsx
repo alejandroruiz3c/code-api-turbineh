@@ -170,7 +170,11 @@ export default async function ProductPage({ params }: { params: Params }) {
                       {v.price === null
                         ? `not sold in ${currency.toUpperCase()}`
                         : formatPrice(v.price, currency)}
-                      {v.inStock ? (v.stock === null ? "" : ` (${v.stock} in stock)`) : " (sold out)"}
+                      {v.inStock
+                        ? v.stock === null
+                          ? ""
+                          : ` (${v.stock} in stock)`
+                        : " (sold out)"}
                     </label>
                   ))}
                 </fieldset>

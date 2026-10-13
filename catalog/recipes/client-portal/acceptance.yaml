@@ -1,0 +1,11 @@
+# Acceptance criteria → tests for client-portal (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/requests.spec.ts › a request is submitted, a file is attached and downloaded, and the status is updated"
+  covers: ["request|ticket|case|submission", "submit|creat|open|send|file|attach|upload|status|track|follow"]
+- test: "tests/e2e/requests.spec.ts › a request is submitted, a file is attached and downloaded, and the status is updated"
+  covers: ["\\bfiles?\\b|upload|attach|document"]
+- test: "tests/e2e/requests.spec.ts › a request is submitted, a file is attached and downloaded, and the status is updated"
+  covers: ["status|stage|progress", "updat|chang|move|review|see|follow|track"]
+- test: "tests/e2e/requests.spec.ts › an HTML file disguised as a PDF is rejected"
+  covers: ["file|upload|attach", "type|reject|malicious|unsafe|only|allowed|validat|pdf|image"]
+- test: "tests/unit/portal.test.ts › lets only owners and admins move a request along allowed transitions"
+  covers: ["staff|admin|owner|role|permission|only", "status|transition|updat|review|move"]

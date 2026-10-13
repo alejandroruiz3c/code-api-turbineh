@@ -27,7 +27,6 @@ import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
 import {
   acceptanceStatus,
-  acceptanceSection,
   readCoverage,
   writeAcceptance,
   type CoverageRule,
@@ -206,7 +205,16 @@ export function assemble(input: AssembleInput): AssembleResult {
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, f.content);
   }
-  writeAcceptance(outDir, acceptanceStatus(spec.acceptance_criteria, coverageRules(input)));
+  writeAcceptance(
+    outDir,
+    acceptanceStatus(spec.acceptance_criteria, [
+      ...coverageRules(input),
+      ...entityCoverage(
+        outDir,
+        entities.map((e) => e.name),
+      ),
+    ]),
+  );
   // Agent guide (AGENTS.md + turbineh.json): structure now, gate results and criteria proofs after verification.
   writeAgentGuide(
     outDir,
@@ -296,7 +304,14 @@ ${
         .map((a) => `- ${a}`)
         .join("\n")}\n\n`
     : ""
-}${acceptanceSection(acceptanceStatus(spec.acceptance_criteria, coverageRules(input))).replace("## Acceptance criteria", "## Acceptance criteria ([ACCEPTANCE.md](ACCEPTANCE.md))")}`;
+}## Acceptance criteria
+
+${spec.acceptance_criteria.length} criteria from the request. Which test proves each one, or where to implement and prove
+it: [ACCEPTANCE.md](ACCEPTANCE.md) (the same facts as AGENTS.md, updated after verification).
+
+\`pnpm dev\`, \`pnpm db:migrate\` and \`pnpm test:e2e\` need no database setup: without \`DATABASE_URL\` they use a local
+PostgreSQL (\`pnpm db:local\`).
+`;
   const components = `${MD}
 # Components
 
@@ -336,6 +351,33 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
     { path: "ARCHITECTURE.md", content: architecture },
     { path: "DEPLOY.md", content: `${MD}\n${deployGuide(spec.app_name, envExample)}` },
   ];
+}
+
+/**
+ * Coverage rules for the generated entities (ADR-0034): each generated spec proves create / edit / CSV export / CSV
+ * import of its entity, so a criterion that names the entity and the action is proven by that test.
+ */
+export function entityCoverage(outDir: string, entityNamesList: string[]): CoverageRule[] {
+  const esc = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const actions: [RegExp, string][] = [
+    [/^owner creates a /, "creat|add|new|record|enter|log|submit|register"],
+    [/^owner edits a /, "edit|updat|chang|modif|correct"],
+    [/ export as CSV/, "export|download|csv"],
+    [/ import from CSV/, "import|upload|csv"],
+  ];
+  return entityNamesList.flatMap((name) => {
+    const n = entityNames(name);
+    const file = `tests/e2e/${n.slug}.spec.ts`;
+    if (!existsSync(join(outDir, file))) return [];
+    const src = readFileSync(join(outDir, file), "utf8");
+    const titles = [...src.matchAll(/test\(\s*"([^"]{5,200})"/g)].map((m) => m[1] as string);
+    const entity = `\\b(${esc(n.labelSingular)}|${esc(n.labelPlural)})\\b`;
+    return actions.flatMap(([re, verbs]) =>
+      titles
+        .filter((t) => re.test(t))
+        .map((t) => ({ test: `${file} › ${t}`, covers: [entity, verbs], from: "generated" })),
+    );
+  });
 }
 
 /** Coverage rules of the recipe chain and of every native component in the app (acceptance.yaml files). */

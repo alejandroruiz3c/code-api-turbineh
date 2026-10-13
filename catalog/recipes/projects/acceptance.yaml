@@ -1,0 +1,11 @@
+# Acceptance criteria → tests for projects (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/projects.spec.ts › creates a project and a task assigned to me"
+  covers: ["project|task|issue|card", "creat|add|new|assign"]
+- test: "tests/e2e/projects.spec.ts › moves the task across the board"
+  covers: ["kanban|board|column|drag|move|status"]
+- test: "tests/e2e/projects.spec.ts › shows the task in My tasks and lets me comment on it"
+  covers: ["my tasks|assigned to (me|them|the user)|personal|comment"]
+- test: "tests/unit/board.test.ts › flags overdue tasks that are not done"
+  covers: ["overdue|due date|deadline|late"]
+- test: "tests/unit/board.test.ts › orders my tasks by due date, then priority"
+  covers: ["priorit|sort|order(ed)? by"]

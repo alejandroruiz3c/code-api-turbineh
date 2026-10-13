@@ -103,7 +103,10 @@ describe("domain components in an assembled app (ADR-0033)", () => {
       "covered",
       "open",
     ]);
-    expect(readFileSync(join(out, "README.md"), "utf8")).toContain("1 of 3 criteria are open");
+    expect(readFileSync(join(out, "ACCEPTANCE.md"), "utf8")).toContain("1 of 3 criteria are open");
+    expect(readFileSync(join(out, "README.md"), "utf8")).toContain(
+      "[ACCEPTANCE.md](ACCEPTANCE.md)",
+    );
     expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["met", "met", "open"]);
   });
 

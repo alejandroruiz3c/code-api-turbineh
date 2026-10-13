@@ -16,9 +16,11 @@ rules:
   - id: turbineh.no-child-process
     languages: [typescript]
     severity: ERROR
-    # Test setup (not shipped) may start processes; application code may not.
+    # Test setup (not shipped) may start processes; application code may not. scripts/local-db.ts is the template's
+    # zero-setup database for development and tests (ADR-0034): it starts PostgreSQL and the command it wraps.
     paths:
-      exclude: ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "playwright.config.ts"]
+      exclude:
+        ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "playwright.config.ts", "scripts/local-db.ts"]
     message: Spawning operating-system processes from app code is not allowed.
     metadata:
       {

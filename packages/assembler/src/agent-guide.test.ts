@@ -52,9 +52,13 @@ describe("agent-ready package (S9/S10)", () => {
     expect(paths).toContain("src/server/stripe.ts");
     expect(paths).toContain("src/app/api/stripe/webhook/route.ts");
     expect(guide.env.required.map((e) => e.name)).toEqual(
-      expect.arrayContaining(["DATABASE_URL", "BETTER_AUTH_SECRET", "ADMIN_EMAILS"]),
+      expect.arrayContaining(["DATABASE_URL", "BETTER_AUTH_SECRET"]),
     );
-    expect(guide.env.optional.map((e) => e.name)).toContain("STRIPE_SECRET_KEY");
+    // Allow-lists are optional at build time and deny by default at runtime (ADR-0034).
+    expect(guide.env.required.map((e) => e.name)).not.toContain("ADMIN_EMAILS");
+    expect(guide.env.optional.map((e) => e.name)).toEqual(
+      expect.arrayContaining(["STRIPE_SECRET_KEY", "ADMIN_EMAILS"]),
+    );
     expect(guide.theme.tokens["color-surface"]).toBe("#001a5a");
     expect(guide.extend.map((e) => e.what)).toContain("Call a new external service");
     expect(guide.tests.some((t) => t.file === "tests/e2e/shop.spec.ts")).toBe(true);
