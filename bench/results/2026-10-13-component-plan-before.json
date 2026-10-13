@@ -1,0 +1,183 @@
+{
+  "label": "before",
+  "rows": [
+    {
+      "need": "Small fetch-based HTTP client with retries and timeouts for external APIs",
+      "selected": [
+        "ops.http-client.ky",
+        "commerce.cart.zustand",
+        "data.fetching.react-query",
+        "data.fuzzy-search.fuse",
+        "email.transactional.turbineh",
+        "ops.queue-throttle.p-queue"
+      ],
+      "unrelated": [
+        "commerce.cart.zustand",
+        "data.fetching.react-query",
+        "data.fuzzy-search.fuse",
+        "email.transactional.turbineh",
+        "ops.queue-throttle.p-queue"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Fuzzy search over a small list of products",
+      "selected": [
+        "data.fuzzy-search.fuse",
+        "data.search-index.minisearch",
+        "ui.virtual-list.tanstack-virtual",
+        "data.pagination.turbineh",
+        "seo.structured-data.schema-dts",
+        "ai.orchestrator.turbineh"
+      ],
+      "unrelated": [
+        "ui.virtual-list.tanstack-virtual",
+        "data.pagination.turbineh",
+        "seo.structured-data.schema-dts",
+        "ai.orchestrator.turbineh"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Send transactional emails to customers",
+      "selected": [
+        "email.transactional.resend",
+        "email.parsing.mailparser",
+        "email.plain-text.html-to-text",
+        "domain.bookings.turbineh",
+        "auth.session.better-auth",
+        "content.html-parse.cheerio"
+      ],
+      "unrelated": [
+        "email.parsing.mailparser",
+        "email.plain-text.html-to-text",
+        "domain.bookings.turbineh",
+        "auth.session.better-auth",
+        "content.html-parse.cheerio"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Limit how many async operations run at once",
+      "selected": [
+        "ops.concurrency.p-limit",
+        "ops.rate-limit.rate-limiter-flexible",
+        "jobs.scheduled.turbineh",
+        "ops.retry.p-retry",
+        "security.pack.turbineh",
+        "ai.stopwords.stopword"
+      ],
+      "unrelated": [
+        "ops.rate-limit.rate-limiter-flexible",
+        "jobs.scheduled.turbineh",
+        "ops.retry.p-retry",
+        "security.pack.turbineh",
+        "ai.stopwords.stopword"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Parse and format dates",
+      "selected": [
+        "content.html-parse.cheerio",
+        "data.dates.date-fns",
+        "content.html-dom.linkedom",
+        "data.phone.libphonenumber-js",
+        "data.serialization.superjson",
+        "domain.workflow.turbineh"
+      ],
+      "unrelated": [
+        "content.html-parse.cheerio",
+        "content.html-dom.linkedom",
+        "data.phone.libphonenumber-js",
+        "data.serialization.superjson",
+        "domain.workflow.turbineh"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Generate QR codes for event tickets",
+      "selected": [
+        "ai.orchestrator.turbineh",
+        "security.ai-safety.turbineh",
+        "files.qr.qrcode",
+        "ai.sse-parsing.eventsource-parser",
+        "data.countries.i18n-iso-countries",
+        "files.barcode.bwip-js"
+      ],
+      "unrelated": [
+        "ai.orchestrator.turbineh",
+        "security.ai-safety.turbineh",
+        "ai.sse-parsing.eventsource-parser",
+        "data.countries.i18n-iso-countries",
+        "files.barcode.bwip-js"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Rate limiting for my API endpoints",
+      "selected": [
+        "ops.rate-limit.rate-limiter-flexible",
+        "security.pack.turbineh",
+        "authz.roles.turbineh",
+        "email.transactional.turbineh",
+        "growth.waitlist.turbineh",
+        "jobs.queue.turbineh"
+      ],
+      "unrelated": [
+        "authz.roles.turbineh",
+        "email.transactional.turbineh",
+        "growth.waitlist.turbineh",
+        "jobs.queue.turbineh"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Detect the language of a text",
+      "selected": [
+        "ai.language-detection.franc-min",
+        "ai.text-chunking.sentence-splitter",
+        "content.markdown-to-text.remove-markdown",
+        "email.plain-text.html-to-text",
+        "files.docx-text.mammoth",
+        "files.office-text.officeparser"
+      ],
+      "unrelated": [
+        "ai.text-chunking.sentence-splitter",
+        "content.markdown-to-text.remove-markdown",
+        "email.plain-text.html-to-text",
+        "files.docx-text.mammoth",
+        "files.office-text.officeparser"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Parse and validate international phone numbers",
+      "selected": [
+        "data.phone.libphonenumber-js",
+        "content.html-parse.cheerio",
+        "content.html-dom.linkedom"
+      ],
+      "unrelated": [
+        "content.html-parse.cheerio",
+        "content.html-dom.linkedom"
+      ],
+      "hit": true
+    },
+    {
+      "need": "Create PDF invoices",
+      "selected": [
+        "files.pdf.react-pdf",
+        "files.pdf-text.unpdf",
+        "storage.private-uploads.turbineh"
+      ],
+      "unrelated": [
+        "files.pdf-text.unpdf",
+        "storage.private-uploads.turbineh"
+      ],
+      "hit": true
+    }
+  ],
+  "precision": 0.2222222222222222,
+  "recall": 1
+}

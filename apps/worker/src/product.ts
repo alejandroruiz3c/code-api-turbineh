@@ -6,7 +6,7 @@ import {
   catalogToPlanned,
   PLATFORM_SERVICES,
   decisionFromSelection,
-  searchCapabilities,
+  componentsForNeed,
   USE_CASES,
   writeComponentPackage,
   writeFlowPackage,
@@ -39,11 +39,13 @@ interface Manifest {
   source: { purl: string };
   capability: { does: string; use_cases?: string[] };
   license: { declared: string };
-  relations: { provides: string[] };
+  relations: { provides: string[]; requires?: string[] };
 }
 
 /** Approved catalog components as engine entries (from git manifests, the source of truth). */
-export function catalogEntries(componentsDir: string): (CatalogEntry & { dir: string })[] {
+export function catalogEntries(
+  componentsDir: string,
+): (CatalogEntry & { dir: string; requires: string[] })[] {
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(join(componentsDir, d.name, "component.yaml")))
     .map((d) => ({
@@ -61,6 +63,7 @@ export function catalogEntries(componentsDir: string): (CatalogEntry & { dir: st
       purl: m.source.purl,
       does: m.capability.does,
       useCases: m.capability.use_cases ?? [],
+      requires: m.relations.requires ?? [],
     }));
 }
 
@@ -169,8 +172,12 @@ const slugify = (s: string) =>
     .slice(0, 5)
     .join("-") || "capability";
 
+/**
+ * A need that involves inference (gets the AI orchestrator and its AI Safety Pack). Word starts that also mean plain
+ * code were removed (ADR-0051): "generate QR codes", "data model" or "extract text from a PDF" are not inference.
+ */
 const INFERENCE =
-  /\b(ai|llm|gpt|model|inference|classif|summar|extract|chat|agent|assistant|embedding|rag|translat|generat)/i;
+  /\b(ai|llm|gpt|language model|inference|classif|summar|chat|agent|assistant|embedding|rag|translat|generative|prompt)/i;
 
 /**
  * Component-only plan (no complete use case fits): the certified components that cover the need. Any need that
@@ -179,9 +186,6 @@ const INFERENCE =
 export function componentPlan(buildId: string, request: PlanRequest, componentsDir: string): Plan {
   // Platform services (repository integration, analysis) are discoverable in search but never packaged as code.
   const all = catalogEntries(componentsDir).filter((c) => !PLATFORM_SERVICES.has(c.id));
-  const found = searchCapabilities(request.need, all, { limit: 30, useCases: [] }).filter(
-    (x) => x.kind === "component",
-  );
   const picked = new Map<string, CatalogEntry>();
   const byId = (id: string) => all.find((c) => c.id === id);
   if (INFERENCE.test(request.need)) {
@@ -190,13 +194,21 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
       if (c) picked.set(id, c);
     }
   }
-  const seenCaps = new Set([...picked.values()].flatMap((c) => c.provides));
-  for (const f of found) {
-    const c = byId(f.id);
-    if (!c || c.provides.every((p) => seenCaps.has(p))) continue;
-    picked.set(c.id, c);
-    c.provides.forEach((p) => seenCaps.add(p));
-    if (picked.size >= 6) break;
+  // Only what the need asks for (ADR-0051): rare words decide, a further component only for a further capability of
+  // the need. Before, any component sharing one word ("small", "client", "external") was added, up to six.
+  const matched = new Map<string, string[]>();
+  for (const m of componentsForNeed(request.need, all, { limit: 6 })) {
+    if (m.entry.provides.every((p) => [...picked.values()].some((c) => c.provides.includes(p))))
+      continue;
+    picked.set(m.entry.id, m.entry);
+    matched.set(m.entry.id, m.covers);
+  }
+  // Declared dependencies of what was chosen (relations.requires), e.g. the orchestrator's AI Safety Pack.
+  for (const c of [...picked.values()]) {
+    for (const id of byId(c.id)?.requires ?? []) {
+      const dep = byId(id);
+      if (dep && !picked.has(id)) picked.set(id, dep);
+    }
   }
   const components = [...picked.values()].map((c) =>
     catalogToPlanned(
@@ -206,7 +218,9 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
         ? "Every inference goes through TurbineH orchestration (understand intent → orchestrate decisions → execute)"
         : c.id.startsWith("security.ai-safety")
           ? "Always shipped with the orchestrator: input guardrails, budgets, output checks, audit"
-          : `Covers "${c.provides.join(", ")}" — certified, audited component`,
+          : matched.has(c.id)
+            ? `Covers "${c.provides.join(", ")}" — what your need asks for (${(matched.get(c.id) ?? []).join(", ")}); certified, audited component`
+            : `Required by ${[...picked.values()].find((p) => byId(p.id)?.requires.includes(c.id))?.id ?? "a selected component"} — certified, audited component`,
     ),
   );
   const deps = components

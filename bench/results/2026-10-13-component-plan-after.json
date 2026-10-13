@@ -1,0 +1,87 @@
+{
+  "label": "after",
+  "rows": [
+    {
+      "need": "Small fetch-based HTTP client with retries and timeouts for external APIs",
+      "selected": [
+        "ops.http-client.ky"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Fuzzy search over a small list of products",
+      "selected": [
+        "data.fuzzy-search.fuse"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Send transactional emails to customers",
+      "selected": [
+        "email.transactional.resend"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Limit how many async operations run at once",
+      "selected": [
+        "ops.concurrency.p-limit"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Parse and format dates",
+      "selected": [
+        "data.dates.dayjs"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Generate QR codes for event tickets",
+      "selected": [
+        "files.qr.qrcode"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Rate limiting for my API endpoints",
+      "selected": [
+        "ops.rate-limit.rate-limiter-flexible"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Detect the language of a text",
+      "selected": [
+        "ai.language-detection.franc-min"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Parse and validate international phone numbers",
+      "selected": [
+        "data.phone.libphonenumber-js"
+      ],
+      "unrelated": [],
+      "hit": true
+    },
+    {
+      "need": "Create PDF invoices",
+      "selected": [
+        "files.pdf.react-pdf"
+      ],
+      "unrelated": [],
+      "hit": true
+    }
+  ],
+  "precision": 1,
+  "recall": 1
+}

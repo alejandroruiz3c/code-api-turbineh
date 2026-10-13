@@ -12,6 +12,7 @@
     "verify:recipe": "tsx src/verify-recipe.ts",
     "verify:spec": "tsx src/verify-spec.ts",
     "bench:selection": "tsx src/selection-bench.ts",
+    "bench:component-plan": "tsx src/component-plan-bench.ts",
     "service": "tsx src/service.ts"
   },
   "dependencies": {
