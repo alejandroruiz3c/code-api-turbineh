@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: data.ics-export.ical-generator
 title: data.ics-export.ical-generator
-summary: Generates iCalendar (.ics) feeds and invitations. Does not sync with external calendars. Generates
-  iCalendar (.ics) feeds and invitations.
+summary: Generates iCalendar (.ics) feeds and invitations. Does not sync with external calendars.
 keywords:
   - ical-generator
   - data.ics-export

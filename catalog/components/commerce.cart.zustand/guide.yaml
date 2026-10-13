@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: commerce.cart.zustand
 title: commerce.cart.zustand
-summary: Small client state store for carts, wizards and UI state. Not a database. Small client state store
-  for carts, wizards and UI state.
+summary: Small client state store for carts, wizards and UI state. Not a database.
 keywords:
   - zustand
   - commerce.cart

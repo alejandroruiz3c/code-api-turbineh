@@ -3,7 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.avatar.radix
 title: ui.avatar.radix
-summary: User avatars with image fallback. Unstyled. User avatars with image fallback.
+summary: User avatars with image fallback. Unstyled.
 keywords:
   - "@radix-ui/react-avatar"
   - ui.avatar

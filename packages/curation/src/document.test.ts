@@ -9,6 +9,7 @@ import {
   importsFrom,
   repairImports,
   type Draft,
+  joinSentences,
 } from "./document.js";
 
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -100,5 +101,19 @@ describe("documentation step (facts first, claims checked)", () => {
         "@radix-ui/react-switch",
       ).sort(),
     ).toEqual(["Root", "Thumb"]);
+  });
+});
+
+describe("joinSentences", () => {
+  it("drops sentences the drafted summary repeats from the manifest", () => {
+    expect(
+      joinSentences([
+        "Small client state store for carts, wizards and UI state.",
+        "Not a database",
+        "Small client state store for carts, wizards and UI state. Keeps state outside React.",
+      ]),
+    ).toBe(
+      "Small client state store for carts, wizards and UI state. Not a database. Keeps state outside React.",
+    );
   });
 });

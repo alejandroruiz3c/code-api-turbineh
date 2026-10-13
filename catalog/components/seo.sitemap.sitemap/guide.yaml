@@ -3,7 +3,7 @@
 schema: turbineh.guide/v0.1
 component: seo.sitemap.sitemap
 title: seo.sitemap.sitemap
-summary: Builds XML sitemaps for search engines. Does not crawl the site. Builds XML sitemaps for search engines.
+summary: Builds XML sitemaps for search engines. Does not crawl the site.
 keywords:
   - sitemap
   - seo.sitemap

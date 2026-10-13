@@ -3,9 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.carousel.embla
 title: ui.carousel.embla
-summary: Accessible, lightweight carousels and sliders for testimonials, galleries and products. Does not
-  include visual styles. Accessible, lightweight carousels and sliders for testimonials, galleries and
-  products.
+summary: Accessible, lightweight carousels and sliders for testimonials, galleries and products. Does not include visual styles.
 keywords:
   - embla-carousel-react
   - ui.carousel

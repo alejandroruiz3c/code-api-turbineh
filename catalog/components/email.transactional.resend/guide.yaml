@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: email.transactional.resend
 title: email.transactional.resend
-summary: Official Resend SDK for transactional email. Does not provide templates or a local outbox. Official
-  Resend SDK for transactional email.
+summary: Official Resend SDK for transactional email. Does not provide templates or a local outbox.
 keywords:
   - resend
   - email.transactional

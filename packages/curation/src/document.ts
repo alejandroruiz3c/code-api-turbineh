@@ -24,6 +24,25 @@ interface Manifest {
   relations: { requires: string[]; provides: string[]; conflicts: string[] };
 }
 
+/**
+ * Joins summary parts sentence by sentence, dropping repeats (the drafted summary often restates the manifest's
+ * `does` / `does_not`), so a guide never says the same thing twice.
+ */
+export function joinSentences(parts: string[]): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    for (const raw of part.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/)) {
+      const sentence = raw.trim().replace(/\.$/, "");
+      const key = sentence.toLowerCase();
+      if (!sentence || seen.has(key)) continue;
+      seen.add(key);
+      out.push(`${sentence}.`);
+    }
+  }
+  return out.join(" ");
+}
+
 export interface ComponentFacts {
   id: string;
   manifest: Manifest;
@@ -514,8 +533,7 @@ export function checkDraft(
     schema: DOCS_SCHEMA,
     component: f.id,
     title: d.title.trim() || m.capability.does,
-    summary:
-      `${m.capability.does.replace(/\.$/, "")}.${m.capability.does_not ? ` ${m.capability.does_not.replace(/\.$/, "")}.` : ""} ${d.summary.trim()}`.trim(),
+    summary: joinSentences([m.capability.does, m.capability.does_not ?? "", d.summary]),
     keywords: [
       ...new Set(
         [

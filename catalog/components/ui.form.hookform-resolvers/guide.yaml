@@ -4,7 +4,6 @@ schema: turbineh.guide/v0.1
 component: ui.form.hookform-resolvers
 title: ui.form.hookform-resolvers
 summary: Connects react-hook-form with Zod schemas for typed client validation. Requires react-hook-form.
-  Connects react-hook-form with Zod schemas for typed client validation.
 keywords:
   - "@hookform/resolvers"
   - ui.form
@@ -39,8 +38,8 @@ interfaces:
 extension_points:
   - what: external validation libraries
     where: resolver implementation
-    how: Integrate Yup, Joi, Superstruct, Zod, Vest, Class Validator, io-ts, Nope, computed-types, TypeBox,
-      arktype, Typanion, Effect-TS or VineJS
+    how: Integrate Yup, Joi, Superstruct, Zod, Vest, Class Validator, io-ts, Nope, computed-types, TypeBox, arktype,
+      Typanion, Effect-TS or VineJS
 compatibility:
   package: "@hookform/resolvers@5.9.1"
   runtime: node@>=20

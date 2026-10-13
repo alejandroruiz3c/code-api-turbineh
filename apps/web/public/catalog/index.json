@@ -2000,7 +2000,7 @@
       "does": "Small client state store for carts, wizards and UI state",
       "doesNot": "Not a database",
       "title": "commerce.cart.zustand",
-      "summary": "Small client state store for carts, wizards and UI state. Not a database. Small client state store for carts, wizards and UI state.",
+      "summary": "Small client state store for carts, wizards and UI state. Not a database.",
       "useCases": [
         "shopping carts",
         "multi-step wizards",
@@ -2727,7 +2727,7 @@
       "does": "Extracts the main article content of a web page, dropping navigation, ads and boilerplate",
       "doesNot": "Needs a DOM document (use content.html-dom); does not fetch pages",
       "title": "content.readability.mozilla-readability",
-      "summary": "Extracts the main article content of a web page, dropping navigation, ads and boilerplate. Needs a DOM document (use content.html-dom); does not fetch pages. Extracts the main article content of a web page, dropping navigation, ads and boilerplate.",
+      "summary": "Extracts the main article content of a web page, dropping navigation, ads and boilerplate. Needs a DOM document (use content.html-dom); does not fetch pages.",
       "useCases": [
         "Extracting clean text content from HTML documents for processing",
         "Generating reader-view style summaries from web pages"
@@ -3230,7 +3230,7 @@
       "does": "CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation",
       "doesNot": "Does not export binary formats such as XLSX",
       "title": "data.csv-export.turbineh",
-      "summary": "CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation. Does not export binary formats such as XLSX. CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation.",
+      "summary": "CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation. Does not export binary formats such as XLSX.",
       "useCases": [
         "Exporting workspace records to CSV format",
         "Generating CSV strings from object arrays with formula protection"
@@ -3664,7 +3664,7 @@
       "does": "Small immutable date library for parsing, arithmetic and formatting",
       "doesNot": "Does not ship time-zone support without plugins",
       "title": "data.dates.dayjs",
-      "summary": "Small immutable date library for parsing, arithmetic and formatting. Does not ship time-zone support without plugins. Small immutable date library for parsing, arithmetic and formatting.",
+      "summary": "Small immutable date library for parsing, arithmetic and formatting. Does not ship time-zone support without plugins.",
       "useCases": [
         "Parsing and validating date strings",
         "Date arithmetic and manipulation",
@@ -4049,7 +4049,7 @@
       "does": "Client-side fuzzy search over small collections",
       "doesNot": "Does not replace database full-text search for large datasets",
       "title": "data.fuzzy-search.fuse",
-      "summary": "Client-side fuzzy search over small collections. Does not replace database full-text search for large datasets. Client-side fuzzy search over small collections.",
+      "summary": "Client-side fuzzy search over small collections. Does not replace database full-text search for large datasets.",
       "useCases": [
         "Searching small datasets in the browser",
         "Finding approximate string matches"
@@ -4140,7 +4140,7 @@
       "does": "Generates iCalendar (.ics) feeds and invitations",
       "doesNot": "Does not sync with external calendars",
       "title": "data.ics-export.ical-generator",
-      "summary": "Generates iCalendar (.ics) feeds and invitations. Does not sync with external calendars. Generates iCalendar (.ics) feeds and invitations.",
+      "summary": "Generates iCalendar (.ics) feeds and invitations. Does not sync with external calendars.",
       "useCases": [
         "Generating .ics calendar files",
         "Creating VEVENT entries for bookings",
@@ -5071,7 +5071,7 @@
       "does": "Offset pagination and bounded free-text search for server-rendered lists",
       "doesNot": "Does not provide cursor pagination or full-text ranking",
       "title": "data.pagination.turbineh",
-      "summary": "Offset pagination and bounded free-text search for server-rendered lists. Does not provide cursor pagination or full-text ranking. Offset pagination and bounded free-text search for server-rendered lists.",
+      "summary": "Offset pagination and bounded free-text search for server-rendered lists. Does not provide cursor pagination or full-text ranking.",
       "useCases": [
         "Server-side rendering of paginated lists",
         "Bounded free-text search via query parameters"
@@ -6187,7 +6187,7 @@
       "does": "Reads and writes Excel workbooks (XLSX) in memory",
       "doesNot": "Does not evaluate formulas",
       "title": "data.xlsx-export.exceljs",
-      "summary": "Reads and writes Excel workbooks (XLSX) in memory. Does not evaluate formulas. Reads and writes Excel workbooks (XLSX) in memory.",
+      "summary": "Reads and writes Excel workbooks (XLSX) in memory. Does not evaluate formulas.",
       "useCases": [
         "Generating XLSX files from in-memory data structures",
         "Reading existing XLSX buffers for data extraction"
@@ -7022,7 +7022,7 @@
       "does": "Official Resend SDK for transactional email",
       "doesNot": "Does not provide templates or a local outbox",
       "title": "email.transactional.resend",
-      "summary": "Official Resend SDK for transactional email. Does not provide templates or a local outbox. Official Resend SDK for transactional email.",
+      "summary": "Official Resend SDK for transactional email. Does not provide templates or a local outbox.",
       "useCases": [
         "Sending transactional emails via the Resend API",
         "Integrating Resend services into Node.js applications"
@@ -8790,7 +8790,7 @@
       "does": "Cron scheduler and next-run evaluation without dependencies",
       "doesNot": "Does not persist schedules across restarts",
       "title": "croner",
-      "summary": "Cron scheduler and next-run evaluation without dependencies. Does not persist schedules across restarts. Cron scheduler and next-run evaluation without dependencies. Trigger functions and/or evaluate cron expressions in JavaScript across all environments.",
+      "summary": "Cron scheduler and next-run evaluation without dependencies. Does not persist schedules across restarts. Trigger functions and/or evaluate cron expressions in JavaScript across all environments.",
       "useCases": [
         "Triggering functions based on cron expressions",
         "Evaluating next scheduled run times without starting a scheduler"
@@ -10562,7 +10562,7 @@
       "does": "Builds XML sitemaps for search engines",
       "doesNot": "Does not crawl the site",
       "title": "seo.sitemap.sitemap",
-      "summary": "Builds XML sitemaps for search engines. Does not crawl the site. Builds XML sitemaps for search engines.",
+      "summary": "Builds XML sitemaps for search engines. Does not crawl the site.",
       "useCases": [
         "Generating XML sitemaps for SEO purposes",
         "Streaming URL data into sitemap formats"
@@ -11481,7 +11481,7 @@
       "does": "User avatars with image fallback",
       "doesNot": "Unstyled",
       "title": "ui.avatar.radix",
-      "summary": "User avatars with image fallback. Unstyled. User avatars with image fallback.",
+      "summary": "User avatars with image fallback. Unstyled.",
       "useCases": [
         "Displaying user profile pictures",
         "Providing text fallbacks when images fail to load"
@@ -11685,7 +11685,7 @@
       "does": "Accessible, lightweight carousels and sliders for testimonials, galleries and products",
       "doesNot": "Does not include visual styles",
       "title": "ui.carousel.embla",
-      "summary": "Accessible, lightweight carousels and sliders for testimonials, galleries and products. Does not include visual styles. Accessible, lightweight carousels and sliders for testimonials, galleries and products.",
+      "summary": "Accessible, lightweight carousels and sliders for testimonials, galleries and products. Does not include visual styles.",
       "useCases": [
         "testimonials",
         "galleries",
@@ -12702,7 +12702,7 @@
       "does": "Connects react-hook-form with Zod schemas for typed client validation",
       "doesNot": "Requires react-hook-form",
       "title": "ui.form.hookform-resolvers",
-      "summary": "Connects react-hook-form with Zod schemas for typed client validation. Requires react-hook-form. Connects react-hook-form with Zod schemas for typed client validation.",
+      "summary": "Connects react-hook-form with Zod schemas for typed client validation. Requires react-hook-form.",
       "useCases": [
         "Integrating Zod schema validation into react-hook-form",
         "Enforcing typed form values via schema inference"
@@ -13221,7 +13221,7 @@
       "does": "Accessible image lightbox and galleries for products and portfolios",
       "doesNot": "Not a carousel (see ui.carousel)",
       "title": "ui.lightbox.yarl",
-      "summary": "Accessible image lightbox and galleries for products and portfolios. Not a carousel (see ui.carousel). Accessible image lightbox and galleries for products and portfolios. Supports keyboard, mouse, touchpad, and touchscreen navigation with responsive image resolution switching.",
+      "summary": "Accessible image lightbox and galleries for products and portfolios. Not a carousel (see ui.carousel). Supports keyboard, mouse, touchpad, and touchscreen navigation with responsive image resolution switching.",
       "useCases": [
         "Product image galleries",
         "Portfolio showcases",
@@ -13423,7 +13423,7 @@
       "does": "CommonMark-compliant Markdown parser with safe defaults (HTML disabled)",
       "doesNot": "Does not render MDX components",
       "title": "ui.markdown.markdown-it",
-      "summary": "CommonMark-compliant Markdown parser with safe defaults (HTML disabled). Does not render MDX components. CommonMark-compliant Markdown parser with safe defaults (HTML disabled).",
+      "summary": "CommonMark-compliant Markdown parser with safe defaults (HTML disabled). Does not render MDX components.",
       "useCases": [
         "Parsing CommonMark compliant markdown text",
         "Converting markdown to HTML strings"
@@ -13710,7 +13710,7 @@
       "does": "Accessible site navigation menus with submenus for websites",
       "doesNot": "Unstyled",
       "title": "ui.navigation.radix-navigation-menu",
-      "summary": "Accessible site navigation menus with submenus for websites. Unstyled. Accessible site navigation menus with submenus for websites.",
+      "summary": "Accessible site navigation menus with submenus for websites. Unstyled.",
       "useCases": [
         "Website header navigation",
         "Navigation menus with submenus"
@@ -14578,7 +14578,7 @@
       "does": "Custom scroll areas for panels and long lists",
       "doesNot": "Unstyled",
       "title": "ui.scroll-area.radix",
-      "summary": "Custom scroll areas for panels and long lists. Unstyled. Custom scroll areas for panels and long lists.",
+      "summary": "Custom scroll areas for panels and long lists. Unstyled.",
       "useCases": [
         "Panels with overflow content",
         "Long lists requiring custom scrollbars"
@@ -14681,7 +14681,7 @@
       "does": "Accessible custom select boxes",
       "doesNot": "Unstyled",
       "title": "ui.select.radix",
-      "summary": "Accessible custom select boxes. Unstyled. Accessible custom select boxes.",
+      "summary": "Accessible custom select boxes. Unstyled.",
       "useCases": [
         "Building accessible dropdown selection menus",
         "Implementing custom styled select components"
@@ -14899,7 +14899,7 @@
       "does": "Typed component variants for utility-class styling",
       "doesNot": "Does not include styles itself",
       "title": "class-variance-authority",
-      "summary": "Typed component variants for utility-class styling. Does not include styles itself. Typed component variants for utility-class styling.",
+      "summary": "Typed component variants for utility-class styling. Does not include styles itself.",
       "useCases": [
         "Defining component variants with utility classes",
         "Managing default variant states",
@@ -15183,7 +15183,7 @@
       "does": "Accessible on/off switches for settings",
       "doesNot": "Unstyled",
       "title": "ui.switch.radix",
-      "summary": "Accessible on/off switches for settings. Unstyled. Accessible on/off switches for settings.",
+      "summary": "Accessible on/off switches for settings. Unstyled.",
       "useCases": [
         "Toggling application settings",
         "Switching between modes"

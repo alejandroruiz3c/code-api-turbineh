@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.navigation.radix-navigation-menu
 title: ui.navigation.radix-navigation-menu
-summary: Accessible site navigation menus with submenus for websites. Unstyled. Accessible site navigation
-  menus with submenus for websites.
+summary: Accessible site navigation menus with submenus for websites. Unstyled.
 keywords:
   - "@radix-ui/react-navigation-menu"
   - ui.navigation

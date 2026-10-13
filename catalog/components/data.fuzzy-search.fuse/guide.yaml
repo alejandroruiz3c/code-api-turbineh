@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: data.fuzzy-search.fuse
 title: data.fuzzy-search.fuse
-summary: Client-side fuzzy search over small collections. Does not replace database full-text search for large
-  datasets. Client-side fuzzy search over small collections.
+summary: Client-side fuzzy search over small collections. Does not replace database full-text search for large datasets.
 keywords:
   - fuse.js
   - data.fuzzy-search

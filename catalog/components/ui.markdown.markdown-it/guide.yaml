@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.markdown.markdown-it
 title: ui.markdown.markdown-it
-summary: CommonMark-compliant Markdown parser with safe defaults (HTML disabled). Does not render MDX
-  components. CommonMark-compliant Markdown parser with safe defaults (HTML disabled).
+summary: CommonMark-compliant Markdown parser with safe defaults (HTML disabled). Does not render MDX components.
 keywords:
   - markdown-it
   - ui.markdown

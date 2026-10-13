@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.styling.class-variance-authority
 title: class-variance-authority
-summary: Typed component variants for utility-class styling. Does not include styles itself. Typed component
-  variants for utility-class styling.
+summary: Typed component variants for utility-class styling. Does not include styles itself.
 keywords:
   - class-variance-authority
   - ui.styling

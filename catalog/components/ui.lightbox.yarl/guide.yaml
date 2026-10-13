@@ -3,9 +3,8 @@
 schema: turbineh.guide/v0.1
 component: ui.lightbox.yarl
 title: ui.lightbox.yarl
-summary: Accessible image lightbox and galleries for products and portfolios. Not a carousel (see
-  ui.carousel). Accessible image lightbox and galleries for products and portfolios. Supports keyboard, mouse,
-  touchpad, and touchscreen navigation with responsive image resolution switching.
+summary: Accessible image lightbox and galleries for products and portfolios. Not a carousel (see ui.carousel). Supports
+  keyboard, mouse, touchpad, and touchscreen navigation with responsive image resolution switching.
 keywords:
   - yet-another-react-lightbox
   - ui.lightbox

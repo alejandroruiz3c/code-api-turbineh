@@ -3,8 +3,8 @@
 schema: turbineh.guide/v0.1
 component: data.pagination.turbineh
 title: data.pagination.turbineh
-summary: Offset pagination and bounded free-text search for server-rendered lists. Does not provide cursor
-  pagination or full-text ranking. Offset pagination and bounded free-text search for server-rendered lists.
+summary: Offset pagination and bounded free-text search for server-rendered lists. Does not provide cursor pagination or
+  full-text ranking.
 keywords:
   - data.pagination.turbineh
   - data.pagination
@@ -32,8 +32,7 @@ tradeoffs:
     cost: Does not provide cursor pagination or full-text ranking
 config:
   - name: install
-    description: Included in recipe templates at src/lib/pagination.ts + generated list pages (exact version,
-      added by TurbineH)
+    description: Included in recipe templates at src/lib/pagination.ts + generated list pages (exact version, added by TurbineH)
 interfaces:
   - name: PAGE_SIZE
     signature: const PAGE_SIZE

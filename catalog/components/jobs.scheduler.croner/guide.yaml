@@ -3,9 +3,8 @@
 schema: turbineh.guide/v0.1
 component: jobs.scheduler.croner
 title: croner
-summary: Cron scheduler and next-run evaluation without dependencies. Does not persist schedules across
-  restarts. Cron scheduler and next-run evaluation without dependencies. Trigger functions and/or evaluate
-  cron expressions in JavaScript across all environments.
+summary: Cron scheduler and next-run evaluation without dependencies. Does not persist schedules across restarts.
+  Trigger functions and/or evaluate cron expressions in JavaScript across all environments.
 keywords:
   - croner
   - jobs.scheduler

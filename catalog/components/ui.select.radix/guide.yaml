@@ -3,7 +3,7 @@
 schema: turbineh.guide/v0.1
 component: ui.select.radix
 title: ui.select.radix
-summary: Accessible custom select boxes. Unstyled. Accessible custom select boxes.
+summary: Accessible custom select boxes. Unstyled.
 keywords:
   - "@radix-ui/react-select"
   - ui.select

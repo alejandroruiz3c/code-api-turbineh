@@ -3,8 +3,7 @@
 schema: turbineh.guide/v0.1
 component: data.xlsx-export.exceljs
 title: data.xlsx-export.exceljs
-summary: Reads and writes Excel workbooks (XLSX) in memory. Does not evaluate formulas. Reads and writes Excel
-  workbooks (XLSX) in memory.
+summary: Reads and writes Excel workbooks (XLSX) in memory. Does not evaluate formulas.
 keywords:
   - exceljs
   - data.xlsx-export

@@ -3,9 +3,8 @@
 schema: turbineh.guide/v0.1
 component: data.csv-export.turbineh
 title: data.csv-export.turbineh
-summary: CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation. Does not
-  export binary formats such as XLSX. CSV export of workspace-scoped records with spreadsheet
-  formula-injection neutralisation.
+summary: CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation. Does not export
+  binary formats such as XLSX.
 keywords:
   - data.csv-export.turbineh
   - data.csv-export
@@ -30,8 +29,7 @@ tradeoffs:
     cost: Modifies the string representation of certain values
 config:
   - name: install
-    description: Included in recipe templates at src/lib/csv.ts + generated export routes (exact version, added by
-      TurbineH)
+    description: Included in recipe templates at src/lib/csv.ts + generated export routes (exact version, added by TurbineH)
 interfaces:
   - name: toCsv
     signature: "function toCsv(rows: Record<string, unknown>[], columns: string[]): string"
@@ -53,12 +51,10 @@ compatibility:
 security:
   - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-10.
   - "Effects: network no, filesystem no, database yes."
-  - Neutralises spreadsheet formula injection by prefixing cells starting with =, +, -, @, or tab with a
-    single quote.
+  - Neutralises spreadsheet formula injection by prefixing cells starting with =, +, -, @, or tab with a single quote.
 guarantees:
   - claim: Neutralises formula injection and quotes special characters
-    test: recipe template saas-crud/tests/unit/csv.test.ts › neutralises formula injection and quotes special
-      characters
+    test: recipe template saas-crud/tests/unit/csv.test.ts › neutralises formula injection and quotes special characters
   - claim: Round-trips quoted fields and CRLF
     test: recipe template saas-crud/tests/unit/csv.test.ts › round-trips quoted fields and CRLF
   - claim: Enforces limits on file size and row count

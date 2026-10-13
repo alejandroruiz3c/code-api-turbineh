@@ -3,9 +3,8 @@
 schema: turbineh.guide/v0.1
 component: content.readability.mozilla-readability
 title: content.readability.mozilla-readability
-summary: Extracts the main article content of a web page, dropping navigation, ads and boilerplate. Needs a
-  DOM document (use content.html-dom); does not fetch pages. Extracts the main article content of a web page,
-  dropping navigation, ads and boilerplate.
+summary: Extracts the main article content of a web page, dropping navigation, ads and boilerplate. Needs a DOM document
+  (use content.html-dom); does not fetch pages.
 keywords:
   - "@mozilla/readability"
   - content.readability
