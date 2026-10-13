@@ -7,7 +7,7 @@ import type { PatternId } from "./patterns.js";
  * The 9 learning-round specs (`bench/frontiers/learning.md` on `wip/frontiers-bench`, 2026-10-13) with the BuildSpec
  * the compiler model produced for each: entity names from each package's `.turbineh/owners.json`, fields from the
  * package's generated tables where they survive (the coding agent deleted the rest), criteria from
- * `.turbineh/acceptance.json`. `expected` is the modelling a person would do from the request (ADR-0040) and is what
+ * `.turbineh/acceptance.json`. `expected` is the modelling a person would do from the request (ADR-0042) and is what
  * the regression tests check.
  */
 export interface LearningSpec {

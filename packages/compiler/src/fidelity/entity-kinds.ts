@@ -3,7 +3,7 @@ import type { BuildSpec } from "../build-spec.js";
 import { mentions, nameWords, nounPattern, plural, sentences, singular } from "./text.js";
 
 /**
- * Entity modelling (ADR-0040 §1). The compiler model lists "entities"; not every noun deserves a CRUD page. Each one is
+ * Entity modelling (ADR-0042 §1). The compiler model lists "entities"; not every noun deserves a CRUD page. Each one is
  * classified by code into one of five kinds, and the assembler generates the matching UI:
  *
  * | kind           | what it is                                        | UI                                              |

@@ -1,7 +1,7 @@
 import { listItems, nounPattern, plural, sentences, singular } from "./text.js";
 
 /**
- * Roles and permissions from the request (ADR-0040 §2), by code. The request names its roles ("owner, editor,
+ * Roles and permissions from the request (ADR-0042 §2), by code. The request names its roles ("owner, editor,
  * viewer", "managers", "staff and clients", "shop managers") and its rules ("viewers cannot edit", "a manager approves",
  * "a client only ever sees their own company", "company emails only (@pixelyard.test)"). They become a permission
  * matrix that the app's `can(role, action, resource?)` reads (`src/server/permissions.ts`).

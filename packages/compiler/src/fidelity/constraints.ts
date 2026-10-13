@@ -2,7 +2,7 @@ import { CITY_ZONES, isTimeZone, parseHours, parseMoney } from "../domains.js";
 import { listItems, NUMBER_WORDS, sentences, singular, toNumber } from "./text.js";
 
 /**
- * Constraints stated in the request (ADR-0040 §3), extracted by code: file limits, durations, notice periods, opening
+ * Constraints stated in the request (ADR-0042 §3), extracted by code: file limits, durations, notice periods, opening
  * hours, time zone (IANA), currency, page size, sort orders, status lists, email domains, schedules and stated
  * numbers. They are passed as parameters to components and to generated entities (status lists become enum options,
  * the time zone and limits land in `src/lib/spec-constraints.ts`). Anything the request does not say is a documented

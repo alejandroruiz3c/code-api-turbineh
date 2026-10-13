@@ -14,7 +14,7 @@ import {
 } from "./text.js";
 
 /**
- * Domain patterns (ADR-0040 §4): recurring shapes of business apps that a catalog component implements (status
+ * Domain patterns (ADR-0042 §4): recurring shapes of business apps that a catalog component implements (status
  * workflows, membership access, audit log, private uploads, scheduled jobs, public pages, waitlist, analytics import,
  * kanban, bookings). Detection and parameters come from the request and from §1–§3 by code; a pattern is selected only
  * when an approved component in the catalog provides one of its capabilities (`PATTERN_CAPABILITIES`), otherwise it is

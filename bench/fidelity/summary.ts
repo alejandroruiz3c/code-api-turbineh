@@ -1,5 +1,5 @@
 /**
- * Spec-fidelity summary of the 9 learning-round specs (ADR-0040), offline and deterministic (no models, no decider):
+ * Spec-fidelity summary of the 9 learning-round specs (ADR-0042), offline and deterministic (no models, no decider):
  * entity kinds, roles, constraints, domain patterns and the catalog component selected for each, and which criteria
  * each pattern touches. Usage: `pnpm exec tsx bench/fidelity/summary.ts > bench/frontiers/fidelity-<date>.md`.
  */

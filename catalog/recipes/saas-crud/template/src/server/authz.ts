@@ -1,20 +1,26 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type { z } from "zod";
 import { auth } from "@/lib/auth";
 import { isStaff, isStaffEmail } from "@/lib/staff";
+import { can as policyCan, toRole, type Action, type Role } from "@/server/role-policy";
+import { UserFacingError } from "@/security/errors";
+import { rateLimit } from "@/security/rate-limit";
 
-export type Role = "owner" | "admin" | "member";
-export type Action = "read" | "create" | "update" | "delete";
+export type { Action, Role };
 
-/** Role policy (Security Pack): members read and create; only owners and admins update or delete. */
+/** Role policy (Security Pack), defined in src/server/role-policy.ts (roles from the request when they were given). */
 export function can(role: Role, action: Action): boolean {
-  if (role === "owner" || role === "admin") return true;
-  return action === "read" || action === "create";
+  return policyCan(role, action);
 }
 
-/** Signed-in user with an active organization, or a redirect. Every server action and page goes through this. */
+/**
+ * Signed-in user with an active organization, or a redirect. Every server action and page that reads or changes
+ * workspace data goes through this (or requireAdmin()); see requireSession() and publicAction() for the other two kinds.
+ */
 export async function requireMember(): Promise<{
   userId: string;
+  email: string;
   organizationId: string;
   role: Role;
 }> {
@@ -35,8 +41,76 @@ export async function requireMember(): Promise<{
     organizationId = first.id;
   }
   const member = await auth.api.getActiveMember({ headers: h }).catch(() => null);
-  const role = (member?.role ?? "member") as Role;
-  return { userId: session.user.id, organizationId, role };
+  const role = toRole(member?.role);
+  return { userId: session.user.id, email: session.user.email, organizationId, role };
+}
+
+/**
+ * Signed-in user who need not be a member of any workspace yet, or a redirect to sign-in. For server actions and pages
+ * of signed-in people before membership: accepting an invitation, onboarding, creating a first workspace. Anything that
+ * reads or changes workspace data uses requireMember() instead.
+ */
+export async function requireSession(): Promise<{
+  userId: string;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+}> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/sign-in");
+  const { id, email, name, emailVerified } = session.user;
+  return { userId: id, email: email.toLowerCase(), name, emailVerified: Boolean(emailVerified) };
+}
+
+/** Client address for per-IP limits: the first X-Forwarded-For hop (set by the hosting proxy), else X-Real-IP. */
+export function clientIp(h: Headers): string {
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || "local";
+}
+
+/** Why a public action refused a request before running: invalid input or too many attempts from one address. */
+export type PublicRefusal = "invalid" | "rate-limited";
+
+export interface PublicActionOptions<S extends z.ZodType, R> {
+  /** Attempts allowed per client IP and window (mandatory: public actions are the first target of abuse). */
+  rateLimit: { limit: number; windowMs?: number };
+  /** Zod schema of the input (FormData fields or a plain object); unknown fields are dropped by z.object. */
+  schema: S;
+  /** The value returned to the visitor when refused (e.g. a form state); default: a UserFacingError is thrown. */
+  refuse?: (reason: PublicRefusal, issues: z.core.$ZodIssue[]) => R;
+}
+
+/**
+ * The one blessed way to expose a server action to anonymous visitors (public booking, contact form, waitlist,
+ * accepting an emailed link): every call is rate-limited per client IP, then validated with the Zod schema, and only
+ * then reaches `handler` with the parsed input. Works with `<form action>` and `useActionState` (the FormData is the
+ * last argument). Export it from a "use server" file:
+ *
+ *   export const joinWaitlist = publicAction("waitlist", { rateLimit: { limit: 5 }, schema }, async (input) => {…});
+ */
+export function publicAction<S extends z.ZodType, R>(
+  name: string,
+  options: PublicActionOptions<S, R>,
+  handler: (input: z.output<S>, ctx: { ip: string }) => Promise<R>,
+): (...args: unknown[]) => Promise<R> {
+  const refuse = (reason: PublicRefusal, issues: z.core.$ZodIssue[] = []): R => {
+    if (options.refuse) return options.refuse(reason, issues);
+    throw new UserFacingError(
+      reason === "rate-limited"
+        ? "Too many attempts. Try again in a minute."
+        : "Check the form and try again.",
+    );
+  };
+  return async (...args: unknown[]): Promise<R> => {
+    const ip = clientIp(await headers());
+    const { limit, windowMs = 60_000 } = options.rateLimit;
+    if (!rateLimit(`public:${name}:${ip}`, limit, windowMs)) return refuse("rate-limited");
+    const raw = args.at(-1);
+    const parsed = options.schema.safeParse(
+      raw instanceof FormData ? Object.fromEntries(raw) : (raw ?? {}),
+    );
+    if (!parsed.success) return refuse("invalid", parsed.error.issues);
+    return handler(parsed.data, { ip });
+  };
 }
 
 /** Staff allow-list (ADMIN_EMAILS, comma-separated emails). Deny by default: an empty list allows nobody. */

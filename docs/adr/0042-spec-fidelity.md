@@ -1,4 +1,4 @@
-# ADR-0040 · Spec fidelity: entity kinds, roles, constraints and domain patterns from the request
+# ADR-0042 · Spec fidelity: entity kinds, roles, constraints and domain patterns from the request
 
 - Status: proposed (partial implementation, see "State")
 - Date: 2026-10-13

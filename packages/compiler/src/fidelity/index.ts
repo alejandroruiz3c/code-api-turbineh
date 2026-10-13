@@ -21,7 +21,7 @@ export * from "./entity-kinds.js";
 export * from "./permissions.js";
 export * from "./patterns.js";
 
-/** Spec fidelity (ADR-0040): what the request says, modelled by code, for the assembler and the agent guide. */
+/** Spec fidelity (ADR-0042): what the request says, modelled by code, for the assembler and the agent guide. */
 export interface Fidelity {
   entities: EntityModel[];
   permissions: PermissionMatrix;

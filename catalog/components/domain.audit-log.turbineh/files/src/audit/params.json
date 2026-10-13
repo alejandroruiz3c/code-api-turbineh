@@ -1,0 +1,6 @@
+{
+  "pageSize": 50,
+  "redactFields": ["password", "secret", "token", "hash"],
+  "ignoreFields": ["id", "organizationId", "createdAt", "updatedAt"],
+  "exportLimit": 5000
+}

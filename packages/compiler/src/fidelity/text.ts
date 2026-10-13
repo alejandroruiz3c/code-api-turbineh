@@ -1,4 +1,4 @@
-/** Small deterministic text helpers shared by the spec-fidelity extractors (ADR-0040). */
+/** Small deterministic text helpers shared by the spec-fidelity extractors (ADR-0042). */
 
 /** Words of a PascalCase / camelCase / kebab-case name, lowercased: "StageEvent" → ["stage", "event"]. */
 export function nameWords(name: string): string[] {

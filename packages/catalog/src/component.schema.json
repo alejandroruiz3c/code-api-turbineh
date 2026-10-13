@@ -57,7 +57,9 @@
         "seo",
         "commerce",
         "storage",
-        "domain"
+        "domain",
+        "site",
+        "growth"
       ]
     },
     "source": {
@@ -352,6 +354,29 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "params": {
+      "description": "Parameters a domain component reads from the request (ADR-0041): the app file the assembler writes and the JSON Schema it must satisfy (the shipped default in files/ satisfies it too).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "schema"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^src/[a-z0-9/_-]+\\.json$"
+        },
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z0-9._-]+\\.json$"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Entity names the component implements: the CRUD generator never duplicates them."
         }
       }
     }

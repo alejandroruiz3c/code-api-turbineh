@@ -1,0 +1,101 @@
+schema: turbineh.guide/v0.1
+component: domain.membership-access.turbineh
+title: Workspace roles from the request, invitations by email and per-record access scopes
+summary: >-
+  Turns the roles a request names (owner/editor/viewer, manager/member, staff/client) into the one role policy every
+  page, action and component already calls (can(role, action)); owners and managers invite people by email with a
+  role through a single-use, expiring link that works for new and existing accounts; roles change and members leave
+  without ever leaving a workspace without an owner; and per-record scopes (company, project, shop) make restricted
+  members see only their own records in uploads, workflow items and analytics. It does not do SSO, SCIM or one link for
+  several workspaces.
+keywords:
+  [roles, permissions, invitations, invite by email, team members, workspace members, owner, editor, viewer, manager,
+   staff, client, read-only, access control, rbac, per-record access, company, project members, shop managers,
+   multi-tenant, accept invitation]
+synonyms:
+  invitation: [invite, invite link, join link, invitación]
+  scope: [company, client company, project, shop, store, branch, location, account]
+  viewer: [read-only, reader, guest]
+use_cases:
+  - "Teams invite teammates by email as owner, editor or viewer; viewers cannot edit"
+  - "Staff invite each client, who only ever sees their own company"
+  - "Members see only the projects or shops they belong to; managers see all"
+use_when:
+  - "The request names roles beyond owner/admin/member or says who cannot do what"
+  - "People join by invitation, or each client/project/shop must see only its own records"
+avoid_when:
+  - "Single-user apps or staff-only back offices where ADMIN_EMAILS is enough (src/lib/staff.ts)"
+  - "Enterprise SSO/SCIM provisioning is required"
+tradeoffs:
+  - { choice: "Replace src/server/role-policy.ts from params", gain: "Every existing can() call follows the request's roles with no other change", cost: "Roles are per workspace, not per record" }
+  - { choice: "Own invitation table with hashed single-use tokens", gain: "Deterministic, testable accept flow; links never stored in clear", cost: "Not better-auth's built-in invitation API" }
+  - { choice: "One scope kind per app (company, project or shop)", gain: "A single, simple rule shared by every component", cost: "Nested scopes need custom code" }
+config:
+  - { name: "src/membership/params.json", default: "owner/admin/member, 7-day invitations, no scope", description: "Roles and permissions, default role, invitable roles, invitation lifetime, per-record scope kind (validated at start-up)" }
+  - { name: BETTER_AUTH_URL, default: "(required by the app)", description: "Origin used in invitation links" }
+interfaces:
+  - { name: can, signature: "can(role, action: read|create|update|delete|manage_members|view_audit|see_all_scopes) → boolean", where: src/server/role-policy.ts }
+  - { name: visibleScopes, signature: "visibleScopes({ userId, organizationId, role }) → Promise<string[] | \"all\">; canSeeScope(ctx, scopeId | null); scopeOptions(ctx)", where: src/server/record-access.ts }
+  - { name: invite, signature: "invite(actor, { email, role, scopeId }) → Promise<{ link }> — emails the link (logged without a provider)", where: src/membership/service.ts }
+  - { name: acceptInvitation, signature: "acceptInvitation({ userId, email }, token) → Promise<organizationId>", where: src/membership/service.ts }
+  - { name: changeRole, signature: "changeRole(actor, memberId, role | null)", where: src/membership/service.ts }
+  - { name: "Scopes", signature: "createScope(actor, name); addToScope(actor, scopeId, email); listScopes(organizationId)", where: src/membership/service.ts }
+  - { name: "Pages", signature: "/dashboard/members (invite, roles, scopes), /invite/[token] (accept; server action uses requireSession())", where: src/app/dashboard/members/page.tsx }
+extension_points:
+  - what: "Add or change a role, or what a role may do"
+    where: "src/membership/params.json"
+    how: "Edit roles[].can; every page and action that calls can() follows. Keep an owner role with manage_members."
+  - what: "File a record under a scope (company, project, shop)"
+    where: "src/server/record-access.ts"
+    how: "Store a scope_id on the record; list with `visibleScopes(ctx)` (\"all\" or ids) and check single records with `canSeeScope(ctx, row.scopeId)`."
+  - what: "Act for someone who is signed in but not a member yet"
+    where: "src/server/authz.ts"
+    how: "Start the server action with `await requireSession()` (returns { userId, email }), never with a bare session read."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, better-auth organization plugin (member table), drizzle-orm with PostgreSQL, zod 4"
+  recipes: [saas-crud, client-portal, projects, analytics-dashboard, internal-tool, tracker]
+  requires: []
+  works_with: [domain.audit-log.turbineh, storage.private-uploads.turbineh, domain.workflow.turbineh, data.analytics-import.turbineh]
+  notes: "Replaces the base src/server/role-policy.ts and src/server/record-access.ts. In staff-only sign-up apps, invited emails must be on ADMIN_EMAILS."
+security:
+  - "Only the SHA-256 of an invitation token is stored; links are single use (row lock), expire and work only for the invited email"
+  - "Inviting, changing roles and managing scopes require manage_members; owners are granted only by owners"
+  - "Nobody changes their own role and a workspace always keeps an owner"
+  - "Scope membership is checked on the server; restricted members never see unscoped or other scopes' records"
+guarantees:
+  - { claim: "Invitations by email with a role, emailed", test: "tests/e2e/membership.spec.ts › the owner invites a teammate by email with a role and the invitation email is sent" }
+  - { claim: "Invitees create an account from the link and join with the invited role", test: "tests/e2e/membership.spec.ts › the invited person creates an account from the link, accepts and joins with the invited role" }
+  - { claim: "Roles without manage_members cannot invite or change roles", test: "tests/e2e/membership.spec.ts › a member whose role cannot manage the workspace cannot invite people or change roles" }
+  - { claim: "Links are single use and bound to the invited email", test: "tests/e2e/membership.spec.ts › an invitation link works only once and only for the invited email" }
+  - { claim: "Restricted members see only their own scope", test: "tests/e2e/membership.spec.ts › a member restricted to their own company sees only that company, never the others" }
+  - { claim: "Roles from the request decide every permission", test: "tests/unit/authz.test.ts › applies the request's roles: each role can do exactly what its params list, nothing else" }
+  - { claim: "The last owner can never be removed or demoted", test: "tests/unit/membership.test.ts › never removes the last owner and never lets you change your own role" }
+limits:
+  - "One scope kind per app; a member can belong to several scopes of that kind"
+  - "Invitation links are for one workspace and one email address"
+  - "In staff-only sign-up apps the invited email must be allowlisted (ADMIN_EMAILS)"
+example: |
+  import { can, requireMember } from "@/server/authz";
+  import { visibleScopes } from "@/server/record-access";
+  const ctx = await requireMember();
+  if (!can(ctx.role, "update")) throw new UserFacingError("Viewers cannot edit notes.");
+  const scopes = await visibleScopes(ctx); // "all" or the ids of the member's companies
+params:
+  file: src/membership/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "roles[]", default: "owner, admin, member", description: "{ key, label, can[] } per role; can ⊆ read, create, update, delete, manage_members, view_audit, see_all_scopes. An owner role with manage_members is required" }
+    - { name: defaultRole, default: "member", description: "Least privileged role, for unknown stored roles" }
+    - { name: inviteRoles, default: "admin, member", description: "Roles that can be granted by invitation (owners may also invite owners)" }
+    - { name: invitationDays, default: "7", description: "Days an invitation link is valid" }
+    - { name: scope, default: "null", description: "{ kind, label, plural } of the per-record scope (company, project, shop) or null" }
+  example: |
+    {
+      "roles": [
+        { "key": "owner", "label": "Owner", "can": ["read", "create", "update", "delete", "manage_members", "view_audit", "see_all_scopes"] },
+        { "key": "editor", "label": "Editor", "can": ["read", "create", "update", "delete", "see_all_scopes"] },
+        { "key": "viewer", "label": "Viewer", "can": ["read", "see_all_scopes"] }
+      ],
+      "defaultRole": "viewer", "inviteRoles": ["editor", "viewer"], "invitationDays": 7, "scope": null
+    }

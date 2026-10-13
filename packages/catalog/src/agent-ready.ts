@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse } from "yaml";
+import { shippedDirs } from "./guide.js";
 
 /**
  * Agent-ready admission checks (ADR-0032), run by `pnpm catalog:validate` on every recipe template and every native
@@ -331,12 +332,22 @@ export function checkComponents(componentsDir: string): AgentReadyIssue[] {
   if (!existsSync(componentsDir)) return [];
   return readdirSync(componentsDir)
     .filter((d) => existsSync(join(componentsDir, d, "files")))
-    .flatMap((d) => [
-      ...checkTree(`components/${d}/files`, join(componentsDir, d, "files")),
-      ...checkAcceptance(
-        join(componentsDir, d, "acceptance.yaml"),
-        `components/${d}/acceptance.yaml`,
-        ["files", "files-ai"].map((f) => join(componentsDir, d, f)),
-      ),
-    ]);
+    .flatMap((d) => {
+      const dirs = shippedDirs(join(componentsDir, d)).filter((x) => existsSync(x));
+      return [
+        ...dirs
+          .filter((x) => !x.endsWith("files-ai"))
+          .flatMap((x) =>
+            checkTree(`components/${d}/${relative(join(componentsDir, d), x)}`, x, [
+              x,
+              join(componentsDir, d, "files"),
+            ]),
+          ),
+        ...checkAcceptance(
+          join(componentsDir, d, "acceptance.yaml"),
+          `components/${d}/acceptance.yaml`,
+          dirs,
+        ),
+      ];
+    });
 }

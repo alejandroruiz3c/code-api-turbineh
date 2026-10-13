@@ -18,3 +18,6 @@ guide:
     - what: "Accept another file type"
       where: "src/server/portal.ts"
       how: "Types are detected by content (magic bytes) with size limits; add the signature and a unit test."
+    - what: "Accept an invitation (invitee without an account, or signed in but not a member yet)"
+      where: "src/app/<route>/actions.ts, src/server/authz.ts (publicAction, requireSession)"
+      how: "No account yet: `publicAction(name, { rateLimit, schema }, handler)` with the hashed, expiring token. Signed in: `await requireSession()` first, then check the invited email."

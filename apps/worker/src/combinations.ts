@@ -7,6 +7,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { assemble, mergedRecipe, recipeChain, type SelectedComponent } from "@turbineh/assembler";
+import { readParamsDecl, validateParams } from "@turbineh/catalog";
 import { ALWAYS_ON, detectDomains, extractPalette, type BuildSpec } from "@turbineh/compiler";
 import type { CandidateCard } from "@turbineh/selector";
 import { loadCatalog } from "./catalog-source.js";
@@ -33,9 +34,115 @@ export interface Combination {
   name: string;
   recipe: string;
   prompt: string;
+  /** Native components assembled with the recipe besides what the pipeline selects by code (ADR-0041). */
+  with?: string[];
+  /** Request parameters per component (what the compiler writes to its params file); defaults otherwise. */
+  params?: Record<string, Record<string, unknown>>;
+  /** Entities of the spec (generated CRUD), when the combination needs some. */
+  entities?: BuildSpec["entities"];
 }
 
-/** Every recipe alone, plus every recipe a domain component's probe selects it for. */
+/**
+ * Recipe + component combinations shown assembled and verified (ADR-0041): the business patterns the learning round
+ * found missing (bench/frontiers/ANALYSIS.md §12, G1), each with the request it comes from and the parameters a
+ * compiler would write for it. `verify:recipe <name>` runs one; `--all` runs them all.
+ */
+const STAGES = ["thrown", "trimmed", "bisque_fired", "glazed", "glaze_fired", "ready", "sold"];
+const stageLabel = (k: string) => (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+
+export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
+  {
+    // Kilnwise (learning round, tracker): stages with date and person, per-stage limits, history not editable.
+    recipe: "tracker",
+    with: ["domain.workflow.turbineh"],
+    prompt:
+      'Build "Kilnwise", a production tracker for a ceramics studio. Visual identity: terracotta `#C2522D`, sand ' +
+      "`#EFE6DA`, dark brown text. Each piece goes through stages (thrown, trimmed, bisque fired, glazed, glaze fired, " +
+      "ready, sold) with the date and the person for every change. Alerts when a piece has been in a stage longer than " +
+      "the stage's limit. Every stage change is recorded and cannot be edited afterwards.",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "piece",
+            label: "Piece",
+            plural: "Pieces",
+            initial: "thrown",
+            dueDate: false,
+            createRoles: ["*"],
+            states: STAGES.map((key) => ({
+              key,
+              label: stageLabel(key),
+              limitHours:
+                { thrown: 48, trimmed: 72, bisque_fired: 120, glazed: 72, glaze_fired: 96 }[key] ??
+                null,
+              final: key === "sold",
+            })),
+            transitions: STAGES.slice(0, -1).map((from, i) => ({
+              from: [from],
+              to: STAGES[i + 1] as string,
+              label: `Mark ${stageLabel(STAGES[i + 1] as string).toLowerCase()}`,
+              roles: ["*"],
+            })),
+          },
+        ],
+      },
+    },
+  },
+  {
+    // Fieldnote (learning round, saas-crud): roles owner/editor/viewer, invitations, audit log visible to owners.
+    recipe: "saas-crud",
+    with: ["domain.membership-access.turbineh", "domain.audit-log.turbineh"],
+    prompt:
+      'Build "Fieldnote", a small SaaS where teams keep a library of customer interview notes. Visual identity: white ' +
+      "background, ink text `#1B1F3B`, violet accents `#6C4CF1`, rounded cards. Teams sign up, create a workspace and " +
+      "invite teammates by email with roles (owner, editor, viewer: viewers cannot edit). Every change is recorded in " +
+      "an audit log visible to owners.",
+    entities: [
+      {
+        name: "Note",
+        fields: [
+          { name: "title", type: "string", required: true },
+          { name: "customerCompany", type: "string", required: true },
+          { name: "interviewDate", type: "date", required: true },
+          { name: "tags", type: "string", required: false },
+          { name: "body", type: "text", required: true },
+        ],
+      },
+    ],
+    params: {
+      "domain.membership-access.turbineh": {
+        roles: [
+          {
+            key: "owner",
+            label: "Owner",
+            can: [
+              "read",
+              "create",
+              "update",
+              "delete",
+              "manage_members",
+              "view_audit",
+              "see_all_scopes",
+            ],
+          },
+          {
+            key: "editor",
+            label: "Editor",
+            can: ["read", "create", "update", "delete", "see_all_scopes"],
+          },
+          { key: "viewer", label: "Viewer", can: ["read", "see_all_scopes"] },
+        ],
+        defaultRole: "viewer",
+        inviteRoles: ["editor", "viewer"],
+        invitationDays: 7,
+        scope: null,
+      },
+    },
+  },
+];
+
+/** Every recipe alone, every recipe a domain component's probe selects it for, and COMPONENT_COMBINATIONS. */
 export function combinations(repoRoot: string): Combination[] {
   const recipesDir = join(repoRoot, "catalog/recipes");
   const recipes = readdirSync(recipesDir, { withFileTypes: true })
@@ -50,11 +157,17 @@ export function combinations(repoRoot: string): Combination[] {
       }
     }
   }
+  for (const c of COMPONENT_COMBINATIONS)
+    out.push({ ...c, name: [c.recipe, ...(c.with ?? [])].join("+") });
   return out;
 }
 
 /** The minimal spec used for template checks (no models involved). */
-export function checkSpec(recipe: string, prompt: string): BuildSpec {
+export function checkSpec(
+  recipe: string,
+  prompt: string,
+  entities: BuildSpec["entities"] = [],
+): BuildSpec {
   return {
     recipe: recipe as BuildSpec["recipe"],
     out_of_scope_reason: null,
@@ -63,7 +176,7 @@ export function checkSpec(recipe: string, prompt: string): BuildSpec {
     slug: "recipe-check",
     summary: `Verification of the ${recipe} recipe template.`,
     roles: ["owner"],
-    entities: [],
+    entities,
     pages: [{ path: "/", purpose: "Home", auth_required: false }],
     capabilities: ["security.headers", "data.validation"],
     acceptance_criteria: [
@@ -131,20 +244,41 @@ export function nativeSelection(
 /** Assembles one combination into `outDir` the way the pipeline does. */
 export function assembleCombination(
   repoRoot: string,
-  c: Pick<Combination, "recipe" | "prompt">,
+  c: Pick<Combination, "recipe" | "prompt" | "with" | "params" | "entities">,
   outDir: string,
   extra: string[] = [],
 ): { components: string[]; domains: string[] } {
-  const { selected, domains } = nativeSelection(repoRoot, c.recipe, c.prompt, extra);
+  const { selected, domains } = nativeSelection(repoRoot, c.recipe, c.prompt, [
+    ...(c.with ?? []),
+    ...extra,
+  ]);
+  // Parameters of the combination (what the compiler would extract from the request), written like detected domains.
+  const componentsDir = join(repoRoot, "catalog/components");
+  const given = Object.entries(c.params ?? {}).map(([component, params]) => {
+    const errors = validateParams(join(componentsDir, component), params);
+    if (errors.length) throw new Error(`${component} params: ${errors.join("; ")}`);
+    const decl = readParamsDecl(join(componentsDir, component));
+    return {
+      id: component,
+      capability: component.split(".").slice(0, 2).join("."),
+      component,
+      recipes: [c.recipe],
+      paramsFile: decl?.file ?? "",
+      params,
+      providedEntities: decl?.entities ?? [],
+      assumptions: [],
+    };
+  });
+  const all = [...domains, ...given];
   assemble({
     buildId: "recipe-check",
     recipesDir: join(repoRoot, "catalog/recipes"),
     recipe: c.recipe,
     outDir,
-    spec: checkSpec(c.recipe, c.prompt),
+    spec: checkSpec(c.recipe, c.prompt, c.entities ?? []),
     selected,
     gaps: [],
-    domains,
+    domains: all,
   });
   return {
     components: selected.map((s) => s.component.id),

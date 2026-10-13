@@ -294,7 +294,7 @@ export interface GeneratedFile {
 }
 
 /**
- * How an entity is generated, from its kind (ADR-0040 §1): `crud` (business), `settings` (configuration: owners and
+ * How an entity is generated, from its kind (ADR-0042 §1): `crud` (business), `settings` (configuration: owners and
  * admins set values under /dashboard/settings, upsert by the first field, no delete).
  */
 export interface EntityOptions {
@@ -464,6 +464,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
+import { audit } from "@/lib/audit";
 ${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { UserFacingError } from "@/security/errors";
 import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
@@ -515,26 +516,26 @@ ${
     .limit(1);
   if (same) {
     await db.update(${n.variable}).set(to${n.pascal}Values(input)).where(eq(${n.variable}.id, same.id));
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: same.id, after: to${n.pascal}Values(input) });
     revalidatePath("${base}");
     return;
   }
 `
     : ""
-}${
-    events.some((l) => l.tracked)
-      ? `  const [created] = await db
-    .insert(${n.variable})
-    .values({ organizationId: ctx.organizationId, ...to${n.pascal}Values(input) })
-    .returning({ id: ${n.variable}.id });
-  if (created) {
+}  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
+  const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
+  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
+${
+  events.some((l) => l.tracked)
+    ? `  if (created) {
 ${events
   .filter((l) => l.tracked)
   .map((l) => `    ${eventCall(l, "created.id", "null", `String(input.${l.tracked} ?? "")`)}`)
   .join("\n")}
-  }`
-      : `  await db.insert(${n.variable}).values({ organizationId: ctx.organizationId, ...to${n.pascal}Values(input) });`
   }
-  revalidatePath("${base}");
+`
+    : ""
+}  revalidatePath("${base}");
 }
 
 /** Changes one record of the active workspace; business rules run again with the previous values. */
@@ -557,10 +558,12 @@ export async function update${n.pascal}(formData: FormData): Promise<void> {
     related: related${n.pascal}(ctx.organizationId),
   });
   if (violation) throw new UserFacingError(violation);
+  const values = to${n.pascal}Values(input);
   await db
     .update(${n.variable})
-    .set(to${n.pascal}Values(input))
+    .set(values)
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
+  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: id, before: previous, after: { ...previous, ...values } });
 ${events
   .filter((l) => l.tracked)
   .map(
@@ -580,9 +583,12 @@ export async function delete${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("delete")})) throw new UserFacingError("You are not allowed to delete ${n.labelPlural.toLowerCase()}.");
   const id = String(formData.get("id") ?? "");
-  await db
+  const removed = await db
     .delete(${n.variable})
-    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
+    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+    .returning();
+  for (const before of removed)
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before });
   revalidatePath("${base}");
 }
 ${
@@ -609,7 +615,10 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
     accepted.push(values);
     (await existing()).unshift({ id: crypto.randomUUID(), createdAt: new Date(), ...values });
   }
-  if (accepted.length > 0) await db.insert(${n.variable}).values(accepted);
+  if (accepted.length > 0) {
+    await db.insert(${n.variable}).values(accepted);
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.imported", subjectType: "${n.labelSingular}", summary: \`\${accepted.length} imported from CSV, \${rows.length - accepted.length} rejected\` });
+  }
   revalidatePath("${base}");
   redirect(\`${base}?imported=\${accepted.length}&rejected=\${rows.length - accepted.length}\`);
 }

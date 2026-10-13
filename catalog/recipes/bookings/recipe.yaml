@@ -19,3 +19,6 @@ guide:
     - what: "Change opening hours"
       where: "src/app/dashboard/availability/page.tsx"
       how: "Weekly availability; bookings outside it are refused."
+    - what: "Let visitors book or cancel without an account (public booking page, cancel link)"
+      where: "src/app/<route>/actions.ts, src/server/authz.ts (publicAction)"
+      how: "Export it as `publicAction(name, { rateLimit, schema }, handler)`: per-IP rate limit and Zod validation come first; never a plain exported function."
