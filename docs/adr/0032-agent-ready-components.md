@@ -52,3 +52,28 @@ verify:recipe <recipe> [--with <components>]` runs the full gate on a template l
   were fixed in the same change.
 - Criteria are "met" only when the gate passed and the report matched a passing test to them; the matching uses the
   existing report mapping (decider), the pass/fail itself is deterministic.
+
+## Documentation standard (amendment, 2026-10-13)
+
+Every catalogue component is documented to one standard: `guide.yaml` (`turbineh.guide/v0.1`, the format of
+ADR-0033): title, summary (what it does and does not), use cases, when to use it / when not (with the alternative),
+trade-offs (choice, gain, cost), configuration and inputs, interfaces with real signatures, extension points,
+compatibility, security notes, guarantees each linked to a test (`<file> › <title>`), known limits, a minimal example,
+keywords and synonyms.
+
+- **Documented, never rejected.** A component without a complete guide is documented by the intake documentation
+  step (`pnpm catalog:document`, run automatically by `pnpm catalog:curate` after certification): deterministic facts
+  from the code (importable names and declaration signatures, env vars, install line, dependencies and versions,
+  licence and effects, test titles, the package README as text), narrative drafted by our open model (the compiler
+  slot) and then checked by code — interfaces must exist, guarantees must quote an existing test title, alternatives
+  must exist in the catalogue, the example may import only what the component provides; unsupported claims are
+  dropped. Generated sections are listed under `generated`. Hand-written guides win and are never overwritten.
+- **Completeness is checked after documenting.** `pnpm catalog:validate` reports missing or incomplete guides as
+  "document it" (and keeps failing CI until they exist); security, licence and test gates still block as before.
+- **Used in three places.** `turbineh search` and `/v1/capabilities` (keywords, use cases, when to use and not,
+  trade-offs, tested guarantees), the agent-readable index `/catalog/index.json` + `/catalog/llms.txt`
+  (`pnpm catalog:index`, checked for freshness by `catalog:validate`), and apps (`docs/components/*.md`).
+- **Decider.** A compact card (what it does, two use cases, provides) is available to selection behind
+  `DECIDER_DOC_CARDS=1`. On the selection bench (19 labelled multi-candidate cases, `bench:selection`) the manifest
+  one-liners scored 17/19 and the best documentation card 16/19 at the same latency, so production keeps the
+  one-liners until a bench run shows a gain; longer cards with limits or "avoid when" scored lower (they read as risk).

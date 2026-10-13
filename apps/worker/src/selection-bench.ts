@@ -1,9 +1,7 @@
 /**
- * `pnpm --filter @turbineh/worker run bench:selection <label> [--manifest-cards]` — selection quality and latency on
+ * `pnpm --filter @turbineh/worker run bench:selection <label> [--cards oneliner|guide|compact]` — selection quality and latency on
  * labelled cases (capabilities with several approved candidates, where the app states what decides the choice).
- * Writes bench/results/<date>-selection-<label>.json. `--manifest-cards` uses the manifest one-liners (baseline);
- * the default uses the documentation cards (docs.yaml); production selection uses manifest cards unless
- * DECIDER_DOC_CARDS=1.
+ * Writes bench/results/<date>-selection-<label>.json; card modes are described in catalog-source.ts (loadCatalog).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -11,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { deciderFromEnv } from "@turbineh/decider";
 import { selectComponents } from "@turbineh/selector";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
-import { candidatesFor, loadCatalog } from "./catalog-source.js";
+import { candidatesFor, loadCatalog, type CardMode } from "./catalog-source.js";
 
 interface Case {
   capability: string;
@@ -125,10 +123,11 @@ export const CASES: Case[] = [
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const label = process.argv[2] ?? "run";
-const manifestCards = process.argv.includes("--manifest-cards");
+const cardsAt = process.argv.indexOf("--cards");
+const cards = (cardsAt > 0 ? process.argv[cardsAt + 1] : "compact") as CardMode;
 loadLocalEnv(repoRoot);
 const decider = deciderFromEnv(readEnv());
-const catalog = loadCatalog(join(repoRoot, "catalog/components"), { docs: !manifestCards });
+const catalog = loadCatalog(join(repoRoot, "catalog/components"), { cards });
 const rows = [];
 for (const c of CASES) {
   const candidates = candidatesFor([c.capability], catalog);
@@ -159,7 +158,7 @@ for (const c of CASES) {
 const n = rows.length;
 const summary = {
   label,
-  cards: manifestCards ? "manifest" : "docs",
+  cards,
   cases: n,
   accuracy: rows.filter((r) => r.correct).length / n,
   meanPChosenWhenCorrect:

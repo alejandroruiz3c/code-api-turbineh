@@ -16,22 +16,32 @@ interface Manifest {
   relations: { requires: string[]; provides: string[]; conflicts: string[] };
 }
 
+/** Measured default (see ADR-0032 §Documentation). */
+export const DEFAULT_CARDS: CardMode = "guide";
+
+export type CardMode = "oneliner" | "guide" | "compact";
+
 /**
- * Catalog manifests from git (source of truth), as decider-ready candidate cards. The card is the compact form of the
- * component's documentation (docs.yaml: what it does, when to use it and not, main trade-off, tested guarantees);
- * `docs: false` keeps the manifest one-liner (selection bench baseline).
+ * Catalog manifests from git (source of truth), as decider-ready candidate cards.
+ *  - oneliner: what it does + what it provides (manifest);
+ *  - guide: the one-liner + use when / avoid when / keywords of guide.yaml (ADR-0033);
+ *  - compact: what it does + two use cases + provides (ADR-0032).
+ * Default from DECIDER_CARDS; the choice is made on the selection bench (bench/results/*-selection-*.json).
  */
-export function loadCatalog(componentsDir: string, opts: { docs?: boolean } = {}): CandidateCard[] {
-  // Measured on the selection bench (bench/results/2026-10-13-selection-*.json): documentation cards did not beat the
-  // manifest one-liners (16/19 vs 17/19), so they are opt-in (DECIDER_DOC_CARDS=1) until a bench run shows a gain.
-  const useDocs = opts.docs ?? process.env.DECIDER_DOC_CARDS === "1";
+export function loadCatalog(
+  componentsDir: string,
+  opts: { cards?: CardMode } = {},
+): CandidateCard[] {
+  const mode: CardMode =
+    opts.cards ?? ((process.env.DECIDER_CARDS as CardMode | undefined) || DEFAULT_CARDS);
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => ({
       m: parse(readFileSync(join(componentsDir, d.name, "component.yaml"), "utf8")) as Manifest,
-      docs: useDocs ? readDocs(join(componentsDir, d.name)) : null,
+      docs: mode === "compact" ? readDocs(join(componentsDir, d.name)) : null,
+      mode,
     }))
-    .map(({ m, docs }) => {
+    .map(({ m, docs, mode: cardMode }) => {
       const purl = /^pkg:[a-z]+\/(.+)@([^@]+)$/.exec(m.source.purl);
       return {
         id: m.id,
@@ -44,7 +54,7 @@ export function loadCatalog(componentsDir: string, opts: { docs?: boolean } = {}
         requires: m.relations.requires,
         card: docs
           ? decisionCard(docs, m.relations.provides, m.capability.does)
-          : `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${guideCard(join(componentsDir, m.id))}`,
+          : `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${cardMode === "guide" ? guideCard(join(componentsDir, m.id)) : ""}`,
       };
     });
 }
