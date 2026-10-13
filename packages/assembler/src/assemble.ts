@@ -28,9 +28,19 @@ import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
 import {
   acceptanceStatus,
   readCoverage,
+  shippedRules,
   writeAcceptance,
   type CoverageRule,
 } from "./acceptance.js";
+import {
+  fidelityCoverage,
+  fidelityFiles,
+  storedMatrix,
+  strictCriteria,
+  type FidelityAssembly,
+} from "./fidelity.js";
+import { generateByKind, type KindPlan } from "./kinds.js";
+import { pascal } from "./naming.js";
 import { initialGuide, writeAgentGuide } from "./agent-guide.js";
 import { ownersOf, recordOwners } from "./ownership.js";
 
@@ -63,6 +73,11 @@ export interface AssembleInput {
     providedEntities: string[];
     assumptions?: string[];
   }[];
+  /**
+   * Spec fidelity (ADR-0042, wired by ADR-0043): entity kinds, the role matrix, constraints and every detected domain
+   * pattern (selected or missing). Absent = the generic CRUD generation of before.
+   */
+  fidelity?: FidelityAssembly;
 }
 
 export interface AssembleResult {
@@ -226,21 +241,41 @@ export function assemble(input: AssembleInput): AssembleResult {
     csvExport: chosen.has("data.csv-export"),
     csvImport: chosen.has("data.csv-import"),
   };
-  const entityFiles = entities.map((e) => ({
-    name: e.name,
-    files: generateEntity(e, features, entities),
-  }));
+  const fid = input.fidelity;
+  const kinds: KindPlan | null = fid ? planByKind(input, entities, features) : null;
+  const entityFiles = kinds
+    ? []
+    : entities.map((e) => ({
+        name: e.name,
+        files: generateEntity(e, features, entities),
+      }));
   for (const e of entityFiles) for (const f of e.files) owners[f.path] = `entity:${e.name}`;
+  if (kinds) Object.assign(owners, kinds.owners);
+  const matrix = fid ? storedMatrix(fid) : null;
+  const fidelityOut = fid && matrix ? fidelityFiles(fid, matrix) : null;
+  for (const f of fidelityOut?.files ?? []) owners[f.path] = "generated:fidelity";
   const generated: GeneratedFile[] = [
     ...entityFiles.flatMap((e) => e.files),
+    ...(kinds?.files ?? []),
+    ...(fidelityOut?.files ?? []),
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
       componentTables,
       extraNav: [...recipe.nav, ...componentNav],
+      ...(kinds
+        ? {
+            nav: kinds.nav,
+            tables: kinds.files
+              .map((f) => /^src\/db\/tables\/([a-z0-9-]+)\.ts$/.exec(f.path)?.[1])
+              .filter((x): x is string => Boolean(x)),
+          }
+        : {}),
     }),
     ...docs(
       input,
-      entities.map((e) => entityNames(e.name).labelPlural),
+      kinds
+        ? kinds.generatedAs.map((g) => featureLine(g))
+        : entities.map((e) => `${entityNames(e.name).labelPlural}: create, list and delete, scoped to your workspace`),
       existsSync(join(outDir, ".env.example"))
         ? readFileSync(join(outDir, ".env.example"), "utf8")
         : "",
@@ -253,16 +288,24 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[f.path] ??= "generated";
   }
   recordOwners(outDir, owners);
+  // Criterion → test: only tests shipped in this package (ADR-0043), each checked against its title and assertions.
   writeAcceptance(
     outDir,
-    acceptanceStatus(spec.acceptance_criteria, [
-      ...coverageRules(input),
-      ...entityCoverage(
-        outDir,
-        entities.map((e) => e.name),
-      ),
-    ]),
+    acceptanceStatus(
+      spec.acceptance_criteria,
+      shippedRules(outDir, [
+        ...coverageRules(input),
+        ...entityCoverage(
+          outDir,
+          entities.map((e) => e.name),
+        ),
+        ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
+      ]),
+      null,
+      strictCriteria(fid),
+    ),
   );
+  if (fid && matrix && kinds) writeFidelityReport(outDir, fid, matrix, kinds);
   // Agent guide (AGENTS.md + turbineh.json): structure now, gate results and criteria proofs after verification.
   writeAgentGuide(
     outDir,
@@ -329,7 +372,7 @@ and generating only the glue. See [COMPONENTS.md](COMPONENTS.md), [ARCHITECTURE.
 
 ## Features
 
-${entityLabels.map((l) => `- ${l}: create, list and delete, scoped to your workspace`).join("\n")}
+${entityLabels.map((l) => `- ${l}`).join("\n")}
 - Email + password sign-in, workspaces (organizations) and roles (owner, admin, member)
 
 ## Run locally
@@ -499,6 +542,87 @@ export function writeReports(outDir: string, security: string, report: string): 
 /** START_HERE.html after verification: the client's entry point, with the real results. */
 export function writeStartHere(outDir: string, facts: HandoverFacts): void {
   writeFileSync(join(outDir, "START_HERE.html"), startHereHtml(facts));
+}
+
+/** README line of a generated entity, by kind. */
+function featureLine(g: KindPlan["generatedAs"][number]): string {
+  const what = entityNames(g.entity).labelPlural;
+  if (g.ui === "settings") return `${what}: a settings page (set per key, no list of records to delete)`;
+  if (g.ui === "timeline") return `${what}: an append-only history shown on its parent's page`;
+  if (g.ui === "parent") return `${what}: listed and added on its parent's page`;
+  if (g.ui === "none") return `${what}: ${g.kind} — no page of its own (${g.where})`;
+  if (g.ui === "crud + workflow")
+    return `${what}: create, list and edit; status changes through its workflow (history, role-gated)`;
+  return `${what}: create, list, edit and delete, scoped to your workspace`;
+}
+
+/** Entities generated by kind from the fidelity model, with workflows and the per-record scope of selected components. */
+function planByKind(
+  input: AssembleInput,
+  entities: BuildSpec["entities"],
+  features: { csvExport: boolean; csvImport: boolean },
+): KindPlan {
+  const fid = input.fidelity as FidelityAssembly;
+  const selected = (id: string) =>
+    fid.patterns.find((p) => p.id === id && p.status === "selected") ?? null;
+  // Workflows of domain.workflow: the entity whose status field the workflow replaces, and its key.
+  const workflows: Record<string, { key: string; field: string }> = {};
+  const wf = selected("workflow");
+  const defs = (wf?.params.workflows as { key: string }[] | undefined) ?? [];
+  fid.fidelity.patterns
+    .filter((p) => p.id === "workflow")
+    .forEach((p, i) => {
+      const entity = String(p.params.entity);
+      const def = defs[i];
+      const e = entities.find((x) => x.name === entity);
+      const field = e?.fields.find((f) =>
+        new RegExp(`^(current)?${String(p.params.field)}$`, "i").test(f.name),
+      );
+      if (def && e && field) workflows[entity] = { key: def.key, field: field.name };
+    });
+  // Per-record scope of domain.membership-access (company, project, shop).
+  const membership = selected("membership-access");
+  const scope = membership?.params.scope as { kind: string; label: string } | null | undefined;
+  return generateByKind({
+    entities,
+    models: fid.fidelity.entities,
+    features,
+    sort: fid.fidelity.constraints.sort,
+    workflows,
+    scope: scope ? { entity: pascal(scope.kind), label: scope.label } : null,
+  });
+}
+
+/** .turbineh/fidelity.json: how the request was modelled (kinds, roles, constraints, patterns) and what is left. */
+function writeFidelityReport(
+  outDir: string,
+  fid: FidelityAssembly,
+  matrix: ReturnType<typeof storedMatrix>,
+  kinds: KindPlan,
+): void {
+  const report = {
+    schema: "turbineh.fidelity/v1",
+    entities: kinds.generatedAs,
+    roles: Object.entries(matrix.roles).map(([key, r]) => ({ key, ...r })),
+    rules: fid.fidelity.permissions.rules.map((r) => r.text),
+    signUpEmailDomains: matrix.signUpEmailDomains,
+    constraints: {
+      timeZone: fid.fidelity.constraints.timeZone,
+      currency: fid.fidelity.constraints.currency,
+      assumptions: fid.fidelity.constraints.assumptions,
+    },
+    patterns: fid.patterns.map((p) => ({
+      id: p.id,
+      status: p.status,
+      component: p.component,
+      reason: p.reason,
+      where: p.status === "missing" ? p.where : [],
+      how: p.status === "missing" ? p.how : "",
+    })),
+    left: kinds.left,
+  };
+  mkdirSync(join(outDir, ".turbineh"), { recursive: true });
+  writeFileSync(join(outDir, ".turbineh/fidelity.json"), `${JSON.stringify(report, null, 2)}\n`);
 }
 
 export function hasTemplate(dir: string): boolean {

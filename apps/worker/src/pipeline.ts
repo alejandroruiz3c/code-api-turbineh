@@ -7,6 +7,7 @@ import {
   assemble,
   coverageRules,
   entitiesToGenerate,
+  entityNames,
   providedTables,
   fieldsOf,
   parseBrand,
@@ -56,6 +57,7 @@ import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
+import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
 
 export type Phase =
   | "compiling"
@@ -278,8 +280,36 @@ export async function runBuild(
   spec.capabilities = [
     ...new Set([...spec.capabilities, ...recipe.defaultCapabilities]),
   ] as typeof spec.capabilities;
+  // Spec fidelity (ADR-0042/0043): entity kinds, roles and rules, constraints and domain patterns, by code (the decider
+  // only for entity kinds the rules are unsure of); each pattern's catalog component is selected by code with params
+  // validated against its params.schema.json.
+  const fidelity = await wireFidelity(prompt, spec, {
+    recipeId,
+    recipeChain: recipeChain(recipesDir, recipeId).map((m) => m.id),
+    componentsDir: join(deps.repoRoot, "catalog/components"),
+    knownEntities: recipe.providedEntities,
+    decider: deps.decider,
+  }).catch(() => null);
+  if (fidelity) {
+    spec.entities = fidelity.spec.entities;
+    spec.capabilities = fidelity.spec.capabilities;
+    await deps.emit(buildId, "compiling", "fidelity", {
+      entities: fidelity.fidelity.entities.map((e) => ({ name: e.name, kind: e.kind, ui: e.ui })),
+      roles: fidelity.fidelity.permissions.roles.map((r) => ({ id: r.id, label: r.label })),
+      patterns: fidelity.wired.patterns.map((p) => ({
+        id: p.id,
+        status: p.status,
+        component: p.component,
+        reason: p.reason,
+      })),
+      decider: fidelity.fidelity.decider,
+    });
+  }
   // Domain components (ADR-0033): detected and parameterised from the request by code, selected by code.
-  const domains = detectDomains(prompt, recipeId, spec.app_name);
+  const domains = mergeDomains(
+    fidelity?.wired.selected ?? [],
+    detectDomains(prompt, recipeId, spec.app_name),
+  );
   if (domains.length > 0) {
     recipe.requiredComponents = {
       ...(recipe.requiredComponents ?? {}),
@@ -435,6 +465,7 @@ export async function runBuild(
     selected: selected.filter((x) => integrable(x.component)),
     brand,
     domains,
+    ...(fidelity ? { fidelity: fidelity.assembly } : {}),
     gaps: [
       ...gaps,
       ...external.map((e) => ({
@@ -975,10 +1006,11 @@ async function businessRules(
   deps: PipelineDeps,
   buildId: string,
 ): Promise<{ candidates: RuleCandidate[]; written: WrittenRules[] }> {
+  // Only entities generated with CRUD and a rules module (business and settings; not events, child lists or logs).
   const entities = entitiesToGenerate(spec, [
     ...recipe.providedEntities,
     ...providedTables(repoDir),
-  ]);
+  ]).filter((e) => existsSync(join(repoDir, "src/entities", entityNames(e.name).slug, "rules.ts")));
   if (entities.length === 0) return { candidates: [], written: [] };
   const lib = readFileSync(join(repoDir, "src/lib/rules.ts"), "utf8");
   const read = (rel: string) => readFileSync(join(repoDir, rel), "utf8");

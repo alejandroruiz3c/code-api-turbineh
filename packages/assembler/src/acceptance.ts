@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { proofVerdict, type ProofCandidate } from "@turbineh/shared";
+import { proofVerdict, proofVeto, type ProofCandidate } from "@turbineh/shared";
 import { parse } from "yaml";
 
 /**
@@ -22,6 +22,12 @@ export interface CoverageRule {
    * criterion's subject, action, actor and any negation (`proofVerdict`, precision first).
    */
   proof?: ProofCandidate;
+  /**
+   * Hand-written rules (acceptance.yaml) checked against the test shipped in the package (ADR-0043): `veto` = its
+   * title and assertions must pass the refusal and actor checks (`proofVeto`); `full` = the full proof check, used
+   * when the test skips itself on a condition of the app (`test.skip(…)`), so it may prove nothing here.
+   */
+  check?: "veto" | "full";
 }
 
 export interface CriterionStatus {
@@ -45,29 +51,90 @@ export function readCoverage(file: string, from: string): CoverageRule[] {
     .map((r) => ({ test: r.test, covers: r.covers.map(String), from }));
 }
 
-const matches = (criterion: string, rule: CoverageRule) =>
-  rule.covers.length > 0 &&
-  rule.covers.every((re) => {
-    try {
-      return new RegExp(re, "i").test(criterion);
-    } catch {
-      return false;
-    }
-  }) &&
-  (!rule.proof || proofVerdict(criterion, rule.proof).proven);
+const matches = (criterion: string, rule: CoverageRule, strict: boolean) => {
+  const covered =
+    rule.covers.length > 0 &&
+    rule.covers.every((re) => {
+      try {
+        return new RegExp(re, "i").test(criterion);
+      } catch {
+        return false;
+      }
+    });
+  if (!covered) return false;
+  if (!rule.proof) return true;
+  // Precision first: generated tests, conditional tests and criteria a missing pattern touches need the full proof.
+  if (!rule.check || rule.check === "full" || strict)
+    return proofVerdict(criterion, rule.proof).proven;
+  return proofVeto(criterion, rule.proof) === "";
+};
 
 export function acceptanceStatus(
   criteria: readonly string[],
   rules: readonly CoverageRule[],
   gatePassed: boolean | null = null,
+  /** Criteria that only a full proof may mark covered (e.g. a missing domain pattern touches them). */
+  strict: (criterion: string) => boolean = () => false,
 ): CriterionStatus[] {
   return criteria.map((criterion) => {
-    const tests = [...new Set(rules.filter((r) => matches(criterion, r)).map((r) => r.test))];
+    const hard = strict(criterion);
+    const tests = [
+      ...new Set(rules.filter((r) => matches(criterion, r, hard)).map((r) => r.test)),
+    ];
     return {
       criterion,
       tests,
       status: tests.length === 0 ? "open" : gatePassed ? "met" : "covered",
     };
+  });
+}
+
+/** Test titles of a spec file with their key assertions and whether they skip themselves on a condition. */
+function blocksOf(src: string): { title: string; assertions: string[]; conditional: boolean }[] {
+  const starts = [...src.matchAll(/\b(?:test|it)\(\s*(["'`])((?:(?!\1).){3,300})\1/g)];
+  return starts.map((m, i) => {
+    const body = src.slice(m.index, starts[i + 1]?.index ?? src.length);
+    return {
+      title: m[2] as string,
+      assertions: body
+        .split("\n")
+        .filter((l) => /expect\(|getByLabel\(|toBe|toThrow/.test(l))
+        .map((l) => l.trim().slice(0, 200)),
+      conditional: /\btest\.skip\(|\bit\.skipIf\(|\bdescribe\.skipIf\(/.test(body),
+    };
+  });
+}
+
+/**
+ * Only tests that exist in the assembled package can prove a criterion (ADR-0043): rules whose file or test title is
+ * not in `outDir` are dropped (e.g. an AI-only spec of a component in an app without the assistant, or a base test a
+ * component replaced). Hand-written rules get the shipped test's title and assertions as proof, checked with the
+ * refusal and actor veto, or the full proof when the test skips itself on a condition.
+ */
+export function shippedRules(outDir: string, rules: readonly CoverageRule[]): CoverageRule[] {
+  const cache = new Map<string, ReturnType<typeof blocksOf> | null>();
+  const read = (file: string) => {
+    if (!cache.has(file)) {
+      const p = join(outDir, file);
+      cache.set(file, existsSync(p) ? blocksOf(readFileSync(p, "utf8")) : null);
+    }
+    return cache.get(file) ?? null;
+  };
+  return rules.flatMap((r) => {
+    const [file = "", title] = r.test.split(" › ");
+    const blocks = read(file);
+    if (!blocks) return [];
+    if (!title) return [r];
+    const block = blocks.find((b) => b.title === title);
+    if (!block) return [];
+    if (r.proof) return [r];
+    return [
+      {
+        ...r,
+        proof: { title: block.title, assertions: block.assertions },
+        check: block.conditional ? ("full" as const) : ("veto" as const),
+      },
+    ];
   });
 }
 

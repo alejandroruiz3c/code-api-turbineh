@@ -74,7 +74,7 @@ export function fieldsOf(e: Entity): Field[] {
   });
 }
 
-function column(f: Field): string {
+export function column(f: Field): string {
   const c = snake(f.name);
   const base = {
     string: `varchar("${c}", { length: 255 })`,
@@ -96,7 +96,7 @@ function column(f: Field): string {
   return `${base}${req}${def}`;
 }
 
-function zodField(f: Field): string {
+export function zodField(f: Field): string {
   const opt = (s: string) => (f.required ? s : `${s}.optional()`);
   const str = (max: number) =>
     f.required
@@ -141,7 +141,7 @@ function zodField(f: Field): string {
   }
 }
 
-function inputType(f: Field): string {
+export function inputType(f: Field): string {
   return {
     string: "text",
     enum: "text",
@@ -305,6 +305,18 @@ export interface EntityOptions {
   children?: ChildLink[];
   /** Default order of the list: one of the entity's date fields, as the request states it. */
   sort?: { field: string; direction: "asc" | "desc" } | null;
+  /** Role-matrix resource of this entity (src/server/permissions.ts RESOURCE_RULES); default: its URL slug. */
+  resource?: string;
+  /**
+   * The entity's status is a workflow of domain.workflow.turbineh: each new record starts a workflow item (initial
+   * state, history, role-gated transitions) linked by subjectId; the list shows the state and links to it.
+   */
+  workflow?: { key: string; dueField: string | null } | null;
+  /**
+   * Per-record scope (domain.membership-access.turbineh): the field holding the scope id (company, project, shop).
+   * Lists show only visible scopes; single records are checked with canSeeScope (src/server/record-access.ts).
+   */
+  scope?: { field: string; label: string } | null;
 }
 
 /** An event entity attached to its parent. Field names are camelCase names of the event entity. */
@@ -322,6 +334,8 @@ export interface ChildLink {
   child: Entity;
   /** Child field holding the parent id. */
   parentField: string;
+  /** What the E2E test types into the child's form on the parent page (label, sample, select or checkbox). */
+  fills?: { label: string; value: string; select: boolean; check: boolean }[];
 }
 
 /** Optional features switched on by components selected for the build. */
@@ -337,7 +351,7 @@ function eventCall(l: EventLink, id: string, from: string, to: string): string {
   const parts = ["organizationId: ctx.organizationId", `${l.parentField}: ${id}`];
   if (l.map.from) parts.push(`${l.map.from}: ${from}`);
   if (l.map.to) parts.push(`${l.map.to}: ${to}`);
-  if (l.map.actor) parts.push(`${l.map.actor}: ctx.userId`);
+  if (l.map.actor) parts.push(`${l.map.actor}: ctx.email`);
   if (l.map.at)
     parts.push(
       `${l.map.at}: ${at?.type === "date" ? "new Date().toISOString().slice(0, 10)" : "new Date()"}`,
@@ -360,8 +374,21 @@ export function generateEntity(
   const fields = fieldsOf(e);
   const settings = opts.variant === "settings";
   const base = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;
-  // The template's role policy: can(role, action). Settings are changed by those who may update records.
-  const act = (a: "create" | "update" | "delete") => (settings ? `"update"` : `"${a}"`);
+  // The role matrix: can(role, action, resource) (src/server/permissions.ts). Settings need "configure".
+  const resource = JSON.stringify(opts.resource ?? n.slug);
+  const act = (a: "create" | "update" | "delete") =>
+    settings ? `"configure", ${resource}` : `"${a}", ${resource}`;
+  const workflow = settings ? null : (opts.workflow ?? null);
+  const scope = opts.scope ?? null;
+  const scopeKey = scope ? camel(scope.field) : null;
+  // Title of the workflow item: what identifies the record (its first text field and first date), else its label.
+  const titleParts = [
+    fieldsOf(e).find((f) => ["string", "text"].includes(f.type) && !/id$/i.test(f.name)),
+    fieldsOf(e).find((f) => f.type === "date" || f.type === "datetime"),
+  ].filter((f): f is Field => Boolean(f));
+  const workflowTitle = titleParts.length
+    ? `[${titleParts.map((f) => `input.${camel(f.name)}`).join(", ")}].filter((v) => v !== undefined && v !== null && String(v).trim() !== "").map(String).join(" · ") || ${JSON.stringify(n.labelSingular)}`
+    : JSON.stringify(n.labelSingular);
   const events = opts.events ?? [];
   const children = opts.children ?? [];
   const tagField = fields.find((f) => f.type === "tags");
@@ -469,7 +496,7 @@ ${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : "
 import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-${events
+${scope ? `import { canSeeScope } from "@/server/record-access";\n` : ""}${workflow ? `import { createItem } from "@/workflow/service";\n` : ""}${events
   .filter((l) => l.tracked)
   .map((l) => {
     const en = entityNames(l.event.name);
@@ -507,6 +534,10 @@ export async function create${n.pascal}(formData: FormData): Promise<void> {
   });
   if (violation) throw new UserFacingError(violation);
 ${
+  scope
+    ? `  if (!(await canSeeScope(ctx, input.${scopeKey} ?? null))) throw new UserFacingError("Choose one of your ${scope.label.toLowerCase()} options.");\n`
+    : ""
+}${
   settings && settingKey
     ? `  // A setting is one row per ${label(settingKey.name).toLowerCase()}: saving an existing one updates it (no duplicates, no delete).
   const [same] = await db
@@ -526,6 +557,17 @@ ${
   const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
   await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
 ${
+  workflow
+    ? `  // Its status lives in the workflow (domain.workflow.turbineh): initial state, history and role-gated changes.
+  if (created)
+    await createItem(ctx, {
+      workflow: ${JSON.stringify(workflow.key)},
+      title: ${workflowTitle},
+      subjectId: created.id,${scope ? `\n      scopeId: input.${scopeKey} ?? null,` : ""}${workflow.dueField ? `\n      dueAt: input.${camel(workflow.dueField)} ? new Date(input.${camel(workflow.dueField)}) : null,` : ""}
+    });
+`
+    : ""
+}${
   events.some((l) => l.tracked)
     ? `  if (created) {
 ${events
@@ -549,8 +591,12 @@ export async function update${n.pascal}(formData: FormData): Promise<void> {
     .from(${n.variable})
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
     .limit(1);
-  if (!previous) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
-  const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
+  if (!previous${scope ? ` || !(await canSeeScope(ctx, previous.${scopeKey} ?? null))` : ""}) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
+  const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));${
+    scope
+      ? `\n  if (!(await canSeeScope(ctx, input.${scopeKey} ?? null))) throw new UserFacingError("Choose one of your ${scope.label.toLowerCase()} options.");`
+      : ""
+  }
   const violation = await check${n.pascal}Rules(input, {
     operation: "update",
     previous,
@@ -583,7 +629,13 @@ export async function delete${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("delete")})) throw new UserFacingError("You are not allowed to delete ${n.labelPlural.toLowerCase()}.");
   const id = String(formData.get("id") ?? "");
-  const removed = await db
+${
+  scope
+    ? `  const [target] = await db.select().from(${n.variable}).where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId))).limit(1);
+  if (!target || !(await canSeeScope(ctx, target.${scopeKey} ?? null))) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
+`
+    : ""
+}  const removed = await db
     .delete(${n.variable})
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
     .returning();
@@ -626,9 +678,22 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
     : ""
 }`;
 
+  const scopeField = scope ? fields.find((f) => camel(f.name) === scopeKey) : undefined;
+  const scopeSelect = (id: string, current: string) => `          <div>
+            <Label htmlFor="${id}">${scope?.label ?? ""}</Label>
+            <select id="${id}" name="${scopeKey}" className="w-full rounded-md border border-field px-3 py-2 text-sm focus:outline-brand" defaultValue={${current}}>
+              <option value="">—</option>
+              {scopes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>`;
   const formFields = fields
     .map((f) => {
       const id = `${n.slug}-${snake(f.name)}`;
+      if (f === scopeField) return scopeSelect(id, `""`);
       if (f.type === "boolean") {
         return `          <div className="flex items-center gap-2">
             <input id="${id}" name="${camel(f.name)}" type="checkbox" />
@@ -657,8 +722,59 @@ ${f.required ? "" : `              <option value="">—</option>\n`}${f.options.
   const search = firstText ? camel(firstText.name) : null;
   const columns = fields.map((f) => camel(f.name));
 
+  // One list query (filters, scope, order) shared by the list page and the CSV export, so the export contains exactly
+  // the filtered list.
+  const defaultSort = opts.sort?.direction === "asc" ? "oldest" : "newest";
+  const query = `${GENERATED}
+import { and, ${tagField ? "arrayContains, " : ""}${sortField ? "asc, " : ""}desc, eq${search ? ", ilike" : ""}${scope ? ", inArray, isNull" : ""}, type SQL } from "drizzle-orm";
+import { ${n.variable} } from "@/db/schema";
+import { parseQuery } from "@/lib/pagination";
+${scope ? `import { visibleScopes, type ScopeContext } from "@/server/record-access";\n` : ""}
+type Raw = Record<string, string | string[] | undefined>;
+
+/** Filters of the ${n.labelPlural.toLowerCase()} list, from the query string (bounded, trimmed). */
+export interface ${n.pascal}ListParams {
+  q: string;
+${tagField ? "  tag: string;\n" : ""}${sortField ? `  sort: "newest" | "oldest" | "added";\n` : ""}}
+
+export function ${camel(n.pascal)}ListParams(raw: Raw): ${n.pascal}ListParams {
+  return {
+    q: parseQuery(raw.q),
+${tagField ? "    tag: parseQuery(raw.tag).toLowerCase(),\n" : ""}${sortField ? `    sort: raw.sort === "oldest" || raw.sort === "newest" || raw.sort === "added" ? raw.sort : "${defaultSort}",\n` : ""}  };
+}
+
+/** The same filters as a query string ("" when none), for pagination and export links. */
+export function ${camel(n.pascal)}ListQuery(p: ${n.pascal}ListParams): string {
+  const qs = new URLSearchParams();
+  if (p.q) qs.set("q", p.q);
+${tagField ? `  if (p.tag) qs.set("tag", p.tag);\n` : ""}${sortField ? `  qs.set("sort", p.sort);\n` : ""}  return qs.toString();
+}
+
+/** Workspace${scope ? ", visible scopes" : ""} and filters (where) and the list order. */
+export async function ${camel(n.pascal)}ListWhere(
+  ctx: { organizationId: string${scope ? "; userId: string; role: string" : ""} },
+  p: ${n.pascal}ListParams,
+): Promise<{ where: SQL | undefined; order: SQL }> {
+${scope ? `  const scopes = await visibleScopes(ctx as ScopeContext);\n` : ""}  return {
+    where: and(
+      eq(${n.variable}.organizationId, ctx.organizationId),
+      ${search ? `p.q ? ilike(${n.variable}.${search}, \`%\${p.q.replace(/[%_\\\\]/g, "\\\\$&")}%\`) : undefined` : "undefined"},${tagField ? `\n      p.tag ? arrayContains(${n.variable}.${camel(tagField.name)}, [p.tag]) : undefined,` : ""}${scope ? `\n      scopes === "all" ? undefined : scopes.length ? inArray(${n.variable}.${scopeKey}, scopes) : isNull(${n.variable}.id),` : ""}
+    ),
+    order: ${
+      sortField
+        ? `p.sort === "added" ? desc(${n.variable}.createdAt) : p.sort === "oldest" ? asc(${n.variable}.${camel(sortField.name)}) : desc(${n.variable}.${camel(sortField.name)})`
+        : `desc(${n.variable}.createdAt)`
+    },
+  };
+}
+`;
+
+  const listParams = `${camel(n.pascal)}ListParams`;
+  const listQuery = `${camel(n.pascal)}ListQuery`;
+  const listWhere = `${camel(n.pascal)}ListWhere`;
+  const stateColumn = workflow ? `"Status", ` : "";
   const page = `${GENERATED}
-import { and, ${tagField ? "arrayContains, " : ""}${sortField ? "asc, " : ""}count, desc, eq${search ? ", ilike" : ""} } from "drizzle-orm";
+import { ${workflow ? "and, count, eq, inArray" : "count"} } from "drizzle-orm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -666,42 +782,53 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
-import { ${n.variable} } from "@/db/schema";
+import { ${n.variable}${workflow ? ", workflowItems" : ""} } from "@/db/schema";
 import { create${n.pascal}, delete${n.pascal}${features.csvImport ? `, import${n.pascal}Csv` : ""} } from "@/entities/${n.slug}/actions";
-import { PAGE_SIZE, parsePage, parseQuery } from "@/lib/pagination";
+import { ${listParams}, ${listQuery}, ${listWhere} } from "@/entities/${n.slug}/query";
+import { PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { can, requireMember } from "@/server/authz";
-
+${scope ? `import { scopeOptions } from "@/server/record-access";\n` : ""}${workflow ? `import { workflowOf } from "@/workflow/config";\nimport { stateLabel } from "@/workflow/engine";\n` : ""}
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ${n.pascal}Page({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireMember();
   const params = await searchParams;
   const { page, offset, limit } = parsePage(params.page);
-  const q = parseQuery(params.q);
-${tagField ? `  const tag = parseQuery(params.tag).toLowerCase();\n` : ""}${
+  const filters = ${listParams}(params);
+${search ? "  const { q } = filters;\n" : ""}${tagField ? `  const { tag } = filters;\n` : ""}${
     sortField
-      ? `  // Sort order from the request: ${label(sortField.name).toLowerCase()}, ${opts.sort?.direction === "asc" ? "oldest" : "newest"} first by default.
-  const sort = params.sort === "oldest" || params.sort === "newest" || params.sort === "added" ? params.sort : "${opts.sort?.direction === "asc" ? "oldest" : "newest"}";
-  const order = sort === "added" ? desc(${n.variable}.createdAt) : sort === "oldest" ? asc(${n.variable}.${camel(sortField.name)}) : desc(${n.variable}.${camel(sortField.name)});\n`
+      ? `  // Sort order from the request: ${label(sortField.name).toLowerCase()}, ${defaultSort} first by default.\n  const { sort } = filters;\n`
       : ""
-  }  const where = and(
-    eq(${n.variable}.organizationId, ctx.organizationId),
-    ${search ? `q ? ilike(${n.variable}.${search}, \`%\${q.replace(/[%_\\\\]/g, "\\\\$&")}%\`) : undefined` : "undefined"},${tagField ? `\n    tag ? arrayContains(${n.variable}.${camel(tagField.name)}, [tag]) : undefined,` : ""}
-  );
-  const [rows, [{ total } = { total: 0 }]] = await Promise.all([
-    db.select().from(${n.variable}).where(where).orderBy(${sortField ? "order" : `desc(${n.variable}.createdAt)`}).limit(limit).offset(offset),
-    db.select({ total: count() }).from(${n.variable}).where(where),
+  }  const { where, order } = await ${listWhere}(ctx, filters);
+  const [rows, [{ total } = { total: 0 }]${scope ? ", scopes" : ""}] = await Promise.all([
+    db.select().from(${n.variable}).where(where).orderBy(order).limit(limit).offset(offset),
+    db.select({ total: count() }).from(${n.variable}).where(where),${scope ? "\n    scopeOptions(ctx)," : ""}
   ]);
+${
+  workflow
+    ? `  // Current state of each record's workflow item (domain.workflow.turbineh).
+  const wf = workflowOf(${JSON.stringify(workflow.key)});
+  const items = rows.length
+    ? await db
+        .select({ id: workflowItems.id, subjectId: workflowItems.subjectId, state: workflowItems.state })
+        .from(workflowItems)
+        .where(and(eq(workflowItems.organizationId, ctx.organizationId), eq(workflowItems.workflow, ${JSON.stringify(workflow.key)}), inArray(workflowItems.subjectId, rows.map((r) => r.id))))
+    : [];
+  const itemOf = (id: string) => items.find((i) => i.subjectId === id);
+`
+    : ""
+}  const canExport = can(ctx.role, "export", ${resource});
+  const exportQuery = ${listQuery}(filters);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canDelete = ${settings ? "false" : `can(ctx.role, ${act("delete")})`};
   const canUpdate = can(ctx.role, ${act("update")});
   const canCreate = can(ctx.role, ${act("create")});
-  const link = (p: number) => \`${base}?page=\${p}\${q ? \`&q=\${encodeURIComponent(q)}\` : ""}${tagField ? `\${tag ? \`&tag=\${encodeURIComponent(tag)}\` : ""}` : ""}${sortField ? `&sort=\${sort}` : ""}\`;
+  const link = (p: number) => \`${base}?page=\${p}\${exportQuery ? \`&\${exportQuery}\` : ""}\`;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">${n.labelPlural}</h1>
-        ${features.csvExport ? `<a className="text-sm underline" href="${base}/export">Export CSV</a>` : ""}
+        ${features.csvExport ? `{canExport ? <a className="text-sm underline" href={\`${base}/export\${exportQuery ? \`?\${exportQuery}\` : ""}\`}>Export CSV</a> : null}` : ""}
       </div>
       {canCreate ? (
       <Card title="${settings ? `Set ${n.labelSingular.toLowerCase()}` : `New ${n.labelSingular.toLowerCase()}`}">
@@ -754,10 +881,25 @@ ${
         </form>`
             : ""
         }
-        <Table head={[${fields.map((f) => `"${label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}""]}>
+        <Table head={[${fields.map((f) => `"${f === scopeField ? (scope?.label ?? label(f.name)) : label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}${stateColumn}""]}>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-line">
-${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : f.type === "tags" ? `(row.${camel(f.name)} ?? []).join(", ")` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
+${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField ? `scopes.find((s) => s.id === row.${camel(f.name)})?.name ?? ""` : f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : f.type === "tags" ? `(row.${camel(f.name)} ?? []).join(", ")` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}${
+  workflow
+    ? `
+              <td className="px-3 py-2">
+                {(() => {
+                  const item = itemOf(row.id);
+                  if (!item) return "—";
+                  return (
+                    <Link className="underline" data-testid="record-state" href={\`/dashboard/workflow/${workflow.key}/\${item.id}\`}>
+                      {wf ? stateLabel(wf, item.state) : item.state}
+                    </Link>
+                  );
+                })()}
+              </td>`
+    : ""
+}
               <td className="flex items-center justify-end gap-3 px-3 py-2">
                 {canUpdate ? (
                   <Link className="text-sm underline" href={\`${base}/\${row.id}/edit\`}>
@@ -794,6 +936,7 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
     .map((f) => {
       const id = `${n.slug}-edit-${snake(f.name)}`;
       const k = `row.${camel(f.name)}`;
+      if (f === scopeField) return scopeSelect(id, `${k} ?? ""`);
       if (f.type === "boolean") {
         return `          <div className="flex items-center gap-2">
             <input id="${id}" name="${camel(f.name)}" type="checkbox" defaultChecked={${k}} />
@@ -833,7 +976,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
-import { ${n.variable} } from "@/db/schema";
+import { ${n.variable}${workflow ? ", workflowItems" : ""} } from "@/db/schema";
 import { update${n.pascal} } from "@/entities/${n.slug}/actions";
 ${[
   ...events.map((l) => {
@@ -845,7 +988,7 @@ ${[
     return `import { ${cn.pascal}Section } from "@/entities/${cn.slug}/section";\n`;
   }),
 ].join("")}import { can, requireMember } from "@/server/authz";
-
+${scope ? `import { canSeeScope, scopeOptions } from "@/server/record-access";\n` : ""}${workflow ? `import { workflowOf } from "@/workflow/config";\nimport { stateLabel } from "@/workflow/engine";\n` : ""}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 ${
   hasDateTime
@@ -867,7 +1010,23 @@ export default async function Edit${n.pascal}Page({ params }: { params: Promise<
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
     .limit(1);
   if (!row) notFound();
-  return (
+${
+  scope
+    ? `  if (!(await canSeeScope(ctx, row.${scopeKey} ?? null))) notFound();
+  const scopes = await scopeOptions(ctx);
+`
+    : ""
+}${
+  workflow
+    ? `  const [item] = await db
+    .select({ id: workflowItems.id, state: workflowItems.state })
+    .from(workflowItems)
+    .where(and(eq(workflowItems.organizationId, ctx.organizationId), eq(workflowItems.workflow, ${JSON.stringify(workflow.key)}), eq(workflowItems.subjectId, row.id)))
+    .limit(1);
+  const wf = workflowOf(${JSON.stringify(workflow.key)});
+`
+    : ""
+}  return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Edit ${n.labelSingular.toLowerCase()}</h1>
@@ -884,7 +1043,21 @@ ${editFields}
           </div>
         </form>
       </Card>
-${[
+${
+  workflow
+    ? `      {item ? (
+        <Card title="Status">
+          <p className="text-sm">
+            <span data-testid="record-state">{wf ? stateLabel(wf, item.state) : item.state}</span> ·{" "}
+            <Link className="underline" href={\`/dashboard/workflow/${workflow.key}/\${item.id}\`}>
+              Change status and see its history
+            </Link>
+          </p>
+        </Card>
+      ) : null}
+`
+    : ""
+}${[
   ...children.map(
     (l) => `      <${entityNames(l.child.name).pascal}Section parentId={row.id} />\n`,
   ),
@@ -895,21 +1068,24 @@ ${[
 `;
 
   const exportRoute = `${GENERATED}
-import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
+import { ${listParams}, ${listWhere} } from "@/entities/${n.slug}/query";
 import { toCsv } from "@/lib/csv";
-import { requireMember } from "@/server/authz";
+import { can, requireMember } from "@/server/authz";
 
-/** CSV export (component data.csv-export.turbineh), scoped to the active workspace. */
-export async function GET(): Promise<Response> {
+/**
+ * CSV export (component data.csv-export.turbineh): exactly the list as filtered on screen (same query string), in the
+ * active workspace, for roles that may export.
+ */
+export async function GET(request: Request): Promise<Response> {
   const ctx = await requireMember();
-  const rows = await db
-    .select()
-    .from(${n.variable})
-    .where(eq(${n.variable}.organizationId, ctx.organizationId))
-    .orderBy(desc(${n.variable}.createdAt))
-    .limit(10_000);
+  if (!can(ctx.role, "export", ${resource})) return new Response("Forbidden", { status: 403 });
+  const { where, order } = await ${listWhere}(
+    ctx,
+    ${listParams}(Object.fromEntries(new URL(request.url).searchParams)),
+  );
+  const rows = await db.select().from(${n.variable}).where(where).orderBy(order).limit(10_000);
   return new Response(toCsv(rows, ${JSON.stringify(columns)}), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
@@ -993,9 +1169,88 @@ ${steps.join("\n")}
       })
       .join(",")}\\n`;
 
+  // Opens the edit page of the record a test just created (exact cell of its unique marker).
+  const openEdit = (marker: string) => `  await page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "${marker}", exact: true }) })
+    .first()
+    .getByRole("link", { name: "Edit" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Edit ${n.labelSingular.toLowerCase()}" })).toBeVisible();`;
+  const createWith = (marker: string, extra: Record<string, string> = {}) => `${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
+${uniqueFills(marker, extra)}
+  await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
+  await expect(page.getByRole("cell", { name: "${markerText(marker)}", exact: true }).first()).toBeVisible();`;
+  const childTests = settings
+    ? []
+    : children.flatMap((l) => {
+        const cn = entityNames(l.child.name);
+        const marker = `with-${cn.slug}`;
+        const fills = l.fills ?? [];
+        const shown = fills.find((f) => !f.select && !f.check);
+        if (!markerText(marker) || !shown) return [];
+        const steps = fills
+          .map((f) =>
+            f.check
+              ? `  await section.getByLabel("${f.label}", { exact: true }).check();`
+              : f.select
+                ? `  await section.getByLabel("${f.label}", { exact: true }).selectOption("${f.value}");`
+                : `  await section.getByLabel("${f.label}", { exact: true }).fill("${f.value}");`,
+          )
+          .join("\n");
+        return [
+          `
+test("owner adds a ${cn.labelSingular.toLowerCase()} to a ${n.labelSingular.toLowerCase()} and sees it on that ${n.labelSingular.toLowerCase()}'s page", async ({ page }) => {
+${createWith(marker)}
+${openEdit(markerText(marker) ?? "")}
+  const section = page.getByTestId("${cn.slug}-section");
+${steps}
+  await section.getByRole("button", { name: "Add ${cn.labelSingular.toLowerCase()}" }).click();
+  await expect(section.getByText("${shown.value}").first()).toBeVisible();
+});
+`,
+        ];
+      });
+  const eventTests = settings
+    ? []
+    : events.flatMap((l) => {
+        const tracked = fields.find((f) => camel(f.name) === l.tracked);
+        if (!tracked || !hasOptions(tracked) || tracked.options.length < 2) return [];
+        const en = entityNames(l.event.name);
+        const marker = `history-${en.slug}`;
+        const [first = "", second = ""] = tracked.options;
+        if (!markerText(marker)) return [];
+        return [
+          `
+test("every ${label(tracked.name).toLowerCase()} change of a ${n.labelSingular.toLowerCase()} is recorded in its history with who and when", async ({ page }) => {
+${createWith(marker, { [camel(tracked.name)]: first })}
+${openEdit(markerText(marker) ?? "")}
+  await page.getByLabel("${label(tracked.name)}", { exact: true }).selectOption("${second}");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/${base.replace(/\//g, "\\/")}$/);
+${openEdit(markerText(marker) ?? "")}
+  const timeline = page.getByTestId("timeline");
+  await expect(timeline.locator("li").last()).toContainText("${second}");${l.map.from ? `\n  await expect(timeline.locator("li").last()).toContainText("${first} → ${second}");` : ""}${l.map.actor ? `\n  await expect(timeline.locator("li").last()).toContainText(OWNER_EMAIL);` : ""}
+});
+
+test("${en.labelPlural.toLowerCase()} cannot be changed or deleted, not even directly in the database", async () => {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query("insert into ${en.table} (organization_id, ${[l.parentField, l.map.to, l.map.at].filter(Boolean).map((k) => snake(k ?? "")).join(", ")}) values ('e2e-history', 'e2e-parent'${l.map.to ? ", 'e2e'" : ""}${l.map.at ? ", now()" : ""})");
+    await expect(client.query("update ${en.table} set organization_id = 'tampered' where organization_id = 'e2e-history'")).rejects.toThrow(/append-only/);
+    await expect(client.query("delete from ${en.table} where organization_id = 'e2e-history'")).rejects.toThrow(/append-only/);
+  } finally {
+    await client.end();
+  }
+});
+`,
+        ];
+      });
+
   const e2e = `${GENERATED}
 import { expect, test } from "@playwright/test";
-
+${eventTests.length ? `import pg from "pg";\n${events.some((l) => l.map.actor) ? `import { OWNER_EMAIL } from "./helpers";\n` : ""}` : ""}
 test("owner creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${fills}
@@ -1031,7 +1286,23 @@ test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ 
   expect(res.headers()["content-type"]).toContain("text/csv");
   expect((await res.text()).split("\\r\\n")[0]).toBe("${columns.join(",")}");
 });
+${
+  search && markerText("exported") && !settings
+    ? `
+test("owner exports the filtered ${n.labelPlural.toLowerCase()} list as CSV: only the ${n.labelPlural.toLowerCase()} that match the search", async ({ page }) => {
+${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
+${uniqueFills("exported", {})}
+  await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
+  await expect(page.getByRole("cell", { name: "${markerText("exported")}", exact: true }).first()).toBeVisible();
+  const res = await page.request.get(\`${base}/export?q=\${encodeURIComponent("${markerText("exported")}")}\`);
+  expect(res.status()).toBe(200);
+  const rows = (await res.text()).split("\\r\\n").slice(1).filter(Boolean);
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.every((r) => r.includes("${markerText("exported")}"))).toBe(true);
+});
 `
+    : ""
+}`
       : ""
   }${
     features.csvImport
@@ -1078,7 +1349,7 @@ ${uniqueFills("earliest", { [camel(sortField.name)]: sortField.type === "date" ?
 });
 `
       : ""
-  }`;
+  }${childTests.join("")}${eventTests.join("")}`;
 
   return [
     { path: `src/db/tables/${n.slug}.ts`, content: table },
@@ -1086,6 +1357,7 @@ ${uniqueFills("earliest", { [camel(sortField.name)]: sortField.type === "date" ?
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
     { path: `src/entities/${n.slug}/rules.ts`, content: rules },
     { path: `src/entities/${n.slug}/related.ts`, content: related },
+    { path: `src/entities/${n.slug}/query.ts`, content: query },
     { path: `src/app${base}/page.tsx`, content: page },
     // Under /<id>/edit (not /<id>): the CSV download link /export must not look like a page route.
     { path: `src/app${base}/[id]/edit/page.tsx`, content: editPage },
@@ -1103,17 +1375,21 @@ export function generateIndexes(
     recipeTables?: boolean;
     componentTables?: string[];
     extraNav?: { label: string; href: string }[];
+    /** Generated by kind (ADR-0043): only these table slugs exist and only these pages get a nav entry. */
+    tables?: string[];
+    nav?: { label: string; href: string }[];
   } = {},
 ): GeneratedFile[] {
   const names = entities.map((e) => entityNames(e.name));
+  const slugs = opts.tables ?? names.map((n) => n.slug);
   const barrel = [
     ...(opts.recipeTables ? ['export * from "./recipe-tables";'] : []),
     ...(opts.componentTables ?? []).map((t) => `export * from "./${t}";`),
-    ...names.map((n) => `export * from "./tables/${n.slug}";`),
+    ...slugs.map((slug) => `export * from "./tables/${slug}";`),
   ];
   const nav = [
     ...(opts.extraNav ?? []),
-    ...names.map((n) => ({ label: n.labelPlural, href: `/dashboard/${n.slug}` })),
+    ...(opts.nav ?? names.map((n) => ({ label: n.labelPlural, href: `/dashboard/${n.slug}` }))),
   ];
   return [
     {
