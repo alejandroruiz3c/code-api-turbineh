@@ -69,6 +69,26 @@ describe("agent-ready package (S9/S10)", () => {
     expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("[AGENTS.md](AGENTS.md)");
   });
 
+  it("documents the blessed helpers, the settings pattern and the local gate (learning round G4)", () => {
+    const dir = build();
+    const guide = JSON.parse(readFileSync(join(dir, "turbineh.json"), "utf8")) as PackageGuide;
+    const ext = (what: RegExp) => guide.extend.find((e) => what.test(e.what));
+    expect(ext(/^Add a public action/)?.how).toMatch(/publicAction\("<name>", \{ rateLimit/);
+    expect(ext(/^Add an action for signed-in non-members/)?.how).toContain(
+      "await requireSession()",
+    );
+    expect(ext(/^Add a setting or secret/)?.how).toMatch(/no secret-shaped literal/);
+    const handover = guide.rerun.find((r) => r.change.startsWith("Before handing over"));
+    expect(handover?.run).toMatch(/turbineh verify --full$/);
+    const md = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(md).toContain("| Add a public action");
+    expect(md).toContain("turbineh verify --full");
+    // The helpers the guide names exist in the package.
+    const authz = readFileSync(join(dir, "src/server/authz.ts"), "utf8");
+    expect(authz).toContain("export function publicAction");
+    expect(authz).toContain("export async function requireSession");
+  });
+
   it("after verification marks each criterion met (with its test) or open (with where to implement it)", () => {
     const dir = build();
     const title = (readFileSync(join(dir, "tests/e2e/shop.spec.ts"), "utf8").match(

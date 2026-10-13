@@ -1,10 +1,9 @@
 "use server";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { waitlistEntries } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
-import { rateLimit } from "@/security/rate-limit";
+import { publicAction } from "@/server/authz";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -18,27 +17,34 @@ const schema = z.object({
 /** Waitlist sign-up: validated, rate-limited, stored once per email, with a confirmation email. */
 export type JoinState = { ok: boolean; message: string } | null;
 
-// Public by design (anyone can join): protected by IP rate limit, honeypot and Zod; no member to check.
-// nosemgrep: turbineh.server-action-without-authz
-export async function joinWaitlist(_prev: JoinState, formData: FormData): Promise<JoinState> {
-  const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0]?.trim() ?? "local";
-  if (!rateLimit(`waitlist:${ip}`, 5))
-    return { ok: false, message: "Too many attempts. Try again in a minute." };
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, message: "Please enter your name and a valid email." };
-  const inserted = await db
-    .insert(waitlistEntries)
-    .values({ name: parsed.data.name, email: parsed.data.email })
-    .onConflictDoNothing({ target: waitlistEntries.email })
-    .returning({ id: waitlistEntries.id });
-  if (inserted.length > 0) {
-    await sendEmail({
-      to: parsed.data.email,
-      subject: "You're on the waitlist",
-      text: `Hi ${parsed.data.name}, thanks for joining the __APP_NAME__ waitlist. We'll be in touch.`,
-    });
-  }
-  // Same answer for new and existing emails: no enumeration of who is on the list.
-  return { ok: true, message: "You're on the list! Check your inbox." };
-}
+// Public by design (anyone can join): publicAction() rate-limits per IP and validates with Zod (+ honeypot).
+export const joinWaitlist = publicAction(
+  "waitlist",
+  {
+    rateLimit: { limit: 5 },
+    schema,
+    refuse: (reason): JoinState => ({
+      ok: false,
+      message:
+        reason === "rate-limited"
+          ? "Too many attempts. Try again in a minute."
+          : "Please enter your name and a valid email.",
+    }),
+  },
+  async ({ name, email }): Promise<JoinState> => {
+    const inserted = await db
+      .insert(waitlistEntries)
+      .values({ name, email })
+      .onConflictDoNothing({ target: waitlistEntries.email })
+      .returning({ id: waitlistEntries.id });
+    if (inserted.length > 0) {
+      await sendEmail({
+        to: email,
+        subject: "You're on the waitlist",
+        text: `Hi ${name}, thanks for joining the __APP_NAME__ waitlist. We'll be in touch.`,
+      });
+    }
+    // Same answer for new and existing emails: no enumeration of who is on the list.
+    return { ok: true, message: "You're on the list! Check your inbox." };
+  },
+);

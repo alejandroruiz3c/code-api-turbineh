@@ -41,6 +41,27 @@ describe("environment", () => {
     expect(isStaff({ email: "owner@example.com", emailVerified: true })).toBe(false);
   });
 
+  it("`next build` without settings gets throwaway values generated at runtime, never literals", async () => {
+    process.env = { NODE_ENV: "production", NEXT_PHASE: "phase-production-build" };
+    vi.resetModules();
+    const first = (await import("@/env")).env.BETTER_AUTH_SECRET;
+    vi.resetModules();
+    const second = (await import("@/env")).env.BETTER_AUTH_SECRET;
+    expect(first.length).toBeGreaterThanOrEqual(32);
+    expect(first).not.toBe(second);
+    // Outside the build the same missing settings stop the app.
+    process.env = { NODE_ENV: "production" };
+    vi.resetModules();
+    await expect(import("@/env")).rejects.toThrow();
+  });
+
+  it("src/env.ts holds no secret-shaped literal (the gate's turbineh.hardcoded-secret rule)", () => {
+    const src = readFileSync("src/env.ts", "utf8");
+    const literal =
+      /(?:const\s+\w*(?:secret|password|passwd|api_?key|token|private_?key)\w*\s*=|\w*(?:secret|password|passwd|api_?key|token|private_?key)\w*\s*:)\s*"[A-Za-z0-9_+/=-]{16,}"/i;
+    expect(src).not.toMatch(literal);
+  });
+
   it("allow-lists are never required", () => {
     expect(requiredVars().filter((n) => /EMAILS|ALLOW|DOMAINS/.test(n))).toEqual([]);
   });
