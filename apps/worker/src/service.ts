@@ -444,6 +444,7 @@ if (tokenKey) {
     repoRoot,
     workerId,
     coder: adaptationCoderFromEnv(env),
+    decider,
     appUrl: process.env.PRODUCT_APP_URL ?? null,
     log,
   };

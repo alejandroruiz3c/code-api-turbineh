@@ -6,7 +6,8 @@ import { cleanVersion, major } from "./stack.js";
  * Repository analysis (PLAN §16 P5, ADR-0034): what a client's project is made of and how it is written, from its
  * file list and a small set of configuration files read through the GitHub API — never cloned, never a secret. Env
  * files are reported by name only; their contents are never requested. Deterministic: the adaptation decisions that
- * follow from it are code, not a model.
+ * follow from it are code, not a model — except which app of a monorepo with several apps receives the capability,
+ * which the decider chooses (`chooseAppPath` in app-choice.ts, ADR-0039 Amendment 1) with `pickAppPath` as fallback.
  */
 
 /** Paths never read, whatever their name suggests (secrets and build output). */

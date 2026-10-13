@@ -12,3 +12,4 @@ export * from "./repo-analysis.js";
 export * from "./adapt.js";
 export * from "./pr-body.js";
 export * from "./github.js";
+export * from "./app-choice.js";

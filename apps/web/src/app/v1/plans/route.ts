@@ -23,6 +23,7 @@ import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { productProblem, requireCaller, resultOf } from "@/server/product";
 import { workspaceGitHub } from "@/server/github";
+import { planDecider } from "@/server/plan-decider";
 
 const MANIFESTS = new Set<string>(MANIFEST_FILES);
 const PLAN_WAIT_MS = 50_000;
@@ -124,6 +125,9 @@ export async function POST(req: Request): Promise<Response> {
       const r = await analyseGitHubRepo(gh, environment.repo.fullName, {
         ...(environment.repo.ref ? { ref: environment.repo.ref } : {}),
         ...(environment.repo.appPath !== undefined ? { appPath: environment.repo.appPath } : {}),
+        // Which app of a monorepo receives the capability: the decider, heuristic fallback (ADR-0039).
+        decider: planDecider(),
+        need,
       });
       analysis = r.analysis;
       // Stack detection reads the application's own manifests (the app folder in a monorepo).

@@ -11,6 +11,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Which app of a monorepo receives a capability is decided by the decider when the repository has several Next.js
+  apps (ADR-0039 Amendment 1, owner decision): plans, the repository analysis and the worker's integration use
+  `chooseAppPath`; the path heuristic stays as the fallback (one app, low confidence, no decider, errors, the CLI).
+  Database and auth strategy stay in code. On the 20 labelled repositories: app 20/20 (was 17/20), database 20/20
+  (18/20), auth 20/20 (17/20); the decider is asked for 4 of 20 repositories, 107 ms each on average.
+
 - Decisions through the decider (ADR-0039): audit of every model call (`docs/decisions-audit.md`) and the rule —
   decisions among options → the decider, generation → open models, deterministic questions → code. **runAgent**
   (component `ai.orchestrator.turbineh` 0.3.0) takes each turn's first action — which tool, or a reply — from the

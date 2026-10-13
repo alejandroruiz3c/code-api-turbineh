@@ -54,6 +54,9 @@ importers:
       '@turbineh/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../../packages/decider
       '@turbineh/deployer':
         specifier: workspace:*
         version: link:../../packages/deployer
@@ -356,6 +359,9 @@ importers:
 
   packages/engine:
     dependencies:
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../decider
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../shared
