@@ -10,3 +10,5 @@ next-env.d.ts
 playwright/.auth/
 # Screen previews captured during verification (not part of the app)
 .turbineh-previews/
+# Data of the zero-setup local database (pnpm db:local)
+.turbineh/local-db/

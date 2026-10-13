@@ -5,15 +5,16 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "tsx scripts/local-db.ts --run --migrate -- next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "tsx scripts/local-db.ts --run --fresh --migrate -- playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/local-db.ts --run -- tsx scripts/migrate.ts",
+    "db:local": "tsx scripts/local-db.ts --serve"
   },
   "dependencies": {
     "better-auth": "1.7.6",
@@ -27,6 +28,9 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
+    "@electric-sql/pglite-socket": "0.2.11",
     "@eslint/js": "10.0.1",
     "@next/eslint-plugin-next": "16.3.8",
     "@playwright/test": "1.63.0",

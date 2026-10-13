@@ -141,6 +141,11 @@ export default async function ProductPage({ params }: { params: Params }) {
               : `Not sold in ${currency.toUpperCase()}`}
           </p>
           <p className="whitespace-pre-line text-muted">{p.description}</p>
+          {sold && variants.length === 0 && available(p.stock) ? (
+            <p className="text-sm" data-testid="stock">
+              {p.stock === null ? "In stock" : `${p.stock} in stock`}
+            </p>
+          ) : null}
           {inStock && sold ? (
             <form action={addToCart} className="flex flex-col items-start gap-4">
               <input type="hidden" name="productId" value={p.id} />
@@ -165,7 +170,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                       {v.price === null
                         ? `not sold in ${currency.toUpperCase()}`
                         : formatPrice(v.price, currency)}
-                      {v.inStock ? "" : " (sold out)"}
+                      {v.inStock ? (v.stock === null ? "" : ` (${v.stock} in stock)`) : " (sold out)"}
                     </label>
                   ))}
                 </fieldset>

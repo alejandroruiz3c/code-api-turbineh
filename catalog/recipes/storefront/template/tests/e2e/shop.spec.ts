@@ -172,6 +172,35 @@ test.describe.serial("storefront", () => {
     await expect(page.getByTestId("price")).toContainText("12.50");
   });
 
+  test("the admin updates a product's stock and the public catalogue reflects it at once", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name", { exact: true }).fill("Stock Test Grinder");
+    await page.getByLabel(/^Price/).fill("89.00");
+    await page.getByLabel("Description").fill("A hand grinder used to check stock updates.");
+    await page.getByLabel(/Stock/).fill("3");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await expect(page.getByRole("cell", { name: "Stock Test Grinder" })).toBeVisible();
+    await page.goto("/shop/stock-test-grinder");
+    await expect(page.getByTestId("stock")).toHaveText("3 in stock");
+
+    const setStock = async (stock: string) => {
+      await page.goto("/dashboard/products");
+      await page.getByRole("link", { name: "Stock Test Grinder", exact: true }).click();
+      await page.getByLabel(/Stock/).fill(stock);
+      await page.getByRole("button", { name: "Save product" }).click();
+      await expect(page).toHaveURL(/\/dashboard\/products$/);
+      await page.goto("/shop/stock-test-grinder");
+    };
+    await setStock("0");
+    await expect(page.getByText("Out of stock")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add to cart" })).toHaveCount(0);
+    await setStock("7");
+    await expect(page.getByTestId("stock")).toHaveText("7 in stock");
+    await expect(page.getByRole("button", { name: "Add to cart" })).toBeVisible();
+  });
+
   test.describe("shopper", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
     // The Stripe API is the local mock (tests/e2e/mocks/STRIPE_API_BASE.mjs); Stripe's hosted page is answered here.
