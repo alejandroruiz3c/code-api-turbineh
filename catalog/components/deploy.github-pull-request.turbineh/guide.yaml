@@ -1,0 +1,139 @@
+# Component guide (turbineh.guide/v0.1). Written by hand from the code and the tests (ADR-0034); keep every claim true.
+schema: turbineh.guide/v0.1
+component: deploy.github-pull-request.turbineh
+title: Integrate into an existing GitHub repository as a verified pull request
+summary: "TurbineH platform service (API feature, not code vendored into an app). Connects GitHub to a workspace
+  (OAuth with state + PKCE, or a token) and delivers a generated capability package into the client's existing
+  repository: adapted to the project's conventions, one commit per logical step on turbineh/<capability>, lockfile
+  and migration generated with the project's own tools, then verified inside the project in the sandbox. The pull
+  request is marked ready and the flow becomes integration_verified only when every check passes; otherwise it
+  stays a draft listing each failure and the next step. It never merges, never pushes to the default branch and
+  never reads env files."
+keywords:
+  - deploy.github-pull-request.turbineh
+  - github
+  - pull request
+  - integrate into existing repository
+  - existing codebase
+  - brownfield
+  - connect github
+  - oauth
+  - pkce
+  - monorepo
+  - next.js
+  - drizzle migration
+  - lockfile
+  - verify in project
+  - code review
+  - coding agent hand-off
+  - apply --pr
+synonyms:
+  pull request:
+    - PR
+    - merge request
+  integrate into existing repository:
+    - add feature to my app
+    - apply to my codebase
+use_cases:
+  - Deliver a verified capability (e.g. an AI assistant) into a client's Next.js repository as a ready-to-review pull request
+  - Hand a coding agent a verified PR whose body says exactly what is left to configure
+  - Integrate into a monorepo application (apps/web) without touching other packages
+  - Let a CLI or CI user integrate with `turbineh apply <plan> --pr`
+use_when:
+  - The project is on GitHub, uses Node.js/TypeScript or JavaScript, and the user wants the capability inside it
+  - The reviewer wants evidence (checks run inside their project) rather than instructions
+avoid_when:
+  - The project is not on GitHub — use `turbineh apply` (local branch and commit) or the ZIP
+  - The project installs from a private registry or git/URL dependencies — the sandbox cannot install them; use the ZIP with a coding agent
+  - The project uses Bun or Yarn Berry — not supported in the sandbox yet
+  - Only a stack is known, no repository — plan with a declared stack; adaptation stays pending
+tradeoffs:
+  - choice: The capability gets its own folder in the project's source root
+    gain: Nothing of the client's is overwritten; removal is one folder plus the listed modified files
+    cost: The capability is not merged into the project's existing modules; wiring it in is left to the reviewer (entry points listed)
+  - choice: Install with network but scripts disabled; checks without internet
+    gain: No third-party code runs while there is network; real installs of the client's lockfile
+    cost: No egress allow-list yet; packages that download binaries in install scripts may fail offline
+  - choice: Ready for review only when every check passes
+    gain: A green PR is verified inside the client's project, not only in TurbineH's template
+    cost: Failures in the client's own code also keep the PR as a draft (stated as such)
+config:
+  - name: GITHUB_CLIENT_ID
+    description: Client id of the existing GitHub OAuth app (callback `/api/auth/callback/github`; the connect callback is `/workspace` under it)
+  - name: GITHUB_CLIENT_SECRET
+    description: Client secret of the OAuth app (server only)
+  - name: DELIVERY_TOKEN_KEY
+    description: 32-byte base64 key; tokens are encrypted at rest with AES-256-GCM (web and worker)
+  - name: PRODUCT_APP_URL
+    description: Optional (worker) — links the pull request to the flow page
+interfaces:
+  - name: Connect GitHub (browser)
+    signature: "GET /api/github/connect?private=0|1&return=/path → GitHub → GET /api/auth/callback/github/workspace"
+  - name: Connect GitHub (CLI)
+    signature: "POST /v1/github/connect {private?} → {url, code, expires_in}; poll GET /v1/github"
+    where: "turbineh connect github [--private]"
+  - name: Connect with a token
+    signature: "POST /v1/github/token {token} → {connected, login}"
+    where: "turbineh connect github --with-token (token on stdin)"
+  - name: Connection status and disconnect
+    signature: "GET /v1/github → {connected, login, private_repos}; DELETE /v1/github (revokes the grant)"
+  - name: Repositories
+    signature: "GET /v1/repos?q= → {repos: [{full_name, private, default_branch}]}"
+  - name: Integrate
+    signature: "POST /v1/plans/{id}/pull-request {repo?, base?} → 202 {integration}; GET /v1/plans/{id}/pull-request → {integrations: [{phase, state, pull_request, result: {checks, reviewerSetup, limits}, error}]}"
+    where: "turbineh apply <plan> --pr [--repo owner/name] [--base branch]"
+extension_points:
+  - what: Adaptation model for non-derivable glue
+    where: "apps/worker/src/models.ts adaptationCoderFromEnv"
+    how: "Backup Coder slots; GLM-5.2 first, ADAPTATION_MODEL_ORDER=primary-first reverses"
+  - what: Foundation modules copied when a package imports them
+    where: catalog/recipes/saas-crud/template/src
+    how: loadFoundation() reads them; only imported modules are copied
+compatibility:
+  package: turbineh/deploy.github-pull-request.turbineh@0.1.0
+  runtime: node@>=20
+  stack: "Client projects: Next.js 15+ (App and/or Pages Router), TypeScript or JavaScript, pnpm/npm/Yarn classic, PostgreSQL for capabilities with tables"
+security:
+  - "OAuth state: 32 random bytes in an httpOnly, Secure, SameSite=Lax cookie scoped to the callback; only its SHA-256 is stored; one use, 10 minutes"
+  - "PKCE S256: the verifier is stored encrypted and sent only in the server-side code exchange"
+  - "Workspace binding: a browser whose access cookie is another workspace is refused; CLI links are one-time and show a code on both sides"
+  - "Minimal scopes: public_repo unless the user chooses private repositories (repo)"
+  - "Token AES-256-GCM at rest, never returned or logged; Disconnect revokes the grant at GitHub"
+  - "The sandbox never receives a token: archives are downloaded by commit on the worker; env files, keys and escaping symlinks are removed first"
+  - "Only planned files may change (checked on the final diff); gitleaks on every changed file"
+guarantees:
+  - claim: The callback requires the returned state to equal the httpOnly cookie (login CSRF)
+    test: "../../../apps/web/src/server/github-oauth.test.ts › rejects a callback whose state does not match the httpOnly cookie (login CSRF)"
+  - claim: Minimal scope, PKCE S256, only the state hash and an encrypted verifier are stored
+    test: "../../../apps/web/src/server/github-oauth.test.ts › authorize URL: minimal scope, state, PKCE S256; only the state hash and an encrypted verifier are stored"
+  - claim: State is single use; the token is stored encrypted and never in the public view
+    test: "../../../apps/web/src/server/github-oauth.test.ts › is single use and stores the token encrypted; the public view never has it"
+  - claim: The connection is bound to the workspace that started it
+    test: "../../../apps/web/src/server/github-oauth.test.ts › binds the connection to the workspace that started it (CLI tickets are bound by the ticket)"
+  - claim: Unrelated files are never touched; the project's alias and Drizzle client are reused; one line added to the schema
+    test: "../../../packages/engine/src/repo-integration.test.ts › App Router + src/ + Drizzle: own folder, relative imports, reuses the client's db, one line in the schema"
+  - claim: Dependencies keep the project's versions (never downgraded); settings are documented by name only
+    test: "../../../packages/engine/src/repo-integration.test.ts › merges package.json and .env.example without downgrades or values"
+  - claim: The PR body has summary, files, decisions, verification, limits, what to configure and how to revert, with no vendor names
+    test: "../../../packages/engine/src/repo-integration.test.ts › has summary, files, decisions, verification, limits, setup and revert; no vendor names"
+  - claim: Complete flows keep the example's end-to-end tests out and re-point imports to the new layout
+    test: "../../../packages/engine/src/repo-integration.test.ts › keeps the example's end-to-end tests out and re-points relative imports"
+  - claim: On a real private repository the PR is opened, verified in the sandbox and becomes integration_verified
+    test: "../../../apps/worker/src/repo-integration.e2e.test.ts › analyse → adapt → commits → PR → verified in the sandbox → integration_verified"
+  - claim: The CLI integrates with --pr and reports the verified pull request
+    test: "../../../packages/cli/src/github.test.ts › apply --pr: starts the integration and reports the verified pull request"
+limits:
+  - Package managers pnpm, npm and Yarn classic; dependencies from the public npm registry only
+  - Checks use placeholder settings and a throwaway PostgreSQL; third-party services are not exercised
+  - Wiring the capability into the client's pages is left to the reviewer or their coding agent (entry points listed in the PR)
+  - Draft pull requests need a paid plan on private repositories; the PR is then titled [Draft] until verified
+  - The install phase has network without an egress allow-list (only the package manager runs)
+example: |-
+  # CLI
+  turbineh connect github --private
+  turbineh plan "AI assistant that answers from our help centre"
+  turbineh apply <plan> --pr --repo acme/web
+
+  # API
+  curl -X POST $BASE/v1/plans/$PLAN/pull-request -H "Authorization: Bearer $TOKEN" -d '{"repo":"acme/web"}'
+  curl $BASE/v1/plans/$PLAN/pull-request -H "Authorization: Bearer $TOKEN"

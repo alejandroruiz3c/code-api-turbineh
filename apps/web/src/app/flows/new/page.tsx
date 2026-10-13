@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { FlowWizard } from "@/components/flow-wizard";
 
 export const metadata: Metadata = { title: "New flow · YES IF for Builders" };
@@ -20,7 +21,9 @@ export default async function NewFlowPage({
         write only the glue and check everything before you take it.
       </p>
       <div className="mt-8">
-        <FlowWizard need={need.slice(0, 2000)} capability={capability?.slice(0, 80) ?? null} />
+        <Suspense>
+          <FlowWizard need={need.slice(0, 2000)} capability={capability?.slice(0, 80) ?? null} />
+        </Suspense>
       </div>
     </main>
   );

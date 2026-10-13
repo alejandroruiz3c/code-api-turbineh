@@ -8,6 +8,7 @@ import type {
   Requirement,
 } from "@turbineh/shared";
 import { componentSummary, requirementsFor, summarizeUseCase } from "./search.js";
+import { repositoryFit, type RepoAnalysis } from "./repo-analysis.js";
 import { compatibility, dependencyDiff } from "./stack.js";
 import type { CatalogEntry, UseCase } from "./types.js";
 
@@ -50,13 +51,19 @@ export interface PlanInput {
   envKeys?: string[];
   entities?: string[];
   preferences?: ProjectPreferences;
+  /** Analysis of the connected repository (PLAN §16 P5): conventions, conflicts and adaptation decisions. */
+  analysis?: RepoAnalysis;
 }
 
 const native = (purl: string) => purl.startsWith("pkg:generic/turbineh");
 
 /** What `apply` will change in the project: the package folder plus dependencies and example configuration. */
-export function plannedFiles(slug: string, deps: number, env: number): FileChange[] {
-  const base = `turbineh/${slug}`;
+export function plannedFiles(
+  slug: string,
+  deps: number,
+  env: number,
+  base = `turbineh/${slug}`,
+): FileChange[] {
   const files: FileChange[] = [
     {
       path: `${base}/README.md`,
@@ -171,6 +178,24 @@ export function buildPlan(input: PlanInput): Plan {
       : []),
   ];
   const external = [...components.values()].filter((c) => !native(c.purl)).length;
+  const repository = input.analysis
+    ? repositoryFit(input.analysis, {
+        kind,
+        slug: input.slug,
+        usesDatabase:
+          kind === "use_case" ||
+          [...components.keys()].some((id) =>
+            /orchestrator|ai-safety|jobs|payments|storage|vector/.test(id),
+          ),
+        usesAuth: kind === "use_case",
+        dependencies: Object.fromEntries(input.dependencies.map((d) => [d.name, d.version])),
+      })
+    : undefined;
+  if (repository) {
+    for (const c of repository.conflicts)
+      if (!compat.incompatibilities.includes(c)) needsApproval.push(`Adaptation: ${c}`);
+    if (!repository.compatible) compat.compatible = false;
+  }
   return {
     id: input.id,
     need: input.need,
@@ -191,7 +216,7 @@ export function buildPlan(input: PlanInput): Plan {
       ...(input.notCovered ?? []),
     ],
     decisions: input.decisions,
-    files: plannedFiles(input.slug, deps.added.length, envCount),
+    files: plannedFiles(input.slug, deps.added.length, envCount, repository?.namespace),
     dependencies: deps.added,
     config,
     estimate: input.useCase
@@ -203,6 +228,7 @@ export function buildPlan(input: PlanInput): Plan {
         }
       : { seconds: MEASURED.componentSeconds, costUsd: 0, tokens: 0, newLinesToMaintain: 0 },
     needsApproval,
+    ...(repository ? { repository } : {}),
   };
 }
 

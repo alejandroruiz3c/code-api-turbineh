@@ -7,18 +7,22 @@ import {
 } from "@turbineh/db";
 import type { Plan } from "@turbineh/shared";
 import {
+  analyseGitHubRepo,
   detectStack,
   ERRORS,
+  github,
+  GitHubError,
   MANIFEST_FILES,
   productError,
   projectDependencies,
+  type RepoAnalysis,
 } from "@turbineh/engine";
 import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { productProblem, requireCaller, resultOf } from "@/server/product";
-import { repoManifests } from "@/server/repo-manifests";
+import { workspaceGitHub } from "@/server/github";
 
 const MANIFESTS = new Set<string>(MANIFEST_FILES);
 const PLAN_WAIT_MS = 50_000;
@@ -38,6 +42,8 @@ const Body = z.object({
           provider: z.literal("github"),
           fullName: z.string().max(200),
           ref: z.string().max(200).optional(),
+          /** Application folder in a monorepo (detected when omitted). */
+          appPath: z.string().max(200).optional(),
         })
         .optional(),
       files: z.record(z.string().max(200), z.string().max(400_000)).optional(),
@@ -51,7 +57,7 @@ const Body = z.object({
     })
     .default({}),
   preferences: z.record(z.string(), z.unknown()).optional(),
-  /** Only to read a private repository's manifests during this request; never stored. */
+  /** Without a GitHub connection: reads a private repository during this request only; never stored. */
   github_token: z.string().max(200).optional(),
   idempotency_key: z.string().max(200).optional(),
 });
@@ -99,19 +105,39 @@ export async function POST(req: Request): Promise<Response> {
   let files = Object.fromEntries(
     Object.entries(environment.files ?? {}).filter(([k]) => MANIFESTS.has(k)),
   );
+  let analysis: RepoAnalysis | undefined;
   if (environment.repo) {
+    // The connected account reads the repository (or a one-request token, or anonymously for public ones).
+    const ws = await workspaceGitHub(caller.ownerId);
+    const gh = !ws.connected && github_token ? github(github_token) : ws.gh;
     try {
+      const r = await analyseGitHubRepo(gh, environment.repo.fullName, {
+        ...(environment.repo.ref ? { ref: environment.repo.ref } : {}),
+        ...(environment.repo.appPath !== undefined ? { appPath: environment.repo.appPath } : {}),
+      });
+      analysis = r.analysis;
+      // Stack detection reads the application's own manifests (the app folder in a monorepo).
+      const at = (f: string) => (r.analysis.appPath ? `${r.analysis.appPath}/${f}` : f);
       files = {
-        ...(await repoManifests(environment.repo.fullName, environment.repo.ref, github_token)),
+        ...Object.fromEntries(
+          MANIFEST_FILES.map((f) => [f, r.files[at(f)] ?? r.files[f]]).filter(
+            (e): e is [string, string] => typeof e[1] === "string",
+          ),
+        ),
         ...files,
       };
     } catch (err) {
       return productProblem(
-        422,
+        err instanceof GitHubError && err.status === 401 ? 401 : 422,
         productError(
           "repo_unreadable",
-          `Could not read ${environment.repo.fullName}: ${err instanceof Error ? err.message : "unknown error"}.`,
-          "Check the name, connect GitHub or pass a token with read access, or upload package.json instead.",
+          `Could not read ${environment.repo.fullName}: ${err instanceof Error ? err.message : "unknown error"}`,
+          ws.connected
+            ? err instanceof GitHubError
+              ? err.action
+              : "Try again in a moment."
+            : "Connect GitHub (with private access for a private repository), or upload package.json instead.",
+          "turbineh connect github",
         ),
       );
     }
@@ -136,6 +162,7 @@ export async function POST(req: Request): Promise<Response> {
         stack,
         ...(files["package.json"] ? { projectDependencies: projectDependencies(files) } : {}),
         ...(preferences ? { preferences } : {}),
+        ...(analysis ? { analysis } : {}),
       },
       ...(environment.repo ? { repo: environment.repo } : {}),
     },

@@ -13,6 +13,7 @@ import {
   type Ctx,
 } from "./commands.js";
 import { CliError, VERSION } from "./context.js";
+import { connect, disconnect } from "./github.js";
 import { print, type CommandResult } from "./output.js";
 
 const HELP = `turbineh ${VERSION} — verified software capabilities for people and coding agents
@@ -23,6 +24,11 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh inspect <id>             what a capability includes, needs and was verified with
   turbineh plan "<need>"            plan for this project: components, files, deps, settings, cost
   turbineh apply [plan] [--approve] generate, then integrate on a new branch (one commit)
+  turbineh apply [plan] --pr [--repo owner/name] [--base branch]
+                                    verified pull request on your GitHub repository
+  turbineh connect github [--private] [--with-token]
+                                    connect GitHub for this project (browser, or token on stdin)
+  turbineh disconnect github        delete and revoke the GitHub connection
   turbineh verify [integration]     check the integration inside this project
   turbineh revert [integration]     undo one integration, keep later work
   turbineh status [plan]            flows, states and integrations
@@ -47,7 +53,11 @@ export function parse(argv: string[]): {
       const [k, v] = a.slice(2).split("=", 2) as [string, string | undefined];
       const next = argv[i + 1];
       if (v !== undefined) flags[k] = v;
-      else if (["url", "stack", "limit", "resume"].includes(k) && next && !next.startsWith("--")) {
+      else if (
+        ["url", "stack", "limit", "resume", "repo", "base"].includes(k) &&
+        next &&
+        !next.startsWith("--")
+      ) {
         flags[k] = next;
         i++;
       } else flags[k] = true;
@@ -67,6 +77,8 @@ const COMMANDS: Record<string, (c: Ctx) => Promise<CommandResult>> = {
   revert,
   status,
   left,
+  connect,
+  disconnect,
 };
 
 async function main(): Promise<number> {

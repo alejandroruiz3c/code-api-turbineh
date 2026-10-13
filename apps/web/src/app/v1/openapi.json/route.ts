@@ -219,13 +219,25 @@ const spec = {
     },
     "/v1/plans/{id}/pull-request": {
       post: {
-        summary: "Deliver the package as a pull request on your GitHub repository (never merged)",
+        summary:
+          "Integrate the package into a repository of the connected GitHub account as a verified pull request",
         description:
-          "Body: { repo: owner/name, base?, github_token } — the token is used once and never stored.",
+          "Body: { repo?: owner/name (defaults to the plan's repository), base?: branch }. Runs in the background: analyse → adapt to the project's conventions → commits on turbineh/<capability> → draft PR → verification inside the project in the sandbox → ready for review (state integration_verified) only when every check passes. Never merged. Needs GitHub connected (409 github_not_connected otherwise).",
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],
-        responses: { "201": { description: "{ integration, pull_request }" } },
+        responses: {
+          "202": { description: "{ integration: { id, status, phase, … }, status_url }" },
+          "409": { description: "github_not_connected or package_not_ready (actionable error)" },
+        },
+      },
+      get: {
+        summary:
+          "Repository integrations of the flow: phase, state, pull request, checks, what the reviewer configures",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "{ integrations: [...] }" } },
       },
     },
     "/v1/plans/{id}/integrations": {
@@ -240,8 +252,52 @@ const spec = {
     },
     "/v1/repos": {
       get: {
-        summary: "GitHub repositories you can integrate into (x-github-token header, not stored)",
-        responses: { "200": { description: "{ repos }" } },
+        summary: "Repositories the connected GitHub account can write to (?q= filters by name)",
+        responses: {
+          "200": { description: "{ repos: [{ full_name, private, default_branch }] }" },
+        },
+      },
+    },
+    "/v1/repos/{owner}/{name}/analysis": {
+      get: {
+        summary:
+          "Repository analysis: stack, router, src layout, aliases, ORM, auth, tests, CI, env file names; conflicts and decisions",
+        parameters: [
+          { name: "owner", in: "path", required: true, schema: { type: "string" } },
+          { name: "name", in: "path", required: true, schema: { type: "string" } },
+          { name: "ref", in: "query", schema: { type: "string" } },
+          {
+            name: "app",
+            in: "query",
+            schema: { type: "string" },
+            description: "App folder in a monorepo",
+          },
+        ],
+        responses: { "200": { description: "{ analysis, conflicts, decisions, compatible }" } },
+      },
+    },
+    "/v1/github": {
+      get: {
+        summary: "This workspace's GitHub connection (account, private access); never the token",
+        responses: { "200": { description: "{ connected, login, private_repos, scopes, via }" } },
+      },
+      delete: {
+        summary: "Disconnect GitHub: deletes the stored token and revokes the authorization",
+        responses: { "200": { description: "{ removed, revoked_at_github }" } },
+      },
+    },
+    "/v1/github/connect": {
+      post: {
+        summary:
+          "One-time link (10 min) that runs Connect GitHub in a browser for this workspace (used by `turbineh connect github`)",
+        responses: { "201": { description: "{ url, code, expires_in }" } },
+      },
+    },
+    "/v1/github/token": {
+      post: {
+        summary:
+          "Connect with an existing GitHub token (agents, CI); stored encrypted, never returned",
+        responses: { "201": { description: "{ connected, login }" } },
       },
     },
     "/v1/activity": {

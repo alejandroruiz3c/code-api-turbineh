@@ -1,0 +1,103 @@
+# Component guide (turbineh.guide/v0.1). Written by hand from the code and the tests (ADR-0034); keep every claim true.
+schema: turbineh.guide/v0.1
+component: ops.repo-analysis.turbineh
+title: Analyse an existing repository — stack, conventions, conflicts
+summary: "TurbineH platform service (API feature, not code vendored into an app). Reads a GitHub repository through
+  the API without cloning — the file list, root manifests, workspace package.json files and the application's
+  configuration — and reports deterministically: application folder in a monorepo, framework and version, App/Pages
+  Router, src/ layout, import aliases, TypeScript strictness, package manager and lockfile, auth library, ORM with
+  schema, migrations folder and database client module, database, UI libraries, Tailwind, tests, lint/format, CI and
+  env file names only. Then compatibility, conflicts and adaptation decisions with reasons for a capability."
+keywords:
+  - ops.repo-analysis.turbineh
+  - analyse repository
+  - detect stack
+  - project conventions
+  - codebase profile
+  - monorepo app path
+  - app router
+  - pages router
+  - path alias
+  - tsconfig paths
+  - orm detection
+  - drizzle
+  - prisma
+  - auth detection
+  - compatibility check
+  - conflicts
+  - brownfield
+synonyms:
+  analyse repository:
+    - analyze repo
+    - scan codebase
+    - inspect project
+use_cases:
+  - Plan a capability for an existing GitHub project (`POST /v1/plans` with environment.repo)
+  - Show the user what was found (stack, conventions, conflicts) before generating
+  - Give a coding agent a machine-readable profile of a repository
+  - Decide where code goes and how imports are written in a client project
+use_when:
+  - The project is on GitHub (public, or private with a GitHub connection)
+  - You need structural facts (layout, tools, versions), not semantic understanding of the code
+avoid_when:
+  - The project is not on GitHub — upload its manifests (environment.files) or run `turbineh plan` locally
+  - You need call graphs or business rules — out of scope by design
+  - The project is not JavaScript/TypeScript — you get an honest incompatibility, not an adaptation
+tradeoffs:
+  - choice: Configuration files only, through the API
+    gain: No clone, no secrets read, fast (seconds)
+    cost: Facts computed in code (e.g. a schema path built at runtime) are reported as unknown
+  - choice: Deterministic rules instead of a model
+    gain: Same input, same answer; every decision has a reason
+    cost: Unusual layouts fall back to safe defaults (own folder, relative imports)
+config:
+  - name: none
+    description: Public repositories work anonymously; private ones use the workspace's GitHub connection (deploy.github-pull-request.turbineh)
+interfaces:
+  - name: Analysis endpoint
+    signature: "GET /v1/repos/{owner}/{name}/analysis?ref=&app= → {repo, private, can_push, analysis, conflicts, decisions, compatible}"
+  - name: Plan with a repository
+    signature: "POST /v1/plans {need, environment: {repo: {provider: 'github', fullName, ref?, appPath?}}} → plan.repository"
+  - name: analyseGitHubRepo
+    signature: "analyseGitHubRepo(gh, fullName, {ref?, appPath?}) → {analysis, info, files}"
+    where: "@turbineh/engine"
+  - name: analysisFindings
+    signature: "analysisFindings(analysis, needs) → {compatible, conflicts, decisions}"
+    where: "@turbineh/engine"
+extension_points:
+  - what: Files read in the second phase
+    where: packages/engine/src/repo-analysis.ts
+    how: CONFIG_NAMES and dbModuleCandidates()
+  - what: Libraries recognised (auth, UI, drivers, frameworks)
+    where: packages/engine/src/repo-analysis.ts
+    how: AUTH_LIBS, UI_LIBS, DB_DRIVERS, FRAMEWORK_DEPS
+compatibility:
+  package: turbineh/ops.repo-analysis.turbineh@0.1.0
+  runtime: node@>=20
+  stack: "Any GitHub repository; JavaScript/TypeScript projects are analysed in depth"
+security:
+  - "Never reads .env* (except .env.example/.sample/.template), keys, .npmrc, .yarnrc, .netrc or build output — enforced in the reader"
+  - "Env files are reported by name only"
+  - "Nothing is executed; the token travels only in the Authorization header and is never echoed"
+guarantees:
+  - claim: Env files, keys and build output are never requested
+    test: "../../../packages/engine/src/repo-integration.test.ts › never asks for env files, keys or build output"
+  - claim: App Router with src/ — alias, Drizzle client module, auth, tests, CI and env names only (secret canary never read)
+    test: "../../../packages/engine/src/repo-integration.test.ts › App Router with src/: alias, Drizzle client, better-auth, vitest, pnpm, CI, env names only"
+  - claim: App Router at the root with Prisma, NextAuth and Jest
+    test: "../../../packages/engine/src/repo-integration.test.ts › App Router without src/: root alias, Prisma, NextAuth, Jest, npm"
+  - claim: Pages Router without alias or ORM
+    test: "../../../packages/engine/src/repo-integration.test.ts › Pages Router: no alias, no ORM, yarn, Tailwind 3"
+  - claim: Monorepo — picks the product app, its alias and its Drizzle client module
+    test: "../../../packages/engine/src/repo-integration.test.ts › monorepo: picks apps/web, its alias and its Drizzle client module"
+  - claim: Conflicts and decisions are deterministic and explained
+    test: "../../../packages/engine/src/repo-integration.test.ts › findings: conflicts and decisions with reasons"
+  - claim: The token is sent only as a header and never echoed in errors
+    test: "../../../packages/engine/src/repo-integration.test.ts › sends the token only as a header and maps errors to actionable ones without echoing it"
+limits:
+  - GitHub may truncate the file tree of very large repositories (stated in the result)
+  - Files over 300 KB are skipped
+  - The database client module is found among db/database/drizzle modules in src/, lib/ and server/
+example: |-
+  curl $BASE/v1/repos/acme/web/analysis -H "Authorization: Bearer $TOKEN"
+  # → analysis.conventions: ["Next.js 16.3.8 with the App Router in `src/app/`.", "Import alias `@/` → `src/`.", ...]

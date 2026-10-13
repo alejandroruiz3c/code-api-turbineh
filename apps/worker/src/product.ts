@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   buildPlan,
   catalogToPlanned,
+  PLATFORM_SERVICES,
   decisionFromSelection,
   searchCapabilities,
   USE_CASES,
@@ -13,6 +14,7 @@ import {
   type CatalogEntry,
   type PackageInfo,
   type PlannedComponent,
+  type RepoAnalysis,
 } from "@turbineh/engine";
 import type { CheckResult, DetectedStack, Plan, ProjectPreferences } from "@turbineh/shared";
 import type { ArtifactStorage } from "@turbineh/storage";
@@ -25,6 +27,8 @@ export interface PlanRequest {
   /** The project's declared dependencies (from its package.json), so only new ones are planned. */
   projectDependencies?: Record<string, string>;
   preferences?: ProjectPreferences;
+  /** Analysis of the connected repository (PLAN §16 P5). */
+  analysis?: RepoAnalysis;
 }
 
 interface Manifest {
@@ -142,6 +146,7 @@ export function flowPlan(input: {
     envKeys: envKeysOf(env),
     entities: input.entities,
     ...(input.request.preferences ? { preferences: input.request.preferences } : {}),
+    ...(input.request.analysis ? { analysis: input.request.analysis } : {}),
   });
 }
 
@@ -164,7 +169,8 @@ const INFERENCE =
  * involves inference gets the TurbineH AI orchestrator and its AI Safety Pack (PLAN §16, owner decision).
  */
 export function componentPlan(buildId: string, request: PlanRequest, componentsDir: string): Plan {
-  const all = catalogEntries(componentsDir);
+  // Platform services (repository integration, analysis) are discoverable in search but never packaged as code.
+  const all = catalogEntries(componentsDir).filter((c) => !PLATFORM_SERVICES.has(c.id));
   const found = searchCapabilities(request.need, all, { limit: 30, useCases: [] }).filter(
     (x) => x.kind === "component",
   );
@@ -223,6 +229,7 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
     ...(request.projectDependencies ? { projectDependencies: request.projectDependencies } : {}),
     envKeys: envKeysOf(env),
     ...(request.preferences ? { preferences: request.preferences } : {}),
+    ...(request.analysis ? { analysis: request.analysis } : {}),
   });
 }
 

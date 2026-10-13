@@ -8,3 +8,7 @@ export * from "./types.js";
 export * from "./use-cases.generated.js";
 export * from "./zip.js";
 export * from "./integration.js";
+export * from "./repo-analysis.js";
+export * from "./adapt.js";
+export * from "./pr-body.js";
+export * from "./github.js";

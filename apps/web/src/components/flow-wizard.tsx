@@ -1,9 +1,10 @@
 "use client";
 import type { EnvironmentInput, Plan } from "@turbineh/shared";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { productApi } from "@/lib/product-api";
 import { matchUseCases, USE_CASES, type UseCase } from "@/lib/use-cases";
+import { GithubConnect, RepoAnalysisView, RepoPicker, useGithub } from "./github-connect";
 import { Panel } from "./ui";
 
 type EnvMode = "repo" | "upload" | "stack";
@@ -48,6 +49,31 @@ export function FlowWizard({
   const [approved, setApproved] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; action: string } | null>(null);
+  const github = useGithub();
+  const params = useSearchParams();
+  const githubResult = params.get("github");
+
+  // Back from "Connect GitHub": restore the need and continue at the environment step.
+  useEffect(() => {
+    if (!githubResult) return;
+    queueMicrotask(() => {
+      const saved = sessionStorage.getItem("tbh_need");
+      if (saved) setNeed(saved);
+      setMode("repo");
+      setStep(2);
+      if (githubResult !== "connected")
+        setError({
+          message:
+            githubResult === "cancelled"
+              ? "GitHub was not connected (cancelled)."
+              : "GitHub could not be connected.",
+          action: "Try again, or upload your project's package.json instead.",
+        });
+    });
+  }, [githubResult]);
+  useEffect(() => {
+    if (need.trim()) sessionStorage.setItem("tbh_need", need);
+  }, [need]);
 
   const environment = useMemo<EnvironmentInput>(() => {
     if (mode === "repo") {
@@ -225,21 +251,31 @@ export function FlowWizard({
             </div>
 
             {mode === "repo" ? (
-              <div className="mt-5">
-                <label htmlFor="repo" className="text-xs text-muted">
-                  GitHub repository (owner/name)
-                </label>
-                <input
-                  id="repo"
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  placeholder="acme/web-app"
-                  className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 font-mono text-sm"
+              <div className="mt-5 flex flex-col gap-4">
+                <GithubConnect
+                  status={github.status}
+                  returnTo="/flows/new"
+                  onChange={() => void github.reload()}
                 />
-                <p className="mt-2 text-xs text-muted">
-                  Optional GitHub connection: it is only requested when you choose to integrate the
-                  result as a pull request. Nothing is changed without your approval.
-                </p>
+                {github.status?.connected ? (
+                  <RepoPicker value={repo} onPick={setRepo} />
+                ) : (
+                  <div>
+                    <label htmlFor="repo" className="text-xs text-muted">
+                      Or a public repository (owner/name) — analysed without connecting
+                    </label>
+                    <input
+                      id="repo"
+                      value={repo}
+                      onChange={(e) => setRepo(e.target.value)}
+                      placeholder="acme/web-app"
+                      className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 font-mono text-sm"
+                    />
+                  </div>
+                )}
+                {/^[\w.-]+\/[\w.-]+$/.test(repo.trim()) ? (
+                  <RepoAnalysisView fullName={repo.trim()} />
+                ) : null}
               </div>
             ) : null}
 
@@ -432,6 +468,35 @@ function PlanReview({
           <p className="mt-3 text-sm text-amber">Not covered yet: {plan.missing.join(", ")}</p>
         ) : null}
       </Panel>
+
+      {plan.repository ? (
+        <Panel title={`Your repository · ${plan.repository.repo}`}>
+          <p className="text-sm text-cream">
+            The capability goes to <code className="text-teal">{plan.repository.namespace}/</code>
+          </p>
+          <ul className="mt-2 list-disc pl-5 text-xs text-ice-2">
+            {plan.repository.conventions.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            {plan.repository.decisions.map((d) => (
+              <li key={d.topic} className="rounded-lg border border-line px-3 py-2">
+                <span className="font-mono text-xs text-muted">{d.topic}</span>{" "}
+                <span className="text-cream">{d.choice}</span>
+                <span className="block text-xs text-ice-2">{d.why}</span>
+              </li>
+            ))}
+          </ul>
+          {plan.repository.conflicts.length ? (
+            <ul className="mt-3 list-disc pl-5 text-xs text-amber">
+              {plan.repository.conflicts.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          ) : null}
+        </Panel>
+      ) : null}
 
       <Panel title={`Decisions · why each component`}>
         <ul className="flex flex-col gap-3">

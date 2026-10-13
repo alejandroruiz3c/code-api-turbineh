@@ -81,6 +81,29 @@ export interface FileChange {
   why: string;
 }
 
+/**
+ * How a plan fits a connected repository (PLAN §16 P5): stack and conventions found by the analysis, conflicts and
+ * the adaptation decisions taken, with their reasons. Present only when the environment is a repository.
+ */
+export interface RepositoryFit {
+  repo: string;
+  ref: string;
+  appPath: string;
+  stack: {
+    language: string;
+    framework: string | null;
+    version: string | null;
+    router: string | null;
+    packageManager: string | null;
+  };
+  conventions: string[];
+  conflicts: string[];
+  decisions: { topic: string; choice: string; why: string }[];
+  compatible: boolean;
+  /** Folder where the capability lands in the project, e.g. "src/turbineh/ai-assistant". */
+  namespace: string;
+}
+
 export interface Plan {
   id: string;
   need: string;
@@ -98,6 +121,8 @@ export interface Plan {
   estimate: { seconds: number; costUsd: number; tokens: number; newLinesToMaintain: number };
   /** Decisions that need a person (incompatibility, relevant choice, action outside the project policy). */
   needsApproval: string[];
+  /** Only when the environment is a connected repository. */
+  repository?: RepositoryFit;
 }
 
 export interface CheckResult {

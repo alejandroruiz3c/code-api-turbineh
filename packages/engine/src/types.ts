@@ -62,3 +62,12 @@ export function catalogDocs(raw: unknown): CatalogDocs | null {
     example: typeof d.example === "string" ? d.example : "",
   };
 }
+
+/**
+ * TurbineH platform services documented in the catalog so people, agents and the decider can find them (search,
+ * inspect), but which are API features rather than code vendored into an app: never selected into a package.
+ */
+export const PLATFORM_SERVICES: ReadonlySet<string> = new Set([
+  "deploy.github-pull-request.turbineh",
+  "ops.repo-analysis.turbineh",
+]);

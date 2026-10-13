@@ -6482,6 +6482,208 @@
       "details": "https://software.turbineh.com/v1/capabilities/data.yaml.yaml"
     },
     {
+      "id": "deploy.github-pull-request.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "deploy",
+      "package": "pkg:generic/turbineh/deploy.github-pull-request.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "deploy.github-pull-request",
+        "repo.integration"
+      ],
+      "does": "TurbineH platform service: connect GitHub to a workspace (OAuth with state + PKCE, or a token) and integrate a verified capability package into the client's existing repository as a pull request — adapted to the project's conventions (paths, import alias, existing Drizzle client, package manager), one commit per logical step on turbineh/<capability>, lockfile and migration generated with the project's own tools, then verified inside the project in the sandbox (install, typecheck, lint, tests, capability tests, migration, build); ready for review and state integration_verified only when every check passes, otherwise a draft with the exact failures and next step. Keywords: github, pull request, PR, integrate into existing repo, connect repository, brownfield, add feature to my app, apply to codebase, code review, branch, merge request, monorepo, Next.js, Drizzle, migration, lockfile, verify in project, OAuth, PKCE, CI",
+      "doesNot": "Does not merge, push to the default branch, run code outside the sandbox, read env files or secrets, deploy, or support GitLab/Bitbucket, Bun or Yarn Berry yet; it does not wire the capability into the client's pages (it documents where, in agent/INTEGRATE.md)",
+      "title": "Integrate into an existing GitHub repository as a verified pull request",
+      "summary": "TurbineH platform service (API feature, not code vendored into an app). Connects GitHub to a workspace (OAuth with state + PKCE, or a token) and delivers a generated capability package into the client's existing repository: adapted to the project's conventions, one commit per logical step on turbineh/<capability>, lockfile and migration generated with the project's own tools, then verified inside the project in the sandbox. The pull request is marked ready and the flow becomes integration_verified only when every check passes; otherwise it stays a draft listing each failure and the next step. It never merges, never pushes to the default branch and never reads env files.",
+      "useCases": [
+        "Deliver a verified capability (e.g. an AI assistant) into a client's Next.js repository as a ready-to-review pull request",
+        "Hand a coding agent a verified PR whose body says exactly what is left to configure",
+        "Integrate into a monorepo application (apps/web) without touching other packages",
+        "Let a CLI or CI user integrate with `turbineh apply <plan> --pr`"
+      ],
+      "useWhen": [
+        "The project is on GitHub, uses Node.js/TypeScript or JavaScript, and the user wants the capability inside it",
+        "The reviewer wants evidence (checks run inside their project) rather than instructions"
+      ],
+      "avoidWhen": [
+        "The project is not on GitHub — use `turbineh apply` (local branch and commit) or the ZIP",
+        "The project installs from a private registry or git/URL dependencies — the sandbox cannot install them; use the ZIP with a coding agent",
+        "The project uses Bun or Yarn Berry — not supported in the sandbox yet",
+        "Only a stack is known, no repository — plan with a declared stack; adaptation stays pending"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "The capability gets its own folder in the project's source root",
+          "gain": "Nothing of the client's is overwritten; removal is one folder plus the listed modified files",
+          "cost": "The capability is not merged into the project's existing modules; wiring it in is left to the reviewer (entry points listed)"
+        },
+        {
+          "choice": "Install with network but scripts disabled; checks without internet",
+          "gain": "No third-party code runs while there is network; real installs of the client's lockfile",
+          "cost": "No egress allow-list yet; packages that download binaries in install scripts may fail offline"
+        },
+        {
+          "choice": "Ready for review only when every check passes",
+          "gain": "A green PR is verified inside the client's project, not only in TurbineH's template",
+          "cost": "Failures in the client's own code also keep the PR as a draft (stated as such)"
+        }
+      ],
+      "config": [
+        {
+          "name": "GITHUB_CLIENT_ID",
+          "description": "Client id of the existing GitHub OAuth app (callback `/api/auth/callback/github`; the connect callback is `/workspace` under it)"
+        },
+        {
+          "name": "GITHUB_CLIENT_SECRET",
+          "description": "Client secret of the OAuth app (server only)"
+        },
+        {
+          "name": "DELIVERY_TOKEN_KEY",
+          "description": "32-byte base64 key; tokens are encrypted at rest with AES-256-GCM (web and worker)"
+        },
+        {
+          "name": "PRODUCT_APP_URL",
+          "description": "Optional (worker) — links the pull request to the flow page"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Connect GitHub (browser)",
+          "signature": "GET /api/github/connect?private=0|1&return=/path → GitHub → GET /api/auth/callback/github/workspace"
+        },
+        {
+          "name": "Connect GitHub (CLI)",
+          "signature": "POST /v1/github/connect {private?} → {url, code, expires_in}; poll GET /v1/github",
+          "where": "turbineh connect github [--private]"
+        },
+        {
+          "name": "Connect with a token",
+          "signature": "POST /v1/github/token {token} → {connected, login}",
+          "where": "turbineh connect github --with-token (token on stdin)"
+        },
+        {
+          "name": "Connection status and disconnect",
+          "signature": "GET /v1/github → {connected, login, private_repos}; DELETE /v1/github (revokes the grant)"
+        },
+        {
+          "name": "Repositories",
+          "signature": "GET /v1/repos?q= → {repos: [{full_name, private, default_branch}]}"
+        },
+        {
+          "name": "Integrate",
+          "signature": "POST /v1/plans/{id}/pull-request {repo?, base?} → 202 {integration}; GET /v1/plans/{id}/pull-request → {integrations: [{phase, state, pull_request, result: {checks, reviewerSetup, limits}, error}]}",
+          "where": "turbineh apply <plan> --pr [--repo owner/name] [--base branch]"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Adaptation model for non-derivable glue",
+          "where": "apps/worker/src/models.ts adaptationCoderFromEnv",
+          "how": "Backup Coder slots; GLM-5.2 first, ADAPTATION_MODEL_ORDER=primary-first reverses"
+        },
+        {
+          "what": "Foundation modules copied when a package imports them",
+          "where": "catalog/recipes/saas-crud/template/src",
+          "how": "loadFoundation() reads them; only imported modules are copied"
+        }
+      ],
+      "compatibility": {
+        "package": "turbineh/deploy.github-pull-request.turbineh@0.1.0",
+        "runtime": "node@>=20",
+        "stack": "Client projects: Next.js 15+ (App and/or Pages Router), TypeScript or JavaScript, pnpm/npm/Yarn classic, PostgreSQL for capabilities with tables"
+      },
+      "security": [
+        "OAuth state: 32 random bytes in an httpOnly, Secure, SameSite=Lax cookie scoped to the callback; only its SHA-256 is stored; one use, 10 minutes",
+        "PKCE S256: the verifier is stored encrypted and sent only in the server-side code exchange",
+        "Workspace binding: a browser whose access cookie is another workspace is refused; CLI links are one-time and show a code on both sides",
+        "Minimal scopes: public_repo unless the user chooses private repositories (repo)",
+        "Token AES-256-GCM at rest, never returned or logged; Disconnect revokes the grant at GitHub",
+        "The sandbox never receives a token: archives are downloaded by commit on the worker; env files, keys and escaping symlinks are removed first",
+        "Only planned files may change (checked on the final diff); gitleaks on every changed file"
+      ],
+      "guarantees": [
+        {
+          "claim": "The callback requires the returned state to equal the httpOnly cookie (login CSRF)",
+          "test": "../../../apps/web/src/server/github-oauth.test.ts › rejects a callback whose state does not match the httpOnly cookie (login CSRF)"
+        },
+        {
+          "claim": "Minimal scope, PKCE S256, only the state hash and an encrypted verifier are stored",
+          "test": "../../../apps/web/src/server/github-oauth.test.ts › authorize URL: minimal scope, state, PKCE S256; only the state hash and an encrypted verifier are stored"
+        },
+        {
+          "claim": "State is single use; the token is stored encrypted and never in the public view",
+          "test": "../../../apps/web/src/server/github-oauth.test.ts › is single use and stores the token encrypted; the public view never has it"
+        },
+        {
+          "claim": "The connection is bound to the workspace that started it",
+          "test": "../../../apps/web/src/server/github-oauth.test.ts › binds the connection to the workspace that started it (CLI tickets are bound by the ticket)"
+        },
+        {
+          "claim": "Unrelated files are never touched; the project's alias and Drizzle client are reused; one line added to the schema",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › App Router + src/ + Drizzle: own folder, relative imports, reuses the client's db, one line in the schema"
+        },
+        {
+          "claim": "Dependencies keep the project's versions (never downgraded); settings are documented by name only",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › merges package.json and .env.example without downgrades or values"
+        },
+        {
+          "claim": "The PR body has summary, files, decisions, verification, limits, what to configure and how to revert, with no vendor names",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › has summary, files, decisions, verification, limits, setup and revert; no vendor names"
+        },
+        {
+          "claim": "Complete flows keep the example's end-to-end tests out and re-point imports to the new layout",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › keeps the example's end-to-end tests out and re-points relative imports"
+        },
+        {
+          "claim": "On a real private repository the PR is opened, verified in the sandbox and becomes integration_verified",
+          "test": "../../../apps/worker/src/repo-integration.e2e.test.ts › analyse → adapt → commits → PR → verified in the sandbox → integration_verified"
+        },
+        {
+          "claim": "The CLI integrates with --pr and reports the verified pull request",
+          "test": "../../../packages/cli/src/github.test.ts › apply --pr: starts the integration and reports the verified pull request"
+        }
+      ],
+      "limits": [
+        "Package managers pnpm, npm and Yarn classic; dependencies from the public npm registry only",
+        "Checks use placeholder settings and a throwaway PostgreSQL; third-party services are not exercised",
+        "Wiring the capability into the client's pages is left to the reviewer or their coding agent (entry points listed in the PR)",
+        "Draft pull requests need a paid plan on private repositories; the PR is then titled [Draft] until verified",
+        "The install phase has network without an egress allow-list (only the package manager runs)"
+      ],
+      "example": "# CLI\nturbineh connect github --private\nturbineh plan \"AI assistant that answers from our help centre\"\nturbineh apply <plan> --pr --repo acme/web\n\n# API\ncurl -X POST $BASE/v1/plans/$PLAN/pull-request -H \"Authorization: Bearer $TOKEN\" -d '{\"repo\":\"acme/web\"}'\ncurl $BASE/v1/plans/$PLAN/pull-request -H \"Authorization: Bearer $TOKEN\"",
+      "keywords": [
+        "deploy.github-pull-request.turbineh",
+        "github",
+        "pull request",
+        "integrate into existing repository",
+        "existing codebase",
+        "brownfield",
+        "connect github",
+        "oauth",
+        "pkce",
+        "monorepo",
+        "next.js",
+        "drizzle migration",
+        "lockfile",
+        "verify in project",
+        "code review",
+        "coding agent hand-off",
+        "apply --pr"
+      ],
+      "synonyms": {
+        "pull request": [
+          "PR",
+          "merge request"
+        ],
+        "integrate into existing repository": [
+          "add feature to my app",
+          "apply to my codebase"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/deploy.github-pull-request.turbineh"
+    },
+    {
       "id": "domain.bookings.turbineh",
       "version": "0.1.0",
       "status": "approved",
@@ -9387,6 +9589,160 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/ops.rate-limit.rate-limiter-flexible"
+    },
+    {
+      "id": "ops.repo-analysis.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "ops",
+      "package": "pkg:generic/turbineh/ops.repo-analysis.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "ops.repo-analysis",
+        "repo.analysis"
+      ],
+      "does": "TurbineH platform service: deterministic analysis of a client's existing repository through the GitHub API (no clone, configuration files only, env files by name only): application folder in a monorepo, framework and version, App/Pages Router, src/ layout, import aliases, TypeScript strictness, package manager and lockfile, auth library, ORM (Drizzle/Prisma/…), schema, migrations folder and database client module, database, UI libraries, Tailwind version, test runner, lint/format tools, CI files; then compatibility, conflicts and adaptation decisions with reasons for a capability. Keywords: analyse repository, detect stack, conventions, codebase scan, project structure, monorepo app path, App Router, Pages Router, path alias, ORM detection, Drizzle, Prisma, NextAuth, Clerk, better-auth, Tailwind, compatibility check, conflicts, brownfield",
+      "doesNot": "Does not read source code beyond configuration and database-client modules, never reads .env files or keys, does not execute anything, and does not decide with a model (all rules are code)",
+      "title": "Analyse an existing repository — stack, conventions, conflicts",
+      "summary": "TurbineH platform service (API feature, not code vendored into an app). Reads a GitHub repository through the API without cloning — the file list, root manifests, workspace package.json files and the application's configuration — and reports deterministically: application folder in a monorepo, framework and version, App/Pages Router, src/ layout, import aliases, TypeScript strictness, package manager and lockfile, auth library, ORM with schema, migrations folder and database client module, database, UI libraries, Tailwind, tests, lint/format, CI and env file names only. Then compatibility, conflicts and adaptation decisions with reasons for a capability.",
+      "useCases": [
+        "Plan a capability for an existing GitHub project (`POST /v1/plans` with environment.repo)",
+        "Show the user what was found (stack, conventions, conflicts) before generating",
+        "Give a coding agent a machine-readable profile of a repository",
+        "Decide where code goes and how imports are written in a client project"
+      ],
+      "useWhen": [
+        "The project is on GitHub (public, or private with a GitHub connection)",
+        "You need structural facts (layout, tools, versions), not semantic understanding of the code"
+      ],
+      "avoidWhen": [
+        "The project is not on GitHub — upload its manifests (environment.files) or run `turbineh plan` locally",
+        "You need call graphs or business rules — out of scope by design",
+        "The project is not JavaScript/TypeScript — you get an honest incompatibility, not an adaptation"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Configuration files only, through the API",
+          "gain": "No clone, no secrets read, fast (seconds)",
+          "cost": "Facts computed in code (e.g. a schema path built at runtime) are reported as unknown"
+        },
+        {
+          "choice": "Deterministic rules instead of a model",
+          "gain": "Same input, same answer; every decision has a reason",
+          "cost": "Unusual layouts fall back to safe defaults (own folder, relative imports)"
+        }
+      ],
+      "config": [
+        {
+          "name": "none",
+          "description": "Public repositories work anonymously; private ones use the workspace's GitHub connection (deploy.github-pull-request.turbineh)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Analysis endpoint",
+          "signature": "GET /v1/repos/{owner}/{name}/analysis?ref=&app= → {repo, private, can_push, analysis, conflicts, decisions, compatible}"
+        },
+        {
+          "name": "Plan with a repository",
+          "signature": "POST /v1/plans {need, environment: {repo: {provider: 'github', fullName, ref?, appPath?}}} → plan.repository"
+        },
+        {
+          "name": "analyseGitHubRepo",
+          "signature": "analyseGitHubRepo(gh, fullName, {ref?, appPath?}) → {analysis, info, files}",
+          "where": "@turbineh/engine"
+        },
+        {
+          "name": "analysisFindings",
+          "signature": "analysisFindings(analysis, needs) → {compatible, conflicts, decisions}",
+          "where": "@turbineh/engine"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Files read in the second phase",
+          "where": "packages/engine/src/repo-analysis.ts",
+          "how": "CONFIG_NAMES and dbModuleCandidates()"
+        },
+        {
+          "what": "Libraries recognised (auth, UI, drivers, frameworks)",
+          "where": "packages/engine/src/repo-analysis.ts",
+          "how": "AUTH_LIBS, UI_LIBS, DB_DRIVERS, FRAMEWORK_DEPS"
+        }
+      ],
+      "compatibility": {
+        "package": "turbineh/ops.repo-analysis.turbineh@0.1.0",
+        "runtime": "node@>=20",
+        "stack": "Any GitHub repository; JavaScript/TypeScript projects are analysed in depth"
+      },
+      "security": [
+        "Never reads .env* (except .env.example/.sample/.template), keys, .npmrc, .yarnrc, .netrc or build output — enforced in the reader",
+        "Env files are reported by name only",
+        "Nothing is executed; the token travels only in the Authorization header and is never echoed"
+      ],
+      "guarantees": [
+        {
+          "claim": "Env files, keys and build output are never requested",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › never asks for env files, keys or build output"
+        },
+        {
+          "claim": "App Router with src/ — alias, Drizzle client module, auth, tests, CI and env names only (secret canary never read)",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › App Router with src/: alias, Drizzle client, better-auth, vitest, pnpm, CI, env names only"
+        },
+        {
+          "claim": "App Router at the root with Prisma, NextAuth and Jest",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › App Router without src/: root alias, Prisma, NextAuth, Jest, npm"
+        },
+        {
+          "claim": "Pages Router without alias or ORM",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › Pages Router: no alias, no ORM, yarn, Tailwind 3"
+        },
+        {
+          "claim": "Monorepo — picks the product app, its alias and its Drizzle client module",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › monorepo: picks apps/web, its alias and its Drizzle client module"
+        },
+        {
+          "claim": "Conflicts and decisions are deterministic and explained",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › findings: conflicts and decisions with reasons"
+        },
+        {
+          "claim": "The token is sent only as a header and never echoed in errors",
+          "test": "../../../packages/engine/src/repo-integration.test.ts › sends the token only as a header and maps errors to actionable ones without echoing it"
+        }
+      ],
+      "limits": [
+        "GitHub may truncate the file tree of very large repositories (stated in the result)",
+        "Files over 300 KB are skipped",
+        "The database client module is found among db/database/drizzle modules in src/, lib/ and server/"
+      ],
+      "example": "curl $BASE/v1/repos/acme/web/analysis -H \"Authorization: Bearer $TOKEN\"\n# → analysis.conventions: [\"Next.js 16.3.8 with the App Router in `src/app/`.\", \"Import alias `@/` → `src/`.\", ...]",
+      "keywords": [
+        "ops.repo-analysis.turbineh",
+        "analyse repository",
+        "detect stack",
+        "project conventions",
+        "codebase profile",
+        "monorepo app path",
+        "app router",
+        "pages router",
+        "path alias",
+        "tsconfig paths",
+        "orm detection",
+        "drizzle",
+        "prisma",
+        "auth detection",
+        "compatibility check",
+        "conflicts",
+        "brownfield"
+      ],
+      "synonyms": {
+        "analyse repository": [
+          "analyze repo",
+          "scan codebase",
+          "inspect project"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/ops.repo-analysis.turbineh"
     },
     {
       "id": "ops.retry.p-retry",

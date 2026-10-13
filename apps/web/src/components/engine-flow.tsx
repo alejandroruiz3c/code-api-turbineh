@@ -2,6 +2,7 @@
 import type { FlowResult, Plan } from "@turbineh/shared";
 import { useEffect, useState } from "react";
 import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
+import { RepoIntegration } from "./repo-integration";
 import { Panel, StateBadge, Stat, pct, secs } from "./ui";
 
 type Flow = Plan & { result?: FlowResult | null };
@@ -142,6 +143,11 @@ export function EngineFlow({ id }: { id: string }) {
               {e.resume ? <code className="mt-1 block text-xs text-teal">{e.resume}</code> : null}
             </div>
           ))}
+          {["verified", "generated", "integrated", "integration_verified"].includes(r.state) ? (
+            <div id="integrate">
+              <RepoIntegration planId={id} defaultRepo={flow.repository?.repo} />
+            </div>
+          ) : null}
           <div className="grid gap-6 md:grid-cols-2">
             <Panel title="Continue">
               <p className="prose-doc text-ice-2">{r.continue}</p>
