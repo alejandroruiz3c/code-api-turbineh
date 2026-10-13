@@ -1,4 +1,4 @@
-import { index, integer, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 /**
  * AI usage per workspace (component ai.orchestrator.turbineh): one row per orchestrated call — calls, tokens,
@@ -22,4 +22,21 @@ export const aiUsage = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_usage_org_idx").on(t.organizationId, t.createdAt)],
+);
+
+/**
+ * Conversation state of runAgent (component ai.orchestrator.turbineh, ADR-0032): messages and the pending
+ * confirmation live on the server, keyed by an unguessable id; the browser only holds the id.
+ */
+export const agentSessions = pgTable(
+  "agent_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    purpose: varchar("purpose", { length: 64 }).notNull(),
+    state: jsonb("state").notNull(),
+    turns: integer("turns").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("agent_sessions_updated_idx").on(t.updatedAt)],
 );

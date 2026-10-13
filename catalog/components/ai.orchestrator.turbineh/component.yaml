@@ -1,10 +1,10 @@
 schema: turbineh.component/v0.1
 id: ai.orchestrator.turbineh
-version: 0.1.0
+version: 0.2.0
 status: approved
 category: ai
 source:
-  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.1.0
+  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.2.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
   does: "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace"
@@ -23,11 +23,15 @@ contract:
     [
       "orchestrate({ task, input, purpose, organizationId, userId, instructions?, context?, history?, schema?, tools? })",
       "embed(texts, { purpose, organizationId, userId })",
+      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0032)",
+      "Toolkit { id, title, audience: public|staff, instructions, tools } from domain components, listed in src/lib/ai/toolkits.ts",
     ]
   outputs:
     [
       "{ output (validated value or text), route, model, tool: { spec, confirm } | null, flags, usage }",
       "usageSummary(organizationId, days) → totals, by purpose, by day",
+      "runAgent → { status: answered|needs_confirmation|cancelled|step_limit, reply, pending, state, steps, route, model, flags, usage }",
+      "POST /api/assistant + /assistant page + AssistantWidget for public toolkits; tests/mock-llm scripted OpenAI-compatible model for E2E",
     ]
   errors:
     [
@@ -36,6 +40,7 @@ contract:
   limits:
     [
       "decider unsafe threshold 0.5 and tool threshold 0.5 (code); 2 transport retries; one repair attempt for structured output; embeddings fixed at 1024 dimensions",
+      "runAgent: 6 steps (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages of state, confirmations expire after 30 min; public assistant: 1000 characters, 10 requests/min per IP, 60 turns per conversation",
     ]
 compat:
   runtime: node@>=20
@@ -47,8 +52,21 @@ effects:
   external_services: [turbineh-ai-gateway]
 integration:
   strategy: vendored-with-provenance
-  install: "Copied by the assembler from files/ when selected (recipe ai-agents requires it, always with security.ai-safety.turbineh): src/lib/ai/{orchestrator,models,decider,plan,usage}.ts, src/db/component-ai-orchestrator.ts, tests/unit/ai-orchestrator.test.ts. Decisions are a plain HTTPS request to the TurbineH AI gateway (no extra dependency)."
-  config: [TURBINEH_AI_URL, TURBINEH_AI_TOKEN, AI_STRUCTURER_MODEL, AI_ROUTES, AI_EMBEDDING_MODEL]
+  install: "Copied by the assembler from files/ when selected (recipe ai-agents requires it, always with security.ai-safety.turbineh): src/lib/ai/{orchestrator,models,decider,plan,usage,agent,sessions,assistant,toolkits}.ts, src/app/api/assistant/route.ts, src/app/assistant/page.tsx, src/components/assistant-widget.tsx, src/db/component-ai-orchestrator.ts, tests/unit/ai-{orchestrator,agent}.test.ts, tests/mock-llm/ (scripted model; domain components add scripts). The assembler rewrites src/lib/ai/toolkits.ts with every installed src/<domain>/toolkit.ts. Decisions are a plain HTTPS request to the TurbineH AI gateway (no extra dependency)."
+  config:
+    [
+      TURBINEH_AI_URL,
+      TURBINEH_AI_TOKEN,
+      AI_BASE_URL,
+      AI_API_KEY,
+      AI_MODEL,
+      AI_STRUCTURER_MODEL,
+      AI_ROUTES,
+      AI_EMBEDDING_MODEL,
+      AI_PUBLIC_MAX_INPUT_CHARS,
+      AI_PUBLIC_REQUESTS_PER_MINUTE,
+      AI_PUBLIC_TURNS_PER_CONVERSATION,
+    ]
   migrations: true
 quality:
   tests:
@@ -70,6 +88,9 @@ evidence:
   - claim: "Apps built with recipe ai-agents pass the full verification with every AI call through the orchestrator"
     origin: tested
     ref: "bench/results/2026-10-12-f3-ai-agents.md"
+  - claim: "runAgent drives the Capability B booking assistant end to end (tools, confirmation, mock model) in a build that passes the full gate"
+    origin: tested
+    ref: "bench/results/2026-10-13-agent-runtime-bookings.md"
   - claim: "Through the TurbineH AI gateway layout (TURBINEH_AI_URL/TURBINEH_AI_TOKEN, ADR-0029), an ai-agents build (ai-01) passes 11/11 checks with 0 corrections against services/ai-mock"
     origin: tested
     ref: "bench/results/2026-10-12-ai-gateway.md"

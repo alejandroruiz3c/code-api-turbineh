@@ -76,7 +76,8 @@ const add = (u: Usage, r: { inputTokens: number; outputTokens: number }) => {
   u.outputTokens += r.outputTokens;
 };
 
-async function record(
+/** One ai_usage row per orchestrated call (also used by runAgent in agent.ts). */
+export async function recordUsage(
   req: AiCaller & { purpose: string },
   usage: Usage,
   route: string | null,
@@ -217,7 +218,7 @@ export async function orchestrate<T = string>(
     flags.push(...scanned.flags);
     if (req.schema && scanned.flags.length > 0) output = req.schema.parse(JSON.parse(scanned.text));
     else if (typeof output === "string") output = scanned.text;
-    await record(req, usage, route, model, deciderName, "ok", started);
+    await recordUsage(req, usage, route, model, deciderName, "ok", started);
     await audit({ ...req, route, decision: decision?.probabilities ?? null, flags, status: "ok" });
     return {
       output,
@@ -231,7 +232,7 @@ export async function orchestrate<T = string>(
   } catch (err) {
     const blocked = err instanceof AiSafetyError;
     const status = blocked ? "blocked" : "error";
-    await record(req, usage, route, model, deciderName, status, started).catch(() => undefined);
+    await recordUsage(req, usage, route, model, deciderName, status, started).catch(() => undefined);
     await audit({ ...req, route, decision: decision?.probabilities ?? null, flags, status }).catch(
       () => undefined,
     );
@@ -259,10 +260,10 @@ export async function embed(
       usage.inputTokens += batch.inputTokens;
       vectors.push(...batch.vectors);
     }
-    await record(req, usage, "embedding", model, "none", "ok", started);
+    await recordUsage(req, usage, "embedding", model, "none", "ok", started);
     return vectors;
   } catch (err) {
-    await record(req, usage, "embedding", model, "none", "error", started).catch(() => undefined);
+    await recordUsage(req, usage, "embedding", model, "none", "error", started).catch(() => undefined);
     if (err instanceof UserFacingError) throw err;
     console.error("[ai] embed failed", err instanceof Error ? err.name : "unknown");
     throw new UserFacingError("The assistant is not available right now. Please try again.");

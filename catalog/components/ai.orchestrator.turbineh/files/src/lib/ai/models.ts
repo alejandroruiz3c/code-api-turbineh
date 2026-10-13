@@ -1,10 +1,14 @@
 import { z } from "zod";
 
 /**
- * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029). With decider.ts, the
- * only place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call). Calls go to the
- * TurbineH AI gateway with this app's token: no model-provider or decider keys live in the app. Defaults are
- * documented open models served in the EU.
+ * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029/ADR-0032). With
+ * decider.ts, the only place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call).
+ *
+ * Model endpoint, chosen by configuration only:
+ *  - default: the TurbineH AI gateway with this app's token (no model-provider or decider keys live in the app);
+ *  - AI_BASE_URL (+ AI_API_KEY, AI_MODEL): any OpenAI-compatible endpoint, e.g. a self-hosted open model or the local
+ *    mock used by the E2E tests. Safety, limits, usage and audit still run in the orchestrator.
+ * Defaults are documented open models served in the EU.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
@@ -20,13 +24,38 @@ const Env = z.object({
     z.string().default("fast=gemma-4-26b-a4b-it,balanced=deepseek-v4-flash-0731,frontier=glm-5.2"),
   ),
   AI_EMBEDDING_MODEL: z.preprocess(empty, z.string().min(1).default("qwen3-embedding-8b")),
+  /** Any OpenAI-compatible endpoint (base URL including its version path, e.g. https://host/v1). Optional. */
+  AI_BASE_URL: z.preprocess(empty, z.url().optional()),
+  /** Bearer key for AI_BASE_URL (never logged). */
+  AI_API_KEY: z.preprocess(empty, z.string().min(1).optional()),
+  /** Model served by AI_BASE_URL; when set, every route and the planner use it. */
+  AI_MODEL: z.preprocess(empty, z.string().min(1).max(120).optional()),
   AI_TIMEOUT_MS: z.preprocess(
     empty,
     z.coerce.number().int().min(1000).max(290_000).default(60_000),
   ),
 });
-let cached: z.infer<typeof Env> | undefined;
-export const aiConfig = () => (cached ??= Env.parse(process.env));
+export type AiConfig = z.infer<typeof Env>;
+/** Parsed on every call (cheap), so tests and long-running servers always see the current environment. */
+export const aiConfig = (): AiConfig => {
+  const cfg = Env.parse(process.env);
+  return cfg.AI_MODEL ? { ...cfg, AI_STRUCTURER_MODEL: cfg.AI_MODEL } : cfg;
+};
+
+/** Where model calls go: an OpenAI-compatible endpoint from AI_BASE_URL, or the TurbineH AI gateway. */
+export function modelEndpoint(cfg: AiConfig = aiConfig()): {
+  baseUrl: string;
+  key: string | undefined;
+  kind: "gateway" | "openai-compatible";
+} {
+  if (cfg.AI_BASE_URL)
+    return { baseUrl: cfg.AI_BASE_URL.replace(/\/$/, ""), key: cfg.AI_API_KEY, kind: "openai-compatible" };
+  return {
+    baseUrl: `${cfg.TURBINEH_AI_URL.replace(/\/$/, "")}/v1`,
+    key: cfg.TURBINEH_AI_TOKEN,
+    kind: "gateway",
+  };
+}
 
 /** Fixed vector size of the knowledge base (pgvector column); models with more dimensions are truncated (MRL). */
 export const EMBEDDING_DIMENSIONS = 1024;
@@ -61,7 +90,12 @@ export function parseRoutes(spec: string): Route[] {
   return routes;
 }
 
-export const routes = () => parseRoutes(aiConfig().AI_ROUTES);
+/** Routes the decider can choose; with AI_MODEL every route uses that one model. */
+export const routes = (): Route[] => {
+  const cfg = aiConfig();
+  const all = parseRoutes(cfg.AI_ROUTES);
+  return cfg.AI_MODEL ? all.map((r) => ({ ...r, model: cfg.AI_MODEL as string })) : all;
+};
 
 /** Transport failure. The message is safe to log; provider responses are never echoed. */
 export class AiTransportError extends Error {}
@@ -69,6 +103,26 @@ export class AiTransportError extends Error {}
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+/** A tool call requested by a model (OpenAI-compatible shape). */
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/** Messages of a tool-calling conversation (runAgent). */
+export type AgentChatMessage =
+  | ChatMessage
+  | { role: "assistant"; content: string | null; tool_calls: ToolCall[] }
+  | { role: "tool"; tool_call_id: string; content: string };
+
+/** Tool offered to a model: name, description and JSON Schema of its arguments. */
+export interface ModelTool {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
 }
 
 export interface ModelReply {
@@ -80,20 +134,21 @@ export interface ModelReply {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** POST with timeout and up to 2 retries on rate limits, server errors and network failures. */
-async function post(path: string, body: unknown): Promise<unknown> {
+async function post(path: string, body: unknown, timeoutMs?: number): Promise<unknown> {
   const cfg = aiConfig();
+  const endpoint = modelEndpoint(cfg);
   for (let attempt = 0; ; attempt++) {
     // 0 = network failure, timeout or an unreadable body.
     let status: number;
     try {
-      const res = await fetch(`${cfg.TURBINEH_AI_URL.replace(/\/$/, "")}/v1${path}`, {
+      const res = await fetch(`${endpoint.baseUrl}${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(cfg.TURBINEH_AI_TOKEN ? { Authorization: `Bearer ${cfg.TURBINEH_AI_TOKEN}` } : {}),
+          ...(endpoint.key ? { Authorization: `Bearer ${endpoint.key}` } : {}),
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(cfg.AI_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs ?? cfg.AI_TIMEOUT_MS),
       });
       status = res.status;
       if (res.ok) return (await res.json()) as unknown;
@@ -132,6 +187,70 @@ export async function chat(
   if (!data.success) throw new AiTransportError("model endpoint returned an unexpected response");
   return {
     text: data.data.choices[0]?.message.content ?? "",
+    inputTokens: Math.round(data.data.usage?.prompt_tokens ?? 0),
+    outputTokens: Math.round(data.data.usage?.completion_tokens ?? 0),
+  };
+}
+
+const ToolCallSchema = z.object({
+  id: z.string().min(1).max(200),
+  type: z.literal("function").default("function"),
+  function: z.object({ name: z.string().min(1).max(64), arguments: z.string().max(20_000) }),
+});
+const ToolChatResponse = z.object({
+  choices: z
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string().nullable().optional(),
+          tool_calls: z.array(ToolCallSchema).nullable().optional(),
+        }),
+      }),
+    )
+    .min(1),
+  usage: z
+    .object({ prompt_tokens: z.number(), completion_tokens: z.number() })
+    .partial()
+    .optional(),
+});
+
+export interface ToolModelReply extends ModelReply {
+  toolCalls: ToolCall[];
+}
+
+/** One step of a tool-calling conversation (used only by runAgent in agent.ts). */
+export async function chatWithTools(
+  model: string,
+  messages: AgentChatMessage[],
+  tools: ModelTool[],
+  opts: { maxTokens?: number; timeoutMs?: number } = {},
+): Promise<ToolModelReply> {
+  const data = ToolChatResponse.safeParse(
+    await post(
+      "/chat/completions",
+      {
+        model,
+        messages,
+        temperature: 0.1,
+        max_tokens: opts.maxTokens ?? 800,
+        ...(tools.length > 0
+          ? {
+              tools: tools.map((t) => ({
+                type: "function",
+                function: { name: t.name, description: t.description, parameters: t.parameters },
+              })),
+              tool_choice: "auto",
+            }
+          : {}),
+      },
+      opts.timeoutMs,
+    ),
+  );
+  if (!data.success) throw new AiTransportError("model endpoint returned an unexpected response");
+  const message = data.data.choices[0]?.message;
+  return {
+    text: message?.content ?? "",
+    toolCalls: (message?.tool_calls ?? []).map((c) => ({ ...c, type: "function" as const })),
     inputTokens: Math.round(data.data.usage?.prompt_tokens ?? 0),
     outputTokens: Math.round(data.data.usage?.completion_tokens ?? 0),
   };
