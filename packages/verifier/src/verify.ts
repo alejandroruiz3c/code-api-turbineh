@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
+import { advisoryFix, findingFix } from "./fixes.js";
 import {
   PNPM_STORE_VOLUME,
   POSTGRES_IMAGE,
@@ -59,6 +60,8 @@ export interface GateFinding {
   where: string;
   blocking: boolean;
   message: string;
+  /** What to do about it (deterministic, per rule; see `findingFix`). */
+  fix?: string;
 }
 
 export interface StepResult {
@@ -111,6 +114,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       where: `${f.path}:${f.line}`,
       blocking: f.severity === "ERROR",
       message: f.message,
+      fix: findingFix(f.rule),
     });
   }
   for (const a of v.findings.advisories) {
@@ -120,6 +124,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       where: a.pkg,
       blocking: a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH"),
       message: `${a.severity} advisory (${a.scope})`,
+      fix: advisoryFix(a),
     });
   }
   for (const l of v.findings.licenses) {
@@ -130,6 +135,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       where: pkg,
       blocking: true,
       message: `Licence ${expr.join(" ")} is outside the delivery licence policy (copyleft or unknown); not a vulnerability. If it comes from an optional binary (e.g. sharp → libvips), exclude it with pnpm.ignoredOptionalDependencies.`,
+      fix: findingFix("licence-policy"),
     });
   }
   if (v.findings.secrets > 0) {
@@ -140,6 +146,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       blocking: true,
       message:
         "A secret-shaped value is in the git history (redacted). Generate test secrets at runtime instead of committing them.",
+      fix: findingFix("gitleaks"),
     });
   }
   for (const s of v.steps) {
@@ -150,6 +157,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       where: failureLocation(s.detail) ?? s.name,
       blocking: true,
       message: `${s.name} failed`,
+      fix: findingFix(s.name),
     });
   }
   return out;
@@ -167,7 +175,7 @@ export function failureLocation(detail: string): string | null {
 }
 
 /** Copyleft / unknown licenses that block delivery in the beta (direct and transitive dependencies). */
-const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
+export const BLOCKING_LICENSE = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;
 
 /**
  * SPDX semantics for dependency licences: "A OR B" lets us choose, so it blocks only when every alternative blocks
@@ -603,52 +611,61 @@ async function ensureBaseImage(dir: string, lockHash: string): Promise<string | 
   return r.code === 0 ? tag : null;
 }
 
-const SEMGREP_IMAGE =
+export const SEMGREP_VERSION = "1.178.0";
+export const SEMGREP_IMAGE =
   "semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b";
-const RULES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../rules");
+/** Own Semgrep rules (`turbineh-security.yml`); the CLI bundle embeds the same file (packages/cli/scripts/bundle.ts). */
+export const RULES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../rules");
+export const RULES_FILE = "turbineh-security.yml";
+
+/** Semgrep arguments shared by the gate and `turbineh verify --full`: same rules, same exclusions, no metrics. */
+export const semgrepScanArgs = (config: string, target: string): string[] => [
+  "scan",
+  "--config",
+  config,
+  "--metrics",
+  "off",
+  "--disable-version-check",
+  "--quiet",
+  "--json",
+  "--exclude",
+  "node_modules",
+  "--exclude",
+  ".next",
+  "--exclude",
+  "tests",
+  target,
+];
+
+/** Docker arguments of the gate's Semgrep run: read-only mounts, no network, pinned image. */
+export const semgrepDockerArgs = (dir: string, rulesDir: string): string[] => [
+  "run",
+  "--rm",
+  "--network",
+  "none",
+  "-v",
+  `${dir}:/src:ro`,
+  "-v",
+  `${rulesDir}:/rules:ro`,
+  SEMGREP_IMAGE,
+  "semgrep",
+  ...semgrepScanArgs(`/rules/${RULES_FILE}`, "/src"),
+];
 
 /**
  * Own security rules with the Semgrep OSS engine: read-only mount, no network, no metrics. Returns null when the
  * scanner gives no valid result (killed, timed out under load): one retry, then the "static" step fails — a scan
  * that did not run never counts as clean.
  */
-export async function staticScan(dir: string): Promise<StaticFinding[] | null> {
-  return (await staticScanOnce(dir)) ?? (await staticScanOnce(dir));
+export async function staticScan(
+  dir: string,
+  rulesDir = RULES_DIR,
+): Promise<StaticFinding[] | null> {
+  return (await staticScanOnce(dir, rulesDir)) ?? (await staticScanOnce(dir, rulesDir));
 }
 
-async function staticScanOnce(dir: string): Promise<StaticFinding[] | null> {
-  const r = await run(
-    "docker",
-    [
-      "run",
-      "--rm",
-      "--network",
-      "none",
-      "-v",
-      `${dir}:/src:ro`,
-      "-v",
-      `${RULES_DIR}:/rules:ro`,
-      SEMGREP_IMAGE,
-      "semgrep",
-      "scan",
-      "--config",
-      "/rules/turbineh-security.yml",
-      "--metrics",
-      "off",
-      "--disable-version-check",
-      "--quiet",
-      "--json",
-      "--exclude",
-      "node_modules",
-      "--exclude",
-      ".next",
-      "--exclude",
-      "tests",
-      "/src",
-    ],
-    10 * 60_000,
-    true,
-  );
+async function staticScanOnce(dir: string, rulesDir: string): Promise<StaticFinding[] | null> {
+  const r = await run("docker", semgrepDockerArgs(dir, rulesDir), 10 * 60_000, true);
   return parseSemgrep(r.tail);
 }
 
@@ -686,7 +703,7 @@ export function parseSemgrep(output: string): StaticFinding[] | null {
   return data.results.map((x) => ({
     rule: x.check_id.replace(/^.*turbineh\./, "turbineh."),
     severity: x.extra.severity === "ERROR" ? "ERROR" : "WARNING",
-    path: x.path.replace(/^\/src\//, ""),
+    path: x.path.replace(/^\/src\//, "").replace(/^\.\//, ""),
     line: x.start.line,
     message: x.extra.message,
     explain: x.extra.metadata?.explain ?? x.extra.message,
@@ -738,8 +755,9 @@ export function productionClosure(lock: Lock): Set<string> {
  * development scope. Only production HIGH/CRITICAL findings block delivery; development-only findings are
  * reported as not reachable at runtime.
  */
-async function osvScan(
+export async function osvScan(
   dir: string,
+  fetchImpl: typeof fetch = fetch,
 ): Promise<{ id: string; pkg: string; severity: string; scope: "production" | "development" }[]> {
   const lock = parse(readFileSync(join(dir, "pnpm-lock.yaml"), "utf8")) as Lock;
   const prod = productionClosure(lock);
@@ -753,7 +771,7 @@ async function osvScan(
     [];
   for (let i = 0; i < pkgs.length; i += 500) {
     const batch = pkgs.slice(i, i + 500);
-    const res = await fetch("https://api.osv.dev/v1/querybatch", {
+    const res = await fetchImpl("https://api.osv.dev/v1/querybatch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -763,10 +781,11 @@ async function osvScan(
         })),
       }),
     });
+    if (!res.ok) throw new Error(`OSV query failed (HTTP ${res.status})`);
     const data = (await res.json()) as { results: { vulns?: { id: string }[] }[] };
     for (const [j, r] of data.results.entries()) {
       for (const v of r.vulns ?? []) {
-        const detail = (await (await fetch(`https://api.osv.dev/v1/vulns/${v.id}`)).json()) as {
+        const detail = (await (await fetchImpl(`https://api.osv.dev/v1/vulns/${v.id}`)).json()) as {
           database_specific?: { severity?: string };
         };
         const pkg = `${batch[j]?.name}@${batch[j]?.version}`;
