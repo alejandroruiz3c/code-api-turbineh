@@ -4,6 +4,18 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Fixed
+
+- Flows (ADR-0050): after "Generate & verify", the flow page no longer reports "A check did not pass, so nothing was
+  delivered" while the app is still being built — the live trace ended at the plan's own `finished` event (production
+  flow `0bfd9dff`, verified 11/11, shown as failed). Failures now say what happened, why, what to do, with one button
+  ("Generate again" resumes from the approved plan) — web, API (`problem`) and CLI.
+- Stack-only flows (ADR-0050): "Next.js" from the wizard was read as an incompatible "next.js" and generation was
+  disabled. A declared stack now builds a complete app ("A complete Next.js app, built for you"), with one-click
+  choices: generate, build a complete Next.js app instead (other stacks, with what they get stated plainly), add to my
+  repository, use my project's files. Unknown use cases are built on the closest template with "what is left" and
+  where, instead of failing out of scope.
+
 ### Added
 
 - Product web: the home page ends with "Checks every package passes" — secrets, security rules, safe dependencies
