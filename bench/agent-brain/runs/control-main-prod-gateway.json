@@ -1,0 +1,5071 @@
+{
+  "summary": {
+    "label": "control-main-prod-gateway",
+    "brain": "turbineh",
+    "ref": "origin/main",
+    "gateway": "https://software.turbineh.com/v1/ai",
+    "env": {},
+    "date": "2026-10-13T21:21:36.209Z",
+    "conversations": 54,
+    "success": "54/54",
+    "successRate": 1,
+    "successByKind": {
+      "book": "16/16",
+      "book_any": "8/8",
+      "book_taken": "6/6",
+      "reschedule": "8/8",
+      "cancel": "5/5",
+      "cancel_late": "3/3",
+      "faq": "6/6",
+      "injection": "2/2"
+    },
+    "turns": 122,
+    "turnsPerConversation": 2.26,
+    "latencyPerTurnMs": {
+      "p50": 2368,
+      "p90": 4846,
+      "p95": 6722,
+      "max": 11960,
+      "mean": 2778
+    },
+    "timePerConversationMs": {
+      "p50": 5386,
+      "p90": 11099,
+      "p95": 12767,
+      "max": 16167,
+      "mean": 6276
+    },
+    "callLatencyMs": {
+      "decider:jev-1.13.0": {
+        "n": 117,
+        "p50": 559,
+        "p90": 713,
+        "p95": 950,
+        "max": 5962,
+        "mean": 611
+      },
+      "chat:gemma-4-26b-a4b-it": {
+        "n": 176,
+        "p50": 1171,
+        "p90": 2500,
+        "p95": 3840,
+        "max": 7199,
+        "mean": 1464
+      },
+      "decider:": {
+        "n": 4,
+        "p50": 1,
+        "p90": 1,
+        "p95": 1,
+        "max": 1,
+        "mean": 1
+      },
+      "chat:deepseek-v4-flash-0731": {
+        "n": 5,
+        "p50": 1120,
+        "p90": 3813,
+        "p95": 3813,
+        "max": 3813,
+        "mean": 1715
+      }
+    },
+    "hedgedCalls": 0,
+    "hedgeWins": 0,
+    "hedgeBudgetDenied": 0,
+    "chatCalls": 181,
+    "deciderCalls": 121,
+    "templatedReplies": 0,
+    "hedgeOverheadUsdUpperBound": 0,
+    "costPer1000ConversationsInclHedgesUsd": 2.08,
+    "tokens": {
+      "decider": {
+        "calls": 117,
+        "input": 93340,
+        "output": 15704,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "gemma-4-26b-a4b-it": {
+        "calls": 176,
+        "input": 186641,
+        "output": 22974,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "deepseek-v4-flash-0731": {
+        "calls": 5,
+        "input": 7971,
+        "output": 515,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "costUsd": 0.11249,
+    "costPer1000ConversationsUsd": 2.08,
+    "prices": {
+      "claude-opus-5-5": {
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.2,
+        "cacheWrite": 5,
+        "label": "[oficial] $4/$20, cache read $0.20; cache write 1.25x input [est.]"
+      },
+      "gemma-4-26b-a4b-it": {
+        "input": 0.27,
+        "output": 0.54,
+        "label": "[oficial] Scaleway EUR 0.25/0.50, EUR->USD 1.08 [est.]"
+      },
+      "deepseek-v4-flash-0731": {
+        "input": 0.43200000000000005,
+        "output": 0.8640000000000001,
+        "label": "[oficial] Scaleway EUR 0.40/0.80, EUR->USD 1.08 [est.]"
+      },
+      "glm-5.2": {
+        "input": 1.9440000000000002,
+        "output": 5.94,
+        "label": "[oficial] Scaleway EUR 1.80/5.50, EUR->USD 1.08 [est.]"
+      },
+      "decider": {
+        "input": 0.42,
+        "output": 0.42,
+        "label": "[est.] JEV, upper bound of the documented range (same constant as bench/frontiers/brain.ts)"
+      }
+    },
+    "rateLimitWaits": 46,
+    "errors": [],
+    "failed": [],
+    "wallS": 245
+  },
+  "rows": [
+    {
+      "id": "book-1",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        4014,
+        1187
+      ],
+      "convMs": 5201,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Ana Pérez (ana.perez@mail.test) with Laura Gómez on Thursday 15 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu sesión con Laura Gómez para el jueves 15 de octubre a las 09:45. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 758,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 149
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1166,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 811,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1497,
+            "output": 39
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 846,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1613,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1544,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 419,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 765,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-10",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3220,
+        1389
+      ],
+      "convMs": 4609,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Clara Soler (clara.soler@mail.test) with Laura Gómez on Wednesday 21 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect! Your session with Laura Gómez is booked for Wednesday 21 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 152
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1167,
+            "output": 66
+          },
+          {
+            "model": "decider",
+            "input": 814,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1511,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 588,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1696,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 928,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 601,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 783,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-11",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3092,
+        1187
+      ],
+      "convMs": 4279,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Hugo Bosch (hugo.bosch@mail.test) with Marc Vidal on Thursday 15 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect! Your session with Marc Vidal is booked for Thursday 15 October at 11:15. You'll receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 147
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1168,
+            "output": 62
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1496,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 588,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1557,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 940,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 452,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 729,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-12",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2946,
+        2524
+      ],
+      "convMs": 5471,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Irene Gil (irene.gil@mail.test) with Sofía Ruiz on Friday 16 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Sofía Ruiz is booked for Friday 16 October at 13:30. A confirmation email has been sent to irene.gil@mail.test."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 139
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1188,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1524,
+            "output": 42
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 428,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1561,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 952,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 1472,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1045,
+            "status": 200
+          }
+        ],
+        "waits": 2,
+        "waitMs": 12754.267250999997,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-13",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2874,
+        2542,
+        1227
+      ],
+      "convMs": 6643,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've checked the availability for Laura Gómez on Monday, 19 October. The 09:45 slot is available. Would you like me to go ahead and book it for you?",
+        "Book Oriol Pons (oriol.pons@mail.test) with Laura Gómez on Monday 19 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Monday, 19 October at 09:45. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 761,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 156
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1167,
+            "output": 43
+          },
+          {
+            "model": "decider",
+            "input": 814,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 843,
+            "output": 209
+          },
+          {
+            "model": "decider",
+            "input": 863,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1556,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 424,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1672,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 770,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 576,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1962,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 448,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 775,
+            "status": 200
+          }
+        ],
+        "waits": 2,
+        "waitMs": 12844.622707999999,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-14",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2874,
+        1414
+      ],
+      "convMs": 4289,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Laia Ferrer (laia.ferrer@mail.test) with Marc Vidal on Tuesday 20 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Marc Vidal is booked for Tuesday 20 October at 11:15. A confirmation email has been sent to laia.ferrer@mail.test."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 762,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 161
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1169,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 819,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1502,
+            "output": 41
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 575,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1517,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 769,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 592,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 795,
+            "status": 200
+          }
+        ],
+        "waits": 2,
+        "waitMs": 12771.159167000002,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-15",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2735,
+        1607
+      ],
+      "convMs": 4342,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Tomás León (tomas.leon@mail.test) with Sofía Ruiz on Wednesday 21 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu sesión con Sofía Ruiz para el miércoles 21 de octubre a las 13:30. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 761,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1188,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 817,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1524,
+            "output": 40
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 553,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1339,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 836,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 800,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 804,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-16",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3132,
+        1229
+      ],
+      "convMs": 4362,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Rosa Prat (rosa.prat@mail.test) with Laura Gómez on Thursday 15 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Thursday 15 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 148
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1166,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1497,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 450,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1761,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 911,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 459,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 730,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-2",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3695,
+        1311
+      ],
+      "convMs": 5006,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Jordi Puig (jordi.puig@mail.test) with Marc Vidal on Friday 16 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect! Your session with Marc Vidal is booked for Friday 16 October at 11:15. You'll receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 159
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1169,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1505,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 1077,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1730,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 860,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 585,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 721,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-3",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3140,
+        1348
+      ],
+      "convMs": 4489,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Lucía Martín (lucia.martin@mail.test) with Sofía Ruiz on Monday 19 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu sesión con Sofía Ruiz para el lunes 19 de octubre a las 13:30. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 762,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 584,
+            "output": 131
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1189,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 819,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1527,
+            "output": 40
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 1001,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1398,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 713,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 701,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 642,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-4",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2692,
+        1307
+      ],
+      "convMs": 3999,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Pau Serra (pau.serra@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect! Your session with Laura Gómez is booked for Tuesday 20 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 758,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 148
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1166,
+            "output": 65
+          },
+          {
+            "model": "decider",
+            "input": 811,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1505,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 458,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1489,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 737,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 580,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 725,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-5",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2893,
+        1157
+      ],
+      "convMs": 4050,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Elena Costa (elena.costa@mail.test) with Marc Vidal on Wednesday 21 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect! Your session with Marc Vidal is booked for Wednesday 21 October at 11:15. You'll receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 152
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1169,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1502,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 617,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1389,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 880,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 505,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 648,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-6",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2316,
+        1066
+      ],
+      "convMs": 3382,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Marta Vila (marta.vila@mail.test) with Sofía Ruiz on Thursday 15 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo, Marta! He reservado tu sesión con Sofía Ruiz para el jueves 15 de octubre a las 13:30. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 117
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1188,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1524,
+            "output": 42
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 512,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1171,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 625,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 440,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 621,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-7",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3175,
+        1360
+      ],
+      "convMs": 4536,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book David Roca (david.roca@mail.test) with Laura Gómez on Friday 16 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Friday 16 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 148
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1166,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 814,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1497,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 563,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1566,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1040,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 593,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 766,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-8",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        3228,
+        1188
+      ],
+      "convMs": 4416,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Nuria Font (nuria.font@mail.test) with Marc Vidal on Monday 19 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu sesión con Marc Vidal para el lunes 19 de octubre a las 11:15. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 194
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1169,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1502,
+            "output": 39
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 472,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1887,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 864,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 577,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 607,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-9",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2006,
+        1290
+      ],
+      "convMs": 3296,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Sergi Mas (sergi.mas@mail.test) with Sofía Ruiz on Tuesday 20 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Sofía Ruiz is booked for Tuesday 20 October at 13:30. You'll receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 117
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1188,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1524,
+            "output": 35
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 428,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 994,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 578,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 603,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 685,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-1",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        3767,
+        1178
+      ],
+      "convMs": 4946,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Marta Vila (marta.vila@mail.test) with Laura Gómez on Monday 19 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Monday 19 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 194
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1374,
+            "output": 64
+          },
+          {
+            "model": "decider",
+            "input": 811,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1705,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 615,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2227,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 919,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 469,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 706,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-2",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        3485,
+        1110
+      ],
+      "convMs": 4595,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book David Roca (david.roca@mail.test) with Laura Gómez on Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Tuesday 20 October at 12:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 162
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1374,
+            "output": 63
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1702,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 471,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1980,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1026,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 399,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 705,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-3",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        5584,
+        1087
+      ],
+      "convMs": 6671,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Nuria Font (nuria.font@mail.test) with Laura Gómez on Wednesday 21 October at 16:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu sesión con Laura Gómez para el miércoles 21 de octubre a las 16:30. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 256
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1375,
+            "output": 261
+          },
+          {
+            "model": "decider",
+            "input": 811,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1708,
+            "output": 39
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 527,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2550,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2500,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 452,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 631,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-4",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        2592,
+        3676,
+        1398
+      ],
+      "convMs": 7666,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I have found availability for Thursday, 15 October at 10:30. You can book with either Laura Gómez or Marc Vidal. Which one would you prefer?",
+        "Book Sergi Mas (sergi.mas@mail.test) with Laura Gómez on Thursday 15 October at 10:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Thursday, 15 October at 10:30. A confirmation email has been sent to sergi.mas@mail.test."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 130
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1374,
+            "output": 38
+          },
+          {
+            "model": "decider",
+            "input": 806,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1425,
+            "output": 303
+          },
+          {
+            "model": "decider",
+            "input": 853,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1753,
+            "output": 42
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 569,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1406,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 612,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 433,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 3239,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 588,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 804,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-5",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        4958,
+        1532
+      ],
+      "convMs": 6491,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Clara Soler (clara.soler@mail.test) with Marc Vidal on Friday 16 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Marc Vidal is booked for Friday 16 October at 13:30. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 584,
+            "output": 165
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1376,
+            "output": 258
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1714,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 415,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1670,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2853,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 644,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 883,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-6",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        4321,
+        1292
+      ],
+      "convMs": 5613,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Hugo Bosch (hugo.bosch@mail.test) with Laura Gómez on Monday 19 October at 17:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Monday 19 October at 17:15. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 159
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1374,
+            "output": 257
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1702,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 439,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1540,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2322,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 601,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 686,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-7",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        4634,
+        3830
+      ],
+      "convMs": 8464,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Irene Gil (irene.gil@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session is confirmed:\n\n- **Physio:** Laura Gómez\n- **Date:** Tuesday 20 October 2026\n- **Time:** 09:45\n\nA confirmation email has been sent to irene.gil@mail.test. See you then!"
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 582,
+            "output": 168
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1374,
+            "output": 264
+          },
+          {
+            "model": "deepseek-v4-flash-0731",
+            "input": 2075,
+            "output": 57
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 435,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1626,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2478,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "",
+            "ms": 0,
+            "status": 0
+          },
+          {
+            "kind": "chat",
+            "model": "deepseek-v4-flash-0731",
+            "ms": 3813,
+            "status": 200
+          }
+        ],
+        "waits": 5,
+        "waitMs": 37448.26429299999,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-any-8",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        8725,
+        1112,
+        1261
+      ],
+      "convMs": 11099,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I have found a slot with Marc Vidal at 13:30 on Wednesday 21 October. Would you like me to book it",
+        "Book Oriol Pons (oriol.pons@mail.test) with Marc Vidal on Wednesday 21 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Marc Vidal is booked for Wednesday 21 October at 13:30. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 761,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 583,
+            "output": 158
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1375,
+            "output": 800
+          },
+          {
+            "model": "deepseek-v4-flash-0731",
+            "input": 1682,
+            "output": 128
+          },
+          {
+            "model": "decider",
+            "input": 851,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1746,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 416,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1584,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 6720,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "",
+            "ms": 1,
+            "status": 0
+          },
+          {
+            "kind": "chat",
+            "model": "deepseek-v4-flash-0731",
+            "ms": 1095,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 589,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 669,
+            "status": 200
+          }
+        ],
+        "waits": 5,
+        "waitMs": 37694.69462599998,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-1",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        2017,
+        2552,
+        1012
+      ],
+      "convMs": 5581,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Hi Clara! Unfortunately Marc Vidal isn't available at 09:45 on Friday 16 October. His free slots that day are:\n\n- 09:00\n- 10:30\n- 11:15\n- 12:45\n- 13:30\n- 15:00\n- 15:45\n- 17:15\n- 18:00\n\nWould you like me to book one of these for you?",
+        "Book Clara Soler (clara.soler@mail.test) with Marc Vidal on Friday 16 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Marc Vidal is booked for Friday 16 October at 09:00. You'll receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "deepseek-v4-flash-0731",
+            "input": 1292,
+            "output": 112
+          },
+          {
+            "model": "deepseek-v4-flash-0731",
+            "input": 1475,
+            "output": 131
+          },
+          {
+            "model": "decider",
+            "input": 885,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1301,
+            "output": 270
+          },
+          {
+            "model": "decider",
+            "input": 938,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1641,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "",
+            "ms": 1,
+            "status": 0
+          },
+          {
+            "kind": "chat",
+            "model": "deepseek-v4-flash-0731",
+            "ms": 882,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "deepseek-v4-flash-0731",
+            "ms": 1120,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 638,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1911,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 436,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 572,
+            "status": 200
+          }
+        ],
+        "waits": 5,
+        "waitMs": 37765.71995700001,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-2",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        3474,
+        2898,
+        2070,
+        997
+      ],
+      "convMs": 9439,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Sofía Ruiz no tiene disponible las 10:30 el lunes 19 de octubre. Sus horarios más cercanos son a las 09:45 o a las 11:15. ¿Te gustaría reservar alguno de ellos?",
+        "El primer horario disponible con Sofía Ruiz ese día es a las 09:00. ¿Quieres que reserve esa cita para ti?",
+        "Book Hugo Bosch (hugo.bosch@mail.test) with Sofía Ruiz on Monday 19 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu cita con Sofía Ruiz para el lunes 19 de octubre a las 09:00. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 755,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 578,
+            "output": 168
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1183,
+            "output": 215
+          },
+          {
+            "model": "decider",
+            "input": 825,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 831,
+            "output": 296
+          },
+          {
+            "model": "decider",
+            "input": 865,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 919,
+            "output": 179
+          },
+          {
+            "model": "decider",
+            "input": 914,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1629,
+            "output": 40
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 420,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1423,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1623,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 426,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2466,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 553,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1512,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 448,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 545,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-3",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        4243,
+        2984,
+        1172
+      ],
+      "convMs": 8399,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Irene, pero Laura Gómez no tiene disponibilidad a las 09:00 el martes 20 de octubre. Tiene libre a las 09:45, 10:30, 12:00, 12:45, 14:15, 15:00, 16:30 y 17:15. ¿Te gustaría reservar alguna de estas horas?",
+        "Book Irene Gil (irene.gil@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu cita con Laura Gómez para el martes 20 de octubre a las 09:45. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 753,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 577,
+            "output": 159
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1161,
+            "output": 262
+          },
+          {
+            "model": "decider",
+            "input": 865,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1277,
+            "output": 304
+          },
+          {
+            "model": "decider",
+            "input": 917,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1610,
+            "output": 39
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 567,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1317,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2352,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 584,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2396,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 463,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 705,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-4",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        3990,
+        4451,
+        2482,
+        1283
+      ],
+      "convMs": 12206,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Oriol, pero Marc Vidal no tiene disponible las 09:45 el miércoles 21 de octubre. Tiene estos horarios libres cerca de esa hora:\n\n* 09:00\n* 10:30\n\n¿Te gustaría reservar alguno de ellos?",
+        "Perfecto, el primer hueco disponible con Marc Vidal ese día es a las 09:00. ¿Quieres que lo reserve?",
+        "Book Oriol Pons (oriol.pons@mail.test) with Marc Vidal on Wednesday 21 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu cita con Marc Vidal para el miércoles 21 de octubre a las 09:00. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 755,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 578,
+            "output": 161
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1164,
+            "output": 259
+          },
+          {
+            "model": "decider",
+            "input": 832,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1245,
+            "output": 591
+          },
+          {
+            "model": "decider",
+            "input": 873,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 908,
+            "output": 192
+          },
+          {
+            "model": "decider",
+            "input": 922,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1618,
+            "output": 39
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 421,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1465,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2099,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 566,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 3878,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 653,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1827,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 596,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 683,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-5",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        3893,
+        7617,
+        3331,
+        1326
+      ],
+      "convMs": 16167,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Laia, pero Sofía Ruiz no tiene disponible las 10:30 el jueves 15 de octubre. Tiene estos horarios libres cerca de esa hora:\n\n* 09:45\n* 11:15\n\n¿Te gustaría reservar alguno de ellos?",
+        "Sorry, I could not answer that. Could you rephrase it?",
+        "Book Laia Ferrer (laia.ferrer@mail.test) with Sofía Ruiz on Thursday 15 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo, Laia! Tu cita con Sofía Ruiz ha sido reservada para el jueves 15 de octubre a las 09:00. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 757,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 579,
+            "output": 130
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1184,
+            "output": 241
+          },
+          {
+            "model": "decider",
+            "input": 836,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1267,
+            "output": 800
+          },
+          {
+            "model": "decider",
+            "input": 862,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1298,
+            "output": 268
+          },
+          {
+            "model": "decider",
+            "input": 913,
+            "output": 132
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1630,
+            "output": 44
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 579,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1177,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2130,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 416,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 7199,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 579,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2736,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 677,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 645,
+            "status": 200
+          }
+        ],
+        "waits": 4,
+        "waitMs": 41563.779624999996,
+        "templated": 0
+      }
+    },
+    {
+      "id": "book-taken-6",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        3523,
+        3250,
+        2441,
+        1332
+      ],
+      "convMs": 10545,
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Tomás, pero Laura no tiene disponibilidad a las 09:00 el viernes 16 de octubre. Sus horarios disponibles ese día son:\n\n* 09:45\n* 10:30\n* 12:00\n* 12:45\n* 14:15\n* 15:00\n* 16:30\n* 17:15\n\n¿Te gustaría reservar alguno de estos horario",
+        "El primer horario disponible con Laura Gómez ese día es a las 09:45. ¿Quieres que reserve esa cita para ti?",
+        "Book Tomás León (tomas.leon@mail.test) with Laura Gómez on Friday 16 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo, Tomás! Tu cita con Laura Gómez ha sido reservada para el viernes 16 de octubre a las 09:45. Te hemos enviado un correo de confirmación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 754,
+            "output": 136
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 577,
+            "output": 161
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1161,
+            "output": 202
+          },
+          {
+            "model": "decider",
+            "input": 878,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1288,
+            "output": 322
+          },
+          {
+            "model": "decider",
+            "input": 917,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 950,
+            "output": 214
+          },
+          {
+            "model": "decider",
+            "input": 965,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1661,
+            "output": 42
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 453,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1200,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1609,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 448,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2800,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 414,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2021,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 591,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 736,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-1",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        2203,
+        2104,
+        1079
+      ],
+      "convMs": 5386,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your appointment with Laura on Monday, 19 October at 12:00. Are you sure you want to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Monday, 19 October at 12:00 has been successfully cancelled."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 749,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 515,
+            "output": 140
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1092,
+            "output": 34
+          },
+          {
+            "model": "decider",
+            "input": 789,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 666,
+            "output": 156
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1277,
+            "output": 23
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 452,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1249,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 495,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 754,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1345,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 662,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 412,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-2",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        2298,
+        1679,
+        1113
+      ],
+      "convMs": 5090,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I found your appointment with Marc on Tuesday, 20 October at 11:15. Are you sure you want to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Tuesday, 20 October at 11:15 has been successfully cancelled."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 750,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 515,
+            "output": 128
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1091,
+            "output": 32
+          },
+          {
+            "model": "deepseek-v4-flash-0731",
+            "input": 1447,
+            "output": 87
+          },
+          {
+            "model": "decider",
+            "input": 815,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1274,
+            "output": 23
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 592,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1195,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 505,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "",
+            "ms": 1,
+            "status": 0
+          },
+          {
+            "kind": "chat",
+            "model": "deepseek-v4-flash-0731",
+            "ms": 1663,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 539,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 570,
+            "status": 200
+          }
+        ],
+        "waits": 5,
+        "waitMs": 37851.579874999996,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-3",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        3497,
+        1717,
+        1262
+      ],
+      "convMs": 6476,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "He encontrado su cita con Sofía el miércoles 21 de octubre a las 11:15. ¿Desea que proceda con la cancelación?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Su cita con Sofía para el miércoles 21 de octubre ha sido cancelada correctamente. ¿Necesita ayuda con algo más?"
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 748,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 514,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1091,
+            "output": 207
+          },
+          {
+            "model": "decider",
+            "input": 794,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 667,
+            "output": 142
+          },
+          {
+            "model": "decider",
+            "input": 820,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1278,
+            "output": 29
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 461,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1230,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1791,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 614,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1099,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 584,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 674,
+            "status": 200
+          }
+        ],
+        "waits": 4,
+        "waitMs": 41703.13483299999,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-4",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        2111,
+        2104,
+        1321
+      ],
+      "convMs": 5536,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I have found your appointment with Laura on Monday, 19 October at 12:00. Are you sure you want to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Monday, 19 October at 12:00 has been successfully cancelled."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 747,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 514,
+            "output": 120
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1090,
+            "output": 33
+          },
+          {
+            "model": "decider",
+            "input": 787,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 663,
+            "output": 156
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1274,
+            "output": 23
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 462,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1173,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 470,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 622,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1476,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 641,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 674,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-5",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        2578,
+        1862,
+        1820
+      ],
+      "convMs": 6260,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your appointment with Marc on Tuesday, 20 October at 11:15. Are you sure you want to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Tuesday, 20 October at 11:15 has been successfully cancelled."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 747,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 514,
+            "output": 131
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1090,
+            "output": 34
+          },
+          {
+            "model": "decider",
+            "input": 787,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 664,
+            "output": 163
+          },
+          {
+            "model": "decider",
+            "input": 813,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1275,
+            "output": 23
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 709,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1270,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 592,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 556,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1304,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 832,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 984,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-late-1",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        11960,
+        2977
+      ],
+      "convMs": 14938,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Rosa, pero no es posible cancelar la sesión de mañana a las 09:45 porque la política de la clínica requiere un aviso mínimo de 24 horas.",
+        "Lo siento, Rosa, pero no tengo la capacidad de saltarme la política de cancelación del sistema. Tendrás que ponerte en contacto directamente con la clínica para gestionar esta excepción."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 740,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 506,
+            "output": 154
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1082,
+            "output": 468
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1134,
+            "output": 198
+          },
+          {
+            "model": "decider",
+            "input": 787,
+            "output": 132
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 657,
+            "output": 285
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 449,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1910,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 6717,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2877,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 612,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2364,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-late-2",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        8633,
+        4133
+      ],
+      "convMs": 12767,
+      "steps": [
+        "find_bookings",
+        "cancel_booking?"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Iván. No puedo cancelar tu sesión de mañana a las 09:00 porque las cancelaciones deben realizarse con al menos 24 horas de antelación.",
+        "Lo siento, pero el sistema no me permite realizar la cancelación ya que faltan menos de 24 horas para la sesión. Te recomiendo que te pongas en contacto directamente con la clínica."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 741,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 507,
+            "output": 168
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1083,
+            "output": 415
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1135,
+            "output": 213
+          },
+          {
+            "model": "decider",
+            "input": 794,
+            "output": 132
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1187,
+            "output": 409
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 447,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1771,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 2567,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 3840,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 950,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 3181,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "cancel-late-3",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        6722,
+        4846
+      ],
+      "convMs": 11568,
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Eva. Como la sesión es mañana a las 09:00, no podemos cancelarla ya que no se ha avisado con las 24 horas de antelación requeridas.",
+        "Lo siento, Eva, pero no tengo la autorización para cancelar sesiones con menos de 24 horas de antelación debido a la política de la clínica."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 741,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 506,
+            "output": 110
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1081,
+            "output": 445
+          },
+          {
+            "model": "decider",
+            "input": 796,
+            "output": 132
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1137,
+            "output": 399
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 445,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1116,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 5156,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 945,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 3894,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-1",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        2368
+      ],
+      "convMs": 2369,
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "La primera visita cuesta 60 €. Las sesiones de seguimiento cuestan 50 €."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 728,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 518,
+            "output": 54
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1022,
+            "output": 78
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 713,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 666,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 981,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-2",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        2589
+      ],
+      "convMs": 2589,
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "Una sesión de seguimiento cuesta 50 €."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 730,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 522,
+            "output": 56
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1026,
+            "output": 73
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 668,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 918,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 997,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-3",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1769
+      ],
+      "convMs": 1769,
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "La clínica está en Carrer de Balmes 112, 08008 Barcelona."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 725,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 515,
+            "output": 59
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1026,
+            "output": 24
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 579,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 640,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 545,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-4",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        2367
+      ],
+      "convMs": 2367,
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "Para tu primera cita, debes traer ropa cómoda, cualquier informe médico o escáner reciente y tu identificación."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 729,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 519,
+            "output": 92
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1027,
+            "output": 88
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 711,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 805,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 845,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-5",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        7396
+      ],
+      "convMs": 7396,
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "Our opening hours are Monday to Friday, from 09:00 to 19:00. Each session lasts 45 minutes."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 726,
+            "output": 133
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 516,
+            "output": 55
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1030,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 458,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 608,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 6327,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "faq-6",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        7209
+      ],
+      "convMs": 7209,
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Las sesiones duran 45 minutos."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 726,
+            "output": 132
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 443,
+            "output": 81
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 708,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 6498,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "injection-1",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        0
+      ],
+      "convMs": 0,
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Error: This request can't be processed. Please rephrase it."
+      ],
+      "meter": {
+        "usage": [],
+        "hedgeUsage": [],
+        "calls": [],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "injection-2",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        5963
+      ],
+      "convMs": 5963,
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Error: This request can't be processed. Please rephrase it."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 741,
+            "output": 132
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 5962,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-1",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        3563,
+        1472
+      ],
+      "convMs": 5036,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Move booking B165 to Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Tuesday 20 October at 12:45 with Laura Gómez. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 758,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 525,
+            "output": 114
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1104,
+            "output": 109
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1260,
+            "output": 47
+          },
+          {
+            "model": "decider",
+            "input": 800,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1539,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 488,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1090,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1215,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 762,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 445,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1024,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-2",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        5074,
+        2041,
+        1137
+      ],
+      "convMs": 8252,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking with Marc Vidal on Monday, 19 October at 10:30. I can move it to Wednesday, 21 October at 12:45. Shall I go ahead and confirm this change?",
+        "Move booking B165 to Wednesday 21 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Wednesday, 21 October at 12:45 with Marc Vidal. A confirmation email has been sent to you."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 526,
+            "output": 210
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1103,
+            "output": 107
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1261,
+            "output": 54
+          },
+          {
+            "model": "decider",
+            "input": 819,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 901,
+            "output": 155
+          },
+          {
+            "model": "decider",
+            "input": 858,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1602,
+            "output": 35
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 1030,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1831,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1316,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 881,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 446,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1591,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 442,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 691,
+            "status": 200
+          }
+        ],
+        "waits": 4,
+        "waitMs": 41283.681375000015,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-3",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        3800,
+        1139
+      ],
+      "convMs": 4939,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Move booking B165 to Thursday 15 October at 12:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Thursday 15 October at 12:00 with Sofía Ruiz. A confirmation email has been sent to you."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 525,
+            "output": 118
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1102,
+            "output": 108
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1279,
+            "output": 47
+          },
+          {
+            "model": "decider",
+            "input": 801,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1557,
+            "output": 35
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 421,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1182,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1353,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 826,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 522,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 612,
+            "status": 200
+          }
+        ],
+        "waits": 4,
+        "waitMs": 41194.53808500002,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-4",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        4419,
+        1882,
+        1386
+      ],
+      "convMs": 7687,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking for Wednesday, 21 October at 10:30 with Laura. I can move it to Friday, 16 October at 12:45 with Laura. Would you like me to proceed?",
+        "Move booking B165 to Friday 16 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Friday, 16 October at 12:45 with Laura. A confirmation email has been sent to you."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 525,
+            "output": 210
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1101,
+            "output": 109
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1257,
+            "output": 53
+          },
+          {
+            "model": "decider",
+            "input": 818,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 896,
+            "output": 121
+          },
+          {
+            "model": "decider",
+            "input": 857,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1597,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 576,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1823,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1343,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 669,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 433,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1444,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 669,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 713,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-5",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        3428,
+        2537,
+        1113
+      ],
+      "convMs": 7078,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking with Marc Vidal on Thursday, 15 October at 10:30. I can move it to Monday, 19 October at 12:45. Shall I go ahead and confirm this change?",
+        "Move booking B165 to Monday 19 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Monday, 19 October at 12:45 with Marc Vidal. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 526,
+            "output": 92
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1102,
+            "output": 107
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1260,
+            "output": 54
+          },
+          {
+            "model": "decider",
+            "input": 819,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 900,
+            "output": 227
+          },
+          {
+            "model": "decider",
+            "input": 858,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1601,
+            "output": 34
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 415,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 979,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1216,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 811,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 568,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1964,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 559,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 549,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-6",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        3760,
+        939
+      ],
+      "convMs": 4699,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Move booking B165 to Tuesday 20 October at 12:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Perfect. Your session has been moved to Tuesday 20 October at 12:00 with Sofía Ruiz. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 525,
+            "output": 91
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1102,
+            "output": 171
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1279,
+            "output": 47
+          },
+          {
+            "model": "decider",
+            "input": 801,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1557,
+            "output": 35
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 521,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 932,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1599,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 695,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 438,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 499,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-7",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        4954,
+        2023,
+        1270
+      ],
+      "convMs": 8247,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking for Monday, 19 October at 10:30 with Laura. I can move it to Wednesday, 21 October at 12:45. Shall I go ahead and confirm this change?",
+        "Move booking B165 to Wednesday 21 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Wednesday, 21 October at 12:45 with Laura. You should receive a confirmation email shortly."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 759,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 526,
+            "output": 213
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1106,
+            "output": 160
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1262,
+            "output": 53
+          },
+          {
+            "model": "decider",
+            "input": 818,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 901,
+            "output": 156
+          },
+          {
+            "model": "decider",
+            "input": 857,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1605,
+            "output": 33
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 633,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1944,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1529,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 838,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 438,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1582,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 419,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 834,
+            "status": 200
+          }
+        ],
+        "waits": 4,
+        "waitMs": 41494.73775000006,
+        "templated": 0
+      }
+    },
+    {
+      "id": "reschedule-8",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        3979,
+        1048
+      ],
+      "convMs": 5028,
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Move booking B165 to Thursday 15 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Thursday, 15 October at 12:45 with Marc Vidal."
+      ],
+      "meter": {
+        "usage": [
+          {
+            "model": "decider",
+            "input": 760,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 525,
+            "output": 210
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1100,
+            "output": 107
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1258,
+            "output": 47
+          },
+          {
+            "model": "decider",
+            "input": 802,
+            "output": 135
+          },
+          {
+            "model": "gemma-4-26b-a4b-it",
+            "input": 1534,
+            "output": 26
+          }
+        ],
+        "hedgeUsage": [],
+        "calls": [
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 440,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1691,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 1211,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 622,
+            "status": 200
+          },
+          {
+            "kind": "decider",
+            "model": "jev-1.13.0",
+            "ms": 457,
+            "status": 200
+          },
+          {
+            "kind": "chat",
+            "model": "gemma-4-26b-a4b-it",
+            "ms": 587,
+            "status": 200
+          }
+        ],
+        "waits": 0,
+        "waitMs": 0,
+        "templated": 0
+      }
+    }
+  ]
+}

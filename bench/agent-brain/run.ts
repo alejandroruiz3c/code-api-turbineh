@@ -21,7 +21,8 @@
  * quota is a staging limit, not part of what is measured.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
-import { execSync } from "node:child_process";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -109,7 +110,8 @@ let rotating: Promise<void> | null = null;
 /** Replaces a spent staging app token (never printed): runs --on-quota once, then rereads the token file. */
 function rotateToken(): Promise<void> {
   rotating ??= (async () => {
-    execSync(ON_QUOTA, { stdio: "ignore" });
+    // Asynchronous: a blocked event loop would stall (and fail) the other conversations' requests.
+    await promisify(exec)(ON_QUOTA);
     process.env.TURBINEH_AI_TOKEN = readFileSync(arg("--token-file", ""), "utf8").trim();
     console.error("app token rotated (staging daily quota)");
   })().finally(() => {
