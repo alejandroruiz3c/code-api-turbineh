@@ -17,7 +17,13 @@ import {
   type IntegrationEntry,
 } from "./context.js";
 import { bold, dim, green, red, STATE_LABEL, yellow, type CommandResult } from "./output.js";
-import { AGENT_BLOCK, cliCommand, writeAgentFiles, type AgentKind } from "./agent-docs.js";
+import {
+  AGENT_BLOCK,
+  cliCommand,
+  withCommand,
+  writeAgentFiles,
+  type AgentKind,
+} from "./agent-docs.js";
 import {
   appendEnvExample,
   extractPackage,
@@ -117,10 +123,17 @@ export async function init(c: Ctx): Promise<CommandResult> {
       `  Stack: ${stack.language}${stack.framework ? ` · ${stack.framework}` : ""}${stack.versions.next ? ` ${stack.versions.next}` : ""}${stack.packageManager ? ` · ${stack.packageManager}` : ""}`,
       "",
       docs
-        ? `${green("✔")} Agent instructions in ${target}${docs.skill ? ` and the Claude Code skill in ${docs.skill}` : ""}.`
+        ? // Printed too: an agent that runs init mid-session reads them now (instruction files load at session start).
+          `${green("✔")} Agent instructions in ${target}${docs.skill ? ` and the Claude Code skill in ${docs.skill}` : ""}:\n\n${withCommand(
+            AGENT_BLOCK,
+            cmd,
+          )
+            .split("\n")
+            .filter((l) => !l.startsWith("<!--"))
+            .join("\n")}`
         : `Proposed block for ${target} (run \`turbineh init --agent claude|codex|cursor\` to add it):\n\n${dim(AGENT_BLOCK)}`,
     ],
-    next: 'turbineh build "<what to build>"   or   turbineh build @spec.md',
+    next: `${cmd} build "<what to build>" --json   or   ${cmd} build @spec.md --json`,
   };
 }
 
