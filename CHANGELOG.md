@@ -11,6 +11,17 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Decisions through the decider (ADR-0038): audit of every model call (`docs/decisions-audit.md`) and the rule —
+  decisions among options → the decider, generation → open models, deterministic questions → code. **runAgent**
+  (component `ai.orchestrator.turbineh` 0.3.0) takes each turn's first action — which tool, or a reply — from the
+  decider in the request it already made (route + safety), and the open model writes only that tool's arguments or the
+  reply; below the confidence threshold, after a tool result or without a decider the model chooses among every tool
+  as before. A decider call at every step was measured slower and costlier and is not used. Measured on staging
+  (`bench/agent-decisions/`): same accuracy, −13 % model input tokens, −1.2 % cost per conversation, −17 % cost on
+  single-action turns. The GitHub integration's adaptation decisions stay in code (measured: database and auth are
+  fixed policy and compatibility; the decider is more accurate on monorepo app choice but slower and costlier — owner
+  decision). `verify:recipe` assembles the domain components a prompt names (e.g. bookings).
+
 - Native fit in the coding agent's flow (ADR-0036, Frontiers R1): **`turbineh build "<spec>" | @spec.md`** — plan →
   generate → wait → write → commit → summary in one command. Empty folder: the complete verified app (agent files
   merged, `.gitignore` unioned, nothing of yours overwritten); existing project: the capability adapted locally with
@@ -98,6 +109,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Worker heartbeat: `/health` reports workers alive in the last 90 s, running builds and queue length.
 
 ### Fixed
+
+- Acceptance criteria are "met" only when a test exercises them (ADR-0038 §4): generated CRUD tests no longer prove
+  refusals, other roles or features they do not touch (production build `f195341c` showed "a viewer cannot edit a
+  note", "invite a teammate", "audit log" and "search / tag filter" as met by create/edit tests); the report's mapping
+  checks the test's steps and assertions and accepts the decider's match only at confidence ≥ 0.8. Labelled set of 38
+  pairs: precision 1.00, recall 0.95.
+- TurbineH AI gateway: `tools`, `tool_choice` and tool-call turns are forwarded (validated and bounded). They were
+  dropped, so runAgent never called a tool through the gateway (6/20 correct first actions on staging before the fix).
 
 - `turbineh init` without `--agent` writes the agent-neutral `AGENTS.md` (read by Codex, Cursor and most coding agents) unless the project already has `CLAUDE.md`; `--agent claude` still writes `CLAUDE.md` and the skill.
 - Web deploys: agent worktrees (`.claude/`) are excluded from the Vercel upload (it exceeded 15,000 files and the production web silently stayed on an old build), and `deploy.sh` now stops with Vercel's error instead of filtering it out (text or JSON CLI output).
