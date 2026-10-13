@@ -1,0 +1,27 @@
+{
+  "workflows": [
+    {
+      "key": "request",
+      "label": "Request",
+      "plural": "Requests",
+      "initial": "open",
+      "dueDate": true,
+      "createRoles": ["*"],
+      "states": [
+        { "key": "open", "label": "Open", "limitHours": null, "final": false },
+        { "key": "in_progress", "label": "In progress", "limitHours": 72, "final": false },
+        { "key": "done", "label": "Done", "limitHours": null, "final": true }
+      ],
+      "transitions": [
+        { "from": ["open"], "to": "in_progress", "label": "Start", "roles": ["owner", "admin"] },
+        { "from": ["in_progress"], "to": "done", "label": "Complete", "roles": ["owner", "admin"] },
+        {
+          "from": ["in_progress"],
+          "to": "open",
+          "label": "Reopen",
+          "roles": ["owner", "admin", "creator"]
+        }
+      ]
+    }
+  ]
+}

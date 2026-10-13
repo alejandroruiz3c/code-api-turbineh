@@ -30,6 +30,14 @@ describe("role policy", () => {
     expect(can("admin", "delete")).toBe(true);
   });
 
+  it("gives an unknown stored role the least privilege (deny by default)", async () => {
+    const { toRole, can } = await import("@/server/role-policy");
+    expect(toRole("owner")).toBe("owner");
+    expect(toRole("superuser")).toBe("member");
+    expect(toRole(undefined)).toBe("member");
+    expect(can(toRole("superuser"), "delete")).toBe(false);
+  });
+
   it("staff allow-list denies by default and matches whole emails only", async () => {
     const { isAdminEmail } = await import("@/server/authz");
     expect(isAdminEmail("ana@example.com", "")).toBe(false);

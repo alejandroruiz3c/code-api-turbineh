@@ -1,0 +1,96 @@
+schema: turbineh.guide/v0.1
+component: domain.workflow.turbineh
+title: Status workflows with role-gated transitions, immutable history and stuck alerts
+summary: >-
+  Moves records of any kind — requests, loans, ceramic pieces, tasks — through the states a request describes. Each
+  workflow lists its states (with an optional time limit), the initial state, the allowed transitions and which roles
+  may make each one ("creator" and "*" included). Every change is re-checked on the server under a row lock and
+  written to an immutable history (who, when, from → to, note) that the database itself refuses to alter. Records stuck
+  in a state longer than its limit, or past their due date, are flagged on the record, the list and an overview. It
+  does not send notifications by itself (jobs.scheduled.turbineh emails digests) or model parallel states.
+keywords:
+  [workflow, status, state machine, stages, transitions, approval, approve, reject, pipeline, role-gated, status
+   history, timeline, audit trail, stuck, sla, time limit, overdue, requests, loans, tasks, production tracker, pieces]
+synonyms:
+  state: [status, stage, step, phase, estado]
+  transition: [status change, move, approval, rejection, check-in]
+  stuck: [over the limit, too long in a stage, stale, sla breach]
+use_cases:
+  - "Document requests that go pending → received → approved, changed only by staff"
+  - "Equipment loans requested by staff and approved or rejected by a manager, with due dates and overdue flags"
+  - "A ceramics piece moving through production stages with the date and person of every change and per-stage limits"
+  - "Tasks that move between statuses with a full timeline"
+use_when:
+  - "The request lists statuses or stages and who may change them"
+  - "Every change must be recorded (who, when) and must not be editable afterwards"
+  - "Records that stay too long in a stage must be highlighted"
+avoid_when:
+  - "Free-form tags or labels with no order (use a field on the entity)"
+  - "Long-running automated processes with timers and branches (use a job queue)"
+tradeoffs:
+  - { choice: "Definitions as data (src/workflow/params.json)", gain: "States, transitions, roles and limits from the request; reviewable and editable without code", cost: "Conditions beyond role, creator and current state need code in service.ts" }
+  - { choice: "Own workflow_items table linked by subjectId", gain: "Works with any entity or none, one engine for every kind of record", cost: "A record's own status column (if any) is not the source of truth; read the workflow item" }
+  - { choice: "History append-only in the database", gain: "Changes cannot be rewritten, even with SQL from the app", cost: "Corrections are new transitions, never edits" }
+config:
+  - { name: "src/workflow/params.json", default: "one demo workflow (open → in progress → done)", description: "Workflows from the request: states, initial, transitions with roles, limits, due dates, who may create (validated at start-up)" }
+  - { name: "src/server/role-policy.ts", default: "owner, admin, member", description: "Role keys used in transitions; domain.membership-access.turbineh maps them from the request" }
+interfaces:
+  - { name: createItem, signature: "createItem(actor, { workflow, title, description?, subjectId?, scopeId?, dueAt? }) → Promise<id>", where: src/workflow/service.ts }
+  - { name: transition, signature: "transition(actor, id, to, note?) → Promise<newState> — throws UserFacingError when not allowed", where: src/workflow/service.ts }
+  - { name: history, signature: "history(actor, id) → { fromState, toState, actorEmail, note, createdAt }[] (oldest first)", where: src/workflow/service.ts }
+  - { name: listItems, signature: "listItems(actor, workflow, { state? }) → items with stuckHours and overdue", where: src/workflow/service.ts }
+  - { name: attentionItems, signature: "attentionItems(organizationId | null, now?) → stuck or overdue items (for alerts and digests)", where: src/workflow/service.ts }
+  - { name: "Rules", signature: "allowedTransitions(wf, state, { role, isCreator }); transitionError(wf, from, to, actor); stuckHours(wf, state, since, now); isOverdue(wf, state, dueAt, now)", where: src/workflow/engine.ts }
+  - { name: "Pages", signature: "/dashboard/workflow (overview + needs attention), /dashboard/workflow/[key] (by state, create), /dashboard/workflow/[key]/[id] (transitions, history)", where: src/app/dashboard/workflow/page.tsx }
+extension_points:
+  - what: "Add a state, a transition or a time limit"
+    where: "src/workflow/params.json"
+    how: "Edit the workflow; it is validated at start-up and the unit tests check it. Roles are workspace role keys, \"creator\" or \"*\"."
+  - what: "Follow an entity of the app through a workflow"
+    where: "src/workflow/service.ts"
+    how: "When the entity is created call `createItem(ctx, { workflow: \"loan\", title, subjectId: row.id })`; link to /dashboard/workflow/loan/<item id> from its page."
+  - what: "Add a condition to a transition (e.g. an item cannot be lent twice for overlapping dates)"
+    where: "src/workflow/service.ts (transition)"
+    how: "Inside the locked transaction, check the condition and throw a UserFacingError; add a unit or E2E test."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, drizzle-orm with PostgreSQL (plpgsql trigger), zod 4"
+  recipes: [client-portal, internal-tool, tracker, projects, saas-crud]
+  requires: []
+  works_with: [domain.membership-access.turbineh, domain.audit-log.turbineh, ui.kanban.turbineh, jobs.scheduled.turbineh]
+  notes: "Uses src/server/record-access.ts for per-record scopes and src/lib/audit.ts for the audit log (both no-ops without their components)."
+security:
+  - "Every state change is re-checked on the server against the definition, the current state and the person's role"
+  - "Changes run under a row lock: two people cannot move the same record from the same state at once"
+  - "History is append-only (no update/delete code path, database trigger)"
+  - "Reads are filtered by workspace and by per-record scope"
+guarantees:
+  - { claim: "New records start in the initial state and their creation is in the history", test: "tests/e2e/workflow.spec.ts › a new record starts in the initial status and its history records who created it and when" }
+  - { claim: "Only allowed transitions are offered; each change is recorded with who and when", test: "tests/e2e/workflow.spec.ts › only the allowed transitions are offered, and each change is recorded with who and when" }
+  - { claim: "The server refuses transitions the workflow does not define", test: "tests/e2e/workflow.spec.ts › a status change the workflow does not allow is refused by the server" }
+  - { claim: "History cannot be changed or deleted, even with SQL", test: "tests/e2e/workflow.spec.ts › status history cannot be changed or deleted, not even directly in the database" }
+  - { claim: "Records over their state's limit are flagged", test: "tests/e2e/workflow.spec.ts › a record that stays in a status longer than its limit is flagged as stuck" }
+  - { claim: "Transitions are role-gated (role keys, creator)", test: "tests/unit/workflow.test.ts › offers only the transitions of the current state that the person's role allows" }
+limits:
+  - "One current state per record; no parallel or timed automatic transitions"
+  - "Lists show up to 500 records per workflow"
+  - "Stuck and overdue are computed when pages load; emails need jobs.scheduled.turbineh"
+example: |
+  import { createItem, transition } from "@/workflow/service";
+  const ctx = await requireMember();
+  const id = await createItem(ctx, { workflow: "loan", title: "Sony FX3 · 14–16 Oct", dueAt: new Date("2026-10-16") });
+  await transition(ctx, id, "approved", "Approved for the shoot");   // throws if the role cannot approve
+params:
+  file: src/workflow/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "workflows[].key / label / plural", description: "Record kind (request, loan, piece, task) and its names" }
+    - { name: "workflows[].initial", description: "State of a new record" }
+    - { name: "workflows[].states[]", description: "{ key, label, limitHours (null = no limit), final }" }
+    - { name: "workflows[].transitions[]", description: "{ from[], to, label (button), roles[] (role keys, \"creator\", \"*\") }" }
+    - { name: "workflows[].createRoles", default: "[\"*\"]", description: "Roles that may create records" }
+    - { name: "workflows[].dueDate", default: "false", description: "Records carry a due date; overdue ones are flagged" }
+  example: |
+    { "workflows": [{ "key": "piece", "label": "Piece", "plural": "Pieces", "initial": "thrown", "dueDate": false, "createRoles": ["*"],
+      "states": [{ "key": "thrown", "label": "Thrown", "limitHours": 72, "final": false }, { "key": "sold", "label": "Sold", "limitHours": null, "final": true }],
+      "transitions": [{ "from": ["thrown"], "to": "sold", "label": "Mark sold", "roles": ["*"] }] }] }

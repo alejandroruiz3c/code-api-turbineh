@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/workflow.spec.ts › a new record starts in the initial status and its history records who created it and when"
+  covers: ["status|stage|state", "(date|when|time).*(person|who|by)|(person|who|by).*(date|when|time)|history|timeline"]
+- test: "tests/e2e/workflow.spec.ts › only the allowed transitions are offered, and each change is recorded with who and when"
+  covers: ["status|stage|state", "chang|move|transition|approv|reject|goes through"]
+- test: "tests/e2e/workflow.spec.ts › a status change the workflow does not allow is refused by the server"
+  covers: ["(only|cannot|can't|not allowed).*(status|stage|transition|approv)|(status|stage|transition|approv).*(only|cannot|not allowed)"]
+- test: "tests/e2e/workflow.spec.ts › status history cannot be changed or deleted, not even directly in the database"
+  covers: ["cannot be (edited|changed|modified|deleted)|immutable|afterwards|append[- ]only|recorded"]
+- test: "tests/e2e/workflow.spec.ts › a record that stays in a status longer than its limit is flagged as stuck"
+  covers: ["longer than|limit|stuck|alert|too long|overdue|highlight"]
+- test: "tests/unit/workflow.test.ts › offers only the transitions of the current state that the person's role allows"
+  covers: ["manager|admin|staff|owner|role", "approv|reject|transition|status|stage"]

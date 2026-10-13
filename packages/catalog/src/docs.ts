@@ -58,6 +58,20 @@ export const componentDocsSchema = z.object({
     .max(20),
   limits: list(1, 10),
   example: z.string().min(10).max(3000),
+  /** Request parameters of a parameterised component (ADR-0041): app file, JSON Schema, fields in words. */
+  params: z
+    .object({
+      file: z.string().min(5),
+      schema: z.string().min(5),
+      fields: z
+        .array(
+          z.object({ name: z.string().min(1), description: text, default: z.string().optional() }),
+        )
+        .min(1)
+        .max(40),
+      example: z.string().max(4000).optional(),
+    })
+    .optional(),
   /** Provenance of a generated guide: model, date, generated sections and the checks done by code. */
   generated: z
     .object({

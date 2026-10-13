@@ -3,16 +3,15 @@ import { redirect } from "next/navigation";
 import type { z } from "zod";
 import { auth } from "@/lib/auth";
 import { isStaff, isStaffEmail } from "@/lib/staff";
+import { can as policyCan, toRole, type Action, type Role } from "@/server/role-policy";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 
-export type Role = "owner" | "admin" | "member";
-export type Action = "read" | "create" | "update" | "delete";
+export type { Action, Role };
 
-/** Role policy (Security Pack): members read and create; only owners and admins update or delete. */
+/** Role policy (Security Pack), defined in src/server/role-policy.ts (roles from the request when they were given). */
 export function can(role: Role, action: Action): boolean {
-  if (role === "owner" || role === "admin") return true;
-  return action === "read" || action === "create";
+  return policyCan(role, action);
 }
 
 /**
@@ -21,6 +20,7 @@ export function can(role: Role, action: Action): boolean {
  */
 export async function requireMember(): Promise<{
   userId: string;
+  email: string;
   organizationId: string;
   role: Role;
 }> {
@@ -41,8 +41,8 @@ export async function requireMember(): Promise<{
     organizationId = first.id;
   }
   const member = await auth.api.getActiveMember({ headers: h }).catch(() => null);
-  const role = (member?.role ?? "member") as Role;
-  return { userId: session.user.id, organizationId, role };
+  const role = toRole(member?.role);
+  return { userId: session.user.id, email: session.user.email, organizationId, role };
 }
 
 /**

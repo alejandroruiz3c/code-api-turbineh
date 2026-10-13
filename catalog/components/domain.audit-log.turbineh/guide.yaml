@@ -1,0 +1,88 @@
+schema: turbineh.guide/v0.1
+component: domain.audit-log.turbineh
+title: Append-only audit log with an owner page, filters and CSV export
+summary: >-
+  Records every change made in a workspace — who, when, which action, which record and the field-level before/after
+  values, with passwords and tokens redacted — through one hook, audit(), that generated entities and domain
+  components already call. Owners (any role with view_audit) see the log at /dashboard/audit with filters by person,
+  action, record type and date range, pagination and CSV export. Entries are append-only: no code updates or deletes
+  them and a database trigger refuses it. It does not record reads or changes made by code that never calls audit().
+keywords:
+  [audit log, audit trail, activity log, change log, history, who changed what, compliance, append-only, immutable,
+   tamper-proof, owner visible, filters, csv export, record changes, before and after]
+synonyms:
+  audit log: [audit trail, activity log, change history, change log, registro de auditoría]
+  owner: [admin, account owner, workspace owner]
+use_cases:
+  - "Every change to notes, requests or records is recorded and visible to the workspace owner"
+  - "Compliance: who changed a client's data and when, exportable as CSV"
+  - "History of invitations, role changes, status transitions and uploads in one place"
+use_when:
+  - "The request says changes are recorded, audited, traceable or visible to owners/admins"
+  - "A regulated or multi-person workspace needs to know who did what"
+avoid_when:
+  - "Analytics of page views or product events (use an analytics tool)"
+  - "Per-record status history shown to everyone (use domain.workflow.turbineh, which keeps its own history)"
+tradeoffs:
+  - { choice: "One audit() hook replaced in place (src/lib/audit.ts)", gain: "Generated entities and every domain component record changes with no extra code", cost: "Hand-written actions must call audit() themselves" }
+  - { choice: "Append-only enforced by a database trigger", gain: "Entries cannot be altered even with direct SQL from the app's role", cost: "Retention needs a migration that drops the trigger deliberately" }
+  - { choice: "Stored in the app database", gain: "Same backups, same tenant filter, zero setup", cost: "Very high write volumes would need a separate log store" }
+config:
+  - { name: "src/audit/params.json", default: "pageSize 50, redact password/secret/token/hash, export 5,000", description: "Page size, redacted field fragments, ignored fields and export bound (validated at start-up)" }
+  - { name: "src/server/role-policy.ts (view_audit)", default: "owner, admin", description: "Which roles see the log; domain.membership-access.turbineh maps it from the request's roles" }
+interfaces:
+  - { name: audit, signature: "audit({ organizationId, actorId, actorEmail?, action, subjectType, subjectId?, summary?, before?, after? }) → Promise<void>", where: src/lib/audit.ts }
+  - { name: diffChanges, signature: "diffChanges(before, after, { redact, ignore }) → { field, before, after }[]", where: src/audit/diff.ts }
+  - { name: listAuditEvents, signature: "listAuditEvents(organizationId, filters, { limit, offset }) → { rows, total }", where: src/audit/query.ts }
+  - { name: "Audit page", signature: "/dashboard/audit?actor=&action=&subject=&from=YYYY-MM-DD&to=YYYY-MM-DD&page=", where: src/app/dashboard/audit/page.tsx }
+  - { name: "CSV export", signature: "GET /dashboard/audit/export?<same filters> → text/csv (recorded as audit.exported)", where: src/app/dashboard/audit/export/route.ts }
+extension_points:
+  - what: "Record a change made by your own server action"
+    where: "src/lib/audit.ts"
+    how: "After the change, `await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: \"invoice.sent\", subjectType: \"Invoice\", subjectId: id, before, after })`."
+  - what: "Change who can read the log"
+    where: "src/server/role-policy.ts"
+    how: "Grant or remove the view_audit action for a role; the page and the export both check can(role, \"view_audit\")."
+  - what: "Hide another sensitive field"
+    where: "src/audit/params.json"
+    how: "Add a fragment of its name to redactFields; its values are stored as [redacted]."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, drizzle-orm with PostgreSQL (plpgsql trigger), zod 4"
+  recipes: [saas-crud, client-portal, internal-tool, projects, tracker, analytics-dashboard]
+  requires: []
+  works_with: [domain.membership-access.turbineh, domain.workflow.turbineh, storage.private-uploads.turbineh]
+  notes: "Replaces the base no-op src/lib/audit.ts; the trigger is applied by scripts/migrate.ts from src/db/sql/."
+security:
+  - "Every read filters by the member's workspace; the page and CSV export require can(role, 'view_audit')"
+  - "Sensitive values (password, secret, token, hash by default) are redacted before they are stored"
+  - "Entries are append-only: no update/delete code path and a BEFORE UPDATE OR DELETE trigger"
+  - "Exporting the log is itself recorded"
+guarantees:
+  - { claim: "Owners see each change with who and when, and export it", test: "tests/e2e/audit-log.spec.ts › the owner sees each change in the audit log with who made it and when, and exports it as CSV" }
+  - { claim: "Filters by action and date", test: "tests/e2e/audit-log.spec.ts › the owner filters the audit log by action and by date" }
+  - { claim: "Entries cannot be changed or deleted, even with SQL", test: "tests/e2e/audit-log.spec.ts › audit entries cannot be changed or deleted, not even directly in the database" }
+  - { claim: "Workspaces are isolated", test: "tests/e2e/audit-log.spec.ts › another workspace never sees this workspace's audit entries" }
+  - { claim: "Sensitive values are never stored", test: "tests/unit/audit.test.ts › never stores sensitive values (passwords, tokens) in the log" }
+  - { claim: "Only changed fields are recorded", test: "tests/unit/audit.test.ts › records only the fields that changed, with before and after values" }
+limits:
+  - "Records only changes that go through audit() (generated entities and TurbineH domain components do)"
+  - "No retention job: entries are kept until a deliberate migration removes them"
+  - "Values longer than 300 characters are shortened in the log"
+example: |
+  import { audit } from "@/lib/audit";
+  await audit({
+    organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email,
+    action: "note.updated", subjectType: "Note", subjectId: note.id,
+    before: previous, after: { ...previous, title: "New title" },
+  });
+params:
+  file: src/audit/params.json
+  schema: params.schema.json
+  fields:
+    - { name: pageSize, default: "50", description: "Entries per page" }
+    - { name: redactFields, default: "password, secret, token, hash", description: "Field-name fragments whose values are never stored" }
+    - { name: ignoreFields, default: "id, organizationId, createdAt, updatedAt", description: "Fields not recorded as changes" }
+    - { name: exportLimit, default: "5000", description: "Maximum rows per CSV export" }
+  example: |
+    { "pageSize": 50, "redactFields": ["password", "secret", "token", "hash", "iban"], "ignoreFields": ["id", "organizationId", "createdAt", "updatedAt"], "exportLimit": 5000 }

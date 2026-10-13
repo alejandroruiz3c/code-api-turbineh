@@ -23,6 +23,14 @@ schema }, handler)` (per-IP rate limit + Zod before anything runs) and `requireS
 
 ### Added
 
+- Domain components for common business patterns (ADR-0041): `domain.workflow.turbineh` (states, role-gated
+  transitions, immutable history, stuck/overdue alerts), `domain.membership-access.turbineh` (roles from the request,
+  invitations by email with a role, accept flow with `requireSession()`, per-record scopes) and
+  `domain.audit-log.turbineh` (append-only audit log, owner page with filters and CSV export). Parameters declared with
+  a JSON Schema (`params` in component.yaml, checked by `catalog:validate`); base seams `src/server/role-policy.ts`,
+  `src/server/record-access.ts`, `src/lib/audit.ts` (generated entities record their changes); `src/db/sql/*.sql`
+  applied by `db:migrate`; assembler adapters `files-recipe/` and `files-with/`; `verify:recipe` component
+  combinations with request params.
 - Which app of a monorepo receives a capability is decided by the decider when the repository has several Next.js
   apps (ADR-0039 Amendment 1, owner decision): plans, the repository analysis and the worker's integration use
   `chooseAppPath`; the path heuristic stays as the fallback (one app, low confidence, no decider, errors, the CLI).

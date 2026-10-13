@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: domain.workflow.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.workflow.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Status workflows from the request for any record kind (requests, loans, pieces, tasks): states, initial state, allowed transitions with the roles that may make them (role keys, creator, any member), optional due dates, row-locked state changes, an immutable history of every change with who and when (database-enforced), and alerts for records stuck in a state longer than its limit or overdue; pages per workflow (grouped by state), per record (transitions, history) and an overview of what needs attention."
+  does_not: "Does not send notifications by itself (jobs.scheduled.turbineh emails digests), branch on custom conditions or run parallel states"
+  use_cases: [client-portal, internal-tool, tracker, projects, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "States, transitions, roles and limits come from the request as data",
+      "History is append-only in code and in the database",
+    ]
+  cons: ["One state per record; conditions beyond role and current state need code"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/workflow/params.json (workflows[]: key, label, plural, initial, dueDate, createRoles, states[], transitions[])",
+      "createItem(actor, { workflow, title, description?, subjectId?, scopeId?, dueAt? }); transition(actor, id, to, note?)",
+    ]
+  outputs: ["workflow_items, workflow_events; history(actor, id); listItems(actor, workflow); attentionItems(organizationId)"]
+  errors: ["UserFacingError (safe to show): unknown workflow/state, transition not defined from the current state, role not allowed, scope not visible"]
+  limits: ["10 workflows, 20 states and 60 transitions each; 500 records per list"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/workflow/{config,engine,service}.ts + params.json, src/db/component-workflow.ts, src/db/sql/110-workflow-history-append-only.sql, src/app/dashboard/workflow/**, unit and E2E tests."
+  config: []
+  migrations: true
+params:
+  file: src/workflow/params.json
+  schema: params.schema.json
+  entities: [Status, State, Stage, StageEvent, StageChange, StageLimit, StatusChange, StatusHistory, Transition, WorkflowEvent, History, Timeline]
+quality:
+  tests:
+    {
+      command: "unit (definition validation, allowed transitions per state and role, refusals, stuck and overdue) + E2E from the app's own definition (initial state and history, server refuses an undefined transition, allowed transitions only, database refuses history changes, stuck flag); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: every change re-checked on the server against the definition and role under a row lock; workspace and per-record scope filters on every read; append-only trigger on history; queries through Drizzle only."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "tracker + workflow and client-portal + membership + uploads + workflow pass the full verification gate with the workflow E2E suite"
+    origin: tested
+    ref: "verify:recipe (ADR-0041 combinations)"
+relations:
+  requires: []
+  provides: [domain.workflow]
+  conflicts: []
+  tested_with: [recipe.tracker, recipe.client-portal, recipe.internal-tool, recipe.projects]
