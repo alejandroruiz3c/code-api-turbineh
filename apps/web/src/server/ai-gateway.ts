@@ -380,7 +380,6 @@ async function forwardHedged(
     let hedge: "none" | "pending" | "budget" | "fired" = "none";
     let inFlight = 1;
     let lastFailure: Forwarded | null = null;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const outcome = (winner: "primary" | "hedge"): Forwarded["hedge"] =>
       hedge === "fired"
         ? winner === "primary"
@@ -441,7 +440,7 @@ async function forwardHedged(
         validChat,
       ).then((r) => onResult(r, "hedge"));
     };
-    timer = setTimeout(() => void fire(), delay);
+    const timer = setTimeout(() => void fire(), delay);
     void primary.then((r) => onResult(r, "primary"));
   });
 }
