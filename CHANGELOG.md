@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Criteria aliases (ADR-0046): domain components declare in `aliases.yaml` which params hold this app's word for
+  the generic words their tests use (bookings: customer → patient, staff member → physiotherapist, business → clinic,
+  services; workflow: record → piece, status → stage). The assembler resolves them per app (`.turbineh/aliases.json`)
+  for that component's tests only; facts count only when the test asserts the value from params; aliases never satisfy
+  a refusal. New params from the request: bookings `businessKind`, workflow `stateNoun`. Frontiers ai-agents +
+  bookings spec 1/14 → 5/14; 109 labelled pairs stay at precision 1.00, recall 0.92.
+
 - Criteria recall (ADR-0045): recipe, domain-component and generated test titles state the subject, actor and outcome
   they prove, assertion messages count as proof, and missing assertions were added (product detail page and delete,
   order email content, Kanban status persisted, owner role at sign-up, list search, audit trail of an edit). The
