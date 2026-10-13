@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { env } from "@/env";
 import { sendEmail } from "@/lib/email";
+import { staffEmails } from "@/lib/staff";
 import { formatPrice, orderSummary, stripePaidAmounts, verifyStripeSignature } from "@/lib/shop";
 
 interface CheckoutCompleted {
@@ -125,9 +126,7 @@ export async function POST(req: Request): Promise<Response> {
         text: `Thank you for your order.\n\n${summary}`,
       });
     }
-    for (const to of env.ADMIN_EMAILS.split(",")
-      .map((e) => e.trim())
-      .filter(Boolean)) {
+    for (const to of staffEmails()) {
       await sendEmail({ to, subject: `New paid order (${total})`, text: summary });
     }
   }

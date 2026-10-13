@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BRAND } from "@/brand";
+import { SignOutButton } from "@/components/sign-out-button";
 import { entityNav } from "@/entities";
 import { requireMember } from "@/server/authz";
 
@@ -25,6 +26,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </li>
           ))}
         </ul>
+        <div className="mt-6 border-t border-line pt-4">
+          <SignOutButton />
+        </div>
       </nav>
       <main className="flex-1 p-8">{children}</main>
     </div>

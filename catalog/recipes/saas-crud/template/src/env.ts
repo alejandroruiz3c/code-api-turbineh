@@ -8,6 +8,8 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("App <onboarding@resend.dev>"),
+  /** Staff emails (comma-separated): admin areas and, in "staff" sign-up apps, the only accounts. Empty = none. */
+  ADMIN_EMAILS: z.string().default(""),
 });
 
 export const env = schema.parse(process.env);

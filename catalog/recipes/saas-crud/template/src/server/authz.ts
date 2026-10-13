@@ -20,9 +20,20 @@ export async function requireMember(): Promise<{
   const h = await headers();
   const session = await auth.api.getSession({ headers: h });
   if (!session) redirect("/sign-in");
-  const organizationId = session.session.activeOrganizationId;
-  if (!organizationId) redirect("/sign-up?step=organization");
-  const member = await auth.api.getActiveMember({ headers: h });
+  let organizationId = session.session.activeOrganizationId;
+  if (!organizationId) {
+    // Sessions without an active workspace (e.g. created before the user joined one): resume their first workspace.
+    // New sign-ins get it from the session hook in src/lib/auth.ts.
+    const [first] = await auth.api.listOrganizations({ headers: h });
+    if (!first) redirect("/sign-up?step=organization");
+    try {
+      await auth.api.setActiveOrganization({ headers: h, body: { organizationId: first.id } });
+    } catch {
+      // Rendering a page cannot write cookies; the session row is updated, the next request reads it.
+    }
+    organizationId = first.id;
+  }
+  const member = await auth.api.getActiveMember({ headers: h }).catch(() => null);
   const role = (member?.role ?? "member") as Role;
   return { userId: session.user.id, organizationId, role };
 }

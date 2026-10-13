@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
-import { env } from "@/env";
 import { sendEmail } from "@/lib/email";
+import { staffEmails } from "@/lib/staff";
 import { rateLimit } from "@/security/rate-limit";
 
 const schema = z.object({
@@ -36,9 +36,7 @@ export async function sendContact(_prev: ContactState, formData: FormData): Prom
   if (parsed.data.website) return { ok: true, message: "Thanks! We will get back to you soon." };
   const { name, email, company, message } = parsed.data;
   await db.insert(contactMessages).values({ name, email, company: company || null, message });
-  for (const to of env.ADMIN_EMAILS.split(",")
-    .map((e) => e.trim())
-    .filter(Boolean)) {
+  for (const to of staffEmails()) {
     await sendEmail({
       to,
       subject: `New message from ${name}`,
