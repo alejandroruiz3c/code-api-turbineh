@@ -166,6 +166,8 @@ test.describe.serial("storefront", () => {
     await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
     await page.getByLabel(/^Price/).fill("12.50");
     await page.getByRole("button", { name: "Save product" }).click();
+    // The action redirects back to the list once saved.
+    await expect(page).toHaveURL(/\/dashboard\/products$/);
     await page.goto("/shop/price-test-mug");
     await expect(page.getByTestId("price")).toContainText("12.50");
   });
