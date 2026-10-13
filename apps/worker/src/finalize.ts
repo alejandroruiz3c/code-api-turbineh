@@ -90,6 +90,8 @@ export interface FinalizeResult {
   handover: HandoverFacts;
   /** Integrated components whose optional glue helper was removed (library and contract test kept). */
   glueRemoved: string[];
+  /** Acceptance criteria → tests after the gate (ADR-0033). */
+  acceptance: { met: number; covered: number; open: string[] };
   /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
   swappedOut: string[];
 }
@@ -404,6 +406,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     corrections,
     swappedOut,
     glueRemoved,
+    acceptance: metrics.acceptance,
   };
 }
 

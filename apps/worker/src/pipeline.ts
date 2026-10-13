@@ -659,6 +659,7 @@ export async function runBuild(
     corrections: fin.corrections,
     swappedOut: fin.swappedOut,
     glueRemoved: fin.glueRemoved,
+    acceptance: fin.acceptance,
     // What is in the delivered repository after corrections and swaps.
     components: usedComponents
       .filter((u) => !fin.swappedOut.includes(u.capability))
