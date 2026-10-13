@@ -14,4 +14,13 @@ describe("staff allowlist", () => {
     expect(maySignUp("staff@example.com", "staff")).toBe(true);
     expect(maySignUp("staff@example.com", "staff", "")).toBe(false);
   });
+
+  it("grants staff access only to a verified allowlisted address", async () => {
+    const { isStaff } = await import("@/lib/staff");
+    expect(isStaff({ email: "owner@example.com", emailVerified: false })).toBe(false);
+    expect(isStaff({ email: "owner@example.com", emailVerified: null })).toBe(false);
+    expect(isStaff({ email: "owner@example.com" })).toBe(false);
+    expect(isStaff({ email: "owner@example.com", emailVerified: true })).toBe(true);
+    expect(isStaff({ email: "visitor@example.com", emailVerified: true })).toBe(false);
+  });
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { SIGN_UP_POLICY } from "../../src/lib/sign-up-policy";
-import { OWNER_EMAIL, PASSWORD, signIn } from "./helpers";
+import { OWNER_EMAIL, PASSWORD, signIn, signUp, verifyEmail } from "./helpers";
 
 // These tests start signed out.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -30,6 +30,26 @@ test("a returning user signs out, signs in again and resumes their workspace", a
   // Never sent back to "create workspace".
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByTestId("role")).toHaveText("owner");
+});
+
+test("an allowlisted email gets staff access only after the address is verified", async ({
+  page,
+}) => {
+  // Allowlisted for this run only (playwright.config.ts): typing a staff address is not enough to become staff.
+  const email = process.env.E2E_STAFF_EMAIL ?? "";
+  await signUp(page, email);
+  await expect(page.getByTestId("staff")).toHaveText("no");
+  await verifyEmail(page, email);
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("staff")).toHaveText("yes");
+});
+
+test("the verified owner has staff access", async ({ browser }) => {
+  const context = await browser.newContext({ storageState: "playwright/.auth/owner.json" });
+  const page = await context.newPage();
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("staff")).toHaveText("yes");
+  await context.close();
 });
 
 test("sign-up follows the app's policy (staff-only apps refuse other emails)", async ({ page }) => {

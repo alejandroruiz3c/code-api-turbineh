@@ -32,7 +32,13 @@ const mockServers = mocks.map((file, i) => {
 const secret = (prefix = "") => `${prefix}${randomBytes(24).toString("hex")}`;
 process.env.BETTER_AUTH_SECRET ||= secret();
 process.env.BETTER_AUTH_URL ||= `http://127.0.0.1:${port}`;
-process.env.ADMIN_EMAILS = [process.env.ADMIN_EMAILS, "admin-e2e@example.com"]
+// A second staff address, unique per run, to prove staff access needs a verified email.
+process.env.E2E_STAFF_EMAIL ||= `staff-${Date.now()}@example.com`;
+process.env.ADMIN_EMAILS = [
+  process.env.ADMIN_EMAILS,
+  "admin-e2e@example.com",
+  process.env.E2E_STAFF_EMAIL,
+]
   .filter(Boolean)
   .join(",");
 // Emails are logged (never sent) and recorded here, so tests can assert them.

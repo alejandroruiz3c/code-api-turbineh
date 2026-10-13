@@ -60,6 +60,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- **Security, all recipes:** staff/admin access (`ADMIN_EMAILS`) trusted an unverified email, so anyone who signed up
+  first with the owner's address became staff. Sign-up now sends a verification link (logged without an email
+  provider) and staff rights require `emailVerified`; E2E covers unverified → verified.
 - All recipes: a fresh sign-in resumed no workspace and sent returning users to "create workspace"; sign-out added.
 - Generated site FAQ could have questions and answers swapped (explicit `question`/`answer` keys + normalisation).
 - Templates' `tsconfig.json` include `.next/dev/types` (Next 16 no longer rewrites it).

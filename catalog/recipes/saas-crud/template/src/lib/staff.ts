@@ -13,6 +13,17 @@ export function isStaffEmail(email: string, raw: string = env.ADMIN_EMAILS): boo
   return staffEmails(raw).includes(email.trim().toLowerCase());
 }
 
+/**
+ * Staff access: an allowlisted email that the user has PROVEN (emailVerified). Anyone can type the owner's address at
+ * sign-up; only the owner can open the verification link sent to it.
+ */
+export function isStaff(
+  user: { email: string; emailVerified?: boolean | null },
+  raw: string = env.ADMIN_EMAILS,
+): boolean {
+  return user.emailVerified === true && isStaffEmail(user.email, raw);
+}
+
 /** Whether `email` may create an account under this app's sign-up policy (src/lib/sign-up-policy.ts). */
 export function maySignUp(
   email: string,

@@ -27,7 +27,11 @@ mechanically is enforced by `pnpm catalog:validate` (admission gate: nothing is 
 4. **No secret-shaped literals** in tracked files, tests included (`sk_test_…`, `whsec_…`, private keys). _Checked._
 5. **Auth resume.** A fresh sign-in resumes the user's first workspace (session hook + `requireMember` fallback); a
    sign-out → sign-in E2E covers it. Staff-only apps use the shared allowlist (`src/lib/staff.ts`, `ADMIN_EMAILS`,
-   deny by default).
+   deny by default). **Staff rights require a verified email**: better-auth sends a verification link on sign-up
+   (through `sendEmail`, logged when there is no provider) and `isStaff()` grants staff/admin only when
+   `session.user.emailVerified === true` — otherwise anyone signing up first with the owner's address would become
+   staff. E2E setup verifies through the logged link (no test-only path in the app); a test proves an unverified
+   allowlisted address gets no staff access and gets it after verification.
 6. **Agent docs.** Every package ships `AGENTS.md` (+ `CLAUDE.md` importing it) and `turbineh.json`
    (`turbineh.package/v1`): purpose, file map by area (from each file's top-level doc comment), extension points
    (base + recipe `guide.extend`), theme tokens, env vars (required/optional from `src/env.ts`), acceptance criteria

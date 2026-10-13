@@ -4,6 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { organization } from "better-auth/plugins";
 import { pool } from "@/db/client";
 import { env } from "@/env";
+import { sendEmail } from "@/lib/email";
 import { maySignUp } from "@/lib/staff";
 
 /** Authentication and organizations: catalog component auth.session.better-auth (+ organization plugin). */
@@ -12,6 +13,20 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   emailAndPassword: { enabled: true, minPasswordLength: 10 },
+  // Staff rights depend on the email address, so it must be proven: a verification link is sent on sign-up and staff
+  // access (src/lib/staff.ts) is granted only once session.user.emailVerified is true.
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email address",
+        text: `Open this link to verify your email address:\n\n${url}\n\nIf you did not create an account, ignore this email.`,
+        link: url,
+      });
+    },
+  },
   databaseHooks: {
     user: {
       create: {
