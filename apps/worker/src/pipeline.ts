@@ -58,6 +58,7 @@ import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
+import { requireRequirements } from "./required-components.js";
 
 export type Phase =
   | "compiling"
@@ -327,21 +328,18 @@ export async function runBuild(
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
   const catalog = loadCatalog(join(deps.repoRoot, "catalog/components"));
-  // Components a required component needs (e.g. ui.kanban → domain.workflow, ADR-0045) are required too, with their
-  // shipped default params when the request did not select them itself.
-  for (let changed = true; changed;) {
-    changed = false;
-    const req = (recipe.requiredComponents ??= {});
-    for (const id of Object.values(req)) {
-      for (const r of catalog.find((x) => x.id === id)?.requires ?? []) {
-        const c = catalog.find((x) => x.id === r && x.status === "approved");
-        if (c && !Object.values(req).includes(r)) {
-          req[c.provides[0] ?? r] = r;
-          changed = true;
-        }
-      }
-    }
-  }
+  // Components a required component needs (e.g. ui.kanban → domain.workflow, ADR-0048) are required too: with the
+  // request's params when the fidelity output has them, otherwise with their defaults, listed under "What is left".
+  const requirements = requireRequirements({
+    required: (recipe.requiredComponents ??= {}),
+    catalog,
+    componentsDir: join(deps.repoRoot, "catalog/components"),
+    recipe: recipeId,
+    patterns: fidelity?.wired.patterns ?? [],
+    parameterised: new Set(domains.map((d) => d.component)),
+  });
+  domains.push(...requirements.domains);
+  if (fidelity) fidelity.assembly.patterns.push(...requirements.defaults);
   const selectionInput = {
     app: {
       recipe: spec.recipe,

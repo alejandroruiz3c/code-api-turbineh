@@ -1,7 +1,7 @@
-# ADR-0045 · Domain components, part 2: uploads, bookings recipe, scheduled jobs, kanban, public pages, waitlist, analytics import
+# ADR-0048 · Domain components, part 2: uploads, bookings recipe, scheduled jobs, kanban, public pages, waitlist, analytics import
 
-- Status: accepted (on `feat/domain-components-2`; 0045 is the next free number after ADR-0043 and ADR-0044 on
-  `main` — it may need renumbering at merge if another branch takes it first)
+- Status: accepted (on `feat/domain-components-2`; 0048 follows ADR-0045 criteria recall, ADR-0046 agent speed and
+  ADR-0047 criteria aliases on `main` — it may need renumbering at merge if another branch takes it first)
 - Date: 2026-10-13
 - Context: learning round (`bench/frontiers/ANALYSIS.md` §12 on `wip/frontiers-bench`, G1) and the "What is left" list
   of PR #92 / ADR-0041. Coding agents rewrote, in every run, private uploads with limits from the spec, the booking site
@@ -54,8 +54,20 @@
 Each component declares its recipes (`use_cases`, guide `compatibility.recipes`) and its `params.schema.json` accepts
 the parameters the compiler's patterns produce (MIME types for uploads, a job kind inferred from its words, the
 informative board fields of kanban, the pattern shapes of waitlist, public pages and analytics), so the nine
-learning-round requests select them with no adapter. domain.bookings is declared for recipe bookings. The pipeline
-also requires what a required component requires (ui.kanban → domain.workflow).
+learning-round requests select them with no adapter. domain.bookings is declared for recipe bookings (and accepts
+`businessKind`, ADR-0047). The pipeline also requires what a required component requires (ui.kanban →
+domain.workflow, `apps/worker/src/required-components.ts`): with the request's parameters when the fidelity output has
+them (the workflow is built from the board's entity and columns and validated against its schema), otherwise with the
+shipped defaults and an entry under AGENTS.md "What is left" ("workflow states not specified; using defaults").
+
+### Criteria recall and aliases (ADR-0045, ADR-0047)
+
+- The bookings recipe's own tests are gone with its code; the component's E2E titles state the Sala Nueve criteria
+  (customer and staff member as actors) and a new test proves "a booking outside the opening hours is rejected".
+  `aliases.yaml` of domain.bookings now covers `tests/e2e/bookings.spec.ts` too.
+- New `aliases.yaml`: storage.private-uploads (allowed type ← `types[]`/`extensions[]`, asserted from `params.types`;
+  record ← `attachTo`), ui.kanban (card ← `entity`, status ← `field`), data.analytics-import (filters ← `filters[]`).
+  growth.waitlist declares none: its params hold no words of the request (only switches and a number).
 
 ### New seams and template changes
 

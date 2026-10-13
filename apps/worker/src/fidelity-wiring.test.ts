@@ -66,7 +66,7 @@ describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, (
     expect(wf?.key).toBe("loan_request");
     expect(wf?.dueDate).toBe(true);
     expect(wf?.transitions.find((t) => t.to === "approved")?.roles).toEqual(["owner", "admin"]);
-    // The overdue emails are a scheduled job (jobs.scheduled.turbineh, ADR-0045): its kind is inferred from the words.
+    // The overdue emails are a scheduled job (jobs.scheduled.turbineh, ADR-0048): its kind is inferred from the words.
     const jobs = w.wired.selected.find((x) => x.id === "jobs.scheduled");
     expect(jobs?.component).toBe("jobs.scheduled.turbineh");
     expect(validateParams(join(componentsDir, "jobs.scheduled.turbineh"), jobs?.params)).toEqual(
@@ -75,7 +75,7 @@ describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, (
   });
 
   it("patterns without a component stay missing with where to implement them", () => {
-    // A catalog without the components of ADR-0045: Brickline's board, attachments and overdue emails stay missing.
+    // A catalog without the components of ADR-0048: Brickline's board, attachments and overdue emails stay missing.
     const dir = mkdtempSync(join(tmpdir(), "catalog-"));
     cpSync(componentsDir, dir, { recursive: true });
     for (const id of [
@@ -95,7 +95,7 @@ describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, (
   });
 
   it("does not select a component for a recipe it is not declared for", () => {
-    // domain.bookings is declared for the bookings recipe (ADR-0045): selected with the request's params.
+    // domain.bookings is declared for the bookings recipe (ADR-0048): selected with the request's params.
     const w = wire("bookings");
     expect(w.wired.patterns.find((p) => p.id === "bookings")).toMatchObject({
       status: "selected",

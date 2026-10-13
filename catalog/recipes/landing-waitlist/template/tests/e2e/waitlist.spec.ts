@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test.describe("public waitlist", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("a visitor joins the waitlist", async ({ page }) => {
+  test("a visitor on the landing page submits their name and email and joins the waitlist", async ({
+    page,
+  }) => {
     await page.goto("/");
     await page.getByLabel("Name").fill("Ada Visitor");
     await page.getByLabel("Email").fill("ada.visitor@example.com");
@@ -22,7 +24,7 @@ test.describe("public waitlist", () => {
   });
 });
 
-test("the admin sees waitlist signups", async ({ page }) => {
+test("the owner (admin) sees the list of waitlist signups in the dashboard", async ({ page }) => {
   await page.goto("/dashboard/waitlist");
   await expect(page.getByRole("cell", { name: "ada.visitor@example.com" })).toBeVisible();
 });

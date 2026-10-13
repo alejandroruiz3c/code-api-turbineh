@@ -48,7 +48,7 @@ const GENERIC = new Set(
     // Narrative and UI mechanics of Given/When/Then criteria (ADR-0043): how a person gets there, not what is checked.
     "click button press tap enter bar area section specific specifically particular certain relevant correspond " +
     "accordingly immediately proceed complet process receiv brows navigat initiat attempt already current initial " +
-    "reflect contain detail level statu databas redirect authenticat consol get gets got"
+    "reflect contain level statu databas redirect authenticat consol get gets got"
   ).split(" "),
 );
 
@@ -105,7 +105,7 @@ const SYNONYMS: Record<string, string> = {
   reserv: "book",
 };
 
-const SUFFIX = /(ment|ing|ed|es|s)$/;
+const SUFFIX = /(ment|ing|ed|es|(?<!s)s)$/;
 
 function stem(w: string): string {
   // "-ment"/"-ing" under another suffix too, so "payments" and "payment", "decremented" and "decrement",
@@ -118,11 +118,14 @@ function stem(w: string): string {
 }
 
 function words(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/\b(sign|log)[- ](in|out|up)\b/g, "$1$2")
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+  return (
+    text
+      .toLowerCase()
+      // "signs up", "signed in", "logging out" read like "sign up", "sign in", "log out".
+      .replace(/\b(sign|log)(?:s|ed|ged|ing|ging)?[- ](in|out|up)\b/g, "$1$2")
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+  );
 }
 
 /** Salient stems: content words minus generic words, as stems with synonyms folded. */
@@ -142,11 +145,30 @@ const rolesIn = (text: string): Set<string> =>
       .filter((w) => ROLES.includes(w)),
   );
 
+/**
+ * A word a component's tests use and what it means in this app, from the component's own params (ADR-0047): the
+ * bookings component's "customer" is this clinic's "patient", its "staff member" a "physiotherapist". Resolved by the
+ * assembler from the params the app ships; never written by hand per build.
+ */
+export interface ProofAlias {
+  /** The generic word the test uses ("customer", "staff member", "service"). */
+  term: string;
+  /** This app's words for it, read from the component's params ("patient"). */
+  means: string[];
+  /**
+   * Facts (service names, prices…): the alias counts only when one of the test's assertions matches this pattern —
+   * i.e. the test asserts the values from params (e.g. `for (const s of params.services) expect(reply)…`).
+   */
+  asserted?: string;
+}
+
 export interface ProofCandidate {
   /** The test title, e.g. "owner edits a note and sees the change". */
   title: string;
   /** Key assertions of the test body (expect(...) lines, visible texts), when known. */
   assertions?: string[];
+  /** Declared aliases of the component that ships the test, resolved for this app. */
+  aliases?: ProofAlias[];
 }
 
 export interface ProofVerdict {
@@ -155,16 +177,38 @@ export interface ProofVerdict {
   reason: string;
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * The test's own text plus the app words of every declared alias it uses: a word alias applies when the test names its
+ * term; a fact alias only when an assertion matches its pattern. Alias words never carry a refusal (negation words are
+ * dropped), so an alias can name the actor or the subject but never satisfy the refusal check.
+ */
+export function proofText(test: ProofCandidate): { own: string; expanded: string } {
+  const own = [test.title, ...(test.assertions ?? [])].join("\n");
+  const extra: string[] = [];
+  for (const a of test.aliases ?? []) {
+    const applies = a.asserted
+      ? (test.assertions ?? []).some((l) => {
+          try {
+            return new RegExp(a.asserted as string).test(l);
+          } catch {
+            return false;
+          }
+        })
+      : new RegExp(`\\b${escapeRe(a.term)}s?\\b`, "i").test(own);
+    if (applies) extra.push(...a.means.filter((m) => m.trim() && !NEGATION.test(m)));
+  }
+  return { own, expanded: extra.length ? `${own}\n${extra.join("\n")}` : own };
+}
+
 /** The refusal and actor checks alone (used to veto a decider's match). */
 export function proofVeto(criterion: string, test: ProofCandidate): string {
-  const testText = [test.title, ...(test.assertions ?? [])].join("\n");
-  if (
-    NEGATION.test(criterion) &&
-    !NEGATION.test(testText) &&
-    !/toBeDisabled|not\.to|403|401/.test(testText)
-  )
+  const { own, expanded } = proofText(test);
+  // The refusal is checked on the test's own text only: an alias never stands in for a refusal.
+  if (NEGATION.test(criterion) && !NEGATION.test(own) && !/toBeDisabled|not\.to|403|401/.test(own))
     return "the criterion requires a refusal the test does not check";
-  const testRoles = rolesIn(testText);
+  const testRoles = rolesIn(expanded);
   const missing = [...rolesIn(criterion)].filter((r) => !testRoles.has(r));
   if (missing.length > 0) return `the test does not act as ${missing.join(", ")}`;
   return "";
@@ -173,8 +217,15 @@ export function proofVeto(criterion: string, test: ProofCandidate): string {
 export function proofVerdict(criterion: string, test: ProofCandidate): ProofVerdict {
   const veto = proofVeto(criterion, test);
   if (veto) return { proven: false, reason: veto };
-  const have = salientStems([test.title, ...(test.assertions ?? [])].join("\n"));
-  const uncovered = [...salientStems(criterion)].filter((s) => !have.has(s));
+  const want = salientStems(criterion);
+  // A criterion that says almost nothing checkable ("products are shown") is proven by no test title.
+  if (want.size < 2)
+    return {
+      proven: false,
+      reason: "the criterion names too little to check (one subject, no outcome)",
+    };
+  const have = salientStems(proofText(test).expanded);
+  const uncovered = [...want].filter((s) => !have.has(s));
   if (uncovered.length > 0)
     return { proven: false, reason: `not exercised by the test: ${uncovered.join(", ")}` };
   return { proven: true, reason: "" };

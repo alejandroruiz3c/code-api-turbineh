@@ -368,6 +368,11 @@
           "cost": "One extra turn before create/move/cancel/send"
         },
         {
+          "choice": "Reply to a confirmed action from a template (the tool's `message`, else the summary + reference), no decider or model call (ADR-0046)",
+          "gain": "The confirmation turn costs no model call and answers in tool time",
+          "cost": "The reply is the tool's text (return a person-facing `message` in the person's language); failures still go to the model"
+        },
+        {
           "choice": "One decision per turn (route + unsafe) instead of per step",
           "gain": "Lower latency and cost",
           "cost": "The route does not change inside a turn"
@@ -412,7 +417,17 @@
         {
           "name": "AI_TIMEOUT_MS",
           "default": "60000",
-          "description": "Per model call"
+          "description": "Per model call (whole budget, one retry included)"
+        },
+        {
+          "name": "AI_ATTEMPT_TIMEOUT_MS",
+          "default": "15000",
+          "description": "Per attempt of a runAgent model call; a stuck attempt is retried once (ADR-0046)"
+        },
+        {
+          "name": "AI_DECIDER_ATTEMPT_TIMEOUT_MS",
+          "default": "5000",
+          "description": "Per attempt of a decision; retried once, then the default route (ADR-0046)"
         },
         {
           "name": "AI_PUBLIC_MAX_INPUT_CHARS",
@@ -514,6 +529,10 @@
         {
           "claim": "Irreversible tools run only after an explicit confirmation",
           "test": "tests/unit/ai-agent.test.ts › never executes an irreversible tool before an explicit confirmation"
+        },
+        {
+          "claim": "A confirmed action that ran is answered from a template without a model call; a failed one goes to the model",
+          "test": "tests/unit/ai-agent.test.ts › a confirmed action that fails goes to the model, which explains it"
         },
         {
           "claim": "Invalid arguments and unknown tools are refused; runs stop at the step limit",
@@ -7264,15 +7283,15 @@
         },
         {
           "claim": "Books only after confirmation and records the confirmation email",
-          "test": "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"
         },
         {
           "claim": "Reschedules with reference + email",
-          "test": "tests/e2e/booking-assistant.spec.ts › reschedules with reference + email after confirmation"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms"
         },
         {
           "claim": "Refuses cancellations inside the notice period",
-          "test": "tests/e2e/booking-assistant.spec.ts › refuses to cancel inside the notice period"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation"
         },
         {
           "claim": "DST-correct local times",
@@ -7309,6 +7328,10 @@
         {
           "claim": "Staff moves and cancellations email the customer",
           "test": "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+        },
+        {
+          "claim": "Times outside the opening hours are never offered or booked",
+          "test": "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"
         }
       ],
       "limits": [
@@ -15366,7 +15389,7 @@
       "guarantees": [
         {
           "claim": "Drag and drop moves a card and records the change with who and when",
-          "test": "tests/e2e/kanban.spec.ts › a card dragged to another status column is saved, with who and when in its history"
+          "test": "tests/e2e/kanban.spec.ts › a card dragged on the kanban board to another status column is persisted, with who and when in its history"
         },
         {
           "claim": "The board works with the keyboard alone and announces each step",

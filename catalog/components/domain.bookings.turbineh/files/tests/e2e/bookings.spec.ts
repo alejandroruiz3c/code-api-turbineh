@@ -234,6 +234,42 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     await mailTo(page, customer, /cancelled$/);
   });
 
+  test("a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused", async ({
+    page,
+    browser,
+  }) => {
+    // A closed weekday inside the horizon (skipped when the business opens every day).
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: params.timeZone }).format(
+      new Date(),
+    );
+    let closed: string | null = null;
+    for (let i = 2; i < Math.min(params.policy.horizonDays, 14) && !closed; i++) {
+      const d = new Date(`${today}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + i);
+      const day = d.toISOString().slice(0, 10);
+      if (!params.hours.some((h) => h.weekday === weekdayOf(day))) closed = day;
+    }
+    if (closed) {
+      const visitor = await anonymous(browser);
+      await visitor.goto(`/book?${new URLSearchParams({ service: service.name, day: closed })}`);
+      await expect(visitor.getByTestId("no-slots")).toContainText("closed");
+      await expect(visitor.getByTestId("slots")).toHaveCount(0);
+      await visitor.context().close();
+    }
+    // A staff booking at closing time (nothing can start then and still end inside the hours) is refused.
+    const day = openDay(3, 5);
+    const close = params.hours.filter((h) => h.weekday === weekdayOf(day)).at(-1)!.close;
+    await page.goto("/dashboard/appointments");
+    await page.getByLabel("Date").fill(day);
+    await page.getByLabel("Time").fill(close);
+    await page.getByLabel("Full name").fill("After Hours");
+    await page.getByLabel("Email", { exact: true }).fill(`late-night-${stamp}@example.com`);
+    await page.getByRole("button", { name: "Book", exact: true }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: /not available|no free times/ }),
+    ).toBeVisible();
+  });
+
   test("people who are not staff cannot see the bookings", async ({ browser }) => {
     const page = await anonymous(browser);
     await signUpOrSignIn(page, `visitor-${stamp}@example.com`);

@@ -1,0 +1,11 @@
+# Criteria aliases (ADR-0047): the kanban tests say "card" and "status column"; the request says "task" and its
+# status field. Resolved by the assembler from src/kanban/params.json (the fidelity pattern's entity and field) and
+# applied to these tests' proofs only.
+file: src/kanban/params.json
+tests:
+  - tests/e2e/kanban.spec.ts
+aliases:
+  - term: card
+    from: entity
+  - term: status
+    from: field

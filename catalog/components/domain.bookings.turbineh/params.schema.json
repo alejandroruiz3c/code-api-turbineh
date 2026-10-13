@@ -115,6 +115,12 @@
         }
       }
     },
+    "businessKind": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 40,
+      "description": "What the business is, in the request's word (clinic, salon, studio); used by criteria aliases (ADR-0047)."
+    },
     "askPhone": {
       "type": "boolean",
       "description": "The public booking page asks for a phone number (required when true)."

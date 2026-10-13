@@ -74,9 +74,9 @@ security:
   - "Queries only through Drizzle; dates validated; errors to people are PolicyError messages only"
 guarantees:
   - { claim: "Never books an invented or taken time", test: "tests/e2e/booking-assistant.spec.ts › never books an invented time" }
-  - { claim: "Books only after confirmation and records the confirmation email", test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email" }
-  - { claim: "Reschedules with reference + email", test: "tests/e2e/booking-assistant.spec.ts › reschedules with reference + email after confirmation" }
-  - { claim: "Refuses cancellations inside the notice period", test: "tests/e2e/booking-assistant.spec.ts › refuses to cancel inside the notice period" }
+  - { claim: "Books only after confirmation and records the confirmation email", test: "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking" }
+  - { claim: "Reschedules with reference + email", test: "tests/e2e/booking-assistant.spec.ts › a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms" }
+  - { claim: "Refuses cancellations inside the notice period", test: "tests/e2e/booking-assistant.spec.ts › a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation" }
   - { claim: "DST-correct local times", test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)" }
   - { claim: "Database-level double-booking guard", test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)" }
   - { claim: "Only staff on ADMIN_EMAILS see appointments", test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments" }
@@ -86,6 +86,7 @@ guarantees:
   - { claim: "Staff calendar per team member, day and week", test: "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)" }
   - { claim: "Time off removes times from what customers are offered", test: "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them" }
   - { claim: "Staff moves and cancellations email the customer", test: "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time" }
+  - { claim: "Times outside the opening hours are never offered or booked", test: "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused" }
 limits:
   - "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)"
   - "No payments, reminders or external calendar sync"
@@ -109,6 +110,7 @@ params:
     - { name: "hours[] { weekday 1–7, open, close }", default: "Monday–Friday 09:00–17:00", description: "Opening windows, local time" }
     - { name: "policy { cancelNoticeHours, bookingNoticeMinutes, horizonDays }", default: "24 h, 0, 60 days", description: "Customers cancel or move up to cancelNoticeHours before; staff always can" }
     - { name: "faq[] { topic, answer|null }", default: "[]", description: "Questions the assistant answers; null answers are never invented" }
+    - { name: "businessKind", default: "null", description: "What the business is in the request's word (clinic, salon); used by criteria aliases" }
     - { name: "askPhone", default: "false", description: "The public booking page asks for (and requires) a phone number" }
   example: |
     { "business": "Sala Nueve", "timeZone": "Europe/Madrid", "resource": { "singular": "Stylist", "plural": "Stylists", "count": 4, "names": [] },

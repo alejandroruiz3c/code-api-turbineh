@@ -5,7 +5,9 @@ import { OWNER_EMAIL, PASSWORD, signIn, signUp, verifyEmail } from "./helpers";
 // These tests start signed out.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("dashboard requires sign-in", async ({ page }) => {
+test("a user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page", async ({
+  page,
+}) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in/);
 });
@@ -47,12 +49,16 @@ test("a returning user signs out, signs in again and resumes their workspace", a
   await expect(page.getByTestId("role")).toHaveText("owner");
 });
 
-test("an allowlisted email gets staff access only after the address is verified", async ({
+test("a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified", async ({
   page,
 }) => {
   // Allowlisted for this run only (playwright.config.ts): typing a staff address is not enough to become staff.
   const email = process.env.E2E_STAFF_EMAIL ?? "";
   await signUp(page, email);
+  await expect(
+    page.getByTestId("role"),
+    "the new user's workspace is created and they are assigned the owner role",
+  ).toHaveText("owner");
   await expect(page.getByTestId("staff")).toHaveText("no");
   await verifyEmail(page, email);
   await page.goto("/dashboard");

@@ -21,7 +21,7 @@ const recipesDir = join(catalog, "recipes");
 const componentsDir = join(catalog, "components");
 
 // The bookings package of the learning round (Sala Nueve, build f336da58): the compiler's criteria. Its rule
-// "the owner books a slot and sees it in the calendar" was cited for seven of them.
+// "the owner books a slot and sees it in the calendar" (as the test was titled then) was cited for seven of them.
 const BOOKINGS_CRITERIA = [
   "Given a customer selects a service, they can only choose time slots that match the service duration.",
   "Given a customer provides a name, email, and phone, the system creates a booking and sends a confirmation email.",
@@ -32,7 +32,7 @@ const BOOKINGS_CRITERIA = [
   "Given a staff member is authenticated, they can move an existing booking to a different time slot.",
   "Given a staff member is authenticated, they can cancel a booking, triggering an automated email to the customer.",
 ];
-// The bookings recipe is built on domain.bookings (ADR-0045): its E2E titles state the criteria they prove. Every
+// The bookings recipe is built on domain.bookings (ADR-0048): its E2E titles state the criteria they prove. Every
 // Sala Nueve criterion but the first (no test chooses a service and checks durations end to end) is proven, each by
 // the test that exercises it.
 const BOOKINGS = "domain.bookings.turbineh";

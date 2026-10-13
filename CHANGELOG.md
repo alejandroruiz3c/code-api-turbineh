@@ -6,7 +6,28 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- Domain components, part 2 (ADR-0045): `storage.private-uploads.turbineh` (limits and types from params, local disk
+- Criteria aliases (ADR-0047): domain components declare in `aliases.yaml` which params hold this app's word for
+  the generic words their tests use (bookings: customer → patient, staff member → physiotherapist, business → clinic,
+  services; workflow: record → piece, status → stage). The assembler resolves them per app (`.turbineh/aliases.json`)
+  for that component's tests only; facts count only when the test asserts the value from params; aliases never satisfy
+  a refusal. New params from the request: bookings `businessKind`, workflow `stateNoun`. Frontiers ai-agents +
+  bookings spec 1/14 → 5/14; 109 labelled pairs stay at precision 1.00, recall 0.92.
+
+- Agent brain speed (ADR-0046): runAgent answers a confirmed irreversible action that ran from a template (the tool's
+  `message`, else the confirmed summary and reference) without a decider or model call, and bounds each model attempt
+  (15 s, one retry when stuck) and each decision attempt (5 s, one retry). On the 54-conversation agent bench, same
+  day: 54/54, turn p95 6.72 → 4.66 s, max 11.96 → 9.37 s, −23 % chat calls, −35 % decider calls, cost 2.08 → 1.40 USD
+  per 1,000 conversations [est.] (`bench/agent-brain/RESULTS.md`). The AI gateway can hedge slow chat completions
+  (one duplicate, per-app daily budget, billed on the answer only, `hedges`/`hedge_wins` in the usage metrics,
+  migration 0010); off by default because it showed no gain. The bench meters hedges, templated replies and network
+  failures, and can rotate a staging app token at its daily quota.
+- Criteria recall (ADR-0045): recipe, domain-component and generated test titles state the subject, actor and outcome
+  they prove, assertion messages count as proof, and missing assertions were added (product detail page and delete,
+  order email content, Kanban status persisted, owner role at sign-up, list search, audit trail of an edit). The
+  matcher is not relaxed: on the 109 labelled pairs precision stays 1.00 and recall goes from 0.62 to 0.92;
+  `verify:spec` Fieldnote 0/11 → 9/11, Kilnwise 0/6 → 1/6, Pixelyard 1/7 → 2/7 met; storefront Frontiers spec 7/7.
+
+- Domain components, part 2 (ADR-0048): `storage.private-uploads.turbineh` (limits and types from params, local disk
   or S3-compatible storage with SigV4 and an offline mock, per-scope authorised downloads, staff email on client
   uploads), the bookings recipe on `domain.bookings.turbineh` (public `/book` page, cancel link with the notice policy,
   staff day/week calendar per team member, time off, staff move/cancel with customer emails; the recipe's own booking

@@ -95,6 +95,11 @@ test.describe.serial("private uploads", () => {
       buffer: Buffer.from("<!doctype html><script>alert(1)</script>"),
     });
     await expect(page.getByRole("status")).toHaveText(/^Only .+ files are accepted\.$/);
+    for (const t of params.types)
+      await expect(
+        page.getByRole("status"),
+        `the refusal names the allowed type ${t} (params.types)`,
+      ).toContainText(new RegExp(t === "jpg" ? "jpe?g" : t, "i"));
     const big = Buffer.alloc(params.maxBytes + 1, 0x20);
     big.write("%PDF-1.7\n");
     await upload(page, { name: "too-big.pdf", mimeType: "application/pdf", buffer: big });

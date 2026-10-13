@@ -1,5 +1,5 @@
 # Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
-- test: "tests/e2e/kanban.spec.ts › a card dragged to another status column is saved, with who and when in its history"
+- test: "tests/e2e/kanban.spec.ts › a card dragged on the kanban board to another status column is persisted, with who and when in its history"
   covers: ["kanban|board", "drag|move|between (statuses|columns|stages)"]
 - test: "tests/e2e/kanban.spec.ts › a card can be moved with the keyboard alone, and each step is announced"
   covers: ["keyboard|accessib|a11y|screen reader"]

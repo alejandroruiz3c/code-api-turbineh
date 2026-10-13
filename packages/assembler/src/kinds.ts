@@ -36,6 +36,10 @@ export interface KindPlanInput {
   workflows: Record<string, { key: string; field: string }>;
   /** Per-record scope of domain.membership-access.turbineh: the entity it is named after (Company, Project, Shop). */
   scope: { entity: string; label: string } | null;
+  /** domain.audit-log.turbineh is installed: the edit tests also check the change in the audit log. */
+  auditLog?: boolean;
+  /** The request's name for the owner role, for generated test titles. */
+  ownerLabel?: string | undefined;
 }
 
 export interface KindPlan {
@@ -584,6 +588,8 @@ export function generateByKind(input: KindPlanInput): KindPlan {
       sort: sortField ?? null,
       workflow: wf ? { key: wf.key, dueField } : null,
       scope: scopeField ? { field: scopeField.name, label: input.scope?.label ?? "Scope" } : null,
+      auditLog: input.auditLog === true && !settings,
+      ...(input.ownerLabel ? { ownerLabel: input.ownerLabel } : {}),
     };
     own(e.name, generateEntity(shaped, input.features, input.entities, opts));
     const href = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;

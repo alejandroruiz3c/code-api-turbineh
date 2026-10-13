@@ -63,7 +63,7 @@ license:
 evidence:
   - claim: "landing-waitlist + growth.waitlist (Orbit Notes) passes the full verification gate with the waitlist E2E suites"
     origin: tested
-    ref: "verify:recipe (ADR-0045 combinations)"
+    ref: "verify:recipe (ADR-0048 combinations)"
 relations:
   requires: []
   provides: [growth.waitlist]

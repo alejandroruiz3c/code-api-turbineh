@@ -12,7 +12,15 @@ const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
   TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
   TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
+  /** One attempt of a decision (ms); a timed-out or failed attempt is retried once (ADR-0046). */
+  AI_DECIDER_ATTEMPT_TIMEOUT_MS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(500).max(60_000).default(5000),
+  ),
 });
+
+/** Attempts per decision: the first and one retry. */
+export const DECIDER_ATTEMPTS = 2;
 
 type Question =
   | { type: "choice"; instructions: string; criteria: Record<string, string> }
@@ -56,29 +64,45 @@ export interface RouteDecision {
 export class DeciderUnavailable extends Error {}
 
 async function decide(
-  cfg: { url: string; token: string },
+  cfg: { url: string; token: string; attemptMs: number },
   state: unknown,
   questions: Record<string, Question>,
 ): Promise<z.infer<typeof Decision>> {
-  const res = await fetch(`${cfg.url}/v1/systemone`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${cfg.token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ state, questions }),
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`TurbineH AI gateway answered ${res.status}`);
-  return Decision.parse(await res.json());
+  for (let attempt = 0; ; attempt++) {
+    // 0 = network failure, timeout or an unreadable body.
+    let status = 0;
+    try {
+      const res = await fetch(`${cfg.url}/v1/systemone`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${cfg.token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ state, questions }),
+        signal: AbortSignal.timeout(cfg.attemptMs),
+      });
+      status = res.status;
+      if (res.ok) return Decision.parse(await res.json());
+    } catch (err) {
+      if (err instanceof z.ZodError) throw err;
+    }
+    const retryable = status === 0 || status === 429 || status >= 500;
+    if (!retryable || attempt + 1 >= DECIDER_ATTEMPTS)
+      throw new Error(`TurbineH AI gateway answered ${status || "nothing"}`);
+    await new Promise((r) => setTimeout(r, status === 429 ? 1000 : 200));
+  }
 }
 
 /** Gateway settings; throws DeciderUnavailable when the app has no token (the caller then uses its defaults). */
-function gateway(): { url: string; token: string } {
+function gateway(): { url: string; token: string; attemptMs: number } {
   const cfg = Env.parse(process.env);
   if (!cfg.TURBINEH_AI_TOKEN) throw new DeciderUnavailable("TURBINEH_AI_TOKEN is not set");
-  return { url: cfg.TURBINEH_AI_URL.replace(/\/$/, ""), token: cfg.TURBINEH_AI_TOKEN };
+  return {
+    url: cfg.TURBINEH_AI_URL.replace(/\/$/, ""),
+    token: cfg.TURBINEH_AI_TOKEN,
+    attemptMs: cfg.AI_DECIDER_ATTEMPT_TIMEOUT_MS,
+  };
 }
 
 /** The route and safety questions, shared by orchestrate() and runAgent(). */

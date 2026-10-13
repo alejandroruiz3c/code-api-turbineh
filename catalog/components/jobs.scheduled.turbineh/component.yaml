@@ -63,7 +63,7 @@ license:
 evidence:
   - claim: "projects + workflow + kanban + uploads + jobs.scheduled and internal-tool + workflow + jobs.scheduled pass the full verification gate with the scheduled-jobs E2E suites"
     origin: tested
-    ref: "verify:recipe (ADR-0045 combinations)"
+    ref: "verify:recipe (ADR-0048 combinations)"
 relations:
   requires: []
   provides: [jobs.scheduled]

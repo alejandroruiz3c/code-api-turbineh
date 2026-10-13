@@ -10,6 +10,7 @@ import {
 } from "@turbineh/compiler";
 import type { CoverageRule } from "./acceptance.js";
 import { GENERATED, type GeneratedFile } from "./entities.js";
+import { entityNames } from "./naming.js";
 
 /**
  * The request's roles, rules and constraints as app code (ADR-0044): `src/server/permissions.ts` (the role matrix every
@@ -130,6 +131,15 @@ interface UnitTest {
 export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
   const roles = Object.entries(m.roles);
   const labelOf = (k: string) => m.roles[k]?.label ?? k;
+  // The records these rules guard: every generated business entity's actions call this can() (ADR-0044), so a title
+  // names them in the request's words (criterion language, ADR-0045).
+  const records = list(
+    f.entities
+      .filter((e) => e.ui === "crud" && (e.kind === "business" || e.kind === "relationship"))
+      .slice(0, 3)
+      .map((e) => entityNames(e.name).labelPlural.toLowerCase()),
+  );
+  const guarded = records ? ` ${records}` : " records";
   const tests: UnitTest[] = [
     {
       title:
@@ -147,7 +157,7 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
     const ro = r.can.filter((a) => a !== "see_all_scopes");
     if (ro.length === 1 && ro[0] === "read")
       tests.push({
-        title: `${r.label} is read-only: a ${r.label.toLowerCase()} can view but cannot create, edit or delete`,
+        title: `${r.label} is read-only: a ${r.label.toLowerCase()} can view${guarded} but cannot create, edit or delete them; the app's actions refuse the request`,
         body: [
           `expect(can(${JSON.stringify(k)}, "read")).toBe(true);`,
           ...["create", "update", "delete"].map(
@@ -156,6 +166,20 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
         ],
       });
   }
+  // Roles with full CRUD over the records, when another role lacks part of it ("managers create, read, update and
+  // delete equipment").
+  const crud = ["create", "read", "update", "delete"] as Permission[];
+  const full = roles.filter(([, r]) => crud.every((a) => r.can.includes(a)));
+  if (full.length > 0 && full.length < roles.length)
+    for (const label of [...new Set(full.map(([k]) => labelOf(k)))]) {
+      const keys = full.filter(([k]) => labelOf(k) === label).map(([k]) => k);
+      tests.push({
+        title: `a signed-in user with the ${label} role can create, read, edit and delete${guarded}`,
+        body: keys.flatMap((k) =>
+          crud.map((a) => `expect(can(${JSON.stringify(k)}, "${a}")).toBe(true);`),
+        ),
+      });
+    }
   // Actions only some roles have (who approves, exports, manages members, sees the audit log…).
   for (const action of [
     "approve",
@@ -174,7 +198,7 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
     const noLabels = [...new Set(no.map(labelOf))].filter((l) => !yesLabels.includes(l));
     if (noLabels.length === 0) continue;
     tests.push({
-      title: `only ${list(yesLabels)} can ${VERB[action] ?? action}; ${list(noLabels)} cannot`,
+      title: `only ${list(yesLabels)} can ${VERB[action] ?? action}${["create", "update", "delete"].includes(action) ? guarded : ""}; ${list(noLabels)} cannot${yesLabels.length === 1 ? ` (access refused to non-${(yesLabels[0] ?? "").toLowerCase()} roles)` : ""}`,
       body: [
         ...yes.map((k) => `expect(can(${JSON.stringify(k)}, "${action}")).toBe(true);`),
         ...no.map((k) => `expect(can(${JSON.stringify(k)}, "${action}")).toBe(false);`),
@@ -226,7 +250,6 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
       ],
     });
   }
-  void f;
   return tests;
 }
 

@@ -55,7 +55,7 @@ security:
   - "The browser only proposes a move; the server re-checks membership, the transition and the role under a row lock"
   - "Moves are rate-limited per person and recorded in the immutable history"
 guarantees:
-  - { claim: "Drag and drop moves a card and records the change with who and when", test: "tests/e2e/kanban.spec.ts › a card dragged to another status column is saved, with who and when in its history" }
+  - { claim: "Drag and drop moves a card and records the change with who and when", test: "tests/e2e/kanban.spec.ts › a card dragged on the kanban board to another status column is persisted, with who and when in its history" }
   - { claim: "The board works with the keyboard alone and announces each step", test: "tests/e2e/kanban.spec.ts › a card can be moved with the keyboard alone, and each step is announced" }
   - { claim: "Moves the workflow does not allow are refused and the card stays", test: "tests/e2e/kanban.spec.ts › a move the workflow does not allow is refused by the server and the card stays where it was" }
   - { claim: "Keyboard moves only target columns the card may go to", test: "tests/unit/kanban.test.ts › moves with the keyboard only between the columns the card may go to" }

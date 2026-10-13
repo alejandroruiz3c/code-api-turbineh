@@ -59,7 +59,7 @@ const card = (page: Page, column: string, title: string) =>
 test.describe.serial("kanban board", () => {
   test.skip(!wf || !allowedTo || !kanban.dragAndDrop, "no movable board for the owner in this app");
 
-  test("a card dragged to another status column is saved, with who and when in its history", async ({
+  test("a card dragged on the kanban board to another status column is persisted, with who and when in its history", async ({
     page,
   }) => {
     const title = `Drag ${stamp}`;
