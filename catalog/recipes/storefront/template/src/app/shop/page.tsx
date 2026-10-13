@@ -60,7 +60,7 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
           />
           <Button type="submit">Search</Button>
         </form>
-        {rows.length === 0 ? <p className="text-slate-600">No products found.</p> : null}
+        {rows.length === 0 ? <p className="text-muted">No products found.</p> : null}
         <ul className="grid grid-cols-2 gap-6 md:grid-cols-4">
           {rows.map((p) => (
             <ProductCard key={p.id} p={p} currency={currency} />

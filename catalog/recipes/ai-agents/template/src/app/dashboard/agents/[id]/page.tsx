@@ -51,27 +51,25 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">{agent.name}</h1>
       {conv?.needsHuman ? (
-        <p className="rounded bg-amber-50 p-2 text-sm text-amber-900">
+        <p className="rounded bg-warning-soft p-2 text-sm text-warning">
           A person will follow up on this conversation.
         </p>
       ) : null}
       <section aria-label="Conversation" className="flex flex-col gap-3">
-        {turns.length === 0 ? (
-          <p className="text-sm text-slate-600">Ask your first question.</p>
-        ) : null}
+        {turns.length === 0 ? <p className="text-sm text-muted">Ask your first question.</p> : null}
         {turns.map((m) => (
           <article
             key={m.id}
             data-role={m.role}
             className={
               m.role === "user"
-                ? "self-end rounded-lg bg-slate-900 p-3 text-sm text-white"
-                : "rounded-lg border border-slate-200 bg-white p-3 text-sm"
+                ? "self-end rounded-lg bg-ink p-3 text-sm text-surface"
+                : "rounded-lg border border-line bg-panel p-3 text-sm"
             }
           >
             <p className="whitespace-pre-wrap">{m.content}</p>
             {m.sources.length > 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Sources: {m.sources.join(", ")}</p>
+              <p className="mt-2 text-xs text-muted">Sources: {m.sources.join(", ")}</p>
             ) : null}
           </article>
         ))}
@@ -79,14 +77,14 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           <form
             key={p.id}
             action={resolveAction}
-            className="flex items-center gap-2 rounded bg-slate-50 p-3 text-sm"
+            className="flex items-center gap-2 rounded bg-subtle p-3 text-sm"
           >
             <input type="hidden" name="id" value={p.id} />
             <span className="flex-1">Confirm: {TOOL_LABELS[p.tool] ?? p.tool}?</span>
             <Button type="submit" name="decision" value="confirm">
               Confirm
             </Button>
-            <Button type="submit" name="decision" value="reject" className="bg-slate-500">
+            <Button type="submit" name="decision" value="reject" className="bg-muted">
               Cancel
             </Button>
           </form>
@@ -104,7 +102,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           </form>
           <form action={deleteAgent} className="mt-4">
             <input type="hidden" name="id" value={agent.id} />
-            <Button type="submit" className="bg-red-700">
+            <Button type="submit" className="bg-danger text-danger-contrast">
               Delete assistant
             </Button>
           </form>

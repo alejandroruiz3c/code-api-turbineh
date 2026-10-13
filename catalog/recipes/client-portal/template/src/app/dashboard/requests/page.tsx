@@ -49,7 +49,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Sea
               required
               maxLength={5000}
               rows={4}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-field px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -60,7 +60,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Sea
       <Card title={seesAll(ctx.role) ? "All requests" : "Your requests"}>
         <Table head={["Title", "Status", "Updated"]}>
           {rows.map((r) => (
-            <tr key={r.id} className="border-b border-slate-100">
+            <tr key={r.id} className="border-b border-line">
               <td className="px-3 py-2">
                 <Link className="underline" href={`/dashboard/requests/${r.id}`}>
                   {r.title}

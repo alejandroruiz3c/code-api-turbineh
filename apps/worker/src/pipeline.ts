@@ -19,6 +19,7 @@ import type { BackupCoder } from "@turbineh/backup-coder";
 import {
   compileIntent,
   detectDomains,
+  extractPalette,
   type BuildSpec,
   type CompileResult,
   type CompilerConfig,
@@ -176,6 +177,8 @@ export async function runBuild(
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
   const spec = compiled.spec;
+  // Specs stored before palettes existed (approved plans) still get the colours stated in the prompt.
+  if (spec.palette === undefined) spec.palette = extractPalette(prompt);
   if (spec.recipe === "out_of_scope" && options.plan) {
     // No complete use case fits: plan the certified components that cover the need (e.g. the AI orchestrator).
     const plan = componentPlan(buildId, options.plan, join(deps.repoRoot, "catalog/components"));

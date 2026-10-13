@@ -17,24 +17,24 @@ export default async function Billing({ searchParams }: { searchParams: SearchPa
     <Card title="Plan and billing">
       <div data-workspace={ctx.organizationId}>
         {sp.upgrade ? (
-          <p className="mb-3 text-amber-700">This feature is part of the Pro plan.</p>
+          <p className="mb-3 text-warning">This feature is part of the Pro plan.</p>
         ) : null}
         {sp.success ? (
-          <p className="mb-3 text-green-700">
+          <p className="mb-3 text-success">
             Thank you! Your plan updates as soon as Stripe confirms the payment.
           </p>
         ) : null}
         <p className="text-lg">
           Current plan: <strong data-testid="plan">{pro ? "Pro" : "Free"}</strong>
           {sub.currentPeriodEnd && pro ? (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted">
               {" "}
               · renews {sub.currentPeriodEnd.toISOString().slice(0, 10)}
             </span>
           ) : null}
         </p>
         {!billingConfigured() ? (
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-muted">
             Billing is not configured yet (STRIPE_SECRET_KEY and STRIPE_PRICE_PRO).
           </p>
         ) : admin ? (
@@ -48,7 +48,7 @@ export default async function Billing({ searchParams }: { searchParams: SearchPa
               <form action={manageBilling}>
                 <button
                   type="submit"
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm"
+                  className="rounded-md border border-field px-4 py-2 text-sm"
                 >
                   Manage billing
                 </button>
@@ -56,7 +56,7 @@ export default async function Billing({ searchParams }: { searchParams: SearchPa
             ) : null}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-slate-500">Ask an owner or admin to change the plan.</p>
+          <p className="mt-3 text-sm text-muted">Ask an owner or admin to change the plan.</p>
         )}
       </div>
     </Card>

@@ -63,7 +63,7 @@ export default function SignUp() {
             <Input id="workspace" name="workspace" required maxLength={60} />
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           ) : null}

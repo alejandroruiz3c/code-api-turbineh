@@ -2,6 +2,7 @@ import { choice, noul, type Decider } from "@turbineh/decider";
 import OpenAI from "openai";
 import { z } from "zod";
 import { buildSpecSchema, type BuildSpec } from "./build-spec.js";
+import { extractPalette } from "./palette.js";
 import {
   ABUSE_QUESTIONS,
   ABUSE_THRESHOLD,
@@ -141,6 +142,7 @@ export async function compileIntent(
     capabilities,
     ...criteria,
     site: site ?? null,
+    palette: extractPalette(prompt),
   });
   if (!parsed.success) {
     errors.push(...parsed.error.issues.map((i) => `${i.path.join(".") || "/"}: ${i.message}`));

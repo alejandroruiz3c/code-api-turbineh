@@ -51,7 +51,7 @@ export default async function AvailabilityPage() {
       <Card title="Opening hours">
         <Table head={["Day", "From", "To", ""]}>
           {rows.map((w) => (
-            <tr key={w.id} className="border-b border-slate-100">
+            <tr key={w.id} className="border-b border-line">
               <td className="px-3 py-2">{WEEKDAYS[w.weekday] ?? w.weekday}</td>
               <td className="px-3 py-2">{clock(w.startMinute)}</td>
               <td className="px-3 py-2">{clock(w.endMinute)}</td>
@@ -59,7 +59,7 @@ export default async function AvailabilityPage() {
                 {manage ? (
                   <form action={removeWindow}>
                     <input type="hidden" name="id" value={w.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Remove
                     </button>
                   </form>

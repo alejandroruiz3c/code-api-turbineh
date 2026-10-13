@@ -83,7 +83,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
               defaultValue={editing?.description}
               required
               rows={4}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-field px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -116,14 +116,14 @@ export default async function Products({ searchParams }: { searchParams: SearchP
       </Card>
       {editing ? (
         <Card title={`Options of ${editing.name}`}>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-muted">
             Sizes, colours or any other choice. Each option has its own SKU and stock and can
             override the price. Products with options are bought through one of them.
           </p>
           {variants.length > 0 ? (
             <Table head={["Option", "SKU", "Price", "Stock", ""]}>
               {variants.map((v) => (
-                <tr key={v.id} className="border-b border-slate-100">
+                <tr key={v.id} className="border-b border-line">
                   <td className="px-3 py-2">{v.name}</td>
                   <td className="px-3 py-2">{v.sku ?? "—"}</td>
                   <td className="px-3 py-2">
@@ -140,7 +140,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                         min={0}
                         defaultValue={v.stock ?? ""}
                         placeholder="∞"
-                        className="w-20 rounded-md border border-slate-300 px-2 py-1"
+                        className="w-20 rounded-md border border-field px-2 py-1"
                       />
                       <button type="submit" className="text-sm underline">
                         Save
@@ -150,7 +150,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                   <td className="px-3 py-2 text-right">
                     <form action={hideVariant}>
                       <input type="hidden" name="id" value={v.id} />
-                      <button className="text-sm text-red-600" type="submit">
+                      <button className="text-sm text-danger" type="submit">
                         Remove
                       </button>
                     </form>
@@ -185,7 +185,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
       ) : null}
       {editing && extraCurrencies.length > 0 ? (
         <Card title={`Prices of ${editing.name} in other currencies`}>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-muted">
             Buyers paying in another currency see exactly these prices (no exchange rates). Empty =
             not sold in that currency; an option without its own price uses the product&apos;s.
           </p>
@@ -196,7 +196,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                 { id: null as string | null, name: "Product" },
                 ...variants.map((v) => ({ id: v.id as string | null, name: `Option ${v.name}` })),
               ].map((row) => (
-                <tr key={row.id ?? "product"} className="border-b border-slate-100">
+                <tr key={row.id ?? "product"} className="border-b border-line">
                   <td className="px-3 py-2">{row.name}</td>
                   {extraCurrencies.map((c) => (
                     <td key={c} className="px-3 py-2">
@@ -205,7 +205,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                         name={`price:${row.id ?? "product"}:${c}`}
                         inputMode="decimal"
                         defaultValue={localValue(row.id, c)}
-                        className="w-24 rounded-md border border-slate-300 px-2 py-1"
+                        className="w-24 rounded-md border border-field px-2 py-1"
                       />
                     </td>
                   ))}
@@ -221,7 +221,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
       <Card title="Products">
         <Table head={["Name", "Price", "Stock", "Status", ""]}>
           {rows.map((p) => (
-            <tr key={p.id} className="border-b border-slate-100">
+            <tr key={p.id} className="border-b border-line">
               <td className="px-3 py-2">
                 <Link className="underline" href={`/dashboard/products?edit=${p.id}`}>
                   {p.name}
@@ -236,7 +236,7 @@ export default async function Products({ searchParams }: { searchParams: SearchP
                 {p.active ? (
                   <form action={deleteProduct}>
                     <input type="hidden" name="id" value={p.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Hide
                     </button>
                   </form>

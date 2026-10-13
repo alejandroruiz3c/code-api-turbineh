@@ -8,8 +8,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   await requireMember();
   return (
     <div className="flex min-h-screen">
-      <nav aria-label="Main" className="w-56 border-r border-slate-200 bg-white p-4">
-        <Link href="/dashboard" className="mb-4 flex items-center gap-2 font-semibold">
+      <nav aria-label="Main" className="w-56 border-r border-line bg-panel p-4">
+        <Link href="/dashboard" className="mb-4 flex items-center gap-2 font-semibold text-accent">
           {BRAND.logo ? (
             // eslint-disable-next-line @next/next/no-img-element -- static brand asset, no optimizer
             <img src={BRAND.logo} alt="" className="h-7 w-auto" />
@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <ul className="flex flex-col gap-1 text-sm">
           {entityNav.map((e) => (
             <li key={e.href}>
-              <Link className="block rounded px-2 py-1 hover:bg-slate-100" href={e.href}>
+              <Link className="block rounded px-2 py-1 hover:bg-subtle" href={e.href}>
                 {e.label}
               </Link>
             </li>

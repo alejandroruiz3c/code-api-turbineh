@@ -29,18 +29,18 @@ export default async function Agents() {
         </Card>
       ) : null}
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-600">No assistants yet.</p>
+        <p className="text-sm text-muted">No assistants yet.</p>
       ) : (
         <ul className="grid gap-4 md:grid-cols-3">
           {rows.map((a) => (
-            <li key={a.id} className="rounded-lg border border-slate-200 bg-white p-5">
+            <li key={a.id} className="rounded-lg border border-line bg-panel p-5">
               <Link
                 href={`/dashboard/agents/${a.id}`}
                 className="text-lg font-semibold hover:underline"
               >
                 {a.name}
               </Link>
-              <p className="mt-1 line-clamp-3 text-sm text-slate-600">{a.instructions}</p>
+              <p className="mt-1 line-clamp-3 text-sm text-muted">{a.instructions}</p>
             </li>
           ))}
         </ul>

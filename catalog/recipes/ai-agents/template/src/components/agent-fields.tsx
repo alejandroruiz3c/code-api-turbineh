@@ -32,7 +32,7 @@ export function AgentFields({
           maxLength={4000}
           rows={4}
           defaultValue={values?.instructions}
-          className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          className="w-full rounded-md border border-field p-2 text-sm"
         />
       </div>
       <fieldset className="flex flex-col gap-1 text-sm">

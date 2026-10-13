@@ -51,7 +51,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Sea
               title={`${d.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })} ${iso(d)}`}
             >
               {today.length === 0 ? (
-                <p className="text-sm text-slate-500">No bookings</p>
+                <p className="text-sm text-muted">No bookings</p>
               ) : (
                 <ul className="flex flex-col gap-2 text-sm">
                   {today.map((b) => (

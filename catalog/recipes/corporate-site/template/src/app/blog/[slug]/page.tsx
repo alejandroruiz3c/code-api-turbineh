@@ -54,7 +54,7 @@ export default async function Post({ params }: { params: Params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: article }} />
       <article className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="mb-2 text-4xl font-bold">{p.title}</h1>
-        <p className="mb-8 text-sm text-slate-500">{p.publishedAt?.toISOString().slice(0, 10)}</p>
+        <p className="mb-8 text-sm text-muted">{p.publishedAt?.toISOString().slice(0, 10)}</p>
         <Markdown source={p.body} />
       </article>
     </SiteShell>

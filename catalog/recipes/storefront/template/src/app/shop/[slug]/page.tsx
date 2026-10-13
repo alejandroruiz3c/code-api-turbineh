@@ -131,7 +131,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             className="w-full rounded-lg object-cover"
           />
         ) : (
-          <div className="flex aspect-square items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+          <div className="flex aspect-square items-center justify-center rounded-lg bg-subtle text-muted">
             No image
           </div>
         )}
@@ -142,7 +142,7 @@ export default async function ProductPage({ params }: { params: Params }) {
               ? `${new Set(prices).size > 1 ? "From " : ""}${formatPrice(Math.min(...prices), currency)}`
               : `Not sold in ${currency.toUpperCase()}`}
           </p>
-          <p className="whitespace-pre-line text-slate-700">{p.description}</p>
+          <p className="whitespace-pre-line text-muted">{p.description}</p>
           {inStock && sold ? (
             <form action={addToCart} className="flex flex-col items-start gap-4">
               <input type="hidden" name="productId" value={p.id} />
@@ -153,7 +153,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                   {variants.map((v, i) => (
                     <label
                       key={v.id}
-                      className={`flex items-center gap-2 text-sm ${v.inStock && v.price !== null ? "" : "text-slate-400"}`}
+                      className={`flex items-center gap-2 text-sm ${v.inStock && v.price !== null ? "" : "text-muted"}`}
                     >
                       <input
                         type="radio"
@@ -181,14 +181,14 @@ export default async function ProductPage({ params }: { params: Params }) {
                     min={1}
                     max={MAX_QTY}
                     defaultValue={1}
-                    className="ml-2 w-20 rounded-md border border-slate-300 px-2 py-1"
+                    className="ml-2 w-20 rounded-md border border-field px-2 py-1"
                   />
                 </label>
                 <Button type="submit">Add to cart</Button>
               </div>
             </form>
           ) : (
-            <p className="font-medium text-red-600">{sold ? "Out of stock" : ""}</p>
+            <p className="font-medium text-danger">{sold ? "Out of stock" : ""}</p>
           )}
         </div>
       </article>

@@ -28,7 +28,7 @@ export default async function Messages({ searchParams }: { searchParams: SearchP
         {rows.map((m) => (
           <li
             key={m.id}
-            className={`rounded-lg border p-4 ${m.handled ? "border-slate-100 opacity-60" : "border-slate-300"}`}
+            className={`rounded-lg border p-4 ${m.handled ? "border-line opacity-60" : "border-field"}`}
           >
             <p className="font-medium">
               {m.name} ·{" "}
@@ -37,7 +37,7 @@ export default async function Messages({ searchParams }: { searchParams: SearchP
               </a>
               {m.company ? ` · ${m.company}` : ""}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               {m.createdAt.toISOString().slice(0, 16).replace("T", " ")}
             </p>
             <p className="mt-2 whitespace-pre-wrap">{m.message}</p>

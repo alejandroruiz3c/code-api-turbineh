@@ -21,7 +21,7 @@ import {
   type GeneratedFile,
 } from "./entities.js";
 import { entityNames } from "./naming.js";
-import { applyBrand, type Brand } from "./brand-theme.js";
+import { applyTheme, type Brand } from "./brand-theme.js";
 import { writeSiteContent } from "./site-content.js";
 import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
@@ -170,7 +170,8 @@ export function assemble(input: AssembleInput): AssembleResult {
         .sort()
     : [];
 
-  if (input.brand) applyBrand(outDir, input.brand);
+  // Theme tokens from the request's palette (and the uploaded brand, which wins): every build, every recipe.
+  applyTheme(outDir, { brand: input.brand ?? null, palette: spec.palette ?? null });
   writeSiteContent(outDir, spec);
   applyRequestedCurrencies(outDir, spec);
 

@@ -39,7 +39,7 @@ export default function SignIn() {
             <Input id="password" name="password" type="password" required />
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           ) : null}

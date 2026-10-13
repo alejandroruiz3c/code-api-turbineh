@@ -26,7 +26,7 @@ export default async function WaitlistAdmin({ searchParams }: { searchParams: Se
     <Card title={`Waitlist (${total})`}>
       <Table head={["Name", "Email", "Joined"]}>
         {rows.map((r) => (
-          <tr key={r.id} className="border-b border-slate-100">
+          <tr key={r.id} className="border-b border-line">
             <td className="px-3 py-2">{r.name}</td>
             <td className="px-3 py-2">{r.email}</td>
             <td className="px-3 py-2">{r.createdAt.toISOString().slice(0, 10)}</td>

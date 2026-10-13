@@ -28,7 +28,7 @@ export function WaitlistForm() {
         {pending ? "Joining…" : "Join the waitlist"}
       </Button>
       {state ? (
-        <p role="status" className={state.ok ? "text-green-700" : "text-red-600"}>
+        <p role="status" className={state.ok ? "text-success" : "text-danger"}>
           {state.message}
         </p>
       ) : null}

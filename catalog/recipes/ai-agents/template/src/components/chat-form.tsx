@@ -27,10 +27,10 @@ export function ChatForm({ agentId }: { agentId: string }) {
         required
         maxLength={8000}
         rows={3}
-        className="rounded-md border border-slate-300 p-2 text-sm"
+        className="rounded-md border border-field p-2 text-sm"
       />
       {state.error ? (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}

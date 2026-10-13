@@ -65,8 +65,8 @@ export default async function TrackerPage({ params }: { params: Promise<{ id: st
           ],
           ["Goal met (30 days)", `${completion(days)}%`],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-slate-200 bg-white p-4">
-            <dt className="text-xs text-slate-500">{label}</dt>
+          <div key={label} className="rounded-lg border border-line bg-panel p-4">
+            <dt className="text-xs text-muted">{label}</dt>
             <dd className="mt-1 text-xl font-semibold" data-stat={label}>
               {value}
             </dd>
@@ -100,14 +100,14 @@ export default async function TrackerPage({ params }: { params: Promise<{ id: st
               key={d.day}
               title={`${d.day}: ${n(d.total)}${unit}`}
               aria-label={`${d.day}: ${d.met ? "goal met" : "goal not met"}`}
-              className={`aspect-square rounded ${d.met ? "bg-brand" : d.total > 0 ? "bg-slate-300" : "bg-slate-100"}`}
+              className={`aspect-square rounded ${d.met ? "bg-brand" : d.total > 0 ? "bg-field" : "bg-subtle"}`}
             />
           ))}
         </ol>
       </Card>
       <form action={deleteTracker}>
         <input type="hidden" name="id" value={t.id} />
-        <button type="submit" className="text-sm text-red-600 underline">
+        <button type="submit" className="text-sm text-danger underline">
           Delete tracker
         </button>
       </form>

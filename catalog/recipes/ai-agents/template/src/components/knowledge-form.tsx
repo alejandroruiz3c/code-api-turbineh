@@ -32,7 +32,7 @@ export function KnowledgeForm() {
           id="kb-text"
           name="text"
           rows={6}
-          className="w-full rounded-md border border-slate-300 p-2 text-sm"
+          className="w-full rounded-md border border-field p-2 text-sm"
         />
       </div>
       <div>
@@ -45,12 +45,12 @@ export function KnowledgeForm() {
         />
       </div>
       {state.error ? (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {state.error}
         </p>
       ) : null}
       {state.added ? (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="text-sm text-success">
           Added “{state.added}”.
         </p>
       ) : null}

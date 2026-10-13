@@ -40,7 +40,7 @@ export default async function Orders({ searchParams }: { searchParams: SearchPar
             key={o.id}
             data-order-id={o.id}
             data-status={o.status}
-            className="border-b border-slate-100"
+            className="border-b border-line"
           >
             <td className="px-3 py-2">
               {o.createdAt.toISOString().slice(0, 16).replace("T", " ")}
@@ -51,7 +51,7 @@ export default async function Orders({ searchParams }: { searchParams: SearchPar
                 <summary className="cursor-pointer">
                   {formatPrice(o.totalCents, o.currency)}
                 </summary>
-                <pre className="mt-2 whitespace-pre-wrap font-sans text-xs text-slate-600">
+                <pre className="mt-2 whitespace-pre-wrap font-sans text-xs text-muted">
                   {orderSummary(
                     o,
                     items.filter((i) => i.orderId === o.id),

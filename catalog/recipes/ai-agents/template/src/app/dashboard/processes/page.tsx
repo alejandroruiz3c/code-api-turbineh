@@ -33,7 +33,7 @@ export default async function Processes() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">AI processes</h1>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         Run the same AI task over many records: classify, extract or summarise.
       </p>
       {can(ctx.role, "update") ? (
@@ -48,7 +48,7 @@ export default async function Processes() {
               <select
                 id="pr-kind"
                 name="kind"
-                className="rounded-md border border-slate-300 p-2 text-sm"
+                className="rounded-md border border-field p-2 text-sm"
               >
                 {Object.entries(KIND_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -73,14 +73,14 @@ export default async function Processes() {
       ) : null}
       <ul className="grid gap-4 md:grid-cols-3">
         {rows.map((p) => (
-          <li key={p.id} className="rounded-lg border border-slate-200 bg-white p-5">
+          <li key={p.id} className="rounded-lg border border-line bg-panel p-5">
             <Link
               href={`/dashboard/processes/${p.id}`}
               className="text-lg font-semibold hover:underline"
             >
               {p.name}
             </Link>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-muted">
               {KIND_LABELS[p.kind as keyof typeof KIND_LABELS] ?? p.kind} · {p.done}/{p.total} done
             </p>
           </li>

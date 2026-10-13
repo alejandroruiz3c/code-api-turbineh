@@ -11,7 +11,7 @@ import { requireAdmin } from "@/server/admin";
 import { deletePost, savePost } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-const area = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+const area = "w-full rounded-md border border-field px-3 py-2 text-sm";
 
 export default async function Posts({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
@@ -71,7 +71,7 @@ export default async function Posts({ searchParams }: { searchParams: SearchPara
       <Card title="Posts">
         <Table head={["Title", "Status", "Updated", ""]}>
           {rows.map((p) => (
-            <tr key={p.id} className="border-b border-slate-100">
+            <tr key={p.id} className="border-b border-line">
               <td className="px-3 py-2">
                 <Link className="underline" href={`/dashboard/posts?edit=${p.id}`}>
                   {p.title}
@@ -82,7 +82,7 @@ export default async function Posts({ searchParams }: { searchParams: SearchPara
               <td className="px-3 py-2 text-right">
                 <form action={deletePost}>
                   <input type="hidden" name="id" value={p.id} />
-                  <button className="text-sm text-red-600" type="submit">
+                  <button className="text-sm text-danger" type="submit">
                     Delete
                   </button>
                 </form>

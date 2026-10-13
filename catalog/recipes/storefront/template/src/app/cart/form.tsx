@@ -18,10 +18,7 @@ export function CouponForm() {
         Apply
       </Button>
       {state ? (
-        <p
-          role="status"
-          className={`w-full text-sm ${state.ok ? "text-green-700" : "text-red-600"}`}
-        >
+        <p role="status" className={`w-full text-sm ${state.ok ? "text-success" : "text-danger"}`}>
           {state.message}
         </p>
       ) : null}
@@ -52,7 +49,7 @@ export function CheckoutForm({
         {pending ? "Opening secure payment…" : "Checkout"}
       </Button>
       {state ? (
-        <p role="status" className={state.ok ? "text-green-700" : "text-red-600"}>
+        <p role="status" className={state.ok ? "text-success" : "text-danger"}>
           {state.message}
         </p>
       ) : null}

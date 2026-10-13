@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paletteSchema } from "./palette.js";
 
 /** Beta recipes (PLAN §3.8). Anything else is answered honestly as out of scope. */
 export const RECIPES = [
@@ -239,6 +240,8 @@ export const buildSpecSchema = z
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
     // Public-site copy (optional part; recipes fall back to deterministic copy when it is null).
     site: sitePart.nullable().optional(),
+    // Visual identity stated in the prompt (explicit colours and type), extracted by code; applied as theme tokens.
+    palette: paletteSchema.nullable().optional(),
   })
   .superRefine((spec, ctx) => {
     if (spec.recipe === "out_of_scope" && !spec.out_of_scope_reason) {
