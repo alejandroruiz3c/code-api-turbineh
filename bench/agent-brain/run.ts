@@ -77,11 +77,27 @@ interface Call {
 }
 interface Meter {
   usage: Usage[];
+  /**
+   * Gateway hedges (ADR-0043): the cancelled duplicate of each hedged call, counted at the answer's own tokens — an
+   * upper bound [est.] of what the provider charges for a request cancelled part-way. Not billed to the app.
+   */
+  hedgeUsage: Usage[];
   calls: Call[];
   waits: number;
   waitMs: number;
+  /** runAgent turns answered from the confirmed-action template, without a model call. */
+  templated: number;
 }
-const newMeter = (): Meter => ({ usage: [], calls: [], waits: 0, waitMs: 0 });
+const newMeter = (): Meter => ({
+  usage: [],
+  hedgeUsage: [],
+  calls: [],
+  waits: 0,
+  waitMs: 0,
+  templated: 0,
+});
+/** Hedge outcomes that mean a duplicate request was fired. */
+const FIRED = new Set(["primary-won", "hedge-won"]);
 const current = new AsyncLocalStorage<Meter>();
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
@@ -138,6 +154,12 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
           ? { hedged: res.headers.get("x-turbineh-hedge") ?? "" }
           : {}),
       });
+      if (kind === "chat" && FIRED.has(res.headers.get("x-turbineh-hedge") ?? ""))
+        m.hedgeUsage.push({
+          model: usedModel,
+          input: u.prompt_tokens ?? 0,
+          output: u.completion_tokens ?? 0,
+        });
       m.usage.push(
         kind === "claude"
           ? {
@@ -313,6 +335,7 @@ async function main() {
                 : {};
             const r = await agent.runAgent({ ...base, input: turn, tools, state, now, ...confirm });
             state = r.state;
+            if (r.flags.includes("templated-reply")) meter.templated++;
             pending = r.status === "needs_confirmation";
             replies.push(r.reply);
             steps.push(...r.steps.map((s) => `${s.tool}${s.executed ? "" : "?"}`));
@@ -417,7 +440,19 @@ function summarise(rows: Row[], wallS: number) {
     latencyPerTurnMs: dist(turnMs),
     timePerConversationMs: dist(rows.map((r) => r.convMs)),
     callLatencyMs: callMs,
-    hedgedCalls: calls.filter((c) => c.hedged && c.hedged !== "none").length,
+    hedgedCalls: calls.filter((c) => FIRED.has(c.hedged ?? "")).length,
+    hedgeWins: calls.filter((c) => c.hedged === "hedge-won").length,
+    hedgeBudgetDenied: calls.filter((c) => c.hedged === "budget").length,
+    chatCalls: calls.filter((c) => c.kind === "chat").length,
+    deciderCalls: calls.filter((c) => c.kind === "decider").length,
+    templatedReplies: rows.reduce((n, r) => n + r.meter.templated, 0),
+    hedgeOverheadUsdUpperBound: Number(costOf(rows.flatMap((r) => r.meter.hedgeUsage)).toFixed(5)),
+    costPer1000ConversationsInclHedgesUsd: Number(
+      (
+        ((cost + costOf(rows.flatMap((r) => r.meter.hedgeUsage))) / Math.max(rows.length, 1)) *
+        1000
+      ).toFixed(2),
+    ),
     tokens: byModel,
     costUsd: Number(cost.toFixed(5)),
     costPer1000ConversationsUsd: Number(((cost / Math.max(rows.length, 1)) * 1000).toFixed(2)),

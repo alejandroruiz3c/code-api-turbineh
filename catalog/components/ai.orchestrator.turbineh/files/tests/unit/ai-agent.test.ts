@@ -4,9 +4,10 @@ import { z } from "zod";
 // The agent loop is tested with injected I/O: no database, no network.
 vi.mock("@/db/client", () => ({ db: {} }));
 
-const { defineTool, readConfirmation, runAgent, ToolError, trimMessages } =
+const { confirmedReply, defineTool, readConfirmation, runAgent, ToolError, trimMessages } =
   await import("@/lib/ai/agent");
-const { modelEndpoint, aiConfig } = await import("@/lib/ai/models");
+const { modelEndpoint, aiConfig, chatWithTools } = await import("@/lib/ai/models");
+const { decideAgentTurn } = await import("@/lib/ai/decider");
 const { chatCompletion } = await import("../mock-llm/mock");
 const { AiSafetyError } = await import("@/lib/ai/guard");
 type AgentIO = import("@/lib/ai/agent").AgentIO;
@@ -55,8 +56,10 @@ const tools = [
       return { summary: `Book 10:00` };
     },
     execute: async (a) => {
+      if (a.time === "10:00" && booked.includes("10:00"))
+        throw new ToolError("That time was just taken.");
       booked.push(a.time);
-      return { booked: true };
+      return { booked: true, reference: "BK12" };
     },
   }),
 ];
@@ -96,13 +99,64 @@ describe("runAgent (tool-calling runtime)", () => {
       { ...base, input: "book 10:00" },
       io([{ toolCalls: [call("book", { time: "10:00" })] }]),
     );
-    const done = await runAgent(
-      { ...base, input: "Yes, please", state: again.state },
-      io([{ text: "Booked." }]),
-    );
+    const doneIO = io([{ text: "Booked." }]);
+    let decided = 0;
+    doneIO.decide = async () => {
+      decided++;
+      throw new Error("not expected");
+    };
+    const done = await runAgent({ ...base, input: "Yes, please", state: again.state }, doneIO);
     expect(booked).toEqual(["10:00"]);
     expect(done.status).toBe("answered");
     expect(done.state.pending).toBeNull();
+    // An explicit yes is settled by code and answered from a template: no decider and no model call.
+    expect(done.reply).toBe("Done: Book 10:00. Reference: BK12. Anything else I can help with?");
+    expect(done.flags).toContain("templated-reply");
+    expect(done.usage.calls).toBe(0);
+    expect(doneIO.seen).toHaveLength(0);
+    expect(decided).toBe(0);
+    expect(done.state.messages.map((m) => m.role)).toEqual([
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+    ]);
+  });
+
+  it("a confirmed action that fails goes to the model, which explains it", async () => {
+    booked.length = 0;
+    booked.push("10:00");
+    const first = await runAgent(
+      { ...base, input: "book 10:00" },
+      io([{ toolCalls: [call("book", { time: "10:00" })] }]),
+    );
+    const fake = io([{ text: "Sorry, 10:00 was just taken. 11:00 is free." }]);
+    const r = await runAgent({ ...base, input: "yes", state: first.state }, fake);
+    expect(r.reply).toBe("Sorry, 10:00 was just taken. 11:00 is free.");
+    expect(r.flags).not.toContain("templated-reply");
+    expect(fake.seen).toHaveLength(1);
+    expect(JSON.stringify(fake.seen[0])).toContain("That time was just taken.");
+  });
+
+  it("builds the confirmed reply from the tool's message, else the summary and the reference", () => {
+    expect(
+      confirmedReply("Cancel booking X.", { message: "Cancelled booking X. We emailed you." }),
+    ).toBe("Cancelled booking X. We emailed you.");
+    expect(
+      confirmedReply("Book Ana with Laura on Thursday at 10:00.", { booked: { id: "B7" } }),
+    ).toBe(
+      "Done: Book Ana with Laura on Thursday at 10:00. Reference: B7. Anything else I can help with?",
+    );
+    expect(confirmedReply("Send the invoice", null)).toBe(
+      "Done: Send the invoice. Anything else I can help with?",
+    );
+    expect(confirmedReply("Pay", { reference: "has spaces in it" })).toBe(
+      "Done: Pay. Anything else I can help with?",
+    );
   });
 
   it("a refusal from prepare goes back to the model; nothing is pending", async () => {
@@ -238,6 +292,89 @@ describe("runAgent (tool-calling runtime)", () => {
       { role: "user" as const, content: "c" },
     ];
     expect(trimMessages(msgs, 3)[0]).toEqual({ role: "user", content: "c" });
+  });
+
+  it("model calls: a stuck attempt is abandoned at the per-attempt timeout and retried once", async () => {
+    const keep = { ...process.env };
+    const realFetch = globalThis.fetch;
+    process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1";
+    process.env.AI_ATTEMPT_TIMEOUT_MS = "1000";
+    let attempts = 0;
+    globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+      attempts++;
+      if (attempts === 1)
+        return new Promise<Response>((_r, reject) =>
+          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
+      return Response.json({ choices: [{ message: { content: "ok" } }] });
+    }) as typeof fetch;
+    try {
+      const t0 = Date.now();
+      const r = await chatWithTools("m", [{ role: "user", content: "hi" }], [], {
+        timeoutMs: 10_000,
+      });
+      expect(r.text).toBe("ok");
+      expect(attempts).toBe(2);
+      expect(Date.now() - t0).toBeLessThan(3000);
+      // Two failed attempts are an error (no third one).
+      attempts = 0;
+      globalThis.fetch = (async () => {
+        attempts++;
+        return new Response("busy", { status: 503 });
+      }) as typeof fetch;
+      await expect(
+        chatWithTools("m", [{ role: "user", content: "hi" }], [], { timeoutMs: 10_000 }),
+      ).rejects.toThrow(/503/);
+      expect(attempts).toBe(2);
+    } finally {
+      globalThis.fetch = realFetch;
+      process.env = keep;
+    }
+  });
+
+  it("decisions: one retry after a failed attempt, then the caller's fallback", async () => {
+    const keep = { ...process.env };
+    const realFetch = globalThis.fetch;
+    process.env.TURBINEH_AI_TOKEN = "tbh_ai_test";
+    process.env.AI_DECIDER_ATTEMPT_TIMEOUT_MS = "500";
+    let attempts = 0;
+    globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+      attempts++;
+      if (attempts === 1)
+        return new Promise<Response>((_r, reject) =>
+          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
+      return Response.json({
+        answers: { next: { type: "choice", choice: "check", confidence: 0.8, probabilities: {} } },
+        model: "jev",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+    }) as typeof fetch;
+    try {
+      const d = await decideAgentTurn(
+        { request: "free?", conversation: "" },
+        [{ name: "check", description: "free times", irreversible: false }],
+        [{ name: "balanced", model: "m", description: "" }],
+      );
+      expect(d.next).toBe("check");
+      expect(attempts).toBe(2);
+      attempts = 0;
+      globalThis.fetch = (async () => {
+        attempts++;
+        return new Response("no", { status: 502 });
+      }) as typeof fetch;
+      await expect(
+        decideAgentTurn(
+          { request: "x", conversation: "" },
+          [],
+          [{ name: "balanced", model: "m", description: "" }],
+        ),
+      ).rejects.toThrow();
+      expect(attempts).toBe(2);
+    } finally {
+      globalThis.fetch = realFetch;
+      process.env = keep;
+    }
   });
 
   it("uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway", () => {
