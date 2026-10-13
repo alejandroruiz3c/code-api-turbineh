@@ -5,25 +5,40 @@ import { db } from "@/server/db";
 import { connectionStatus, seal, takeConnection } from "@/server/deploy-connections";
 import { problem } from "@/server/problem";
 
-const Body = z.object({
-  // Either "signed in with Vercel" (ADR-0021) or a pasted token (ADR-0017).
-  vercel_connection: z.literal(true).optional(),
-  vercel_token: z.string().trim().min(20).max(200).optional(),
-  vercel_team_id: z.string().trim().regex(/^team_[A-Za-z0-9]+$/).optional(),
-  database: z.union([
-    z.object({ neon_api_key: z.string().trim().min(20).max(200) }),
-    z.object({ url: z.string().trim().regex(/^postgres(ql)?:\/\/\S+$/, "Use a postgres:// connection string").max(1000) }),
-  ]),
-  admin_email: z.email().max(320).optional(),
-}).refine((b) => Boolean(b.vercel_connection) !== Boolean(b.vercel_token), {
-  message: "Sign in with Vercel or paste a token",
-});
+const Body = z
+  .object({
+    // Either "signed in with Vercel" (ADR-0021) or a pasted token (ADR-0017).
+    vercel_connection: z.literal(true).optional(),
+    vercel_token: z.string().trim().min(20).max(200).optional(),
+    vercel_team_id: z
+      .string()
+      .trim()
+      .regex(/^team_[A-Za-z0-9]+$/)
+      .optional(),
+    database: z.union([
+      z.object({ neon_api_key: z.string().trim().min(20).max(200) }),
+      z.object({
+        url: z
+          .string()
+          .trim()
+          .regex(/^postgres(ql)?:\/\/\S+$/, "Use a postgres:// connection string")
+          .max(1000),
+      }),
+    ]),
+    admin_email: z.email().max(320).optional(),
+  })
+  .refine((b) => Boolean(b.vercel_connection) !== Boolean(b.vercel_token), {
+    message: "Sign in with Vercel or paste a token",
+  });
 
 /**
  * POST /v1/builds/{id}/deploy-app — "Deploy for me" (optional, ADR-0017). Deploys the verified build into the
  * client's own Vercel account and database. Credentials are encrypted at rest and erased when the job ends.
  */
-export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const caller = await getCaller();
   if (!caller) return problem(401, "Unauthorized");
@@ -64,7 +79,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /** GET /v1/builds/{id}/deploy-app — latest deployment: status, current step, result (no secrets). */
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const caller = await getCaller();
   if (!caller) return problem(401, "Unauthorized");

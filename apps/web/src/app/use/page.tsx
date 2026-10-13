@@ -1,8 +1,10 @@
-import { checkLabel, summarizeUseCase, USE_CASES } from "@turbineh/engine";
+import { checkLabel } from "@turbineh/engine";
 import type { FlowState } from "@turbineh/shared";
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { CopyBlock } from "../../components/copy-block";
+import { Disclosure } from "../../components/disclosure";
 import { STATE_LABEL } from "../../components/ui";
 
 export const metadata: Metadata = {
@@ -209,13 +211,12 @@ function Table({ caption, rows }: { caption: string; rows: string[][] }) {
 
 const TOC: [id: string, label: string][] = [
   ["people", "People · web"],
-  ["agents", "Coding agents · CLI & MCP"],
+  ["agents", "Coding agents · CLI"],
+  ["mcp", "MCP"],
   ["api", "Any app · API"],
-  ["build", "What you can build"],
 ];
 
 export default function UsePage() {
-  const useCases = USE_CASES.map((u) => summarizeUseCase(u));
   return (
     <main className="mx-auto max-w-4xl px-6 pt-8">
       <p className="eyebrow">How to use</p>
@@ -240,6 +241,14 @@ export default function UsePage() {
               </a>
             </li>
           ))}
+          <li>
+            <Link
+              href="/catalog"
+              className="inline-block rounded-full border border-line px-4 py-1.5 text-muted hover:border-teal hover:text-ice-2"
+            >
+              What you can build →
+            </Link>
+          </li>
         </ul>
       </nav>
 
@@ -367,192 +376,192 @@ export default function UsePage() {
       </Section>
 
       <Section
-        id="agents"
+        id="tools"
         eyebrow="2 · Coding agents"
         title="Claude Code, Codex, Cursor — any agent that runs commands"
-        intro="The CLI writes verified code into the project and tells the agent exactly what is left. Every command takes --json."
+        intro="The CLI writes verified code into the project and tells the agent exactly what is left. Every command takes --json. The MCP server and the API reach the same engine. Open the one you use."
       >
-        <Sub title="Install">
-          <CopyBlock label="install commands" code={INSTALL} />
-        </Sub>
+        <div className="mt-6 flex flex-col gap-3">
+          <Disclosure
+            id="agents"
+            eyebrow="Coding agents · CLI"
+            title="Install, build, read what is left"
+            summary="One command plans, generates, verifies and commits; exit codes tell the agent what to do next."
+          >
+            <Sub title="Install">
+              <CopyBlock label="install commands" code={INSTALL} />
+            </Sub>
 
-        <Sub title="Set up the project">
-          <CopyBlock label="init command" code={INIT} />
-          <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-ice-2">
-            <li>
-              <Code>.turbineh/project.json</Code>: a random, private workspace id and the detected
-              stack.
-            </li>
-            <li>
-              An instructions block (when to use TurbineH, the one command, exit codes) in{" "}
-              <Code>CLAUDE.md</Code> for Claude Code and in <Code>AGENTS.md</Code> for Codex, Cursor
-              and any other agent. Without <Code>--agent</Code>, <Code>--yes</Code> writes it to the
-              instructions file the project already has, or creates <Code>AGENTS.md</Code>; plain{" "}
-              <Code>turbineh init</Code> only shows the block. Re-running refreshes it in place.
-            </li>
-            <li>
-              Claude Code also gets the project skill <Code>.claude/skills/turbineh/SKILL.md</Code>.
-            </li>
-          </ul>
-        </Sub>
+            <Sub title="Set up the project">
+              <CopyBlock label="init command" code={INIT} />
+              <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-ice-2">
+                <li>
+                  <Code>.turbineh/project.json</Code>: a random, private workspace id and the
+                  detected stack.
+                </li>
+                <li>
+                  An instructions block (when to use TurbineH, the one command, exit codes) in{" "}
+                  <Code>CLAUDE.md</Code> for Claude Code and in <Code>AGENTS.md</Code> for Codex,
+                  Cursor and any other agent. Without <Code>--agent</Code>, <Code>--yes</Code>{" "}
+                  writes it to the instructions file the project already has, or creates{" "}
+                  <Code>AGENTS.md</Code>; plain <Code>turbineh init</Code> only shows the block.
+                  Re-running refreshes it in place.
+                </li>
+                <li>
+                  Claude Code also gets the project skill{" "}
+                  <Code>.claude/skills/turbineh/SKILL.md</Code>.
+                </li>
+              </ul>
+            </Sub>
 
-        <Sub title="The one command">
-          <CopyBlock label="build commands" code={BUILD} />
-          <p className="mt-3 text-sm text-ice-2">
-            Plans, generates, verifies, writes the code here and commits it. An empty folder gets
-            the complete app; a JavaScript/TypeScript project gets the capability in its own folder.
-            With <Code>--json</Code> it prints one JSON event per line; the last line is the result.
-          </p>
-          <CopyBlock label="example events" code={EVENTS} />
-          <p className="mt-3 text-sm text-ice-2">
-            In the result, <Code>criteria.items</Code> not <Code>met</Code> and <Code>left[]</Code>{" "}
-            are the only work left, each with <Code>where</Code>; <Code>settings.missing</Code> go
-            in <Code>.env.local</Code>; <Code>gate.ok</Code> means lint, types, unit, build and E2E
-            already passed. Run it in the foreground with a long timeout (10 min): it returns as
-            soon as the result is ready, so there is no need to poll.
-          </p>
-          <Table caption="Exit codes" rows={EXIT_CODES} />
-        </Sub>
-
-        <Sub title="Read what is left">
-          <CopyBlock label="left and verify commands" code={LEFT} />
-          <p className="mt-2 text-xs text-muted">
-            Run them where the build wrote the code (the folder with <Code>turbineh.json</Code>).
-          </p>
-          <p className="mt-3 text-sm text-ice-2">
-            <Code>verify --full</Code> runs the same security and policy checks as the TurbineH
-            gate, with the same pinned versions: secret scan, our static rules, known
-            vulnerabilities and the licence policy, plus typecheck, lint and unit tests. Each
-            finding has its file and line, a security, policy or quality label and the fix; with{" "}
-            <Code>--json</Code>, the same shape as the gate&apos;s findings. It uses Docker when it
-            is available and pinned local binaries otherwise; a check that cannot run is reported as
-            not run, never as clean. Your code never leaves the machine: only package names and
-            versions are looked up. Exit 1 means a blocking finding or a check not run.
-          </p>
-        </Sub>
-
-        <Sub title="Integrate into an existing repository">
-          <CopyBlock label="repository commands" code={REPO} />
-        </Sub>
-
-        <Sub title="MCP">
-          <p className="mt-2 text-sm text-ice-2">
-            <Code>turbineh mcp</Code> is an MCP server on stdio. Its tools — build, resume, search,
-            plan, apply, status, left, verify — return exactly the command&apos;s{" "}
-            <Code>--json</Code> document. It uses the same token (<Code>TURBINEH_TOKEN</Code> or a
-            saved login).
-          </p>
-          <p className="mt-4 text-xs text-muted">Claude Code</p>
-          <CopyBlock label="Claude Code MCP command" code={MCP_CLAUDE} />
-          <p className="mt-4 text-xs text-muted">Codex</p>
-          <CopyBlock label="Codex MCP command" code={MCP_CODEX} />
-          <p className="mt-4 text-xs text-muted">
-            Cursor: <Code>.cursor/mcp.json</Code> in the project (or <Code>~/.cursor/mcp.json</Code>
-            )
-          </p>
-          <CopyBlock label="Cursor MCP configuration" code={MCP_CURSOR} />
-          <p className="mt-3 text-sm text-ice-2">
-            Any MCP client: command <Code>turbineh</Code>, args <Code>mcp</Code>.
-          </p>
-        </Sub>
-
-        <Sub title="More commands">
-          <Table caption="More commands" rows={MORE} />
-        </Sub>
-
-        <Sub title="Rules for agents">
-          <ul className="mt-3 flex list-disc flex-col gap-1 rounded-xl border border-teal/40 bg-teal/5 p-4 pl-9 text-sm text-ice-2">
-            <li>
-              Before writing a known capability yourself (shop and payments, auth and roles,
-              bookings, AI assistants, dashboards, portals, CRUD, landing pages), run{" "}
-              <Code>turbineh build</Code>.
-            </li>
-            <li>
-              Always pass <Code>--json</Code> and branch on the exit code, not on the text.
-            </li>
-            <li>
-              Never print, echo or commit the token; keep it in <Code>TURBINEH_TOKEN</Code>.
-            </li>
-            <li>
-              In a delivered package, read <Code>AGENTS.md</Code> first; re-run only what your
-              change touches.
-            </li>
-            <li>
-              Before handing over, run <Code>turbineh verify --full --json</Code> and fix every
-              blocking finding.
-            </li>
-            <li>Exit 3: show the decision to the user; add --approve only after they agree.</li>
-          </ul>
-        </Sub>
-      </Section>
-
-      <Section
-        id="api"
-        eyebrow="3 · Any app"
-        title="The API"
-        intro={
-          <>
-            Everything the web app and the CLI do, over HTTP. Errors are RFC 9457 problem details
-            with <Code>code</Code>, <Code>message</Code>, <Code>action</Code> and, when it applies,{" "}
-            <Code>resume</Code>. Machine-readable spec:{" "}
-            <a className="text-teal underline" href="/v1/openapi.json">
-              /v1/openapi.json
-            </a>
-            .
-          </>
-        }
-      >
-        <Sub title="Authentication and workspace">
-          <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-ice-2">
-            <li>
-              <Code>Authorization: Bearer &lt;invitation token&gt;</Code> on every call.
-            </li>
-            <li>
-              <Code>x-turbineh-workspace: &lt;id&gt;</Code> keeps one history per project. Use a
-              random UUID: with a shared invitation token the workspace id is what keeps your flows
-              and your GitHub connection apart, so GitHub can only be connected to a private
-              workspace (a UUID), never to a guessable name or the shared default.
-            </li>
-          </ul>
-          <CopyBlock label="API example" code={API} />
-        </Sub>
-
-        <Sub title="Main endpoints">
-          <Table caption="Main endpoints" rows={ENDPOINTS} />
-        </Sub>
-
-        <Sub title="Catalogue index for agents">
-          <p className="mt-2 text-sm text-ice-2">
-            Every verified component — what it does and does not, when to use it, interfaces and a
-            minimal example — with the same token.
-          </p>
-          <CopyBlock label="catalogue index commands" code={CATALOG} />
-        </Sub>
-      </Section>
-
-      <Section
-        id="build"
-        eyebrow="4 · What you can build"
-        title="Complete flows in the catalogue"
-        intro="Each one is a verified app you can start from, or a capability added to your project. The same list answers turbineh search and /v1/capabilities."
-      >
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-          {useCases.map((u) => (
-            <li key={u.id} className="rounded-xl border border-line bg-panel/30 p-5">
-              <h3 className="font-semibold text-cream">{u.name}</h3>
-              <p className="mt-1 text-sm text-muted">{u.summary}</p>
-              <p className="mt-3 text-xs text-ice-2">
-                You provide:{" "}
-                {u.requirements.map((r, i) => (
-                  <span key={r.name}>
-                    {i ? " · " : ""}
-                    <code className="font-mono text-teal">{r.name}</code>
-                  </span>
-                ))}
+            <Sub title="The one command">
+              <CopyBlock label="build commands" code={BUILD} />
+              <p className="mt-3 text-sm text-ice-2">
+                Plans, generates, verifies, writes the code here and commits it. An empty folder
+                gets the complete app; a JavaScript/TypeScript project gets the capability in its
+                own folder. With <Code>--json</Code> it prints one JSON event per line; the last
+                line is the result.
               </p>
-            </li>
-          ))}
-        </ul>
+              <CopyBlock label="example events" code={EVENTS} />
+              <p className="mt-3 text-sm text-ice-2">
+                In the result, <Code>criteria.items</Code> not <Code>met</Code> and{" "}
+                <Code>left[]</Code> are the only work left, each with <Code>where</Code>;{" "}
+                <Code>settings.missing</Code> go in <Code>.env.local</Code>; <Code>gate.ok</Code>{" "}
+                means lint, types, unit, build and E2E already passed. Run it in the foreground with
+                a long timeout (10 min): it returns as soon as the result is ready, so there is no
+                need to poll.
+              </p>
+              <Table caption="Exit codes" rows={EXIT_CODES} />
+            </Sub>
+
+            <Sub title="Read what is left">
+              <CopyBlock label="left and verify commands" code={LEFT} />
+              <p className="mt-2 text-xs text-muted">
+                Run them where the build wrote the code (the folder with <Code>turbineh.json</Code>
+                ).
+              </p>
+              <p className="mt-3 text-sm text-ice-2">
+                <Code>verify --full</Code> runs the same security and policy checks as the TurbineH
+                gate, with the same pinned versions: secret scan, our static rules, known
+                vulnerabilities and the licence policy, plus typecheck, lint and unit tests. Each
+                finding has its file and line, a security, policy or quality label and the fix; with{" "}
+                <Code>--json</Code>, the same shape as the gate&apos;s findings. It uses Docker when
+                it is available and pinned local binaries otherwise; a check that cannot run is
+                reported as not run, never as clean. Your code never leaves the machine: only
+                package names and versions are looked up. Exit 1 means a blocking finding or a check
+                not run.
+              </p>
+            </Sub>
+
+            <Sub title="Integrate into an existing repository">
+              <CopyBlock label="repository commands" code={REPO} />
+            </Sub>
+
+            <Sub title="More commands">
+              <Table caption="More commands" rows={MORE} />
+            </Sub>
+
+            <Sub title="Rules for agents">
+              <ul className="mt-3 flex list-disc flex-col gap-1 rounded-xl border border-teal/40 bg-teal/5 p-4 pl-9 text-sm text-ice-2">
+                <li>
+                  Before writing a known capability yourself (shop and payments, auth and roles,
+                  bookings, AI assistants, dashboards, portals, CRUD, landing pages), run{" "}
+                  <Code>turbineh build</Code>.
+                </li>
+                <li>
+                  Always pass <Code>--json</Code> and branch on the exit code, not on the text.
+                </li>
+                <li>
+                  Never print, echo or commit the token; keep it in <Code>TURBINEH_TOKEN</Code>.
+                </li>
+                <li>
+                  In a delivered package, read <Code>AGENTS.md</Code> first; re-run only what your
+                  change touches.
+                </li>
+                <li>
+                  Before handing over, run <Code>turbineh verify --full --json</Code> and fix every
+                  blocking finding.
+                </li>
+                <li>Exit 3: show the decision to the user; add --approve only after they agree.</li>
+              </ul>
+            </Sub>
+          </Disclosure>
+
+          <Disclosure
+            id="mcp"
+            eyebrow="Coding agents · MCP"
+            title="The same tools as an MCP server"
+            summary="Add turbineh mcp to Claude Code, Codex, Cursor or any MCP client: same token, same JSON."
+          >
+            <p className="mt-5 text-sm text-ice-2">
+              <Code>turbineh mcp</Code> is an MCP server on stdio. Its tools — build, resume,
+              search, plan, apply, status, left, verify — return exactly the command&apos;s{" "}
+              <Code>--json</Code> document. It uses the same token (<Code>TURBINEH_TOKEN</Code> or a
+              saved login).
+            </p>
+            <p className="mt-4 text-xs text-muted">Claude Code</p>
+            <CopyBlock label="Claude Code MCP command" code={MCP_CLAUDE} />
+            <p className="mt-4 text-xs text-muted">Codex</p>
+            <CopyBlock label="Codex MCP command" code={MCP_CODEX} />
+            <p className="mt-4 text-xs text-muted">
+              Cursor: <Code>.cursor/mcp.json</Code> in the project (or{" "}
+              <Code>~/.cursor/mcp.json</Code>)
+            </p>
+            <CopyBlock label="Cursor MCP configuration" code={MCP_CURSOR} />
+            <p className="mt-3 text-sm text-ice-2">
+              Any MCP client: command <Code>turbineh</Code>, args <Code>mcp</Code>.
+            </p>
+          </Disclosure>
+
+          <Disclosure
+            id="api"
+            eyebrow="Any app · API"
+            title="The API"
+            summary="Everything the web app and the CLI do, over HTTP, with actionable problem details."
+          >
+            <p className="mt-5 max-w-3xl text-sm text-muted">
+              Errors are RFC 9457 problem details with <Code>code</Code>, <Code>message</Code>,{" "}
+              <Code>action</Code> and, when it applies, <Code>resume</Code>. Machine-readable spec:{" "}
+              <a className="text-teal underline" href="/v1/openapi.json">
+                /v1/openapi.json
+              </a>
+              .
+            </p>
+            <Sub title="Authentication and workspace">
+              <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-ice-2">
+                <li>
+                  <Code>Authorization: Bearer &lt;invitation token&gt;</Code> on every call.
+                </li>
+                <li>
+                  <Code>x-turbineh-workspace: &lt;id&gt;</Code> keeps one history per project. Use a
+                  random UUID: with a shared invitation token the workspace id is what keeps your
+                  flows and your GitHub connection apart, so GitHub can only be connected to a
+                  private workspace (a UUID), never to a guessable name or the shared default.
+                </li>
+              </ul>
+              <CopyBlock label="API example" code={API} />
+            </Sub>
+
+            <Sub title="Main endpoints">
+              <Table caption="Main endpoints" rows={ENDPOINTS} />
+            </Sub>
+
+            <Sub title="Catalogue index for agents">
+              <p className="mt-2 text-sm text-ice-2">
+                Every verified component — what it does and does not, when to use it, interfaces and
+                a minimal example — with the same token.
+              </p>
+              <CopyBlock label="catalogue index commands" code={CATALOG} />
+            </Sub>
+          </Disclosure>
+        </div>
+        <p className="mt-6 text-sm text-muted">
+          What can you build? Every complete flow is in the{" "}
+          <Link href="/catalog" className="text-teal underline-offset-4 hover:underline">
+            Catalogue
+          </Link>
+          , with what each one needs from you.
+        </p>
       </Section>
     </main>
   );

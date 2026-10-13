@@ -18,13 +18,13 @@ const UUID = /^[0-9a-f-]{36}$/;
 function usesAi(metrics: Record<string, unknown>): boolean {
   const comps = (metrics.components as unknown[] | undefined) ?? [];
   return comps.some(
-    (c) => (typeof c === "string" ? c : (c as { id?: string } | null)?.id) === "ai.orchestrator.turbineh",
+    (c) =>
+      (typeof c === "string" ? c : (c as { id?: string } | null)?.id) ===
+      "ai.orchestrator.turbineh",
   );
 }
 
-type Owned =
-  | { ok: false; error: Response }
-  | { ok: true; caller: Caller; build: BuildRow };
+type Owned = { ok: false; error: Response } | { ok: true; caller: Caller; build: BuildRow };
 
 async function ownedAiBuild(id: string): Promise<Owned> {
   const caller = await getCaller();
@@ -40,7 +40,10 @@ async function ownedAiBuild(id: string): Promise<Owned> {
  * POST /v1/builds/{id}/ai-token — creates (or rotates) the TurbineH AI gateway token of an AI app (ADR-0029). The
  * token is shown once; the previous one stops working immediately.
  */
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function POST(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const r = await ownedAiBuild(id);
   if (!r.ok) return r.error;
@@ -64,7 +67,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 /** GET /v1/builds/{id}/ai-token — token prefix and usage (calls and tokens; never the token, never prices). */
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const r = await ownedAiBuild(id);
   if (!r.ok) return r.error;
@@ -74,7 +80,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /** DELETE /v1/builds/{id}/ai-token — revokes the token (the app's AI stops until a new one is created). */
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function DELETE(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const r = await ownedAiBuild(id);
   if (!r.ok) return r.error;

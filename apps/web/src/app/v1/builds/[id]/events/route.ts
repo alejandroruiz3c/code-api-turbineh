@@ -7,11 +7,15 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /** GET /v1/builds/{id}/events — Server-Sent Events with the live trace; ends when the build finishes. */
-export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await ctx.params;
   const caller = await getCaller();
   if (!caller) return problem(401, "Unauthorized");
-  if (!/^[0-9a-f-]{36}$/.test(id) || !(await getBuild(db, id, caller.ownerId))) return problem(404, "Build not found");
+  if (!/^[0-9a-f-]{36}$/.test(id) || !(await getBuild(db, id, caller.ownerId)))
+    return problem(404, "Build not found");
   let last = Number(req.headers.get("last-event-id") ?? 0) || 0;
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -24,7 +28,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
           const events = await eventsSince(db, id, last);
           for (const e of events) {
             last = e.id;
-            send(`id: ${e.id}\nevent: ${e.type === "finished" ? "finished" : "phase"}\ndata: ${JSON.stringify(e)}\n\n`);
+            send(
+              `id: ${e.id}\nevent: ${e.type === "finished" ? "finished" : "phase"}\ndata: ${JSON.stringify(e)}\n\n`,
+            );
             if (e.type === "finished") {
               controller.close();
               return;
@@ -40,6 +46,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     },
   });
   return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
 }
