@@ -41,7 +41,7 @@ export default async function Home() {
       <h1 className="display animate-fade-up mt-4 max-w-3xl text-4xl font-bold text-cream sm:text-5xl">
         Secured software flows.
         <br />
-        <span className="text-ice">In seconds. Almost free.</span>
+        <span className="text-ice">In seconds. Free and open.</span>
       </h1>
       <p className="animate-fade-up mt-4 max-w-2xl text-muted">
         Go from “I need this capability” to “it's integrated and verified”. Built on audited

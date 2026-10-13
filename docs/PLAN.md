@@ -582,6 +582,20 @@ componentes aprobados, convenciones, política de cambios); `turbineh init` las 
 Secretos fuera de git (el token de acceso vive en variables de entorno, nunca en el repo público); Security Pack y
 AI Safety Pack siempre; solo cifras de `bench/`; decisiones deterministas fuera de los modelos; ADR por decisión.
 
+### 16.7 Modelo de negocio · decisión del propietario (2026-10-13)
+
+La biblioteca es **libre y gratuita**. Se retira el precio de 5 $ por entrega, el "primer flujo gratis" y la tabla
+de planes de la landing (api.turbineh.com), del deck y de las superficies de producto.
+
+| Oferta | Qué incluye | Precio |
+|---|---|---|
+| **A · Biblioteca inteligente de software open source** | Pensada para agentes · verificada en ciberseguridad, AI safety, calidad y revisión de código · integración de flujos completos | Libre y gratuita (reutilizar cuesta cero tokens) |
+| **B** | Orquestación optimizada · infraestructura de despliegue · inferencia de IA | Bajo presupuesto ("Ask for quote") |
+
+Mensaje: "Free and open. Pay only for what runs it." Donde se argumentaba "casi gratis" o "pagas por entrega, no
+por token", ahora se dice "gratis: reutilizar cuesta cero tokens". La promesa "casi gratis" de
+`docs/PRODUCT_DESCRIPTION.md` (texto del propietario, no se edita) queda sustituida por esta nota.
+
 ## 14. Protocolo director ↔ ejecutor
 
 1. Claude Code trabaja WP a WP, en rama propia, con PR y descripción.

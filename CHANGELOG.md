@@ -9,6 +9,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - GitHub connections only in private workspaces: with the shared invitation token the workspace comes from a header (or the shared `api-default`), so connecting, using or opening pull requests with GitHub requires a random workspace id (what the browser and `turbineh init` create); guessable names get an actionable 403 and stored credentials are never used for them.
 - Booking assistant: "find my bookings by email" emails the list (with references) to that address instead of showing it in the chat; the reply is the same whether or not bookings exist, with a 10-minute cooldown per address (no disclosure of someone else's appointments, no inbox flooding).
 
+### Changed
+
+- Business model (owner decision, 2026-10-13, `docs/PLAN.md` §16.7): the library is free and open; the $5 per
+  delivery and "first flow free" pricing is withdrawn. The product area's tagline is now "Secured software flows. In
+  seconds. Free and open."
+
 ### Added
 
 - Which app of a monorepo receives a capability is decided by the decider when the repository has several Next.js
