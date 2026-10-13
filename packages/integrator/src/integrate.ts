@@ -135,6 +135,20 @@ export interface GlueCache {
   get: (key: string) => Promise<{ content: string } | null>;
 }
 
+/** Writes the cached, gate-verified glue of a component when there is one; returns its path or null. */
+export async function useVerifiedGlue(
+  dir: string,
+  c: ExternalComponent,
+  cache?: GlueCache,
+): Promise<string | null> {
+  const verified = await cache?.get(glueCacheKey(c)).catch(() => null);
+  if (!verified?.content) return null;
+  const file = glueFile(c.capability);
+  mkdirSync(dirname(join(dir, file)), { recursive: true });
+  writeFileSync(join(dir, file), verified.content);
+  return file;
+}
+
 /** Installs every component once, then writes contract tests and glue in parallel. */
 export async function integrateComponents(
   dir: string,
@@ -168,15 +182,12 @@ export async function integrateComponents(
           usage: { input_tokens: 0, output_tokens: 0 },
         };
       }
-      const verified = await glueCache?.get(glueCacheKey(c)).catch(() => null);
-      if (verified?.content) {
-        const file = glueFile(c.capability);
-        mkdirSync(dirname(join(dir, file)), { recursive: true });
-        writeFileSync(join(dir, file), verified.content);
+      const reused = await useVerifiedGlue(dir, c, glueCache);
+      if (reused) {
         return {
           component: c.id,
           capability: c.capability,
-          glue: file,
+          glue: reused,
           contractTest,
           usage: { input_tokens: 0, output_tokens: 0 },
           reused: true,

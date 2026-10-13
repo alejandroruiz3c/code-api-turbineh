@@ -83,12 +83,20 @@ export async function init(c: Ctx): Promise<CommandResult> {
   writeProject(c.cwd, project);
   const agentFlag = c.flags.agent;
   if (agentFlag !== undefined && !["claude", "codex", "cursor"].includes(String(agentFlag)))
-    fail("usage", `Unknown agent "${String(agentFlag)}".`, "Use --agent claude, --agent codex or --agent cursor.");
+    fail(
+      "usage",
+      `Unknown agent "${String(agentFlag)}".`,
+      "Use --agent claude, --agent codex or --agent cursor.",
+    );
   const agent = typeof agentFlag === "string" ? (agentFlag as AgentKind) : null;
   // --agent writes the instructions (and the Claude Code skill); without it, --yes writes them, otherwise they are shown.
   const write = agent !== null || c.flags.yes === true;
   const docs = write ? writeAgentFiles(c.cwd, agent, baseUrl()) : null;
-  const target = docs?.file ?? (existsSync(join(c.cwd, "AGENTS.md")) && !existsSync(join(c.cwd, "CLAUDE.md")) ? "AGENTS.md" : "CLAUDE.md");
+  const target =
+    docs?.file ??
+    (existsSync(join(c.cwd, "AGENTS.md")) && !existsSync(join(c.cwd, "CLAUDE.md"))
+      ? "AGENTS.md"
+      : "CLAUDE.md");
   return {
     ok: true,
     command: "init",

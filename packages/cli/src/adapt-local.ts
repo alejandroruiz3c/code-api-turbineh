@@ -23,8 +23,7 @@ import { git, isGitRepo } from "./project.js";
  */
 
 declare const __TURBINEH_FOUNDATION__:
-  | { foundation: Record<string, string>; versions: Record<string, string> }
-  | undefined;
+  { foundation: Record<string, string>; versions: Record<string, string> } | undefined;
 
 /** Security Pack basics and verified versions: embedded in the bundled CLI, read from the catalog in development. */
 export function foundation(): {
@@ -33,7 +32,9 @@ export function foundation(): {
 } {
   if (typeof __TURBINEH_FOUNDATION__ !== "undefined") return __TURBINEH_FOUNDATION__;
   const here = dirname(fileURLToPath(import.meta.url));
-  return loadFoundation(join(here, "..", "..", "..", "catalog", "recipes", "saas-crud", "template"));
+  return loadFoundation(
+    join(here, "..", "..", "..", "catalog", "recipes", "saas-crud", "template"),
+  );
 }
 
 const SKIP = /(^|\/)(node_modules|\.next|dist|build|out|\.turbo|\.vercel|coverage|\.git)(\/|$)/;
@@ -115,9 +116,7 @@ export function adaptLocally(
           adaptation.steps.push({
             key: "dependencies",
             message: "dependencies",
-            files: [
-              { path: pkgPath, content: m.text, action: "modify", why: "Dependencies" },
-            ],
+            files: [{ path: pkgPath, content: m.text, action: "modify", why: "Dependencies" }],
           });
         adaptation.dependencies.added.push(...m.added);
       }

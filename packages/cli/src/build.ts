@@ -113,7 +113,11 @@ export async function build(c: Ctx): Promise<CommandResult> {
   try {
     git(c.cwd, "--version");
   } catch {
-    fail("no_git", "git is not installed.", "Install git: the code arrives as one revertable commit.");
+    fail(
+      "no_git",
+      "git is not installed.",
+      "Install git: the code arrives as one revertable commit.",
+    );
   }
   const project = ensureProject(c.cwd);
   const files = target === "repo" ? localManifests(c.cwd) : {};
@@ -221,7 +225,8 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
         error: e ?? {
           code: "generation_failed",
           message: "TurbineH could not generate this package.",
-          action: "Rephrase the specification (one app, its data, roles and flows) and run build again.",
+          action:
+            "Rephrase the specification (one app, its data, roles and flows) and run build again.",
         },
       };
     }
@@ -257,7 +262,9 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
     }
     if (r.state === "generating" && !generatingSaid) {
       generatingSaid = true;
-      say("generating and verifying in the TurbineH sandbox (lint, types, unit, build, E2E, security)");
+      say(
+        "generating and verifying in the TurbineH sandbox (lint, types, unit, build, E2E, security)",
+      );
     }
     if (["verified", "generated", "integrated", "integration_verified"].includes(r.state)) break;
     if (Date.now() > deadline) {
@@ -447,12 +454,14 @@ async function writeRepo(
       EXIT.conflict,
     );
   // Files TurbineH must modify must not carry uncommitted changes: they would be mixed into its commit.
-  const dirty = new Set(
-    git(c.cwd, "status", "--porcelain")
-      .split("\n")
-      .filter(Boolean)
-      .map((l) => l.slice(3).trim()),
-  );
+  const changedSinceHead = (() => {
+    try {
+      return git(c.cwd, "diff", "--name-only", "HEAD");
+    } catch {
+      return ""; // no commit yet: nothing of the user's is committed to protect
+    }
+  })();
+  const dirty = new Set(changedSinceHead.split("\n").filter(Boolean));
   const clash = files.filter((f) => f.action === "modify" && dirty.has(f.path)).map((f) => f.path);
   if (clash.length)
     throw new CliError(
@@ -601,7 +610,11 @@ function summary(
       .map((x) => ({ criterion: x.what, status: "open", where: x.where }));
     for (const x of r.plan?.criteria ?? [])
       if (x.status === "covered" && !criteria.some((y) => y.criterion === x.criterion))
-        criteria.push({ criterion: x.criterion, status: gateOk ? "met" : "covered", test: x.tests[0] ?? "" });
+        criteria.push({
+          criterion: x.criterion,
+          status: gateOk ? "met" : "covered",
+          test: x.tests[0] ?? "",
+        });
     required = w.adaptation.settings;
     missing = missingSettings(c.cwd, required);
   }
@@ -655,7 +668,10 @@ function summary(
     ...open.map((x) => `    - ${x.criterion}${x.where ? dim(` → ${x.where}`) : ""}`),
     ...left
       .filter((x) => x.kind !== "criterion")
-      .map((x) => `  ${yellow("!")} ${x.what}${x.where && x.where !== "—" ? dim(` → ${x.where}`) : ""}`),
+      .map(
+        (x) =>
+          `  ${yellow("!")} ${x.what}${x.where && x.where !== "—" ? dim(` → ${x.where}`) : ""}`,
+      ),
     ...(required.length
       ? [
           `  Settings: ${required.join(", ")}${missing.length ? yellow(` — missing in .env.local: ${missing.join(", ")}`) : ""}`,

@@ -75,7 +75,8 @@ export function instructionFile(cwd: string, agent: AgentKind | null): string {
 export function upsertBlock(text: string): string {
   const s = text.indexOf(START);
   const e = text.indexOf(END);
-  if (s !== -1 && e > s) return `${text.slice(0, s)}${AGENT_BLOCK.trimEnd()}${text.slice(e + END.length)}`;
+  if (s !== -1 && e > s)
+    return `${text.slice(0, s)}${AGENT_BLOCK.trimEnd()}${text.slice(e + END.length)}`;
   const legacy = /## TurbineH capabilities\n[\s\S]*?(?=\n## |\s*$)/.exec(text);
   if (legacy)
     return `${text.slice(0, legacy.index)}${AGENT_BLOCK.trimEnd()}${text.slice(legacy.index + legacy[0].length)}\n`;

@@ -209,7 +209,11 @@ export function serve(
                 emit: (event: Record<string, unknown>) =>
                   send({
                     method: "notifications/progress",
-                    params: { progressToken: token, progress: ++progress, message: JSON.stringify(event) },
+                    params: {
+                      progressToken: token,
+                      progress: ++progress,
+                      message: JSON.stringify(event),
+                    },
                   }),
               }
             : {}),

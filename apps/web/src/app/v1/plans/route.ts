@@ -36,7 +36,10 @@ const Body = z.object({
     .trim()
     .min(8, "Describe the need in a few words (at least 8 characters)")
     // A full specification file is accepted (ADR-0036): every criterion it states is compiled and reported.
-    .max(MAX_NEED, `The specification is longer than ${MAX_NEED} characters: keep the parts that state behaviour`),
+    .max(
+      MAX_NEED,
+      `The specification is longer than ${MAX_NEED} characters: keep the parts that state behaviour`,
+    ),
   environment: z
     .object({
       repo: z

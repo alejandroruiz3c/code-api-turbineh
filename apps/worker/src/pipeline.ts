@@ -452,10 +452,13 @@ export async function runBuild(
       gaps: toFill.map((g) => g.capability),
     });
     const [ints, fills] = await Promise.all([
-      integrateComponents(repoDir, externals, deps.compiler, deps.glueCache).catch((err: unknown) => {
-        integrationError = err instanceof Error ? err.message.slice(0, 300) : "integration failed";
-        return [] as IntegrationResult[];
-      }),
+      integrateComponents(repoDir, externals, deps.compiler, deps.glueCache).catch(
+        (err: unknown) => {
+          integrationError =
+            err instanceof Error ? err.message.slice(0, 300) : "integration failed";
+          return [] as IntegrationResult[];
+        },
+      ),
       Promise.all(
         toFill.map((g) =>
           fillGap(repoDir, g, deps.backupCoder, {

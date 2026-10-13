@@ -49,7 +49,9 @@ export function parse(argv: string[]): {
       const next = argv[i + 1];
       if (v !== undefined) flags[k] = v;
       else if (
-        ["url", "stack", "limit", "resume", "repo", "base", "agent", "spec", "timeout"].includes(k) &&
+        ["url", "stack", "limit", "resume", "repo", "base", "agent", "spec", "timeout"].includes(
+          k,
+        ) &&
         next &&
         !next.startsWith("--")
       ) {
