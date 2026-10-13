@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Security
 
+- Public and pre-membership server actions (ADR-0040): the base template ships `publicAction(name, { rateLimit,
+schema }, handler)` (per-IP rate limit + Zod before anything runs) and `requireSession()` (signed in, not a member
+  yet). `turbineh.server-action-without-authz` accepts both, now also checks async function-expression exports and
+  rejects `publicAction` without its rate limit or schema; the waitlist and contact templates use it instead of
+  `nosemgrep`. `src/env.ts` generates build-only values at runtime instead of secret-shaped placeholders; AGENTS.md
+  documents both patterns.
 - GitHub connections only in private workspaces: with the shared invitation token the workspace comes from a header (or the shared `api-default`), so connecting, using or opening pull requests with GitHub requires a random workspace id (what the browser and `turbineh init` create); guessable names get an actionable 403 and stored credentials are never used for them.
 - Booking assistant: "find my bookings by email" emails the list (with references) to that address instead of showing it in the chat; the reply is the same whether or not bookings exist, with a 10-minute cooldown per address (no disclosure of someone else's appointments, no inbox flooding).
 

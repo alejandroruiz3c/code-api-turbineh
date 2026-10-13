@@ -396,8 +396,8 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
     },
     {
       change: "Before handing over (everything)",
-      run: "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e && turbineh verify --full",
-      note: "Same steps as the TurbineH gate; `turbineh verify --full` runs its security and policy checks here (gitleaks, the Semgrep rules, OSV advisories, licence policy) with the same rules and versions, prints file:line and the fix, and exits non-zero on a blocking finding. Your code never leaves the machine.",
+      run: "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e",
+      note: "Same steps as the TurbineH gate (which also runs gitleaks, Semgrep rules, OSV and the licence policy). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
     },
   ];
 }
@@ -484,9 +484,8 @@ ${g.app.summary}
 Recipe \`${g.recipe.id}\`: ${g.recipe.description}. Build \`${g.buildId}\`. ${status}
 
 Read this file instead of the whole repository. The same facts are machine-readable in \`turbineh.json\`
-(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the checks with file:line and fix —
-\`turbineh verify --full\` adds the gate's security and policy scans, locally; install:
-\`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
+(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix;
+install: \`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
 
 ## What is left
 

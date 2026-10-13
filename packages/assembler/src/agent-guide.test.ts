@@ -79,10 +79,9 @@ describe("agent-ready package (S9/S10)", () => {
     );
     expect(ext(/^Add a setting or secret/)?.how).toMatch(/no secret-shaped literal/);
     const handover = guide.rerun.find((r) => r.change.startsWith("Before handing over"));
-    expect(handover?.run).toMatch(/turbineh verify --full$/);
+    expect(handover?.note).toContain("publicAction()");
     const md = readFileSync(join(dir, "AGENTS.md"), "utf8");
     expect(md).toContain("| Add a public action");
-    expect(md).toContain("turbineh verify --full");
     // The helpers the guide names exist in the package.
     const authz = readFileSync(join(dir, "src/server/authz.ts"), "utf8");
     expect(authz).toContain("export function publicAction");
