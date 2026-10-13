@@ -26,11 +26,25 @@ case "$TARGET" in
   *) echo "unknown target $TARGET"; exit 1 ;;
 esac
 
+# One deploy per environment at a time (parallel agents share staging): wait for the lock instead of overwriting a
+# deploy in progress. mkdir is atomic; a lock older than 45 min is considered stale.
+LOCK="${TMPDIR:-/tmp}/turbineh-deploy-$TARGET.lock"
+REV="$(git rev-parse --abbrev-ref HEAD)@$(git rev-parse --short HEAD)$(git diff --quiet HEAD || echo +dirty)"
+for i in $(seq 1 180); do
+  mkdir "$LOCK" 2>/dev/null && { echo "$REV" >"$LOCK/rev"; break; }
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +45 2>/dev/null)" ]; then rm -rf "$LOCK"; continue; fi
+  [ "$i" = 1 ] && echo "waiting: $TARGET deploy in progress ($(cat "$LOCK/rev" 2>/dev/null || echo unknown))"
+  sleep 10
+done
+[ "$(cat "$LOCK/rev" 2>/dev/null)" = "$REV" ] || { echo "could not take the $TARGET deploy lock"; exit 1; }
+trap 'rm -rf "$LOCK"' EXIT
+
 if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
+  echo "$TARGET worker: replacing $(ssh -i "$KEY" $SSH_OPTS "root@$HOST" "cat $DIR/.deployed-rev 2>/dev/null || echo unknown") with $REV"
   rsync -az --delete -e "ssh -i $KEY $SSH_OPTS" --exclude node_modules --exclude .git --exclude '.env*.local' \
     --exclude /builds --exclude /artifacts --exclude .next --exclude .turbo --exclude .vercel \
     --exclude bench/results/runs --exclude /.claude --exclude /ingest/.cache ./ "root@$HOST:$DIR/"
-  ssh -i "$KEY" $SSH_OPTS "root@$HOST" "set -e; cd $DIR && chown -R turbineh:turbineh . \
+  ssh -i "$KEY" $SSH_OPTS "root@$HOST" "set -e; cd $DIR && echo '$REV' > .deployed-rev && chown -R turbineh:turbineh . \
     && sudo -u turbineh pnpm install --frozen-lockfile >/dev/null \
     && sudo -u turbineh pnpm turbo build --filter=@turbineh/worker... | grep -E 'Tasks:' \
     && (docker image inspect turbineh/sandbox:1 >/dev/null 2>&1 || docker build -q -t turbineh/sandbox:1 services/sandbox >/dev/null) \
