@@ -6,13 +6,21 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- Criteria aliases (ADR-0046): domain components declare in `aliases.yaml` which params hold this app's word for
+- Criteria aliases (ADR-0047): domain components declare in `aliases.yaml` which params hold this app's word for
   the generic words their tests use (bookings: customer → patient, staff member → physiotherapist, business → clinic,
   services; workflow: record → piece, status → stage). The assembler resolves them per app (`.turbineh/aliases.json`)
   for that component's tests only; facts count only when the test asserts the value from params; aliases never satisfy
   a refusal. New params from the request: bookings `businessKind`, workflow `stateNoun`. Frontiers ai-agents +
   bookings spec 1/14 → 5/14; 109 labelled pairs stay at precision 1.00, recall 0.92.
 
+- Agent brain speed (ADR-0046): runAgent answers a confirmed irreversible action that ran from a template (the tool's
+  `message`, else the confirmed summary and reference) without a decider or model call, and bounds each model attempt
+  (15 s, one retry when stuck) and each decision attempt (5 s, one retry). On the 54-conversation agent bench, same
+  day: 54/54, turn p95 6.72 → 4.66 s, max 11.96 → 9.37 s, −23 % chat calls, −35 % decider calls, cost 2.08 → 1.40 USD
+  per 1,000 conversations [est.] (`bench/agent-brain/RESULTS.md`). The AI gateway can hedge slow chat completions
+  (one duplicate, per-app daily budget, billed on the answer only, `hedges`/`hedge_wins` in the usage metrics,
+  migration 0010); off by default because it showed no gain. The bench meters hedges, templated replies and network
+  failures, and can rotate a staging app token at its daily quota.
 - Criteria recall (ADR-0045): recipe, domain-component and generated test titles state the subject, actor and outcome
   they prove, assertion messages count as proof, and missing assertions were added (product detail page and delete,
   order email content, Kanban status persisted, owner role at sign-up, list search, audit trail of an edit). The

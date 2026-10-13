@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { proofVerdict, type ProofAlias, type ProofCandidate } from "./criterion-proof.js";
 
-/** Criteria aliases (ADR-0046): a component's declared words, resolved from this app's params. */
+/** Criteria aliases (ADR-0047): a component's declared words, resolved from this app's params. */
 const ALIASES: ProofAlias[] = [
   { term: "customer", means: ["patient"] },
   { term: "staff member", means: ["physiotherapist"] },

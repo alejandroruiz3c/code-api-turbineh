@@ -146,7 +146,7 @@ const rolesIn = (text: string): Set<string> =>
   );
 
 /**
- * A word a component's tests use and what it means in this app, from the component's own params (ADR-0046): the
+ * A word a component's tests use and what it means in this app, from the component's own params (ADR-0047): the
  * bookings component's "customer" is this clinic's "patient", its "staff member" a "physiotherapist". Resolved by the
  * assembler from the params the app ships; never written by hand per build.
  */

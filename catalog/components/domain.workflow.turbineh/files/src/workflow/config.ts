@@ -14,7 +14,7 @@ export const WorkflowDef = z
     key,
     label: z.string().trim().min(1).max(40),
     plural: z.string().trim().min(1).max(40),
-    /** The request's word for the state ("stage", "phase"); used by criteria aliases (ADR-0046). */
+    /** The request's word for the state ("stage", "phase"); used by criteria aliases (ADR-0047). */
     stateNoun: z.string().trim().min(1).max(40).optional(),
     initial: key,
     /** Records carry an optional due date; overdue = past it and not in a final state. */

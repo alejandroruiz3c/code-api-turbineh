@@ -1,4 +1,4 @@
-# Criteria aliases (ADR-0046): the words this component's tests use, and which of its params hold this app's word
+# Criteria aliases (ADR-0047): the words this component's tests use, and which of its params hold this app's word
 # for each. Resolved by the assembler from src/bookings/params.json and applied to these tests' proofs only. Facts
 # (`asserted`) count only when the test asserts the values it reads from params.
 file: src/bookings/params.json

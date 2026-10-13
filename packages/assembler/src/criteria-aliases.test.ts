@@ -8,7 +8,7 @@ import { readAliasDeclaration, valuesAt } from "./aliases.js";
 import { assemble, coverageRules } from "./assemble.js";
 import { acceptanceStatus } from "./acceptance.js";
 
-/** Criteria aliases (ADR-0046) on the Frontiers ai-agents + domain.bookings spec (Flex Physio). */
+/** Criteria aliases (ADR-0047) on the Frontiers ai-agents + domain.bookings spec (Flex Physio). */
 const repo = join(import.meta.dirname, "../../..");
 const recipesDir = join(repo, "catalog/recipes");
 const componentsDir = join(repo, "catalog/components");
@@ -89,7 +89,7 @@ function build(): string {
   return out;
 }
 
-describe("criteria aliases (ADR-0046)", () => {
+describe("criteria aliases (ADR-0047)", () => {
   it("resolves the bookings component's words from this app's params", () => {
     const out = build();
     const aliases = JSON.parse(readFileSync(join(out, ".turbineh/aliases.json"), "utf8")) as {

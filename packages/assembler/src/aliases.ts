@@ -4,7 +4,7 @@ import type { ProofAlias } from "@turbineh/shared";
 import { parse } from "yaml";
 
 /**
- * Criteria aliases (ADR-0046). A domain component's tests use generic words ("customer", "staff member", "record");
+ * Criteria aliases (ADR-0047). A domain component's tests use generic words ("customer", "staff member", "record");
  * the request names them its own way ("patient", "physiotherapist", "piece"). A component declares, in
  * `aliases.yaml`, which of its params hold this app's word for each generic one. The assembler resolves them from the
  * params the app ships and attaches them to the proofs of that component's tests only. Facts (service names,

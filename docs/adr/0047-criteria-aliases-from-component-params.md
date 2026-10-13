@@ -1,4 +1,4 @@
-# ADR-0046 · Criteria aliases from component params
+# ADR-0047 · Criteria aliases from component params
 
 - Status: accepted (owner-approved proposal of ADR-0045; number may need renumbering at merge)
 - Date: 2026-10-13

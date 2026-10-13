@@ -102,7 +102,7 @@ for (const f of walk(catalog).filter((p) => existsSync(p)))
     shipped.set(b.title, { ...b, file: relative(catalog, f).replace(/^.*?\/(tests\/)/, "$1") });
 
 /**
- * ADR-0046: the agent pairs come from the Flex Physio build; its bookings params give the component's aliases
+ * ADR-0047: the agent pairs come from the Flex Physio build; its bookings params give the component's aliases
  * (customer → patient, staff member → physiotherapist, the services). Resolved exactly as the assembler does.
  */
 const FLEX_PHYSIO =
@@ -151,7 +151,7 @@ describe("criteria recall with the tests as shipped today", () => {
     const now = score(true);
     const withAliases = score(true, true);
     console.log(JSON.stringify({ pairs: PROOF_PAIRS.length, before, now, withAliases }));
-    // ADR-0046: aliases from the app's params never cost precision.
+    // ADR-0047: aliases from the app's params never cost precision.
     expect(agentAliases.length).toBe(1);
     expect(withAliases.fp).toBe(0);
     expect(withAliases.recall).toBeGreaterThanOrEqual(now.recall);

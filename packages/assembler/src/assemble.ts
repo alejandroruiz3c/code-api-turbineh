@@ -547,7 +547,7 @@ export function coverageRules(
       );
   const proven = attachProofs(rules, source);
   if (!outDir) return proven;
-  // Component aliases resolved from the params this app ships (ADR-0046), on that component's tests only.
+  // Component aliases resolved from the params this app ships (ADR-0047), on that component's tests only.
   const resolved = componentAliases(componentsDir, components, outDir);
   return proven.map((r) => {
     const aliases = aliasesFor(splitTestRef(r.test).file, resolved);

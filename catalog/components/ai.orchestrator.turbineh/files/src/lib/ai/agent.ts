@@ -222,6 +222,48 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
   ]);
 }
 
+/** A tool result that reports a failure (`{ error }`, from ToolError, a timeout or a failed step). */
+const isToolFailure = (result: unknown): boolean =>
+  typeof result === "object" &&
+  result !== null &&
+  typeof (result as { error?: unknown }).error === "string";
+
+const REFERENCE_KEY =
+  /^(reference|ref|booking_?id|order_?id|ticket_?id|confirmation(_?code)?|number|id)$/i;
+
+/** First short identifier in a tool result (top level, then one level down), e.g. a booking reference. */
+function referenceOf(result: Record<string, unknown>): string | null {
+  const levels = [
+    result,
+    ...Object.values(result).filter(
+      (v): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v),
+    ),
+  ];
+  for (const level of levels)
+    for (const [k, v] of Object.entries(level))
+      if (REFERENCE_KEY.test(k) && (typeof v === "string" || typeof v === "number")) {
+        const ref = String(v).trim();
+        if (ref.length > 0 && ref.length <= 64 && !/\s/.test(ref)) return ref;
+      }
+  return null;
+}
+
+/**
+ * Deterministic reply after a confirmed irreversible action ran successfully (no model call): the tool's own
+ * person-facing `message` when it returns one, otherwise the summary the person confirmed plus the reference the
+ * result carries.
+ */
+export function confirmedReply(summary: string, result: unknown): string {
+  const r =
+    typeof result === "object" && result !== null && !Array.isArray(result)
+      ? (result as Record<string, unknown>)
+      : {};
+  if (typeof r.message === "string" && r.message.trim()) return r.message.trim().slice(0, 1000);
+  const ref = referenceOf(r);
+  const what = summary.trim().replace(/[.\s]+$/, "");
+  return `Done: ${what}.${ref ? ` Reference: ${ref}.` : ""} Anything else I can help with?`;
+}
+
 /** Tool output reaches the model as data: bounded, control tokens removed, PII redacted when configured. */
 function toolContent(result: unknown): { text: string; flags: string[] } {
   const raw = JSON.stringify(result ?? null).slice(0, 8000);
@@ -368,7 +410,6 @@ export async function runAgent(
       description: t.description,
       irreversible: Boolean(t.irreversible),
     }));
-    let chosenRoute: string | null = null;
     // What the decider sees: the latest message, recent turns as plain text and this turn's tool results.
     const conversation = state.messages
       .filter(
@@ -378,34 +419,45 @@ export async function runAgent(
       .slice(-8)
       .map((m) => `${m.role === "user" ? "Person" : "Assistant"}: ${m.content.slice(0, 600)}`)
       .join("\n");
-    let next: { next: string; confidence: number } | null = null;
-    try {
-      const d = await io.decide({ request: input.text, conversation }, specs);
-      usage.inputTokens += d.inputTokens;
-      usage.outputTokens += d.outputTokens;
-      decision = d.probabilities;
-      chosenRoute = d.route;
-      next = { next: d.next, confidence: d.confidence };
-      if (d.unsafe >= UNSAFE_THRESHOLD)
-        throw new AiSafetyError("This request can't be processed. Please rephrase it.");
-    } catch (err) {
-      if (err instanceof AiSafetyError) throw err;
-      deciderName = err instanceof DeciderUnavailable ? "none" : "unavailable";
-      flags.push("decider-unavailable");
-    }
-    const chosen =
-      available.find((r) => r.name === chosenRoute) ??
-      available.find((r) => r.name === "balanced") ??
-      available[0];
-    if (!chosen) throw new Error("no AI route configured");
-    route = chosen.name;
-    model = chosen.model;
+    type Next = { next: string; confidence: number };
+    type Chosen = { name: string; model: string };
+    let next: Next | null = null;
+    let chosen: Chosen | null = null;
+    const decideTurn = async (): Promise<{ chosen: Chosen; next: Next | null }> => {
+      let chosenRoute: string | null = null;
+      let decided: Next | null = null;
+      try {
+        const d = await io.decide({ request: input.text, conversation }, specs);
+        usage.inputTokens += d.inputTokens;
+        usage.outputTokens += d.outputTokens;
+        decision = d.probabilities;
+        chosenRoute = d.route;
+        decided = { next: d.next, confidence: d.confidence };
+        if (d.unsafe >= UNSAFE_THRESHOLD)
+          throw new AiSafetyError("This request can't be processed. Please rephrase it.");
+      } catch (err) {
+        if (err instanceof AiSafetyError) throw err;
+        deciderName = err instanceof DeciderUnavailable ? "none" : "unavailable";
+        flags.push("decider-unavailable");
+      }
+      const r =
+        available.find((x) => x.name === chosenRoute) ??
+        available.find((x) => x.name === "balanced") ??
+        available[0];
+      if (!r) throw new Error("no AI route configured");
+      route = r.name;
+      model = r.model;
+      return { chosen: r, next: decided };
+    };
 
-    // 3 · A pending irreversible action is executed only on an explicit confirmation.
+    // 3 · A pending irreversible action is executed only on an explicit confirmation. An explicit yes or no is
+    // settled by code: the decision is taken only if a model has to run afterwards.
+    const answer = state.pending ? (req.confirm ?? readConfirmation(input.text)) : null;
+    if (answer === null) ({ chosen, next } = await decideTurn());
+    else deciderName = "skipped";
     state.messages.push({ role: "user", content: input.text });
     if (state.pending) {
       const pending = state.pending;
-      const answer = req.confirm ?? readConfirmation(input.text);
       state.pending = null;
       if (answer === false) {
         steps.push({ tool: pending.tool, ok: true, executed: false });
@@ -429,12 +481,23 @@ export async function runAgent(
         flags.push(...content.flags);
         state.messages.push({ role: "assistant", content: null, tool_calls: [call] });
         state.messages.push({ role: "tool", tool_call_id: call.id, content: content.text });
-        // The turn's decision was taken before this action ran: the model continues from its result.
-        next = null;
+        // Done as confirmed: the reply comes from a template over the tool's result, without a model call. A
+        // failure goes to the model, which explains it and offers an alternative.
+        if (!isToolFailure(result)) {
+          flags.push("templated-reply");
+          return await finish("answered", confirmedReply(pending.summary, result));
+        }
       } else {
         flags.push("confirmation-not-given");
       }
     }
+    if (!chosen) {
+      // Decided now, after the confirmed action ran: the model continues from its result and sees every tool.
+      deciderName = "jev";
+      chosen = (await decideTurn()).chosen;
+      next = null;
+    }
+    const routeModel = chosen.model;
 
     // 4 · Tool loop.
     const system = [
@@ -467,7 +530,7 @@ export async function runAgent(
       const remaining = deadline - Date.now();
       if (remaining <= 1000) break;
       const reply = await io.complete(
-        chosen.model,
+        routeModel,
         [{ role: "system", content: system }, ...state.messages],
         offered,
         remaining,
