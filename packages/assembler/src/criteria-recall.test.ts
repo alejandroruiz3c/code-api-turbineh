@@ -136,7 +136,7 @@ function score(current: boolean, aliases = false) {
         ? undefined
         : p.id.startsWith("rule-agent-")
           ? aliasesFor(now.file, agentAliases)
-          : // ADR-0048: the storefront's declared actors, on the storefront runs' recipe tests.
+          : // ADR-0049: the storefront's declared actors, on the storefront runs' recipe tests.
             p.id.startsWith("rule-shop-") && !now.file.includes("booking")
             ? shopActors
             : undefined;

@@ -300,7 +300,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[f.path] ??= "generated";
   }
   recordOwners(outDir, owners);
-  // Actor aliases (ADR-0048) for the recipe's and the generated tests: the recipe chain's role model and the
+  // Actor aliases (ADR-0049) for the recipe's and the generated tests: the recipe chain's role model and the
   // request's role matrix; components' own aliases (ADR-0047) for their tests.
   const actors: ResolvedAliases = {
     component: `recipe ${input.recipe}`,

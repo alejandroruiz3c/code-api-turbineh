@@ -120,7 +120,7 @@ export function aliasesFor(
 }
 
 /**
- * Actor aliases of a recipe (ADR-0048): the words requests use for the role the recipe's own tests act as, declared
+ * Actor aliases of a recipe (ADR-0049): the words requests use for the role the recipe's own tests act as, declared
  * by the recipe from its role model (`aliases.yaml` › `actors`, each with why it holds). Example: in the storefront the
  * E2E owner is the shop's administrator (verified ADMIN_EMAILS staff, the only role with the admin area), so a
  * criterion about "an administrator" is the owner's. Never inferred from free text.

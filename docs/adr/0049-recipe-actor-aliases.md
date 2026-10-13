@@ -1,4 +1,4 @@
-# ADR-0048 · Recipe actor aliases from the role model
+# ADR-0049 · Recipe actor aliases from the role model
 
 - Status: accepted (number may need renumbering at merge)
 - Date: 2026-10-13

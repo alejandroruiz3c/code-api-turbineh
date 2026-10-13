@@ -7,7 +7,7 @@ import { readAcceptanceJson } from "./agent-guide.js";
 import { readRecipeActors } from "./aliases.js";
 import { assemble } from "./assemble.js";
 
-/** Actor aliases of recipes (ADR-0048): the staging build f0788924 of the Frontiers shop spec. */
+/** Actor aliases of recipes (ADR-0049): the staging build f0788924 of the Frontiers shop spec. */
 const recipesDir = join(__dirname, "../../../catalog/recipes");
 
 const ADMIN_PRODUCTS =

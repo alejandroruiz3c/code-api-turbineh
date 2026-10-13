@@ -1,4 +1,4 @@
-# Actor aliases (ADR-0048): who this recipe's tests act as, in the words requests use for that role. From the recipe's
+# Actor aliases (ADR-0049): who this recipe's tests act as, in the words requests use for that role. From the recipe's
 # role model only, never guessed. Applied to the recipe's and the generated tests of an app built on it.
 actors:
   - term: owner
