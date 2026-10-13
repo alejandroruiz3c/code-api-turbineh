@@ -573,6 +573,8 @@ export function initialGuide(input: {
   recipe: { id: string; description: string; guide?: RecipeGuide };
   criteria: string[];
   gaps: { capability: string; trigger: string }[];
+  /** Installed catalog components and their extension points (guide.yaml), listed after the recipe's. */
+  components?: { id: string; extend: { what: string; where: string; how: string }[] }[];
 }): Omit<PackageGuide, "left"> {
   const files = fileMap(input.outDir);
   const tests = testsOf(input.outDir);
@@ -589,7 +591,13 @@ export function initialGuide(input: {
     })),
     gate: null,
     files,
-    extend: [...(input.recipe.guide?.extend ?? []), ...BASE_EXTEND],
+    extend: [
+      ...(input.recipe.guide?.extend ?? []),
+      ...(input.components ?? []).flatMap((c) =>
+        c.extend.map((e) => ({ ...e, what: `${e.what} (${c.id})` })),
+      ),
+      ...BASE_EXTEND,
+    ],
     theme: themeOf(input.outDir),
     env: envOf(input.outDir),
     tests,

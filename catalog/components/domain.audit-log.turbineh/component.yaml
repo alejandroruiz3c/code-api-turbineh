@@ -1,0 +1,67 @@
+schema: turbineh.component/v0.1
+id: domain.audit-log.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.audit-log.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Append-only audit log per workspace: every change made through generated entities and domain components (who, when, action, record, field-level before/after with sensitive values redacted) is recorded by the audit() hook; an owner-visible page with filters (who, action, record type, date range), pagination and CSV export; the database refuses updates and deletes of entries."
+  does_not: "Does not record reads, page views or changes made by hand-written code that does not call audit(); no retention or archiving job"
+  use_cases: [saas-crud, client-portal, internal-tool, projects, tracker]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Generated entities and domain components record their changes with no extra code",
+      "Append-only enforced twice: no code path and a database trigger",
+    ]
+  cons: ["One row per change in the app database (no separate log store)"]
+  alternatives: [observability.logging.pino]
+contract:
+  inputs: ["audit({ organizationId, actorId, actorEmail?, action, subjectType, subjectId?, summary?, before?, after? })"]
+  outputs: ["audit_events rows; /dashboard/audit (filters, pages); /dashboard/audit/export (CSV)"]
+  errors: ["audit() throws when the entry cannot be stored (an unrecorded change is a bug)"]
+  limits: ["60 changed fields per entry, 300 characters per value, CSV export bounded by exportLimit (default 5,000)"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/lib/audit.ts (replaces the base no-op hook), src/audit/{config,diff,query}.ts + params.json, src/db/component-audit.ts, src/db/sql/100-audit-append-only.sql, src/app/dashboard/audit/** and tests."
+  config: []
+  migrations: true
+params:
+  file: src/audit/params.json
+  schema: params.schema.json
+  entities: [AuditLog, AuditEntry, AuditEvent, ActivityLog, Activity, ChangeLog, History]
+quality:
+  tests:
+    {
+      command: "unit (diff, redaction, append-only scan) + E2E (owner sees and exports, filters, database refuses changes, other workspaces see nothing); full gate via verify:recipe saas-crud+domain.membership-access.turbineh+domain.audit-log.turbineh",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: entries scoped by workspace on every read; page and export behind can(role, 'view_audit'); sensitive fields redacted before storage; LIKE wildcards escaped; append-only trigger."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "saas-crud + membership-access + audit-log passes the full verification gate with the audit E2E suite"
+    origin: tested
+    ref: "verify:recipe saas-crud+domain.membership-access.turbineh+domain.audit-log.turbineh (ADR-0040)"
+relations:
+  requires: []
+  provides: [domain.audit-log]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

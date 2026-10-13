@@ -1,0 +1,27 @@
+{
+  "roles": [
+    {
+      "key": "owner",
+      "label": "Owner",
+      "can": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "manage_members",
+        "view_audit",
+        "see_all_scopes"
+      ]
+    },
+    {
+      "key": "admin",
+      "label": "Admin",
+      "can": ["read", "create", "update", "delete", "manage_members", "see_all_scopes"]
+    },
+    { "key": "member", "label": "Member", "can": ["read", "create", "see_all_scopes"] }
+  ],
+  "defaultRole": "member",
+  "inviteRoles": ["admin", "member"],
+  "invitationDays": 7,
+  "scope": null
+}

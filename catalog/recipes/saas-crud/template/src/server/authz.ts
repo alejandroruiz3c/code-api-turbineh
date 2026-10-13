@@ -2,19 +2,29 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { isStaff, isStaffEmail } from "@/lib/staff";
+import { can as policyCan, toRole, type Action, type Role } from "@/server/role-policy";
 
-export type Role = "owner" | "admin" | "member";
-export type Action = "read" | "create" | "update" | "delete";
+export type { Action, Role };
 
-/** Role policy (Security Pack): members read and create; only owners and admins update or delete. */
+/** Role policy (Security Pack), defined in src/server/role-policy.ts (roles from the request when they were given). */
 export function can(role: Role, action: Action): boolean {
-  if (role === "owner" || role === "admin") return true;
-  return action === "read" || action === "create";
+  return policyCan(role, action);
+}
+
+/**
+ * Signed-in user, member of a workspace or not yet (e.g. someone accepting an invitation), or a redirect to sign-in.
+ * Server actions of signed-in people who may not belong to the workspace yet start with this.
+ */
+export async function requireSession(): Promise<{ userId: string; email: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/sign-in");
+  return { userId: session.user.id, email: session.user.email };
 }
 
 /** Signed-in user with an active organization, or a redirect. Every server action and page goes through this. */
 export async function requireMember(): Promise<{
   userId: string;
+  email: string;
   organizationId: string;
   role: Role;
 }> {
@@ -35,8 +45,8 @@ export async function requireMember(): Promise<{
     organizationId = first.id;
   }
   const member = await auth.api.getActiveMember({ headers: h }).catch(() => null);
-  const role = (member?.role ?? "member") as Role;
-  return { userId: session.user.id, organizationId, role };
+  const role = toRole(member?.role);
+  return { userId: session.user.id, email: session.user.email, organizationId, role };
 }
 
 /** Staff allow-list (ADMIN_EMAILS, comma-separated emails). Deny by default: an empty list allows nobody. */

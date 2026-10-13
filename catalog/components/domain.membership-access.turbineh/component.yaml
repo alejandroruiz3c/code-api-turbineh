@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: domain.membership-access.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.membership-access.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Workspace membership from the request: roles and permissions mapped from the spec (owner/editor/viewer, manager/member, staff/client) applied by the one role policy every page and action uses; invitations by email with a role (hashed single-use link, expiry, accept flow for new or existing accounts with requireSession()); role changes and removal that never leave a workspace without an owner; and per-record access scopes (company, project, shop) so restricted members see only their records."
+  does_not: "Does not do SSO, SCIM or multiple workspaces per invitation link; staff-only sign-up apps must allow the invited emails (ADMIN_EMAILS)"
+  use_cases: [saas-crud, client-portal, projects, analytics-dashboard, internal-tool]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Roles come from the request and are enforced through the existing can() everywhere",
+      "Per-record scopes shared by uploads, workflow items and analytics rows",
+    ]
+  cons: ["Role checks are per workspace; per-record rules beyond scopes stay in each feature"]
+  alternatives: [authz.organizations.better-auth]
+contract:
+  inputs:
+    [
+      "src/membership/params.json (roles, defaultRole, inviteRoles, invitationDays, scope)",
+      "invite(actor, { email, role, scopeId }); acceptInvitation({ userId, email }, token); changeRole(actor, memberId, role | null); createScope / addToScope",
+    ]
+  outputs: ["can(role, action) from the params; visibleScopes / canSeeScope / scopeOptions; /dashboard/members; /invite/[token]"]
+  errors: ["UserFacingError (safe to show): role not grantable, last owner, own role, invalid/used/expired/other-email invitation, unknown scope"]
+  limits: ["8 roles, invitations valid 1–30 days, one scope kind per app"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/server/role-policy.ts and src/server/record-access.ts (replace the base policy and scope hooks), src/membership/**, src/db/component-membership.ts, src/app/dashboard/members/**, src/app/invite/[token]/**, unit and E2E tests. Uses requireSession() from src/server/authz.ts."
+  config: []
+  migrations: true
+params:
+  file: src/membership/params.json
+  schema: params.schema.json
+  entities: [Member, WorkspaceMember, TeamMember, Membership, Invitation, Invite, Role, Permission, Company, ClientCompany, Shop, Scope]
+quality:
+  tests:
+    {
+      command: "unit (role policy from params, invitation rules, last owner, scopes) + E2E (invite → email → sign up from the link → accept with role; read-only role cannot manage; single-use and other-email links refused; scope isolation); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: only SHA-256 of invitation tokens stored, single use inside a row-locked transaction, invited email must match the signed-in email, manage_members checked on every action, last-owner and self-change guards, scope membership checked server-side, all queries parameterised."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "saas-crud + membership-access + audit-log and client-portal + membership-access + private-uploads + workflow pass the full verification gate with the membership E2E suite"
+    origin: tested
+    ref: "verify:recipe (ADR-0040 combinations)"
+relations:
+  requires: []
+  provides: [domain.membership-access]
+  conflicts: []
+  tested_with: [recipe.saas-crud, recipe.client-portal]

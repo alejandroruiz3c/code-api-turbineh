@@ -28,6 +28,16 @@ export interface ComponentGuide {
   guarantees: { claim: string; test: string }[];
   limits: string[];
   example: string;
+  /**
+   * Parameters from the request (ADR-0040), for components that declare `params` in component.yaml: the app file,
+   * its JSON Schema and each field in words, so a compiler (or a person) can write them from a spec.
+   */
+  params?: {
+    file: string;
+    schema: string;
+    fields: { name: string; description: string; default?: string }[];
+    example?: string;
+  };
 }
 
 const REQUIRED: (keyof ComponentGuide)[] = [
@@ -47,6 +57,20 @@ const REQUIRED: (keyof ComponentGuide)[] = [
   "limits",
   "example",
 ];
+
+/** Directories whose files a component ships into apps: files/, files-ai/, files-recipe/<recipe>/, files-with/<id>/. */
+export function shippedDirs(componentDir: string): string[] {
+  const nested = (d: string) =>
+    existsSync(join(componentDir, d))
+      ? readdirSync(join(componentDir, d)).map((x) => join(componentDir, d, x))
+      : [];
+  return [
+    join(componentDir, "files"),
+    join(componentDir, "files-ai"),
+    ...nested("files-recipe"),
+    ...nested("files-with"),
+  ];
+}
 
 /** Guide files of one component directory (guide.yaml, guide.<part>.yaml). */
 export function guideFiles(componentDir: string): string[] {
@@ -87,6 +111,23 @@ export function guideErrors(componentDir: string, id: string): string[] {
     for (const e of g.extension_points ?? [])
       if (!e?.what || !e.where || !e.how)
         errors.push(`${name}: extension_points need what, where, how`);
+    const manifest = join(componentDir, "component.yaml");
+    const declared = existsSync(manifest)
+      ? (parse(readFileSync(manifest, "utf8")) as { params?: { file: string; schema: string } })
+          .params
+      : undefined;
+    if (declared && !g.params?.fields?.length)
+      errors.push(
+        `${name}: "params" (file, schema, fields) is required for a parameterised component`,
+      );
+    if (
+      declared &&
+      g.params &&
+      (g.params.file !== declared.file || g.params.schema !== declared.schema)
+    )
+      errors.push(
+        `${name}: params.file/schema must match component.yaml (${declared.file}, ${declared.schema})`,
+      );
     for (const t of g.guarantees ?? []) {
       const [path, title] = String(t?.test ?? "").split(" › ");
       const filePath = path?.trim() ?? "";
@@ -96,7 +137,9 @@ export function guideErrors(componentDir: string, id: string): string[] {
       const shipped = (
         tpl
           ? [join(componentDir, "../../recipes", tpl[1] ?? "", "template", tpl[2] ?? "")]
-          : ["files", "files-ai", "."].map((d) => join(componentDir, d, filePath))
+          : [...shippedDirs(componentDir), "."].map((d) =>
+              join(d === "." ? componentDir : d, filePath),
+            )
       ).find((p) => existsSync(p));
       if (!filePath || !shipped) {
         errors.push(
@@ -187,5 +230,18 @@ ${list(g.limits)}
 \`\`\`ts
 ${g.example.trim()}
 \`\`\`
-`;
+${
+  g.params
+    ? `
+## Parameters from the request
+
+Written by TurbineH to \`${g.params.file}\` (JSON Schema: \`${g.params.schema}\` in the catalogue component); edit the file to
+change them, it is validated at start-up.
+
+| Field | Default | Description |
+| --- | --- | --- |
+${g.params.fields.map((f) => `| \`${cell(f.name)}\` | ${cell(f.default) || "—"} | ${cell(f.description)} |`).join("\n")}
+${g.params.example ? `\n\`\`\`json\n${g.params.example.trim()}\n\`\`\`\n` : ""}`
+    : ""
+}`;
 }

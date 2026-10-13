@@ -151,6 +151,28 @@ export function assemble(input: AssembleInput): AssembleResult {
       appendFileSync(join(outDir, ".env.example"), readFileSync(extraEnv, "utf8"));
     }
   }
+  // Component adapters (ADR-0040), copied after every component's files/ so they win:
+  //  - files-recipe/<recipe>/: glue for a recipe of the chain (e.g. the bookings recipe's home page);
+  //  - files-with/<component>/: glue used only when that other component is in the app too.
+  const selectedIds = new Set(input.selected.map((s) => s.component.id));
+  const isMeta = (f: string) => /(^|\/)(\.env\.example\.append|nav\.json)$/.test(f);
+  for (const s of input.selected) {
+    if (!s.component.pkg.name.startsWith("turbineh/")) continue;
+    const base = join(componentsDir, s.component.id);
+    const overlays = [
+      ...chain.map((m) => join(base, "files-recipe", m.id)),
+      ...[...selectedIds].map((id) => join(base, "files-with", id)),
+    ].filter((d) => existsSync(d));
+    for (const dir of overlays) {
+      cpSync(dir, outDir, { recursive: true, filter: (src) => !isMeta(src) });
+      Object.assign(owners, ownersOf(dir, `component:${s.component.id}`, isMeta));
+      const navFile = join(dir, "nav.json");
+      if (existsSync(navFile))
+        componentNav.push(
+          ...(JSON.parse(readFileSync(navFile, "utf8")) as { label: string; href: string }[]),
+        );
+    }
+  }
   // AI parts of components (files-ai/: toolkits, mock-model scripts, assistant E2E) only when the app has runAgent.
   const aiApp = existsSync(join(outDir, "src/lib/ai/agent.ts"));
   for (const s of input.selected) {
@@ -255,6 +277,12 @@ export function assemble(input: AssembleInput): AssembleResult {
       },
       criteria: spec.acceptance_criteria,
       gaps: input.gaps,
+      components: [...selectedIds].map((id) => ({
+        id,
+        extend: readGuides(join(componentsDir, id))
+          .filter((g) => !g.part)
+          .flatMap((g) => g.extension_points ?? []),
+      })),
     }),
   );
 

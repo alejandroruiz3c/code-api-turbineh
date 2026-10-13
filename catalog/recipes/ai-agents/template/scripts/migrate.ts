@@ -1,6 +1,7 @@
 /** Creates/updates auth tables (better-auth) and applies app migrations (drizzle). Idempotent. */
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // Migrations only create tables: they never sign or send anything, so they need no real auth settings. Placeholders
 // (process-local, never stored) let `pnpm db:migrate` run with nothing but DATABASE_URL.
@@ -20,6 +21,15 @@ await runMigrations();
 await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
 if (existsSync("./drizzle/meta/_journal.json")) {
   await migrate(drizzle(pool), { migrationsFolder: "./drizzle" });
+}
+// Database rules drizzle-kit cannot express (ADR-0040), e.g. append-only triggers of audit and history tables:
+// src/db/sql/*.sql, idempotent (CREATE OR REPLACE / DROP … IF EXISTS), applied in name order after the tables exist.
+if (existsSync("./src/db/sql")) {
+  for (const file of readdirSync("./src/db/sql")
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
+    await pool.query(readFileSync(join("./src/db/sql", file), "utf8"));
+  }
 }
 await pool.end();
 console.log("migrations applied");

@@ -119,7 +119,14 @@ else {
   // A combination name ("ai-agents+domain.bookings.turbineh") or a recipe with an optional prompt.
   const named = known.find((k) => k.name === name);
   targets = [
-    named && !prompt ? named : { name, recipe: name.split("+")[0] ?? name, prompt: prompt || "" },
+    named && !prompt
+      ? named
+      : {
+          name,
+          recipe: name.split("+")[0] ?? name,
+          prompt: prompt || "",
+          with: name.split("+").slice(1),
+        },
   ];
 }
 const results = [];

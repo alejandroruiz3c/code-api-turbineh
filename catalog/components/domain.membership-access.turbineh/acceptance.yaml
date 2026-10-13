@@ -1,0 +1,17 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/membership.spec.ts › the owner invites a teammate by email with a role and the invitation email is sent"
+  covers: ["invit", "e-?mail|role"]
+- test: "tests/e2e/membership.spec.ts › the invited person creates an account from the link, accepts and joins with the invited role"
+  covers: ["invit|join", "accept|join|role|sign[ -]?up|link"]
+- test: "tests/e2e/membership.spec.ts › a member whose role cannot manage the workspace cannot invite people or change roles"
+  covers: ["(only|just) (the )?(owner|admin|manager)s?.*(invite|manage|role)|(invite|manage).*(only|just) (the )?(owner|admin|manager)s?"]
+- test: "tests/unit/authz.test.ts › maps owner/editor/viewer: viewers read but cannot edit, only owners manage members and read the audit log"
+  covers: ["viewer|read[- ]only|editor", "cannot|can't|not|only|read"]
+- test: "tests/unit/authz.test.ts › applies the request's roles: each role can do exactly what its params list, nothing else"
+  covers: ["roles?\\b", "owner|editor|viewer|manager|member|staff|client|admin", "can|permission|allowed|only"]
+- test: "tests/e2e/membership.spec.ts › an invitation link works only once and only for the invited email"
+  covers: ["invit", "once|single|expire|only (for|by)|invited (email|address)"]
+- test: "tests/e2e/membership.spec.ts › a member restricted to their own company sees only that company, never the others"
+  covers: ["only (ever )?sees? (their|its) own|own (company|project|shop|client)|belong to|per[- ](company|project|shop|client)"]
+- test: "tests/e2e/membership.spec.ts › the owner changes a member's role"
+  covers: ["chang|assign|updat", "role"]
