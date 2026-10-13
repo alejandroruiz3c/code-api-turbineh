@@ -6,7 +6,11 @@ import type pg from "pg";
  * the CLI or the repository integration (`metrics.integrations`).
  */
 
-/** Approved plan → queue its generation on the same row (keeps the plan and the event trace). */
+/**
+ * Approved plan → queue its generation on the same row (keeps the plan and the event trace). A generation that
+ * failed without delivering anything can be queued again the same way ("Generate again", ADR-0050): the plan and its
+ * spec are kept, so it resumes from the approved plan.
+ */
 export async function requeueForGeneration(
   db: pg.Pool,
   id: string,
@@ -15,8 +19,9 @@ export async function requeueForGeneration(
   const res = await db.query(
     `UPDATE builds SET status = 'queued', options = options || '{"mode":"generate"}'::jsonb, attempts = 0,
        claimed_by = NULL, claimed_at = NULL, error = NULL, finished_at = NULL
-     WHERE id = $1 AND owner_id = $2 AND status = 'done' AND options->>'mode' = 'plan'
-       AND metrics ? 'plan'
+     WHERE id = $1 AND owner_id = $2 AND metrics ? 'plan'
+       AND ((status = 'done' AND options->>'mode' = 'plan')
+         OR (status = 'failed' AND options->>'mode' = 'generate' AND NOT coalesce(artifact ? 'zipKey', false)))
      RETURNING id`,
     [id, ownerId],
   );

@@ -14,11 +14,11 @@ export default async function NewFlowPage({
     <main className="mx-auto max-w-6xl px-6 pt-8">
       <p className="eyebrow">New flow</p>
       <h1 className="display mt-2 text-3xl font-semibold text-cream">
-        From need to verified capability
+        From need to a verified app
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Describe it, tell us where it will live, review one plan. We assemble verified components,
-        write only the glue and check everything before you take it.
+        Describe it, choose a new complete app or your own project, review one plan. We assemble
+        verified components, write only the glue and check everything before you take it.
       </p>
       <div className="mt-8">
         <Suspense>

@@ -178,7 +178,7 @@ export function buildPlan(input: PlanInput): Plan {
   const envCount = config.filter((r) => r.kind === "env").length;
   const policy = input.preferences?.changePolicy;
   const needsApproval = [
-    ...compat.incompatibilities.map((i) => `Incompatibility: ${i}`),
+    ...compat.incompatibilities.map((i) => `Before you continue: ${i}`),
     ...input.gaps.map(gapNotice),
     ...(policy && !policy.allowDependencyChanges && deps.added.length > 0
       ? [
@@ -207,7 +207,7 @@ export function buildPlan(input: PlanInput): Plan {
     : undefined;
   if (repository) {
     for (const c of repository.conflicts)
-      if (!compat.incompatibilities.includes(c)) needsApproval.push(`Adaptation: ${c}`);
+      if (!compat.incompatibilities.includes(c)) needsApproval.push(`In your repository: ${c}`);
     if (!repository.compatible) compat.compatible = false;
   }
   return {

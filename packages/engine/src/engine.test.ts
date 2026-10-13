@@ -183,7 +183,7 @@ describe("plan", () => {
       "Adds 1 verified dependency",
     );
     expect(plan.compatible).toBe(true);
-    expect(plan.needsApproval.join(" ")).toMatch(/Incompatibility: next/);
+    expect(plan.needsApproval.join(" ")).toMatch(/Before you continue: next/);
     expect(plan.incompatibilities.join(" ")).toMatch(/next: .*15\.2\.0.*16\.3\.8/);
     expect(plan.components).toHaveLength(1);
     expect(plan.components[0]?.why).toMatch(/security headers; required by the flow/);

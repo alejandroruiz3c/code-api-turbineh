@@ -22,10 +22,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       try {
         while (!req.signal.aborted && Date.now() - started < 290_000) {
           const events = await eventsSince(db, id, last);
-          for (const e of events) {
+          for (const [i, e] of events.entries()) {
             last = e.id;
-            send(`id: ${e.id}\nevent: ${e.type === "finished" ? "finished" : "phase"}\ndata: ${JSON.stringify(e)}\n\n`);
-            if (e.type === "finished") {
+            // A plan's own `finished` is followed by the generation's `queued` on the same row: only a `finished`
+            // with nothing after it ends the stream (ADR-0050; see lib/flow-events.ts).
+            const final =
+              e.type === "finished" &&
+              i === events.length - 1 &&
+              (await eventsSince(db, id, e.id)).length === 0;
+            send(`id: ${e.id}\nevent: ${final ? "finished" : "phase"}\ndata: ${JSON.stringify(e)}\n\n`);
+            if (final) {
               controller.close();
               return;
             }
