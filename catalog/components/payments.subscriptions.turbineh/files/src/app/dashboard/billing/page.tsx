@@ -46,10 +46,7 @@ export default async function Billing({ searchParams }: { searchParams: SearchPa
             ) : null}
             {sub.stripeCustomerId ? (
               <form action={manageBilling}>
-                <button
-                  type="submit"
-                  className="rounded-md border border-field px-4 py-2 text-sm"
-                >
+                <button type="submit" className="rounded-md border border-field px-4 py-2 text-sm">
                   Manage billing
                 </button>
               </form>

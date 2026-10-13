@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { productPrices, products, productVariants } from "@/db/schema";
-import { IMAGE_MAX_BYTES, imageType, parsePrice } from "@/lib/shop";
+import { IMAGE_MAX_BYTES, IMAGE_URL_MAX, imageType, parseImageUrl, parsePrice } from "@/lib/shop";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
 import { requireAdmin } from "@/server/admin";
@@ -16,6 +16,7 @@ const base = z.object({
   description: z.string().trim().min(5).max(5000),
   price: z.string().trim(),
   stock: z.string().trim().optional(),
+  imageUrl: z.string().max(IMAGE_URL_MAX).optional(),
   active: z.literal("on").optional(),
 });
 
@@ -41,12 +42,16 @@ export async function saveProduct(formData: FormData): Promise<void> {
   const stock = parsed.data.stock
     ? z.coerce.number().int().min(0).max(1_000_000).parse(parsed.data.stock)
     : null;
+  const imageUrl = parseImageUrl(parsed.data.imageUrl ?? "");
+  if (imageUrl === undefined)
+    throw new UserFacingError("The image URL must be an https:// address (up to 2048 characters).");
   const image = await readImage(formData);
   const values = {
     name: parsed.data.name,
     description: parsed.data.description,
     priceCents,
     stock,
+    imageUrl,
     active: parsed.data.active === "on",
     updatedAt: new Date(),
     ...(image ?? {}),

@@ -97,7 +97,19 @@ export default async function Products({ searchParams }: { searchParams: SearchP
             />
           </div>
           <div>
-            <Label htmlFor="pr-image">Image (PNG, JPEG or WebP, up to 2 MB)</Label>
+            <Label htmlFor="pr-image-url">Image URL (https://…, optional)</Label>
+            <Input
+              id="pr-image-url"
+              name="imageUrl"
+              type="url"
+              maxLength={2048}
+              pattern="https://.*"
+              placeholder="https://example.com/product.jpg"
+              defaultValue={editing?.imageUrl ?? ""}
+            />
+          </div>
+          <div>
+            <Label htmlFor="pr-image">Or upload an image (PNG, JPEG or WebP, up to 2 MB)</Label>
             <input
               id="pr-image"
               name="image"

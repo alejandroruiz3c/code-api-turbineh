@@ -311,3 +311,36 @@ export function signStripePayload(
 ): string {
   return `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex")}`;
 }
+
+export const IMAGE_URL_MAX = 2048;
+
+/**
+ * Admin-entered product image URL: https only (no http:, javascript: or data:), at most 2048 characters. Returns the
+ * normalised URL, null for an empty value, or undefined when invalid.
+ */
+export function parseImageUrl(raw: string): string | null | undefined {
+  const v = raw.trim();
+  if (!v) return null;
+  if (v.length > IMAGE_URL_MAX) return undefined;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && u.hostname && !u.username && !u.password
+      ? u.toString()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Where a product's image is shown from: its https URL when set, else the uploaded image, else none. */
+export function productImageSrc(p: {
+  id: string;
+  imageUrl: string | null;
+  imageMime: string | null;
+}): string | null {
+  if (p.imageUrl) return p.imageUrl;
+  return p.imageMime ? `/shop/images/${p.id}` : null;
+}
+
+/** ILIKE pattern for a shopper's search text (wildcards escaped). */
+export const searchPattern = (q: string) => `%${q.replace(/[%_\\]/g, "\\$&")}%`;

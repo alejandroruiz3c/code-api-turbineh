@@ -12,6 +12,12 @@ describe("security headers", () => {
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     expect(headers["Content-Security-Policy"]).toContain("object-src 'none'");
   });
+  it("allows remote images only over https, and only when the app opts in", () => {
+    const img = (headers["Content-Security-Policy"] ?? "")
+      .split("; ")
+      .find((d) => d.startsWith("img-src"));
+    expect(img).toMatch(/^img-src 'self' data: blob:( https:)?$/);
+  });
 });
 
 describe("rate limit", () => {

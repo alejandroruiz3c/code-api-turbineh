@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { PAGE_SIZE, parsePage, parseQuery } from "@/lib/pagination";
+import { searchPattern } from "@/lib/shop";
 import { currentCurrency } from "@/server/currency";
 import { inCurrency } from "@/server/prices";
 import { cartCount } from "@/server/shop";
@@ -25,7 +26,10 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
   const q = parseQuery(params.q);
   const where = and(
     eq(products.active, true),
-    q ? ilike(products.name, `%${q.replace(/[%_\\]/g, "\\$&")}%`) : undefined,
+    // Search matches names and descriptions.
+    q
+      ? or(ilike(products.name, searchPattern(q)), ilike(products.description, searchPattern(q)))
+      : undefined,
   );
   const currency = await currentCurrency();
   const [baseRows, [{ total } = { total: 0 }]] = await Promise.all([
@@ -36,6 +40,7 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
         name: products.name,
         priceCents: products.priceCents,
         imageMime: products.imageMime,
+        imageUrl: products.imageUrl,
       })
       .from(products)
       .where(where)

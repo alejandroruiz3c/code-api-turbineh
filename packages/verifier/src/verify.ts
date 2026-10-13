@@ -255,8 +255,12 @@ export async function verify(dir: string): Promise<VerifyResult> {
   // Shop apps: Stripe's official API simulator on the same isolated network, so checkout and the signed webhook
   // are exercised end to end without internet or real keys.
   const stripeHost = `${net}-stripe`;
+  // Apps that ship their own mock (tests/e2e/mocks/<ENV>.mjs, started by playwright.config.ts) need no container.
+  const ships = (envVar: string) => existsSync(join(dir, `tests/e2e/mocks/${envVar}.mjs`));
   const shop =
-    existsSync(join(dir, "src/server/stripe.ts")) || existsSync(join(dir, "src/lib/billing.ts"));
+    (existsSync(join(dir, "src/server/stripe.ts")) ||
+      existsSync(join(dir, "src/lib/billing.ts"))) &&
+    !ships("STRIPE_API_BASE");
   if (shop) {
     await run("docker", [
       "run",
@@ -271,7 +275,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
   }
   // AI apps (orchestrator component): a deterministic model + decider simulator on the same isolated network.
   const aiHost = `${net}-ai`;
-  const aiApp = existsSync(join(dir, "src/lib/ai/orchestrator.ts"));
+  const aiApp = existsSync(join(dir, "src/lib/ai/orchestrator.ts")) && !ships("TURBINEH_AI_URL");
   if (aiApp) {
     await run("docker", [
       "run",

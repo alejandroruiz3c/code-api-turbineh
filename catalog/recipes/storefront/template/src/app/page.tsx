@@ -29,6 +29,7 @@ export default async function Home() {
       name: products.name,
       priceCents: products.priceCents,
       imageMime: products.imageMime,
+      imageUrl: products.imageUrl,
     })
     .from(products)
     .where(eq(products.active, true))

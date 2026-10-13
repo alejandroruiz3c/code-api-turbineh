@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPrice } from "@/lib/shop";
+import { formatPrice, productImageSrc } from "@/lib/shop";
 
 export function ProductCard({
   p,
@@ -11,16 +11,18 @@ export function ProductCard({
     name: string;
     priceCents: number | null;
     imageMime: string | null;
+    imageUrl: string | null;
   };
   currency: string;
 }) {
+  const src = productImageSrc(p);
   return (
     <li className="overflow-hidden rounded-lg border border-line bg-panel">
       <Link href={`/shop/${p.slug}`} className="block">
-        {p.imageMime ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served by our own image route
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element -- own image route or the admin's https URL
           <img
-            src={`/shop/images/${p.id}`}
+            src={src}
             alt={p.name}
             className="aspect-square w-full object-cover"
             loading="lazy"

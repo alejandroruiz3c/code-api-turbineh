@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/db/client";
 import { productPrices, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
-import { formatPrice, MAX_QTY, priceIn } from "@/lib/shop";
+import { formatPrice, MAX_QTY, priceIn, productImageSrc } from "@/lib/shop";
 import { jsonLd } from "@/lib/text";
 import { currentCurrency, enabledCurrencies } from "@/server/currency";
 import { cartCount } from "@/server/shop";
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       title: p.name,
       description: p.description.slice(0, 160),
       type: "website",
-      ...(p.imageMime ? { images: [`/shop/images/${p.id}`] } : {}),
+      ...(productImageSrc(p) ? { images: [productImageSrc(p) as string] } : {}),
     },
   };
 }
@@ -72,6 +72,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     inStock: available(v.stock),
   }));
   const base = env.BETTER_AUTH_URL.replace(/\/$/, "");
+  const imageSrc = productImageSrc(p);
   const inStock = variants.length > 0 ? variants.some((v) => v.inStock) : available(p.stock);
   const prices = (
     variants.length > 0 ? variants.map((v) => v.price) : [price(currency, null)]
@@ -115,7 +116,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     "@type": "Product",
     name: p.name,
     description: p.description,
-    ...(p.imageMime ? { image: `${base}/shop/images/${p.id}` } : {}),
+    ...(imageSrc ? { image: imageSrc.startsWith("/") ? `${base}${imageSrc}` : imageSrc } : {}),
     offers: offers.length === 1 ? offers[0] : offers,
   });
   return (
@@ -123,13 +124,9 @@ export default async function ProductPage({ params }: { params: Params }) {
       {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD built by jsonLd(), "<" escaped */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: product }} />
       <article className="mx-auto grid max-w-5xl gap-10 px-6 py-12 md:grid-cols-2">
-        {p.imageMime ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served by our own image route
-          <img
-            src={`/shop/images/${p.id}`}
-            alt={p.name}
-            className="w-full rounded-lg object-cover"
-          />
+        {imageSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element -- own image route or the admin's https URL
+          <img src={imageSrc} alt={p.name} className="w-full rounded-lg object-cover" />
         ) : (
           <div className="flex aspect-square items-center justify-center rounded-lg bg-subtle text-muted">
             No image

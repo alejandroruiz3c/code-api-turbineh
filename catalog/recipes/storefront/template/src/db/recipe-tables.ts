@@ -26,6 +26,8 @@ export const products = pgTable(
     active: boolean("active").notNull().default(true),
     image: bytea("image"),
     imageMime: varchar("image_mime", { length: 40 }),
+    /** External image (https URL set by the admin); shown instead of the uploaded image when present. */
+    imageUrl: varchar("image_url", { length: 2048 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
