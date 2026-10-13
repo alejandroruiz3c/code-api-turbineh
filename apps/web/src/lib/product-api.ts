@@ -10,6 +10,63 @@ import type {
  * Typed client of the product engine (PLAN §16.4) for the browser. Same contract as the API and the CLI. Endpoints
  * that are not deployed yet answer `{ ok: false, missing: true }`, so screens can fall back gracefully.
  */
+export interface GithubStatus {
+  connected: boolean;
+  login?: string;
+  private_repos?: boolean;
+  via?: "oauth" | "token";
+}
+
+export interface RepoItem {
+  full_name: string;
+  private: boolean;
+  default_branch: string;
+  description: string | null;
+  pushed_at: string | null;
+}
+
+export interface RepoAnalysisResponse {
+  repo: string;
+  private: boolean;
+  can_push: boolean;
+  default_branch: string;
+  analysis: {
+    appPath: string;
+    language: string;
+    framework: { name: string | null; version: string | null; router: string | null };
+    packageManager: { name: string | null };
+    conventions: string[];
+  };
+  conflicts: string[];
+  decisions: { topic: string; choice: string; why: string }[];
+  compatible: boolean;
+}
+
+export interface IntegrationCheckView {
+  name: string;
+  ok: boolean | null;
+  detail: string;
+  action?: string;
+}
+
+export interface RepoIntegration {
+  id: string;
+  repo: string;
+  status: "queued" | "running" | "done" | "failed";
+  phase: string;
+  state: string | null;
+  branch: string | null;
+  pull_request: { url: string; number: number; draft: boolean | null } | null;
+  result: {
+    checks?: IntegrationCheckView[];
+    reviewerSetup?: string[];
+    limits?: string[];
+    decisions?: { topic: string; choice: string; why: string }[];
+  };
+  error: ProductError | null;
+  created_at: string;
+}
+
 export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; missing: boolean; status: number; error: ProductError | null };
@@ -72,6 +129,22 @@ export const productApi = {
     }),
   flow: (id: string) =>
     call<Plan & { result?: FlowResult | null }>(`/v1/plans/${encodeURIComponent(id)}`),
+  github: () => call<GithubStatus>("/v1/github"),
+  disconnectGithub: () => call<{ removed: boolean }>("/v1/github", { method: "DELETE" }),
+  repos: (q: string) => call<{ repos: RepoItem[] }>(`/v1/repos?q=${encodeURIComponent(q)}`),
+  analysis: (fullName: string) =>
+    call<RepoAnalysisResponse>(
+      `/v1/repos/${fullName.split("/").map(encodeURIComponent).join("/")}/analysis`,
+    ),
+  pullRequest: (planId: string, repo: string) =>
+    call<{ integration: RepoIntegration }>(`/v1/plans/${encodeURIComponent(planId)}/pull-request`, {
+      method: "POST",
+      body: JSON.stringify({ repo }),
+    }),
+  integrations: (planId: string) =>
+    call<{ integrations: RepoIntegration[] }>(
+      `/v1/plans/${encodeURIComponent(planId)}/pull-request`,
+    ),
   /** Today's build path (kept for the demo while the engine lands). */
   startBuild: (prompt: string) =>
     call<{ build_id: string }>("/v1/builds", {

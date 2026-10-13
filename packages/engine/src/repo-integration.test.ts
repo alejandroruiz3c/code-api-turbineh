@@ -251,6 +251,15 @@ describe("adaptation to the client's conventions", () => {
     expect(x.dependencies.added.some((d) => d.startsWith("vitest"))).toBe(false);
     expect(text(x, ".env.example")).toContain("TURBINEH_AI_TOKEN=");
     expect(text(x, ".env.example")).not.toMatch(/TURBINEH_AI_URL=\S/);
+    // Exactly what is left for the reviewer: one required setting; the rest keep documented defaults.
+    const setup = x.reviewerSetup.join("\n");
+    expect(setup).toMatch(/Set this setting in each environment .*`TURBINEH_AI_TOKEN`/);
+    expect(setup).toMatch(/Optional, nothing to do .*`AI_ROUTES`/);
+    expect(setup).toMatch(
+      /run `pnpm install` \(this pull request already updates `pnpm-lock.yaml`\)/,
+    );
+    expect(setup).toContain("`src/turbineh/ai-assistant/lib/ai/orchestrator.ts`");
+    expect(text(x, ".env.example")).toContain("# default: https://software.turbineh.com/v1/ai");
     expect(x.steps.map((s) => s.key)).toEqual([
       "code",
       "glue",

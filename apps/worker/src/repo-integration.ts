@@ -587,7 +587,20 @@ async function runJob(job: RepoIntegrationRow, deps: IntegrationDeps, work: stri
         ? { "drizzle-kit": versions["drizzle-kit"] ?? "0.31.11" }
         : {},
   });
-  const names = envNames(original, clean.paths).concat(adaptation.settings);
+  // The project's own settings get placeholders; the capability's optional settings keep their documented
+  // non-secret defaults (a placeholder would break e.g. numeric limits) and the rest stay unset.
+  const names = envNames(original, clean.paths);
+  const capEnv = adaptation.steps
+    .flatMap((s) => s.files)
+    .find((f) => f.path === `${adaptation.namespace}/config/.env.example`);
+  const defaults = Object.fromEntries(
+    String(capEnv?.content ?? "")
+      .split("\n")
+      .map((l) => /^([A-Z][A-Z0-9_]*)=(\S+)$/.exec(l.trim()))
+      .filter((m): m is RegExpExecArray => Boolean(m?.[1] && m[2]))
+      .filter((m) => !/(SECRET|TOKEN|KEY|PASSWORD)/.test(m[1] ?? ""))
+      .map((m) => [m[1] ?? "", m[2] ?? ""]),
+  );
   const prepNotes: string[] = [];
   if (pm && !unsafe.length) {
     await phase("preparing");
@@ -595,7 +608,7 @@ async function runJob(job: RepoIntegrationRow, deps: IntegrationDeps, work: stri
     const migDir = adaptation.migration.dir ? join(repoDir, at(adaptation.migration.dir)) : null;
     const lockBefore = lockPath ? readFileSync(join(repoDir, lockPath), "utf8") : null;
     const migBefore = migDir ? listDir(migDir) : new Map<string, string>();
-    const prep = await runSandbox(project, sandboxPlan("prepare"), names);
+    const prep = await runSandbox(project, sandboxPlan("prepare"), names, defaults);
     const extra: CommitStep[] = [];
     if (lockPath && lockBefore !== null) {
       const after = readFileSync(join(repoDir, lockPath), "utf8");
@@ -700,7 +713,8 @@ async function runJob(job: RepoIntegrationRow, deps: IntegrationDeps, work: stri
   await download(gh, job.repo, headSha, join(verifyDir, "repo"));
   const vclean = sanitizeProject(join(verifyDir, "repo"));
   let steps: StepOutcome[] = [];
-  if (pm && !unsafe.length) steps = await runSandbox(verifyDir, sandboxPlan("verify"), names);
+  if (pm && !unsafe.length)
+    steps = await runSandbox(verifyDir, sandboxPlan("verify"), names, defaults);
   const checks = toChecks(steps, adaptation, base, pm ?? "npm");
   if (!pm || unsafe.length)
     checks.push({

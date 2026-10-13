@@ -122,6 +122,7 @@ interface Manifest {
   name?: string;
   dependencies?: Record<string, string>;
   environment?: string[];
+  entryPoints?: string[];
   components?: { id: string }[];
 }
 
@@ -188,11 +189,51 @@ export function mergePackageJson(
   return { text: `${JSON.stringify(pkg, null, indent)}\n`, added, kept };
 }
 
-/** Adds the settings the project's .env.example lacks (names only, never values). */
+export interface SettingDoc {
+  comment: string[];
+  value: string;
+}
+
+/** Comments and example values of a package's .env.example, by setting name. */
+export function envDocs(text: string): Record<string, SettingDoc> {
+  const out: Record<string, SettingDoc> = {};
+  // A comment block documents every setting that follows it, up to a blank line or the next comment.
+  let comment: string[] = [];
+  let afterKey = false;
+  for (const raw of text.split("\n")) {
+    const l = raw.trim();
+    if (l.startsWith("#")) {
+      if (afterKey) comment = [];
+      afterKey = false;
+      comment.push(l.replace(/^#+\s?/, ""));
+    } else if (!l) {
+      comment = [];
+      afterKey = false;
+    } else {
+      const m = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(l);
+      if (m?.[1]) out[m[1]] = { comment: [...comment], value: (m[2] ?? "").trim() };
+      afterKey = true;
+    }
+  }
+  return out;
+}
+
+/** required = no default and a credential or connection; default = the package documents a value; else optional. */
+export function settingKind(name: string, doc?: SettingDoc): "required" | "default" | "optional" {
+  if (doc?.value) return "default";
+  if (/(TOKEN|SECRET|PASSWORD|_KEY|DATABASE_URL)$/.test(name)) return "required";
+  return doc && /optional|default|empty\s*=/i.test(doc.comment.join(" ")) ? "optional" : "required";
+}
+
+/**
+ * Adds the settings the project's .env.example lacks: names and the package's explanatory comments, never values
+ * (a documented non-secret default is mentioned in the comment).
+ */
 export function mergeEnvExample(
   current: string,
   keys: string[],
   header: string,
+  docs: Record<string, SettingDoc> = {},
 ): { text: string; added: string[] } {
   const have = new Set(
     current.split("\n").map((l) => /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l)?.[1]),
@@ -202,7 +243,20 @@ export function mergeEnvExample(
   const sep = current === "" || current.endsWith("\n") ? "" : "\n";
   const gap = current.trim() ? "\n" : "";
   return {
-    text: `${current}${sep}${gap}# ${header}\n${added.map((k) => `${k}=`).join("\n")}\n`,
+    text: `${current}${sep}${gap}# ${header}\n${added
+      .map((k) => {
+        const d = docs[k];
+        const notes = [
+          ...(d?.comment ?? []).filter((c) => !/^[A-Z][A-Z0-9_]*=/.test(c)).slice(0, 3),
+          ...(d?.value &&
+          settingKind(k, d) === "default" &&
+          !/(TOKEN|SECRET|PASSWORD|_KEY)$/.test(k)
+            ? [`default: ${d.value}`]
+            : []),
+        ];
+        return `${notes.map((n) => `# ${n}`).join("\n")}${notes.length ? "\n" : ""}${k}=`;
+      })
+      .join("\n")}\n`,
     added,
   };
 }
@@ -544,10 +598,14 @@ export const db = drizzle(pool, { schema });
   if (ownClient || glue.length) envKeys.unshift("DATABASE_URL");
   const envPath = a.envExample ?? at(a, ".env.example");
   const envNow = input.read(envPath);
+  const settingDocs = envDocs(files.get("config/.env.example")?.toString("utf8") ?? "");
+  if (!settingDocs.DATABASE_URL)
+    settingDocs.DATABASE_URL = { comment: ["PostgreSQL connection string"], value: "" };
   const env = mergeEnvExample(
     envNow ?? "",
     envKeys,
     `${manifest.name ?? slug} (TurbineH capability) — see ${ns}/config/.env.example`,
+    settingDocs,
   );
   if (env.added.length)
     out.set(envPath, {
@@ -586,8 +644,28 @@ export const db = drizzle(pool, { schema });
         config: a.orm.config,
         schemaFile: single,
       };
+      const scripts = (() => {
+        try {
+          return (
+            (
+              JSON.parse(input.read(at(a, "package.json")) ?? "{}") as {
+                scripts?: Record<string, string>;
+              }
+            ).scripts ?? {}
+          );
+        } catch {
+          return {};
+        }
+      })();
+      const migrateScript = Object.entries(scripts).find(([, cmd]) =>
+        /drizzle-kit\s+(migrate|push)/.test(cmd),
+      )?.[0];
+      const pmRun =
+        a.packageManager.name === "npm" || !a.packageManager.name
+          ? "npm run"
+          : a.packageManager.name;
       reviewerSetup.push(
-        `Apply the new migration with your usual command (e.g. \`drizzle-kit migrate\`) before deploying.`,
+        `Apply the new migration (\`${a.orm.migrationsDir ?? "drizzle"}/\`) in each environment before deploying: \`${migrateScript ? `${pmRun} ${migrateScript}` : "npx drizzle-kit migrate"}\`.`,
       );
     } else {
       const dir = `${ns.slice(a.appPath ? a.appPath.length + 1 : 0)}/db/migrations`;
@@ -605,15 +683,30 @@ export const db = drizzle(pool, { schema });
   // ── 6. what the reviewer configures; limits ────────────────────────────────────────────────────────────
   if (merged.added.length)
     reviewerSetup.unshift(
-      `Install the new dependencies with ${a.packageManager.name ?? "your package manager"} (the lockfile is updated in this pull request when the verification could update it).`,
+      `After merging, run \`${a.packageManager.name ?? "npm"} install\`${a.packageManager.lockfile ? ` (this pull request already updates \`${a.packageManager.lockfile}\`)` : ""}.`,
     );
-  const settingsToSet = envKeys.filter((k, i) => envKeys.indexOf(k) === i);
-  if (settingsToSet.length)
+  // Only settings the project does not have yet; required ones first, optional ones keep their defaults.
+  const required = env.added.filter((k) => settingKind(k, settingDocs[k]) === "required");
+  const optional = env.added.filter((k) => settingKind(k, settingDocs[k]) !== "required");
+  if (required.length)
     reviewerSetup.push(
-      `Set these settings in your environments (names documented in \`${envPath}\`): ${settingsToSet.map((k) => `\`${k}\``).join(", ")}.`,
+      `Set ${required.length === 1 ? "this setting" : "these settings"} in each environment (documented in \`${envPath}\`): ${required
+        .map(
+          (k) => `\`${k}\`${settingDocs[k]?.comment[0] ? ` — ${settingDocs[k]?.comment[0]}` : ""}`,
+        )
+        .join("; ")}.`,
     );
+  if (optional.length)
+    reviewerSetup.push(
+      `Optional, nothing to do unless you want to change the defaults: ${optional.map((k) => `\`${k}\``).join(", ")}.`,
+    );
+  const entryFiles = (manifest.entryPoints ?? [])
+    .map((e) => (e.startsWith("src/") ? `${ns}/${e.slice(4)}` : null))
+    .filter((e): e is string => Boolean(e && [...out.keys()].includes(e)));
   reviewerSetup.push(
-    `Wire the capability where you need it: entry points and examples in \`${ns}/agent/INTEGRATE.md\`.`,
+    entryFiles.length
+      ? `Call the capability where your app needs it: ${entryFiles.map((e) => `\`${e}\``).join(", ")} (usage and examples in \`${ns}/agent/INTEGRATE.md\`).`
+      : `Call the capability where your app needs it (usage and examples in \`${ns}/agent/INTEGRATE.md\`).`,
   );
   if (kind === "use_case")
     limits.push(

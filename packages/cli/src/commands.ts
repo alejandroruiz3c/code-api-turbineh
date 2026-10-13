@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { readZip } from "@turbineh/engine";
 import type { CapabilitySummary, FlowResult, Plan } from "@turbineh/shared";
 import { api, sleep } from "./api.js";
+import { applyPullRequest } from "./github.js";
 import {
   baseUrl,
   ensureProject,
@@ -378,6 +379,9 @@ export async function apply(c: Ctx): Promise<CommandResult> {
       "Wait until the package is verified.",
       `turbineh apply ${id}`,
     );
+
+  // Repository integration: a verified pull request on GitHub instead of a local branch.
+  if (c.flags.pr === true) return applyPullRequest(c, id as string, ws);
 
   if (!isGitRepo(c.cwd))
     fail(

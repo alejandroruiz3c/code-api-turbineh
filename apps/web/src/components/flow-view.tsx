@@ -2,10 +2,10 @@
 import type { FlowState } from "@turbineh/shared";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { authClient } from "@/lib/auth-client";
 import { AGENT_INSTRUCTIONS } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
 import { DeployForMe } from "./deploy-for-me";
+import { RepoIntegration } from "./repo-integration";
 import { Panel, StateBadge, Stat, pct } from "./ui";
 
 interface BuildEvent {
@@ -370,7 +370,12 @@ function ResultScreen({
         >
           Download ZIP
         </a>
-        <IntegrateIntoRepo id={id} initialUrl={result.repo_url} />
+        <a
+          href="#integrate"
+          className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal"
+        >
+          Integrate into repository
+        </a>
         <button
           type="button"
           onClick={() =>
@@ -383,6 +388,10 @@ function ResultScreen({
         >
           {copied ? "Copied ✓" : "Copy instructions for your AI agent"}
         </button>
+      </div>
+
+      <div id="integrate" className="scroll-mt-24">
+        <RepoIntegration planId={id} />
       </div>
 
       <div>
@@ -632,89 +641,5 @@ function ImproveCallout({
         <p className="mt-2 text-xs text-bad">Could not start it. Try again in a moment.</p>
       ) : null}
     </div>
-  );
-}
-
-/** Integrate into a repository: GitHub is connected only now, on demand (optional for everything else). */
-function IntegrateIntoRepo({ id, initialUrl }: { id: string; initialUrl: string | null }) {
-  const params = useSearchParams();
-  const [state, setState] = useState<"idle" | "working" | "done" | "error">(
-    initialUrl ? "done" : "idle",
-  );
-  const [url, setUrl] = useState(initialUrl);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const run = useCallback(async () => {
-    setState("working");
-    setMessage(null);
-    const res = await fetch(`/v1/builds/${id}/deliver`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    if (res.status === 401 || res.status === 409) {
-      const body = (await res.json().catch(() => ({}))) as { needs_scope?: string };
-      if (res.status === 401 || body.needs_scope) {
-        await authClient.signIn.social({
-          provider: "github",
-          scopes: ["repo"],
-          callbackURL: `/flows/${id}?integrate=1`,
-        });
-        return;
-      }
-    }
-    if (!res.ok) {
-      setState("error");
-      setMessage(
-        "Integration could not start → download the ZIP or copy the agent instructions meanwhile.",
-      );
-      return;
-    }
-    for (let i = 0; i < 90; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const s = (await (await fetch(`/v1/builds/${id}/deliver`)).json()) as {
-        delivery: { status: string; repo_url: string | null; error: string | null } | null;
-      };
-      if (s.delivery?.status === "done" && s.delivery.repo_url) {
-        setUrl(s.delivery.repo_url);
-        setState("done");
-        return;
-      }
-      if (s.delivery?.status === "failed") {
-        setState("error");
-        setMessage(s.delivery.error ?? "Integration failed");
-        return;
-      }
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (params.get("integrate") === "1" && state === "idle") queueMicrotask(() => void run());
-  }, [params, run, state]);
-
-  if (state === "done" && url) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="rounded-full bg-teal px-5 py-2 text-sm font-semibold text-navy"
-      >
-        Open the repository ↗
-      </a>
-    );
-  }
-  return (
-    <span className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        disabled={state === "working"}
-        onClick={() => void run()}
-        className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal disabled:opacity-50"
-      >
-        {state === "working" ? "Integrating…" : "Integrate into repository"}
-      </button>
-      {message ? <span className="text-xs text-bad">{message}</span> : null}
-    </span>
   );
 }

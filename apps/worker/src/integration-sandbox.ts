@@ -225,6 +225,8 @@ export async function runSandbox(
   jobDir: string,
   plan: SandboxPlan,
   envNames: string[],
+  /** Non-secret defaults documented by the capability (e.g. its gateway URL); other settings stay unset. */
+  defaults: Record<string, string> = {},
 ): Promise<StepOutcome[]> {
   for (const d of ["logs", "home", "cache", "tools"])
     mkdirSync(join(jobDir, d), { recursive: true });
@@ -259,7 +261,7 @@ export async function runSandbox(
   const net = `turbineh-int-${randomUUID().slice(0, 8)}`;
   const dbHost = `${net}-db`;
   const databaseUrl = `postgres://app:app@${dbHost}:5432/app`;
-  const env = { ...placeholderEnv(envNames, databaseUrl), TBH_DB_HOST: dbHost };
+  const env = { ...defaults, ...placeholderEnv(envNames, databaseUrl), TBH_DB_HOST: dbHost };
   // Phase A: default network, only the package manager runs (scripts disabled), registry pinned.
   const a = await run("docker", [...common(env), installScript(plan)], 25 * 60_000, true);
   const steps = parseSteps(jobDir, a.tail);

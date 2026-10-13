@@ -236,8 +236,8 @@ describe.skipIf(!ENABLED)("repository integration on a real GitHub repository", 
       } finally {
         if (created && process.env.E2E_KEEP_REPO !== "1")
           await gh("DELETE", `/repos/${repo}`).catch(() => undefined);
-        await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`).catch(() => undefined);
         await closePool();
+        await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`).catch(() => undefined);
         await admin.end();
       }
     },
