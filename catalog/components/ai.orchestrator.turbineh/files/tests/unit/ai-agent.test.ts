@@ -294,7 +294,7 @@ describe("runAgent (tool-calling runtime)", () => {
     expect(trimMessages(msgs, 3)[0]).toEqual({ role: "user", content: "c" });
   });
 
-  it("model calls: a stuck attempt is abandoned at the per-attempt timeout and retried once", async () => {
+  it("model calls: a stuck attempt is abandoned at the per-attempt timeout and retried once; transient errors twice", async () => {
     const keep = { ...process.env };
     const realFetch = globalThis.fetch;
     process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1";
@@ -316,7 +316,19 @@ describe("runAgent (tool-calling runtime)", () => {
       expect(r.text).toBe("ok");
       expect(attempts).toBe(2);
       expect(Date.now() - t0).toBeLessThan(3000);
-      // Two failed attempts are an error (no third one).
+      // Two stuck attempts end the call (no third one).
+      attempts = 0;
+      globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+        attempts++;
+        return new Promise<Response>((_r, reject) =>
+          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
+      }) as typeof fetch;
+      await expect(
+        chatWithTools("m", [{ role: "user", content: "hi" }], [], { timeoutMs: 10_000 }),
+      ).rejects.toThrow(/network/);
+      expect(attempts).toBe(2);
+      // Transient server errors keep two retries.
       attempts = 0;
       globalThis.fetch = (async () => {
         attempts++;
@@ -325,12 +337,12 @@ describe("runAgent (tool-calling runtime)", () => {
       await expect(
         chatWithTools("m", [{ role: "user", content: "hi" }], [], { timeoutMs: 10_000 }),
       ).rejects.toThrow(/503/);
-      expect(attempts).toBe(2);
+      expect(attempts).toBe(3);
     } finally {
       globalThis.fetch = realFetch;
       process.env = keep;
     }
-  });
+  }, 15_000);
 
   it("decisions: one retry after a failed attempt, then the caller's fallback", async () => {
     const keep = { ...process.env };

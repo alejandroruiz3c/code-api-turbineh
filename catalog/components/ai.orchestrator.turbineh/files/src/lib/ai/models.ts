@@ -146,12 +146,18 @@ export interface ModelReply {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Attempts per model call: the first and one retry (ADR-0043). */
-export const MODEL_ATTEMPTS = 2;
+/**
+ * Attempts per model call (ADR-0043): up to 3 for transient failures (network errors, rate limits, server errors), as
+ * before; an attempt that hits its per-attempt timeout is retried once (a second stuck attempt ends the call).
+ * Measured: with a single retry for every failure, a ~2.5 s network blip between the app and the gateway failed 2 of
+ * 54 conversations on staging.
+ */
+export const MODEL_ATTEMPTS = 3;
+export const MODEL_TIMEOUT_ATTEMPTS = 2;
 
 /**
- * POST with a per-attempt timeout (`attemptMs`, default the whole budget) and one retry on timeouts, network
- * failures, rate limits and server errors, all within the call's overall budget (`timeoutMs`, default AI_TIMEOUT_MS).
+ * POST with a per-attempt timeout (`attemptMs`, default the whole budget) and retries (see MODEL_ATTEMPTS), all
+ * within the call's overall budget (`timeoutMs`, default AI_TIMEOUT_MS).
  */
 async function post(
   path: string,
@@ -163,9 +169,11 @@ async function post(
   const endpoint = modelEndpoint(cfg);
   const deadline = Date.now() + (timeoutMs ?? cfg.AI_TIMEOUT_MS);
   const perAttempt = attemptMs ?? Number.POSITIVE_INFINITY;
+  let timeouts = 0;
   for (let attempt = 0; ; attempt++) {
     // 0 = network failure, timeout or an unreadable body.
     let status: number;
+    const signal = AbortSignal.timeout(Math.max(1, Math.min(perAttempt, deadline - Date.now())));
     try {
       const res = await fetch(`${endpoint.baseUrl}${path}`, {
         method: "POST",
@@ -174,16 +182,22 @@ async function post(
           ...(endpoint.key ? { Authorization: `Bearer ${endpoint.key}` } : {}),
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(Math.max(1, Math.min(perAttempt, deadline - Date.now()))),
+        signal,
       });
       status = res.status;
       if (res.ok) return (await res.json()) as unknown;
     } catch {
       status = 0;
+      if (signal.aborted) timeouts++;
     }
     const retryable = status === 0 || status === 429 || status >= 500;
-    const backoff = status === 429 ? 1000 : 250;
-    if (!retryable || attempt + 1 >= MODEL_ATTEMPTS || deadline - Date.now() < backoff + 1000)
+    const backoff = status === 429 ? 1000 * (attempt + 1) : 500 * 2 ** attempt;
+    if (
+      !retryable ||
+      attempt + 1 >= MODEL_ATTEMPTS ||
+      timeouts >= MODEL_TIMEOUT_ATTEMPTS ||
+      deadline - Date.now() < backoff + 1000
+    )
       throw new AiTransportError(`model endpoint failed (${status || "network"})`);
     await sleep(backoff);
   }
