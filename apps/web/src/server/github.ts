@@ -10,6 +10,7 @@ import { decrypt, encrypt } from "@turbineh/shared";
 import { db } from "./db";
 import { env } from "./env";
 import { CALLBACK_PATH, type OAuthDeps } from "./github-oauth";
+import { privateWorkspace } from "./product";
 
 /** Production wiring of the GitHub connection (database, encryption key, OAuth app). */
 export const appUrl = () => env.BETTER_AUTH_URL.replace(/\/$/, "");
@@ -30,6 +31,7 @@ export function oauthDeps(): OAuthDeps {
 
 /** The workspace's GitHub token (decrypted in memory for one request), or null when not connected. */
 export async function workspaceToken(ownerId: string): Promise<string | null> {
+  if (!privateWorkspace(ownerId)) return null; // shared or guessable workspace ids never use stored credentials
   const enc = await githubTokenEnc(db, ownerId);
   if (!enc) return null;
   try {

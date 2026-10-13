@@ -3,7 +3,7 @@ import { decrypt } from "@turbineh/shared";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { connectionView, revokeGrant } from "@/server/github-oauth";
-import { requireCaller } from "@/server/product";
+import { requireCaller, githubWorkspaceProblem } from "@/server/product";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   return Response.json(
     {
       ...connectionView(await githubConnection(db, caller.ownerId)),
@@ -29,6 +31,8 @@ export async function GET(): Promise<Response> {
 export async function DELETE(): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   const gone = await deleteGithubConnection(db, caller.ownerId);
   let revoked = false;
   if (gone?.via === "oauth") {

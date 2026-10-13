@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { appUrl } from "@/server/github";
 import { CONNECT_PATH, sha256 } from "@/server/github-oauth";
-import { requireCaller } from "@/server/product";
+import { requireCaller, githubWorkspaceProblem } from "@/server/product";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,8 @@ const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export async function POST(req: Request): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   const body = Body.parse(await req.json().catch(() => ({})));
   const ticket = randomBytes(32).toString("base64url");
   const bytes = randomBytes(8);

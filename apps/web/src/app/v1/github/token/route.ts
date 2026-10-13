@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { whoAmI } from "@/server/github-oauth";
-import { productProblem, requireCaller } from "@/server/product";
+import { productProblem, requireCaller, githubWorkspaceProblem } from "@/server/product";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,8 @@ const Body = z.object({ token: z.string().trim().min(20).max(400) });
 export async function POST(req: Request): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success)
     return productProblem(

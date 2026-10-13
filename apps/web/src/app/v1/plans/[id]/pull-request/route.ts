@@ -8,7 +8,7 @@ import {
 import { BRANCH_NAME, ERRORS, productError, REPO_NAME } from "@turbineh/engine";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { ownedFlow, productProblem, requireCaller } from "@/server/product";
+import { ownedFlow, productProblem, requireCaller, githubWorkspaceProblem } from "@/server/product";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,8 @@ export async function POST(
 ): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   const { id } = await ctx.params;
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
@@ -113,6 +115,8 @@ export async function GET(
 ): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
+  const gate = githubWorkspaceProblem(caller);
+  if (gate) return gate;
   const { id } = await ctx.params;
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
