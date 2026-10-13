@@ -15,6 +15,8 @@ const csp = [
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // `next dev` would otherwise write AGENTS.md/CLAUDE.md into apps/web; the repo keeps its own agent instructions.
+  agentRules: false,
   images: { unoptimized: true },
   transpilePackages: [
     "@turbineh/db",

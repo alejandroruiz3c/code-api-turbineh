@@ -1,0 +1,720 @@
+"use client";
+import type { FlowState } from "@turbineh/shared";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { authClient } from "@/lib/auth-client";
+import { AGENT_INSTRUCTIONS } from "@/lib/product-api";
+import { AiAccess } from "./ai-access";
+import { DeployForMe } from "./deploy-for-me";
+import { Panel, StateBadge, Stat, pct } from "./ui";
+
+interface BuildEvent {
+  id: number;
+  phase: string;
+  type: string;
+  data: Record<string, unknown>;
+  at: string;
+}
+
+interface BuildReport {
+  headline: string;
+  overview: string;
+  criteria: { criterion: string; evidence: string; verified: boolean }[];
+  security: {
+    status: "clear" | "alerts";
+    statusLine: string;
+    points: string[];
+    fixedBeforeDelivery: number;
+  };
+  nextSteps: string[];
+  improvement: ImprovementEstimate | null;
+}
+
+interface ImprovementEstimate {
+  total: number;
+  fixable: number;
+  fixableProduction: number;
+  minutes: { min: number; max: number };
+}
+
+interface BuildResult {
+  status: string;
+  error: string | null;
+  repo_url: string | null;
+  improvement_build_id: string | null;
+  metrics: {
+    reuse?: { reusedShare?: number; reusedLines?: number; generatedLines?: number };
+    components?: (string | { id?: string })[];
+    alerts?: { id: string; level: string; title: string; explain: string; where: string }[];
+    report?: BuildReport;
+    improved?: boolean;
+    handover?: { checksPassed?: number; checksTotal?: number; fixedBeforeDelivery?: number };
+    deployment?: { url?: string } | null;
+    timings?: Record<string, number>;
+  };
+  artifact: {
+    slug?: string;
+    zip_url: string;
+    files: string[];
+    docs: Record<string, string>;
+  } | null;
+}
+
+/** Live trace, in the order the orchestration works: understand → decide → execute → verify. */
+const PHASES: { key: string; label: string; match: string[]; optional?: boolean }[] = [
+  { key: "understand", label: "Understanding intent", match: ["guarding", "compiling"] },
+  { key: "select", label: "Orchestrating decisions", match: ["selecting"] },
+  { key: "resolve", label: "Checking compatibility", match: ["resolving"] },
+  { key: "assemble", label: "Assembling verified components", match: ["assembling"] },
+  { key: "integrate", label: "Writing the glue", match: ["integrating"], optional: true },
+  { key: "verify", label: "Building, testing & scanning", match: ["verifying"] },
+  { key: "correct", label: "Correcting failed checks", match: ["correcting"], optional: true },
+  { key: "fix", label: "Fixing security findings", match: ["remediating"], optional: true },
+  { key: "report", label: "Writing the evidence", match: ["reporting"] },
+  { key: "deliver", label: "Packaging", match: ["delivering"] },
+];
+
+type Tab = "try" | "review" | "check" | "continue" | "revert";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "try", label: "Try" },
+  { key: "review", label: "Review" },
+  { key: "check", label: "Check" },
+  { key: "continue", label: "Continue" },
+  { key: "revert", label: "Revert" },
+];
+
+const ENV_NAME = /`([A-Z][A-Z0-9_]{2,})`/g;
+const SECRETLESS_DEFAULTS = new Set(["NODE_ENV", "PORT"]);
+
+export function FlowView({ id }: { id: string }) {
+  const [events, setEvents] = useState<BuildEvent[]>([]);
+  const [result, setResult] = useState<BuildResult | null>(null);
+
+  const loadResult = useCallback(async () => {
+    const res = await fetch(`/v1/builds/${id}`);
+    if (res.ok) setResult((await res.json()) as BuildResult);
+  }, [id]);
+
+  useEffect(() => {
+    const es = new EventSource(`/v1/builds/${id}/events`);
+    const onEvent = (msg: MessageEvent<string>) => {
+      const e = JSON.parse(msg.data) as BuildEvent;
+      setEvents((prev) => (prev.some((p) => p.id === e.id) ? prev : [...prev, e]));
+    };
+    es.addEventListener("phase", onEvent as EventListener);
+    es.addEventListener("finished", ((msg: MessageEvent<string>) => {
+      onEvent(msg);
+      es.close();
+      void loadResult();
+    }) as EventListener);
+    return () => es.close();
+  }, [id, loadResult]);
+
+  const finished = events.find((e) => e.type === "finished");
+  const phaseState = (match: string[]) => {
+    const evs = events.filter((e) => match.includes(e.phase));
+    if (evs.some((e) => e.type === "done")) return "done";
+    if (evs.length > 0) return finished ? "done" : "running";
+    return "pending";
+  };
+  const by = (phase: string, type = "done") =>
+    events.find((e) => e.phase === phase && e.type === type)?.data;
+  const selecting = by("selecting") as
+    | {
+        decisions?: {
+          capability: string;
+          best: { id: string; p: number } | null;
+          trigger: string | null;
+        }[];
+        decider?: { questions?: number; latencyMs?: number };
+      }
+    | undefined;
+  const verifying = events.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)
+    ?.data as { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
+  const compiling = by("compiling") as
+    { decisions?: { recipe?: { choice: string; confidence: number } } } | undefined;
+
+  const state: FlowState = result
+    ? result.status === "done"
+      ? result.metrics.deployment
+        ? "deployed"
+        : "verified"
+      : result.status === "failed"
+        ? "failed"
+        : "generating"
+    : finished
+      ? finished.data.status === "done"
+        ? "verified"
+        : "failed"
+      : "generating";
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-center gap-3" role="status" aria-live="polite">
+        <StateBadge state={state} />
+        {state === "generating" ? (
+          <span className="text-sm text-muted">
+            Live — every decision appears below as it is taken.
+          </span>
+        ) : null}
+      </div>
+
+      {result?.artifact ? (
+        <ResultScreen id={id} result={result} onReload={() => void loadResult()} />
+      ) : null}
+      {result && !result.artifact ? (
+        <Panel title="What happened">
+          <p className="text-sm text-bad">
+            {result.error ?? "A check did not pass, so nothing was delivered."}
+          </p>
+          <p className="mt-2 text-sm text-ice-2">
+            → Start the flow again with more detail about the rule that matters, or narrow it to one
+            capability. Everything checked so far is kept in the trace below.
+          </p>
+        </Panel>
+      ) : null}
+
+      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+        <ol className="flex flex-col gap-3" aria-label="Flow trace">
+          {PHASES.map((p) => {
+            const s = phaseState(p.match);
+            if (p.optional && s === "pending") return null;
+            return (
+              <li key={p.key} className="flex items-center gap-3 text-sm">
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-2.5 rounded-full ${s === "done" ? "bg-teal" : s === "running" ? "animate-pulse-dot bg-amber" : "bg-line"}`}
+                />
+                <span className={s === "pending" ? "text-muted" : "text-ice-2"}>{p.label}</span>
+                <span className="sr-only">{s}</span>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="flex flex-col gap-6">
+          {compiling?.decisions?.recipe ? (
+            <Panel title="Intent understood">
+              <p className="text-sm">
+                <span className="text-cream">{compiling.decisions.recipe.choice}</span>{" "}
+                <span className="text-muted">
+                  · confidence {pct(compiling.decisions.recipe.confidence)}
+                </span>
+              </p>
+            </Panel>
+          ) : null}
+          {selecting?.decisions ? (
+            <Panel
+              title={`Decisions · ${selecting.decisions.length} capabilities${selecting.decider?.questions ? ` · ${selecting.decider.questions} questions decided in one pass` : ""}`}
+            >
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {selecting.decisions.map((d) => (
+                  <li
+                    key={d.capability}
+                    className="rounded-lg border border-line px-3 py-2 text-xs"
+                  >
+                    <p className="font-mono text-muted">{d.capability}</p>
+                    {d.best ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-ice-2">{d.best.id}</span>
+                        <span className="ml-auto text-teal">{pct(d.best.p)} fit</span>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-amber">
+                        no verified component yet — written and verified as glue
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+          {verifying?.steps ? (
+            <Panel title="Verification · isolated sandbox, no network">
+              <ul className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                {verifying.steps.map((s) => (
+                  <li
+                    key={s.name}
+                    className={`rounded-md border px-2 py-1.5 ${s.ok ? "border-teal/50 text-teal" : "border-bad/60 text-bad"}`}
+                  >
+                    {s.ok ? "✓" : "✗"} {s.name}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultScreen({
+  id,
+  result,
+  onReload,
+}: {
+  id: string;
+  result: BuildResult;
+  onReload: () => void;
+}) {
+  const [tab, setTab] = useState<Tab>("try");
+  const [copied, setCopied] = useState(false);
+  const report = result.metrics.report;
+  const docs = useMemo(() => result.artifact?.docs ?? {}, [result.artifact]);
+  const needs = useMemo(() => {
+    const names = new Set<string>();
+    for (const m of (docs["DEPLOY.md"] ?? "").matchAll(ENV_NAME)) {
+      if (m[1] && !SECRETLESS_DEFAULTS.has(m[1])) names.add(m[1]);
+    }
+    return [...names].slice(0, 12);
+  }, [docs]);
+  const works = (report?.criteria ?? []).filter((c) => c.verified);
+  const pending = (report?.criteria ?? []).filter((c) => !c.verified);
+  const h = result.metrics.handover;
+  const components = (result.metrics.components ?? []).map((c) =>
+    typeof c === "string" ? c : (c.id ?? ""),
+  );
+  const usesAi = components.includes("ai.orchestrator.turbineh");
+
+  return (
+    <>
+      <section aria-label="Result" className="grid gap-6 lg:grid-cols-2">
+        <Panel title="What works">
+          {report ? <p className="mb-3 text-sm text-cream">{report.headline}</p> : null}
+          <ul className="flex flex-col gap-2 text-sm">
+            <li className="flex gap-2">
+              <span className="text-teal" aria-hidden="true">
+                ✓
+              </span>
+              Package verified in the sandbox: {h?.checksPassed ?? "—"}/{h?.checksTotal ?? "—"}{" "}
+              checks (build, tests, end-to-end, secrets, security rules, vulnerabilities, licences)
+            </li>
+            {works.slice(0, 6).map((c) => (
+              <li key={c.criterion} className="flex gap-2">
+                <span className="text-teal" aria-hidden="true">
+                  ✓
+                </span>
+                <span>
+                  {c.criterion}
+                  <span className="block text-xs text-muted">{c.evidence}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+        <Panel title="Needs your configuration">
+          {needs.length === 0 && pending.length === 0 ? (
+            <p className="text-sm text-teal">Nothing pending.</p>
+          ) : (
+            <ul className="flex flex-col gap-2 text-sm">
+              {needs.map((n) => (
+                <li key={n} className="flex gap-2">
+                  <span className="text-amber" aria-hidden="true">
+                    ○
+                  </span>
+                  <span>
+                    <span className="font-mono text-ice-2">{n}</span>
+                    <span className="block text-xs text-muted">
+                      Set it in your environment (see config/.env.example)
+                    </span>
+                  </span>
+                </li>
+              ))}
+              {pending.map((c) => (
+                <li key={c.criterion} className="flex gap-2">
+                  <span className="text-amber" aria-hidden="true">
+                    ○
+                  </span>
+                  <span>
+                    {c.criterion}
+                    <span className="block text-xs text-muted">
+                      Not verified automatically — check it in your project
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </section>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat
+          value={pct(result.metrics.reuse?.reusedShare)}
+          label="Reused from verified components"
+          accent
+        />
+        <Stat
+          value={String(result.metrics.reuse?.generatedLines ?? "—")}
+          label="New lines to maintain (the glue)"
+        />
+        <Stat
+          value={String(h?.fixedBeforeDelivery ?? 0)}
+          label="Security issues fixed before delivery"
+        />
+        <Stat value={String(components.length)} label="Verified components used" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setTab("try")}
+          className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy"
+        >
+          Try example
+        </button>
+        <a
+          href={result.artifact?.zip_url}
+          className="rounded-full border border-teal px-5 py-2 text-sm text-teal hover:bg-teal/10"
+        >
+          Download ZIP
+        </a>
+        <IntegrateIntoRepo id={id} initialUrl={result.repo_url} />
+        <button
+          type="button"
+          onClick={() =>
+            void navigator.clipboard.writeText(AGENT_INSTRUCTIONS).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2500);
+            })
+          }
+          className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal"
+        >
+          {copied ? "Copied ✓" : "Copy instructions for your AI agent"}
+        </button>
+      </div>
+
+      <div>
+        <div
+          role="tablist"
+          aria-label="Result details"
+          className="flex flex-wrap gap-2 border-b border-line pb-3"
+        >
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              id={`tab-${t.key}`}
+              aria-selected={tab === t.key}
+              aria-controls={`panel-${t.key}`}
+              onClick={() => setTab(t.key)}
+              className={`rounded-full px-4 py-1.5 text-sm ${tab === t.key ? "bg-teal text-navy" : "text-muted hover:text-ice-2"}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div
+          role="tabpanel"
+          id={`panel-${tab}`}
+          aria-labelledby={`tab-${tab}`}
+          className="mt-5 flex flex-col gap-6"
+        >
+          {tab === "try" ? (
+            <>
+              <Panel title="Run the example with sample data">
+                <pre className="prose-doc overflow-auto rounded-lg bg-navy-900/80 p-4 text-ice-2">{`unzip ${result.artifact?.slug ?? "package"}.zip && cd ${result.artifact?.slug ?? "package"}
+pnpm install
+cp .env.example .env.local     # fill the values listed under "Needs your configuration"
+pnpm db:migrate && pnpm db:seed
+pnpm dev                       # http://localhost:3000`}</pre>
+                <p className="mt-3 text-xs text-muted">
+                  Or put it live in your own accounts in minutes — you own everything:
+                </p>
+                <div className="mt-3">
+                  <DeployForMe id={id} onDone={onReload} />
+                </div>
+              </Panel>
+              {usesAi ? (
+                <Panel title="AI access">
+                  <AiAccess id={id} />
+                </Panel>
+              ) : null}
+            </>
+          ) : null}
+          {tab === "review" ? (
+            <>
+              <Panel title={`Components used · ${components.length}`}>
+                <ul className="grid gap-2 font-mono text-xs sm:grid-cols-2 lg:grid-cols-3">
+                  {components.map((c) => (
+                    <li key={c} className="rounded border border-line px-2 py-1 text-ice-2">
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+              <DocsPanel
+                docs={docs}
+                order={["COMPONENTS.md", "ARCHITECTURE.md", "README.md"]}
+                files={result.artifact?.files ?? []}
+              />
+            </>
+          ) : null}
+          {tab === "check" ? (
+            <>
+              {report ? (
+                <Panel title="Security">
+                  <p
+                    className={`text-sm font-semibold ${report.security.status === "clear" ? "text-teal" : "text-amber"}`}
+                  >
+                    {report.security.statusLine}
+                  </p>
+                  {report.security.points.length > 0 ? (
+                    <ul className="mt-3 list-disc pl-5 text-sm text-ice-2">
+                      {report.security.points.map((p) => (
+                        <li key={p}>{p}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {report.security.status === "alerts" ? (
+                    <ImproveCallout
+                      id={id}
+                      improved={Boolean(result.metrics.improved)}
+                      estimate={report.improvement}
+                      existingId={result.improvement_build_id}
+                    />
+                  ) : null}
+                </Panel>
+              ) : null}
+              <DocsPanel docs={docs} order={["SECURITY.md", "TURBINEH_REPORT.md"]} />
+            </>
+          ) : null}
+          {tab === "continue" ? (
+            <>
+              <Panel title="For your AI coding agent">
+                <p className="text-sm text-ice-2">{AGENT_INSTRUCTIONS}</p>
+                <p className="mt-3 text-xs text-muted">
+                  Or from the terminal: <code className="text-teal">turbineh apply {id}</code> then{" "}
+                  <code className="text-teal">turbineh verify</code> — the CLI returns the same
+                  state as this page.
+                </p>
+              </Panel>
+              {report?.nextSteps.length ? (
+                <Panel title="Next steps">
+                  <ol className="list-decimal pl-5 text-sm text-ice-2">
+                    {report.nextSteps.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ol>
+                </Panel>
+              ) : null}
+              <DocsPanel docs={docs} order={["DEPLOY.md", "DEPLOYED.md", "README.md"]} />
+            </>
+          ) : null}
+          {tab === "revert" ? (
+            <Panel title="Undo the integration without losing later work">
+              <ul className="flex flex-col gap-3 text-sm text-ice-2">
+                <li>
+                  <span className="text-cream">Integrated in a repository:</span> it arrives as one
+                  pull request / one commit. Revert that commit — your later commits stay —{" "}
+                  <code className="text-teal">git revert &lt;integration-commit&gt;</code> or{" "}
+                  <code className="text-teal">turbineh revert {id}</code>.
+                </li>
+                <li>
+                  <span className="text-cream">From the ZIP:</span> the package lives in its own
+                  folder with its own entry points; remove the folder and the lines listed in
+                  docs/integration.md.
+                </li>
+                <li>
+                  <span className="text-cream">Deployed for you:</span> the project and database
+                  live in your own accounts; delete them there at any time.
+                </li>
+              </ul>
+            </Panel>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DocsPanel({
+  docs,
+  order,
+  files,
+}: {
+  docs: Record<string, string>;
+  order: string[];
+  files?: string[];
+}) {
+  const keys = order.filter((d) => docs[d]);
+  const [doc, setDoc] = useState(keys[0] ?? "");
+  if (keys.length === 0 && !files) return null;
+  return (
+    <div className={`grid gap-6 ${files ? "lg:grid-cols-[260px_1fr]" : ""}`}>
+      {files ? (
+        <Panel title={`Files · ${files.length}`}>
+          <ul className="max-h-[420px] overflow-auto font-mono text-xs text-muted">
+            {files.map((f) => (
+              <li key={f} style={{ paddingLeft: `${(f.split("/").length - 1) * 10}px` }}>
+                {f.split("/").pop()}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      ) : null}
+      {keys.length > 0 ? (
+        <Panel title="Documents">
+          <div className="mb-3 flex flex-wrap gap-2">
+            {keys.map((d) => (
+              <button
+                key={d}
+                type="button"
+                aria-pressed={doc === d}
+                onClick={() => setDoc(d)}
+                className={`rounded-full px-3 py-1 text-xs ${doc === d ? "bg-teal text-navy" : "border border-line text-muted"}`}
+              >
+                {d.replace(".md", "")}
+              </button>
+            ))}
+          </div>
+          <div className="prose-doc max-h-[480px] overflow-auto text-ice-2">
+            {(docs[doc] ?? "").replace(/^<!-- turbineh:generated -->\n/, "")}
+          </div>
+        </Panel>
+      ) : null}
+    </div>
+  );
+}
+
+function ImproveCallout({
+  id,
+  improved,
+  estimate,
+  existingId,
+}: {
+  id: string;
+  improved: boolean;
+  estimate: ImprovementEstimate | null;
+  existingId: string | null;
+}) {
+  const router = useRouter();
+  const [state, setState] = useState<"idle" | "working" | "error">("idle");
+  let text: string;
+  let offer = false;
+  if (improved)
+    text =
+      "This is the improved, final version. Remaining alerts could not be fixed automatically.";
+  else if (existingId) text = "The improvement of this flow was already requested (once per flow).";
+  else if (!estimate || estimate.fixable === 0)
+    text = "None of the remaining alerts can be fixed automatically.";
+  else {
+    offer = true;
+    text = `We can most likely fix ${estimate.fixable} of ${estimate.total} remaining alert(s) in about ${estimate.minutes.min}–${estimate.minutes.max} min; every check runs again. Once per flow.`;
+  }
+  return (
+    <div className="mt-4 rounded-lg border border-amber/50 p-4">
+      <p className="text-sm text-ice-2">{text}</p>
+      {offer ? (
+        <button
+          type="button"
+          disabled={state === "working"}
+          onClick={async () => {
+            setState("working");
+            const res = await fetch(`/v1/builds/${id}/improve`, { method: "POST" });
+            const body = (await res.json().catch(() => ({}))) as { build_id?: string };
+            if (body.build_id) return router.push(`/flows/${body.build_id}`);
+            setState("error");
+          }}
+          className="mt-3 rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy disabled:opacity-50"
+        >
+          {state === "working" ? "Starting…" : "Improve & re-verify"}
+        </button>
+      ) : null}
+      {existingId ? (
+        <a href={`/flows/${existingId}`} className="mt-3 inline-block text-sm text-teal underline">
+          Open the improved flow
+        </a>
+      ) : null}
+      {state === "error" ? (
+        <p className="mt-2 text-xs text-bad">Could not start it. Try again in a moment.</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Integrate into a repository: GitHub is connected only now, on demand (optional for everything else). */
+function IntegrateIntoRepo({ id, initialUrl }: { id: string; initialUrl: string | null }) {
+  const params = useSearchParams();
+  const [state, setState] = useState<"idle" | "working" | "done" | "error">(
+    initialUrl ? "done" : "idle",
+  );
+  const [url, setUrl] = useState(initialUrl);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const run = useCallback(async () => {
+    setState("working");
+    setMessage(null);
+    const res = await fetch(`/v1/builds/${id}/deliver`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (res.status === 401 || res.status === 409) {
+      const body = (await res.json().catch(() => ({}))) as { needs_scope?: string };
+      if (res.status === 401 || body.needs_scope) {
+        await authClient.signIn.social({
+          provider: "github",
+          scopes: ["repo"],
+          callbackURL: `/flows/${id}?integrate=1`,
+        });
+        return;
+      }
+    }
+    if (!res.ok) {
+      setState("error");
+      setMessage(
+        "Integration could not start → download the ZIP or copy the agent instructions meanwhile.",
+      );
+      return;
+    }
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const s = (await (await fetch(`/v1/builds/${id}/deliver`)).json()) as {
+        delivery: { status: string; repo_url: string | null; error: string | null } | null;
+      };
+      if (s.delivery?.status === "done" && s.delivery.repo_url) {
+        setUrl(s.delivery.repo_url);
+        setState("done");
+        return;
+      }
+      if (s.delivery?.status === "failed") {
+        setState("error");
+        setMessage(s.delivery.error ?? "Integration failed");
+        return;
+      }
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (params.get("integrate") === "1" && state === "idle") queueMicrotask(() => void run());
+  }, [params, run, state]);
+
+  if (state === "done" && url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-full bg-teal px-5 py-2 text-sm font-semibold text-navy"
+      >
+        Open the repository ↗
+      </a>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled={state === "working"}
+        onClick={() => void run()}
+        className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal disabled:opacity-50"
+      >
+        {state === "working" ? "Integrating…" : "Integrate into repository"}
+      </button>
+      {message ? <span className="text-xs text-bad">{message}</span> : null}
+    </span>
+  );
+}
