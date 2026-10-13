@@ -34,6 +34,8 @@ function openDay(minDays: number, salt = 0): string {
 }
 
 async function say(page: Page, message: string): Promise<string> {
+  // Wait for hydration: before it, the form would submit natively.
+  await expect(page.locator('section[data-ready="true"]')).toBeVisible();
   const log = page.getByTestId("assistant-log");
   const before = await log.locator("li[data-role]").count();
   await page.getByLabel("Your message").fill(message);

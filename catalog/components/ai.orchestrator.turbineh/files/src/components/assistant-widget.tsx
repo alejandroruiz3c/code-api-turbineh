@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 type Line = { role: "user" | "assistant" | "error"; text: string };
 type Reply = {
@@ -11,6 +11,7 @@ type Reply = {
 };
 
 const KEY = "turbineh-assistant-session";
+const noopSubscribe = () => () => undefined;
 
 /**
  * Public assistant chat (component ai.orchestrator.turbineh, ADR-0033). Talks to POST /api/assistant; irreversible
@@ -22,13 +23,22 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
+  // false while server-rendered, true once hydrated (tests wait for it before typing).
+  const ready = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
   const session = useRef<string | null>(null);
   const end = useRef<HTMLLIElement | null>(null);
 
   useEffect(() => {
     session.current = window.sessionStorage.getItem(KEY);
   }, []);
-  useEffect(() => end.current?.scrollIntoView({ block: "nearest" }), [lines]);
+  // Block body: newer browsers return a Promise from scrollIntoView, which must not become the effect cleanup.
+  useEffect(() => {
+    void end.current?.scrollIntoView({ block: "nearest" });
+  }, [lines]);
 
   async function send(message: string, confirm?: boolean) {
     if (!message.trim() || busy) return;
@@ -69,6 +79,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
   return (
     <section
       aria-label={title}
+      data-ready={ready ? "true" : "false"}
       className="flex w-full max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm"
     >
       <h2 className="font-semibold">{title}</h2>
