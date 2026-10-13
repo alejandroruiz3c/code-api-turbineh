@@ -167,7 +167,7 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     await expect(page.getByRole("button", { name: "Confirm" })).toHaveCount(0);
   });
 
-  test("the assistant rejects prompt injection and oversized messages (over the character limit) with a 400 error, before any model call", async ({
+  test("a malicious prompt injection input is refused with a 400 error: the booking assistant does not process it", async ({
     request,
   }) => {
     const injected = await request.post("/api/assistant", {
@@ -175,8 +175,13 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     });
     expect(injected.status()).toBe(400);
     expect((await injected.json()).error).toContain("can't be processed");
+  });
+
+  test("a user who sends a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse", async ({
+    request,
+  }) => {
     const big = await request.post("/api/assistant", { data: { message: "x".repeat(5000) } });
-    expect(big.status()).toBe(400);
+    expect(big.status(), "the oversized input is rejected").toBe(400);
   });
 });
 

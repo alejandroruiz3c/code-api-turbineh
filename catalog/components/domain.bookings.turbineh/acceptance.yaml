@@ -27,5 +27,7 @@
   covers: ["double|overlap|conflict|same (time|slot)"]
 - test: "tests/e2e/booking-assistant.spec.ts › the assistant books only a real free slot after the person confirms the date, time and staff member; the confirmation email is logged and staff see the booking"
   covers: ["physiotherapist|stylist|therapist|staff member|chosen|any (one|available)"]
-- test: "tests/e2e/booking-assistant.spec.ts › the assistant rejects prompt injection and oversized messages (over the character limit) with a 400 error, before any model call"
-  covers: ["injection|abuse|input limit|rate limit|too long|oversiz"]
+- test: "tests/e2e/booking-assistant.spec.ts › a malicious prompt injection input is refused with a 400 error: the booking assistant does not process it"
+  covers: ["injection|jailbreak|manipulat"]
+- test: "tests/e2e/booking-assistant.spec.ts › a user who sends a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
+  covers: ["abuse|input limit|character limit|too long|oversiz|exceed"]
