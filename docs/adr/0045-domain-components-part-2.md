@@ -32,8 +32,30 @@
    idempotent runs keyed by (job, latest scheduled instant) under a unique index, failed runs retried; digests
    (overdue/stuck records to their creator, daily attention digest to members who manage the workspace) through
    `sendEmail`, logged without a provider.
-4. Group 2 (`ui.kanban`, `site.public-pages`, `growth.waitlist`, `data.analytics-import`): see the PR; this ADR is
-   extended as each lands.
+4. **`ui.kanban.turbineh`** (requires domain.workflow) — a board per workflow, one column per state; cards move by
+   native drag and drop or with the keyboard alone (Space, arrows, Enter/Space, Escape) with every step announced in a
+   live region; each move is the same server-checked transition as on the record page; refused moves put the card back.
+5. **`site.public-pages.turbineh`** — public collections from params (`pages[]: entity, path, detail, filters`): a list
+   per collection filtered by its fields, a page per entry with metadata, canonical URL, JSON-LD and a `next/og` Open
+   Graph image in the brand colours, published pages in the sitemap; staff edit entries; drafts never show. On
+   corporate-site (`files-recipe/`) the pages use its SiteShell, menu and sitemap.
+6. **`growth.waitlist.turbineh`** — `publicAction` join (same answer for known emails), double opt-in confirmed by a
+   button on the emailed link's page (mail scanners never confirm), position by confirmation time, referral link and
+   a boost of N places per confirmed referral (pure, unit-tested rule), staff list with CSV export and removal. It
+   keeps the landing-waitlist form and action names, so the recipe's page works unchanged.
+7. **`data.analytics-import.turbineh`** — CSV columns from params (date, dimensions, measures inferred from names),
+   every row validated before one insert transaction (all or nothing, report of line, column and reason), totals vs
+   the previous period, measures by day/week/month/quarter/year, top values per dimension, comparison between scope
+   values, chart CSV exports with the same filters, per-scope access through `record-access` (a shop manager sees and
+   imports only their shop).
+
+### Selection by the fidelity wiring (ADR-0044)
+
+Each component declares its recipes (`use_cases`, guide `compatibility.recipes`) and its `params.schema.json` accepts
+the parameters the compiler's patterns produce (MIME types for uploads, a job kind inferred from its words, the
+informative board fields of kanban, the pattern shapes of waitlist, public pages and analytics), so the nine
+learning-round requests select them with no adapter. domain.bookings is declared for recipe bookings. The pipeline
+also requires what a required component requires (ui.kanban → domain.workflow).
 
 ### New seams and template changes
 

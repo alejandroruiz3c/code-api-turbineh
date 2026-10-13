@@ -1,0 +1,10 @@
+{
+  "entity": "Sale",
+  "columns": ["date", "store", "product", "quantity", "revenue"],
+  "atomic": true,
+  "errorReport": true,
+  "periods": ["day", "week", "month"],
+  "compareWithPreviousPeriod": true,
+  "filters": ["date range", "store"],
+  "exportCsv": true
+}

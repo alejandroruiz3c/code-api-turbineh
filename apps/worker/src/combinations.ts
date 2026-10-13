@@ -192,6 +192,54 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Brightside (learning round, analytics-dashboard): CSV of daily sales validated all-or-nothing with a report,
+    // revenue and units by day/week/month, top products, shops vs previous period, filters, chart CSV exports; shop
+    // managers see only their shop.
+    recipe: "analytics-dashboard",
+    with: ["domain.membership-access.turbineh", "data.analytics-import.turbineh"],
+    prompt:
+      'Build a sales analytics dashboard for "Brightside Coffee", a chain of six coffee shops. Visual identity: ' +
+      "espresso brown `#3E2723`, cream `#FFF8E7`, caramel `#D4A373` charts. Managers upload daily sales as CSV (date, " +
+      "shop, product, quantity, revenue); invalid rows are rejected with a clear report and never half-imported. The " +
+      "dashboard shows revenue and units by day, week and month, top products, comparison between shops and versus the " +
+      "previous period, with filters by date range and shop; every chart can be exported as CSV. Shop managers see " +
+      "only their shop; the owner sees all.",
+    params: {
+      "domain.membership-access.turbineh": {
+        roles: [
+          {
+            key: "owner",
+            label: "Owner",
+            can: [
+              "read",
+              "create",
+              "update",
+              "delete",
+              "manage_members",
+              "view_audit",
+              "see_all_scopes",
+            ],
+          },
+          { key: "shop_manager", label: "Shop manager", can: ["read", "create"] },
+        ],
+        defaultRole: "shop_manager",
+        inviteRoles: ["shop_manager"],
+        invitationDays: 7,
+        scope: { kind: "shop", label: "Shop", plural: "Shops" },
+      },
+      "data.analytics-import.turbineh": {
+        entity: "DailySale",
+        columns: ["date", "shop", "product", "quantity", "revenue"],
+        atomic: true,
+        errorReport: true,
+        periods: ["day", "week", "month"],
+        compareWithPreviousPeriod: true,
+        filters: ["date range", "shop"],
+        exportCsv: true,
+      },
+    },
+  },
+  {
     // Brickline (learning round, projects): tasks with statuses on a kanban board with drag and drop, file attachments,
     // overdue tasks emailed every morning (logged without an email provider).
     recipe: "projects",

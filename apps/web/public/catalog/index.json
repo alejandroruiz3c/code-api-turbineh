@@ -3045,6 +3045,198 @@
       "details": "https://software.turbineh.com/v1/capabilities/content.rss.feed"
     },
     {
+      "id": "data.analytics-import.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "data",
+      "package": "pkg:generic/turbineh/data.analytics-import.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "data.analytics-import"
+      ],
+      "does": "CSV import for analytics with the columns of the request (date, dimensions such as shop and product, measures such as quantity and revenue): every row validated first and the file imported whole or not at all, with a report of line, column and reason; a dashboard of totals compared with the previous period, measures by day/week/month/quarter/year, top values per dimension and a comparison between values of the scope dimension, filtered by date range and scope value; every chart exported as CSV with the same filters; per-scope access (a shop manager sees and imports only their shop) through record-access.",
+      "doesNot": "Does not connect to databases or APIs, schedule imports, or draw line charts beyond accessible bars and tables",
+      "title": "Analytics from CSV imports — all-or-nothing validation, periods, comparisons, per-scope access, chart exports",
+      "summary": "Turns \"managers upload daily sales as CSV (date, shop, product, quantity, revenue); invalid rows are rejected with a clear report and never half-imported\" into a working dashboard. Each file is validated row by row first and imported whole in one transaction, or not at all with a report of line, column and reason. The dashboard shows totals compared with the previous period of equal length, measures by day, week, month, quarter or year, top values of each dimension and a comparison between shops, filtered by date range and shop; every chart exports its numbers as CSV with the same filters. With per-record scopes a shop manager sees and imports only their shop while the owner sees all.",
+      "useCases": [
+        "Daily sales of six coffee shops uploaded as CSV, with revenue and units by day, week and month",
+        "Shop managers who see only their shop while the owner compares all shops",
+        "Exporting the numbers behind every chart as CSV"
+      ],
+      "useWhen": [
+        "The request uploads or imports CSV data and asks for totals, periods, comparisons or charts",
+        "Invalid rows must be reported and never partially imported"
+      ],
+      "avoidWhen": [
+        "Data entered record by record in forms (generated CRUD with a summary page)",
+        "Live connections to external databases or BI tools"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Generic rows (date + JSON dimensions and measures)",
+          "gain": "Any column set from the request without generated tables",
+          "cost": "No per-column database types or indexes beyond date and scope"
+        },
+        {
+          "choice": "Validate everything before one insert transaction",
+          "gain": "Never half-imported; one complete report",
+          "cost": "Whole file in memory (bounded to 5 MB / 50,000 rows)"
+        },
+        {
+          "choice": "Bars and tables instead of a chart library",
+          "gain": "No dependency, accessible, the same numbers as the CSV export",
+          "cost": "No line or pie charts"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/analytics-import/params.json",
+          "default": "date, store, product, quantity, revenue; day/week/month",
+          "description": "Columns, periods, comparisons, filters and exports from the request (validated at start-up)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "importCsv",
+          "signature": "importCsv(actor, fileName, text) → { ok: true, rows } | { ok: false, errors: { line, column, message }[] }",
+          "where": "src/analytics-import/service.ts"
+        },
+        {
+          "name": "Queries",
+          "signature": "totals(actor, filters); series(actor, filters, period); byDimension(actor, filters, dimension, limit?); scopeValues(actor); lastDay(actor)",
+          "where": "src/analytics-import/service.ts"
+        },
+        {
+          "name": "Rules",
+          "signature": "parseCsv(text); validateCsv(text, dataset, allowedScopes?); periodStart(day, period); previousRange(from, to); change(now, before)",
+          "where": "src/analytics-import/rules.ts"
+        },
+        {
+          "name": "Dataset",
+          "signature": "toDataset(params) → { columns, date, measures, dimensions, scope, periods, compare, exportCsv }",
+          "where": "src/analytics-import/config.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/reports (filters from, to, period, scope); /dashboard/reports/import; /dashboard/reports/export?chart=series|compare|top-<dimension>",
+          "where": "src/app/dashboard/reports/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a column, change which columns are numbers or which one is the scope",
+          "where": "src/analytics-import/params.json",
+          "how": "Edit columns (and measures/dateColumn/scopeColumn when names do not say it); validated at start-up; the unit tests cover the roles."
+        },
+        {
+          "what": "Add a validation rule (e.g. revenue must equal quantity × price)",
+          "where": "src/analytics-import/rules.ts (validateCsv)",
+          "how": "Push a { line, column, message } error; the file stays all-or-nothing. Add a unit test."
+        },
+        {
+          "what": "Add a chart",
+          "where": "src/app/dashboard/reports/page.tsx, src/analytics-import/service.ts, src/app/dashboard/reports/export/route.ts",
+          "how": "Add a query in the service (it applies workspace and scope filters), render it with <Bars> and add its chart key to the export route."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions), drizzle-orm with PostgreSQL (jsonb, date_trunc), zod 4",
+        "recipes": [
+          "analytics-dashboard",
+          "internal-tool",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.audit-log.turbineh"
+        ],
+        "notes": "Per-shop access needs domain.membership-access.turbineh with a scope whose names match the scope column's values."
+      },
+      "security": [
+        "Imports require a member who may create; restricted members may import only rows of their own scopes",
+        "Every query is filtered by workspace and visible scopes; exports use the same filters",
+        "Column names come from validated params and reach SQL only as parameters",
+        "Files are bounded (5 MB, 50,000 rows) and rate-limited per person"
+      ],
+      "guarantees": [
+        {
+          "claim": "An invalid file imports nothing and reports line, column and reason",
+          "test": "tests/e2e/analytics-import.spec.ts › a CSV with an invalid row is rejected with a report of line, column and reason, and nothing is imported"
+        },
+        {
+          "claim": "Valid files are imported whole and aggregated by period",
+          "test": "tests/e2e/analytics-import.spec.ts › a valid CSV is imported whole and the dashboard shows totals by day, week and month"
+        },
+        {
+          "claim": "Totals are compared with the previous period and between shops",
+          "test": "tests/e2e/analytics-import.spec.ts › the dashboard compares the period with the previous one and between values of each dimension"
+        },
+        {
+          "claim": "Every chart exports as CSV with the same filters",
+          "test": "tests/e2e/analytics-import.spec.ts › every chart exports its numbers as CSV with the same filters"
+        },
+        {
+          "claim": "Shop managers see and import only their shop",
+          "test": "tests/e2e/analytics-scopes.spec.ts › a shop manager sees only their own shop's figures and cannot import another shop's"
+        },
+        {
+          "claim": "Validation is all-or-nothing with a report",
+          "test": "tests/unit/analytics-import.test.ts › rejects the whole file when any row is invalid, with the line, column and reason of each problem"
+        }
+      ],
+      "limits": [
+        "5 MB and 50,000 rows per file; aggregates computed per request in PostgreSQL",
+        "Bars and tables only (no line or pie charts)"
+      ],
+      "example": "// src/analytics-import/params.json — Brightside Coffee\n{ \"entity\": \"DailySale\", \"columns\": [\"date\", \"shop\", \"product\", \"quantity\", \"revenue\"], \"periods\": [\"day\", \"week\", \"month\"],\n  \"compareWithPreviousPeriod\": true, \"filters\": [\"date range\", \"shop\"], \"exportCsv\": true, \"atomic\": true, \"errorReport\": true }\n",
+      "keywords": [
+        "analytics",
+        "dashboard",
+        "csv import",
+        "upload csv",
+        "validation report",
+        "all or nothing",
+        "kpi",
+        "revenue",
+        "units",
+        "by day",
+        "by week",
+        "by month",
+        "previous period",
+        "comparison",
+        "top products",
+        "filters",
+        "date range",
+        "export csv",
+        "per shop",
+        "per store"
+      ],
+      "synonyms": {
+        "import": [
+          "upload",
+          "load",
+          "ingest"
+        ],
+        "measure": [
+          "metric",
+          "kpi",
+          "revenue",
+          "quantity",
+          "units"
+        ],
+        "dimension": [
+          "shop",
+          "store",
+          "product",
+          "region",
+          "category"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/data.analytics-import.turbineh"
+    },
+    {
       "id": "data.countries.i18n-iso-countries",
       "version": "0.1.0",
       "status": "approved",

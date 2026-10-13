@@ -12,7 +12,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   staff day/week calendar per team member, time off, staff move/cancel with customer emails; the recipe's own booking
   code removed) and `jobs.scheduled.turbineh` (cron route protected by `CRON_SECRET`, idempotent runs, overdue and
   daily email digests). New seams: `src/server/body-limit.ts`, `src/workflow/extras.tsx`, `src/workflow/board.tsx`.
-  Checked combinations: Ledgerline, Sala Nueve, Pixelyard.
+  Group 2: `ui.kanban.turbineh` (accessible drag-and-drop and keyboard board over workflow states),
+  `site.public-pages.turbineh` (public collections with filters, a page per entry, SEO, sitemap, Open Graph images),
+  `growth.waitlist.turbineh` (double opt-in, position, referral boost, CSV export) and
+  `data.analytics-import.turbineh` (all-or-nothing CSV import with a report, periods, comparisons, per-scope access,
+  chart CSV exports). Every component is declared for its recipes and accepts the fidelity patterns' params, so the
+  learning-round requests select it (ADR-0044). Checked combinations: Ledgerline, Sala Nueve, Pixelyard, Brickline,
+  Orbit Notes, Altamira, Brightside.
 - Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists
