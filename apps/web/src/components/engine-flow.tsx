@@ -20,7 +20,8 @@ export function EngineFlow({ id }: { id: string }) {
       if (!alive) return;
       if (!r.ok) return setError(r.error?.action ?? "This flow could not be loaded.");
       setFlow(r.data);
-      const done = r.data.result && !["generating", "planned"].includes(r.data.result.state);
+      const done =
+        r.data.result && !["planning", "generating", "planned"].includes(r.data.result.state);
       if (!done) timer = setTimeout(() => void tick(), 2500);
     };
     void tick();

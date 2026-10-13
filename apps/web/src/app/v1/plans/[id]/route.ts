@@ -17,12 +17,15 @@ export async function GET(
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
   const result = await resultOf(row);
+  const plan = (row.metrics.plan as Plan | undefined) ?? null;
+  // The plan's fields at the top level (same shape as POST /v1/plans) plus the live result.
   return Response.json(
     {
+      ...plan,
       id: row.id,
       need: row.prompt,
       state: result.state,
-      plan: (row.metrics.plan as Plan | undefined) ?? null,
+      plan,
       result,
       created_at: row.created_at,
       finished_at: row.finished_at,

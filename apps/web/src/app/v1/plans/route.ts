@@ -1,4 +1,11 @@
-import { buildsLastDay, buildsLastDayFromIp, costToday, enqueueBuild } from "@turbineh/db";
+import {
+  buildsLastDay,
+  buildsLastDayFromIp,
+  costToday,
+  enqueueBuild,
+  getBuild,
+} from "@turbineh/db";
+import type { Plan } from "@turbineh/shared";
 import {
   detectStack,
   ERRORS,
@@ -10,10 +17,13 @@ import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
-import { productProblem, requireCaller } from "@/server/product";
+import { productProblem, requireCaller, resultOf } from "@/server/product";
 import { repoManifests } from "@/server/repo-manifests";
 
 const MANIFESTS = new Set<string>(MANIFEST_FILES);
+const PLAN_WAIT_MS = 50_000;
+
+export const maxDuration = 60;
 
 const Body = z.object({
   need: z
@@ -130,6 +140,22 @@ export async function POST(req: Request): Promise<Response> {
       ...(environment.repo ? { repo: environment.repo } : {}),
     },
   });
+  const links = { status_url: `/v1/plans/${id}`, events_url: `/v1/plans/${id}/events` };
+  // Planning takes seconds: wait briefly so most callers get the plan in this response (`?wait=0` returns at once).
+  const waitMs = new URL(req.url).searchParams.get("wait") === "0" ? 0 : PLAN_WAIT_MS;
+  for (const until = Date.now() + waitMs; Date.now() < until;) {
+    await new Promise((r) => setTimeout(r, 1000));
+    const row = await getBuild(db, id, caller.ownerId);
+    if (row?.status === "failed") {
+      const result = await resultOf(row);
+      return productProblem(
+        422,
+        result.errors[0] ?? ERRORS.generationFailed(id, "planning failed"),
+      );
+    }
+    const plan = row?.status === "done" ? (row.metrics.plan as Plan | undefined) : undefined;
+    if (plan) return Response.json({ ...plan, id, created, ...links });
+  }
   return Response.json(
     {
       id,

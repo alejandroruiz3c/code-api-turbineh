@@ -180,7 +180,8 @@ describe("plan", () => {
     expect(plan.files.find((f) => f.path === "package.json")?.why).toBe(
       "Adds 1 verified dependency",
     );
-    expect(plan.compatible).toBe(false);
+    expect(plan.compatible).toBe(true);
+    expect(plan.needsApproval.join(" ")).toMatch(/Incompatibility: next/);
     expect(plan.incompatibilities.join(" ")).toMatch(/next: .*16\.3\.8.*15\.2\.0/);
     expect(plan.components).toHaveLength(1);
     expect(plan.components[0]?.why).toMatch(/security headers; required by the flow/);

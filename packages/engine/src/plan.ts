@@ -111,7 +111,8 @@ export function buildPlan(input: PlanInput): Plan {
   const deps = dependencyDiff(input.dependencies, input.projectDependencies);
   const compat = {
     ...base,
-    compatible: base.compatible && deps.conflicts.length === 0,
+    // Version conflicts are listed and need approval, but the stack can still host the package.
+    compatible: base.compatible,
     incompatibilities: [...base.incompatibilities, ...deps.conflicts],
   };
   const caps = input.components.map((c) => c.capability);

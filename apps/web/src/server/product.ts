@@ -8,7 +8,8 @@ import { storage } from "./storage";
 /** Product API errors carry the actionable ProductError (PLAN §16.4) inside RFC 9457 problem details. */
 export function productProblem(status: number, error: ProductError): Response {
   return Response.json(
-    { type: "about:blank", title: error.message, status, error },
+    // Fields at the top level too, so simple clients read code/message/action directly.
+    { type: "about:blank", title: error.message, status, ...error, error },
     {
       status,
       headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" },
