@@ -1,4 +1,20 @@
 # Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account and gets a confirmation email with a cancel link"
+  covers: ["\\bbook|appointment|reserv", "pick|choose|select|free (slot|time)|public|online|without (an )?account"]
+- test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account and gets a confirmation email with a cancel link"
+  covers: ["confirm|e-?mail", "link|cancel|confirm"]
+- test: "tests/e2e/bookings.spec.ts › the same time can never be booked twice for the same team member"
+  covers: ["double|overlap|conflict|same (time|slot)|twice"]
+- test: "tests/e2e/bookings.spec.ts › the cancel link cancels the booking, and inside the notice period it is refused"
+  covers: ["cancel", "\\d+ ?(h|hours?)|notice|before|link"]
+- test: "tests/e2e/bookings.spec.ts › staff see the day and week calendar per team member"
+  covers: ["calendar|day and week|week view|day view|schedule", "staff|stylist|per|team"]
+- test: "tests/e2e/bookings.spec.ts › staff block time off and those times are no longer offered"
+  covers: ["time off|block|holiday|absence|unavailab"]
+- test: "tests/e2e/bookings.spec.ts › staff move or cancel a booking and the customer is emailed"
+  covers: ["move|reschedul|cancel", "e-?mail|notif"]
+- test: "tests/e2e/bookings.spec.ts › people who are not staff cannot see the bookings"
+  covers: ["staff|admin|sign[ -]?in|log[ -]?in", "see|manage|dashboard|calendar|only"]
 - test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
   covers: ["\\bbook|appointment|session|reserv"]
 - test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"

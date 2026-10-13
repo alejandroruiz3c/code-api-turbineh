@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BRAND } from "@/brand";
 import { bookingConfig as cfg, hoursText, priceLabel } from "@/bookings/config";
 
-/** Public home page of a booking site (domain.bookings.turbineh on recipe bookings): services, hours, book online. */
+/** Public home page of the booking site (recipe bookings, on domain.bookings.turbineh): services, hours, book online. */
 export default function Home() {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-10 px-6 py-20">
@@ -13,10 +13,14 @@ export default function Home() {
         ) : null}
         <h1 className="text-4xl font-bold">{cfg.business}</h1>
         <p className="text-muted">
-          Book online with any of our {cfg.resource.count} {cfg.resource.plural.toLowerCase()} in a few clicks.
+          Book online with any of our {cfg.resource.count} {cfg.resource.plural.toLowerCase()} in a
+          few clicks.
         </p>
         <div className="flex gap-3">
-          <Link className="rounded-md bg-brand px-5 py-2 font-medium text-brand-contrast" href="/book">
+          <Link
+            className="rounded-md bg-brand px-5 py-2 font-medium text-brand-contrast"
+            href="/book"
+          >
             Book now
           </Link>
           <Link className="rounded-md border border-field px-5 py-2" href="/sign-in">
@@ -41,7 +45,9 @@ export default function Home() {
       <section aria-label="Opening hours" className="text-center text-sm text-muted">
         <h2 className="mb-1 font-semibold text-ink">Opening hours</h2>
         <p>{hoursText()}</p>
-        <p>Times in {cfg.timeZone}. Cancel online up to {cfg.policy.cancelNoticeHours} hours before.</p>
+        <p>
+          Times in {cfg.timeZone}. Cancel online up to {cfg.policy.cancelNoticeHours} hours before.
+        </p>
       </section>
     </main>
   );

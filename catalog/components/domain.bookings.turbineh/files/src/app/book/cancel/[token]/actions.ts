@@ -21,7 +21,10 @@ export const cancelBooking = publicAction(
   async ({ token }): Promise<CancelState> => {
     try {
       const r = await cancelByToken(token);
-      return { ok: true, message: `Booking ${r.reference} on ${r.when} is cancelled. We emailed you a confirmation.` };
+      return {
+        ok: true,
+        message: `Booking ${r.reference} on ${r.when} is cancelled. We emailed you a confirmation.`,
+      };
     } catch (err) {
       if (err instanceof PolicyError) return { ok: false, message: err.message };
       throw err;

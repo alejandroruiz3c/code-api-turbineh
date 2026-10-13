@@ -65,16 +65,23 @@ export default async function CalendarPage({ searchParams }: Props) {
           <Link className="underline" href={link({ date: addDays(from, days) })}>
             Next →
           </Link>
-          <Link className={view === "day" ? "font-semibold" : "underline"} href={link({ view: "day" })}>
+          <Link
+            className={view === "day" ? "font-semibold" : "underline"}
+            href={link({ view: "day" })}
+          >
             Day
           </Link>
-          <Link className={view === "week" ? "font-semibold" : "underline"} href={link({ view: "week" })}>
+          <Link
+            className={view === "week" ? "font-semibold" : "underline"}
+            href={link({ view: "week" })}
+          >
             Week
           </Link>
         </nav>
       </div>
       <p className="text-sm text-muted" data-testid="calendar-range">
-        {view === "week" ? `Week of ${from}` : `${DAY_NAMES[isoWeekday(from) - 1]} ${from}`} · {cfg.timeZone}
+        {view === "week" ? `Week of ${from}` : `${DAY_NAMES[isoWeekday(from) - 1]} ${from}`} ·{" "}
+        {cfg.timeZone}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
@@ -90,7 +97,12 @@ export default async function CalendarPage({ searchParams }: Props) {
           </thead>
           <tbody>
             {resources.map((r) => (
-              <tr key={r.id} className="border-b border-line align-top" data-testid="calendar-row" data-resource={r.name}>
+              <tr
+                key={r.id}
+                className="border-b border-line align-top"
+                data-testid="calendar-row"
+                data-resource={r.name}
+              >
                 <th scope="row" className="px-2 py-2 font-medium">
                   {r.name}
                 </th>

@@ -80,7 +80,11 @@ export function TimeOffForm({
     done: null,
   });
   return (
-    <form action={action} className="grid max-w-2xl grid-cols-2 gap-3 md:grid-cols-5" aria-label="Add time off">
+    <form
+      action={action}
+      className="grid max-w-2xl grid-cols-2 gap-3 md:grid-cols-5"
+      aria-label="Add time off"
+    >
       <div className="flex flex-col gap-1">
         <Label htmlFor="to-resource">{resourceLabel}</Label>
         <select id="to-resource" name="resourceId" className={select} required>

@@ -141,6 +141,19 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Sala Nueve (learning round, bookings): public booking page, stylist or any, cancel link up to 12 hours before,
+    // no double bookings, staff day/week calendar per stylist, time off, staff move/cancel with customer emails.
+    // Parameters come from the request through detectDomains (recipe bookings requires domain.bookings).
+    recipe: "bookings",
+    with: ["domain.bookings.turbineh"],
+    prompt:
+      'Build an online booking site for "Sala Nueve", a hair salon with four stylists. Services: cut 30 min (25 €), ' +
+      "colour 90 min (70 €), cut and colour 120 min (90 €). Opening hours Tuesday–Saturday 10:00–20:00, Europe/Madrid. " +
+      "Customers pick a service, a stylist (or any) and a free slot, enter name, email and phone, and receive a " +
+      "confirmation email with a link to cancel up to 12 hours before. No double bookings, ever. Staff sign in to see " +
+      "the day and week calendar per stylist, block time off and move or cancel bookings (the customer is emailed). No AI.",
+  },
+  {
     // Ledgerline (learning round, client-portal): staff/client roles, a client sees only their company, private
     // uploads (PDF/JPG/PNG up to 10 MB) downloadable by that client and staff, document requests pending → received →
     // approved with due dates, staff emailed when a client uploads.
@@ -230,10 +243,16 @@ export function combinations(repoRoot: string): Combination[] {
     .map((d) => d.name)
     .sort();
   const out: Combination[] = recipes.map((recipe) => ({ name: recipe, recipe, prompt: "" }));
+  const explicit = new Set(
+    COMPONENT_COMBINATIONS.map((c) => [c.recipe, ...(c.with ?? [])].join("+")),
+  );
   for (const recipe of recipes) {
     for (const [component, prompt] of Object.entries(DOMAIN_PROBES)) {
+      const name = `${recipe}+${component}`;
+      // A combination with its own request (e.g. Sala Nueve for bookings) replaces the generic probe.
+      if (explicit.has(name)) continue;
       if (detectDomains(prompt, recipe).some((d) => d.component === component)) {
-        out.push({ name: `${recipe}+${component}`, recipe, prompt });
+        out.push({ name, recipe, prompt });
       }
     }
   }

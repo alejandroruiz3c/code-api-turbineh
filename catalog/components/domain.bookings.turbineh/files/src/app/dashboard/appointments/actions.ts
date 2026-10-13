@@ -66,7 +66,10 @@ export async function staffMoveBooking(_prev: StaffState, formData: FormData): P
     const { id, ...to } = parsed.data;
     const m = await staffMove(id, { ...to, resource: to.resource || undefined });
     revalidatePath("/dashboard/appointments", "layout");
-    return { error: null, done: `Moved ${m.reference} to ${m.when} with ${m.resource}. The customer was emailed.` };
+    return {
+      error: null,
+      done: `Moved ${m.reference} to ${m.when} with ${m.resource}. The customer was emailed.`,
+    };
   } catch (err) {
     if (err instanceof PolicyError) return { error: err.message, done: null };
     throw err;

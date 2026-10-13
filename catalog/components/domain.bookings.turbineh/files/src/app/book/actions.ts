@@ -15,8 +15,19 @@ const schema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.email().max(320),
   phone: cfg.askPhone
-    ? z.string().trim().regex(/^\+?[\d\s().-]{6,30}$/)
-    : z.union([z.string().trim().regex(/^\+?[\d\s().-]{6,30}$/), z.literal("")]).optional(),
+    ? z
+        .string()
+        .trim()
+        .regex(/^\+?[\d\s().-]{6,30}$/)
+    : z
+        .union([
+          z
+            .string()
+            .trim()
+            .regex(/^\+?[\d\s().-]{6,30}$/),
+          z.literal(""),
+        ])
+        .optional(),
   website: z.string().max(0).optional(), // honeypot: humans leave it empty
 });
 

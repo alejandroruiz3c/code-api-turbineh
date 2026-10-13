@@ -68,7 +68,9 @@ export default async function AppointmentPage({ params }: Props) {
               <input type="hidden" name="id" value={row.a.id} />
               <Button type="submit">Cancel booking</Button>
             </form>
-            <p className="mt-2 text-xs text-muted">The customer is emailed when you move or cancel.</p>
+            <p className="mt-2 text-xs text-muted">
+              The customer is emailed when you move or cancel.
+            </p>
           </Card>
         </>
       ) : null}

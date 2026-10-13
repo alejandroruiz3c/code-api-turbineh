@@ -1,24 +1,24 @@
 id: bookings
-description: Bookings and appointments with weekly availability, conflict-free booking, a calendar and email confirmations
+description: Online booking site for an appointment business — public booking page (service, team member or any, real free times, no account), confirmation email with a cancel link and a notice policy, no double bookings, staff calendar per team member (day and week), time off, move and cancel with customer emails
 extends: saas-crud
 providedEntities:
   [Booking, Appointment, Reservation, Visit, Session, Availability, AvailabilitySlot, Slot, TimeSlot, Schedule,
-   OpeningHour, OpeningHours, WorkingHour, WorkingHours, BusinessHour, BusinessHours, Calendar, CalendarEvent]
+   OpeningHour, OpeningHours, WorkingHour, WorkingHours, BusinessHour, BusinessHours, Calendar, CalendarEvent,
+   TimeOff, Absence, Holiday, BlockedTime, Stylist, Service, Customer]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
-nav:
-  - { label: Bookings, href: /dashboard/bookings }
-  - { label: Calendar, href: /dashboard/calendar }
-  - { label: Availability, href: /dashboard/availability }
+# The booking domain (public page, cancel link, staff calendar, time off) is the component domain.bookings.turbineh
+# (ADR-0033, ADR-0043): code selects it in every bookings build and writes its params from the request.
+requiredComponents:
+  domain.bookings: domain.bookings.turbineh
+nav: []
 
-# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe. The booking domain's own extension
+# points (params, rules, public page, cancel link, calendar, time off) come from domain.bookings.turbineh's guide.
 guide:
   extend:
-    - what: "Change booking rules (duration, notice, conflicts)"
-      where: "src/server/bookings.ts, src/app/dashboard/bookings/actions.ts"
-      how: "Slots and conflicts are computed on the server; add a unit test for each rule."
-    - what: "Change opening hours"
-      where: "src/app/dashboard/availability/page.tsx"
-      how: "Weekly availability; bookings outside it are refused."
-    - what: "Let visitors book or cancel without an account (public booking page, cancel link)"
+    - what: "Add another public form (waiting list, gift voucher request…)"
       where: "src/app/<route>/actions.ts, src/server/authz.ts (publicAction)"
-      how: "Export it as `publicAction(name, { rateLimit, schema }, handler)`: per-IP rate limit and Zod validation come first; never a plain exported function."
+      how: "Same pattern as bookSlot in src/app/book/actions.ts: `publicAction(name, { rateLimit, schema, refuse }, handler)`."
+    - what: "Change how booking emails are sent"
+      where: "src/lib/email.ts"
+      how: "Without RESEND_API_KEY emails are logged (E2E reads them through EMAIL_OUTBOX_FILE); the texts are in src/bookings/service.ts."

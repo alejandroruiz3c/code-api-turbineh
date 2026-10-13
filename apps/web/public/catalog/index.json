@@ -6920,7 +6920,7 @@
       "provides": [
         "domain.bookings"
       ],
-      "does": "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite.",
+      "does": "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list: list, day/week calendar per team member, time off, move and cancel with customer emails; a public booking page (no account) and a cancel link in the confirmation email that honours the notice policy. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite.",
       "doesNot": "Does not take payments, sync external calendars or send reminders; one business per app",
       "title": "Booking domain (appointments, availability, policy) with an assistant toolkit",
       "summary": "Everything an appointment business needs behind its assistant or its staff: team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded, and staff pages behind an ADMIN_EMAILS allow-list. Parameters come from the request. In AI apps it exposes six tools to runAgent; create/move/cancel need the person's confirmation.",
@@ -7004,8 +7004,18 @@
         },
         {
           "name": "Staff pages",
-          "signature": "/dashboard/appointments (list, book, cancel), /dashboard/appointments/settings (team, answers)",
+          "signature": "/dashboard/appointments (list, book, cancel), /[id] (move, cancel), /calendar (day/week per team member), /time-off, /settings (team, answers)",
           "where": "src/app/dashboard/appointments/page.tsx"
+        },
+        {
+          "name": "Public pages",
+          "signature": "/book (service, team member or any, free times, name/email/phone; publicAction bookSlot), /book/cancel/[token] (cancel link, notice policy)",
+          "where": "src/app/book/page.tsx"
+        },
+        {
+          "name": "Management",
+          "signature": "cancelByToken(token); appointmentByCancelToken(token); staffMove(id, { day, time, resource? }); addTimeOff({ resourceId, day, from, to, reason?, by }); removeTimeOff(id); calendar(fromDay, days, resourceId?)",
+          "where": "src/bookings/manage.ts"
         }
       ],
       "extensionPoints": [
@@ -7020,6 +7030,16 @@
           "how": "Add a function to service.ts that enforces the rule, then a defineTool() calling it; irreversible: true + prepare() if it changes data. Add a mock rule in tests/mock-llm/scripts/bookings.ts and an E2E case."
         },
         {
+          "what": "Change the public booking page or what the customer enters",
+          "where": "src/app/book/page.tsx, src/app/book/actions.ts (publicAction bookSlot)",
+          "how": "Keep it a publicAction (rate limit + Zod schema first); createAppointment re-checks the time against real availability."
+        },
+        {
+          "what": "Change the cancel link or its notice rule",
+          "where": "src/bookings/manage.ts (cancelByToken), src/bookings/params.json (policy.cancelNoticeHours)",
+          "how": "The token is single-use per booking and stored hashed; the notice rule is canChange() in availability.ts."
+        },
+        {
           "what": "Different availability rule (breaks, holidays)",
           "where": "src/bookings/availability.ts",
           "how": "Filter dayStarts()/freeSlots(); everything (assistant, staff form) uses them, so one change applies everywhere."
@@ -7029,7 +7049,8 @@
         "runtime": "node >= 20",
         "framework": "next ^16, drizzle-orm with PostgreSQL, zod 4",
         "recipes": [
-          "ai-agents"
+          "ai-agents",
+          "bookings"
         ],
         "requires": [],
         "works_with": [
@@ -7072,11 +7093,36 @@
         {
           "claim": "Only staff on ADMIN_EMAILS see appointments",
           "test": "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments"
+        },
+        {
+          "claim": "Customers book a real free time on the public page and receive a cancel link",
+          "test": "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account and gets a confirmation email with a cancel link"
+        },
+        {
+          "claim": "The same time is never booked twice for one team member, even from a stale page",
+          "test": "tests/e2e/bookings.spec.ts › the same time can never be booked twice for the same team member"
+        },
+        {
+          "claim": "The cancel link honours the notice policy",
+          "test": "tests/e2e/bookings.spec.ts › the cancel link cancels the booking, and inside the notice period it is refused"
+        },
+        {
+          "claim": "Staff calendar per team member, day and week",
+          "test": "tests/e2e/bookings.spec.ts › staff see the day and week calendar per team member"
+        },
+        {
+          "claim": "Time off removes times from what customers are offered",
+          "test": "tests/e2e/bookings.spec.ts › staff block time off and those times are no longer offered"
+        },
+        {
+          "claim": "Staff moves and cancellations email the customer",
+          "test": "tests/e2e/bookings.spec.ts › staff move or cancel a booking and the customer is emailed"
         }
       ],
       "limits": [
         "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)",
         "No payments, reminders or external calendar sync",
+        "Time off is checked when times are offered and booked; a booking racing a time-off change in the same instant is not locked out",
         "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
       ],
       "example": "import { availability, createAppointment } from \"@/bookings/service\";\nconst day = await availability({ day: \"2026-11-02\" });            // real free times\nconst first = day.slots[0];\nif (first) await createAppointment({ day: \"2026-11-02\", time: first.time, name: \"Ana García\", email: \"ana@example.com\", via: \"staff\" });\n",

@@ -5,7 +5,10 @@ import { bookingConfig as cfg } from "@/bookings/config";
 import { CancelForm } from "./cancel-form";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: `Cancel a booking · ${cfg.business}`, robots: { index: false } };
+export const metadata: Metadata = {
+  title: `Cancel a booking · ${cfg.business}`,
+  robots: { index: false },
+};
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -34,8 +37,8 @@ export default async function CancelPage({ params }: Props) {
             <CancelForm token={token} />
           ) : (
             <p role="alert" className="text-sm text-danger" data-testid="too-late">
-              Bookings can only be cancelled online up to {cfg.policy.cancelNoticeHours} hours before they start.
-              Please contact {cfg.business} directly.
+              Bookings can only be cancelled online up to {cfg.policy.cancelNoticeHours} hours
+              before they start. Please contact {cfg.business} directly.
             </p>
           )}
         </section>
