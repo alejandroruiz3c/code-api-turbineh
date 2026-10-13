@@ -410,7 +410,11 @@ async function writeApp(
   const who = identity(c.cwd);
   git(c.cwd, "add", "-A");
   const name = readGuide(c.cwd)?.app.name ?? r.plan?.capability.name ?? "application";
-  commit(c.cwd, who.args, `feat: ${name} — verified TurbineH package (build ${id.slice(0, 8)})`);
+  commit(
+    c.cwd,
+    who.args,
+    `feat: ${name} — ${r.state === "generated" ? "TurbineH package, delivered NOT verified" : "verified TurbineH package"} (build ${id.slice(0, 8)})`,
+  );
   return {
     target: "app",
     ...files,
@@ -664,7 +668,8 @@ function summary(
       : {}),
     note: gateOk
       ? "Already verified in the TurbineH sandbox (lint, typecheck, unit, build, E2E, security): do not re-run the whole gate; re-run only what your own change touches."
-      : "The gate is not green: start with the failing steps.",
+      : // ADR-0037: delivered, not verified — the exact failure and its fix are the first items of `left`.
+        `Delivered, not verified: ${gate.filter((g) => g.ok).length}/${gate.length} checks passed. Start with the first item of "left" (failing test, file:line, suggested fix).`,
     seconds: Math.round(elapsedMs / 1000),
   };
   const lines = [

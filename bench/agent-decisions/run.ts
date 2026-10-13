@@ -1,5 +1,5 @@
 /**
- * Agent-decision bench (ADR-0038): the real runAgent of the orchestrator component, before and after its tool
+ * Agent-decision bench (ADR-0039): the real runAgent of the orchestrator component, before and after its tool
  * decisions moved to the decider, on the same clinic, tools and conversations.
  *
  *   pnpm --filter @turbineh/bench exec tsx agent-decisions/run.ts \

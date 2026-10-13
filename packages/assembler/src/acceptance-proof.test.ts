@@ -7,7 +7,7 @@ import { entityCoverage } from "./assemble.js";
 import { generateEntity } from "./entities.js";
 
 /**
- * Regression (ADR-0038 §4): production build f195341c (Fieldnote, saas-crud) marked these criteria "met" with generated
+ * Regression (ADR-0039 §4): production build f195341c (Fieldnote, saas-crud) marked these criteria "met" with generated
  * CRUD tests that do not prove them. Each must come out "open"; the true proofs stay "met".
  */
 const ENTITIES = [

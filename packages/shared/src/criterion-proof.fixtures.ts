@@ -1,5 +1,5 @@
 /**
- * Labelled criterion → test pairs for the proof matcher (ADR-0038 §4). `met` is the human label: does this test, by
+ * Labelled criterion → test pairs for the proof matcher (ADR-0039 §4). `met` is the human label: does this test, by
  * its title and assertions, prove the criterion (subject, action, outcome, actor, negation)? The first six pairs are
  * the false "met" of production build f195341c (Fieldnote, saas-crud); they must come out "open".
  */

@@ -23,7 +23,7 @@ contract:
     [
       "orchestrate({ task, input, purpose, organizationId, userId, instructions?, context?, history?, schema?, tools? })",
       "embed(texts, { purpose, organizationId, userId })",
-      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0033); TurbineH orchestration decides the next action (tool or reply) at every step and the open model writes only its arguments or the reply (ADR-0038)",
+      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0033); TurbineH orchestration decides the next action (tool or reply) at every step and the open model writes only its arguments or the reply (ADR-0039)",
       "Toolkit { id, title, audience: public|staff, instructions, tools } from domain components, listed in src/lib/ai/toolkits.ts",
     ]
   outputs:

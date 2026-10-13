@@ -26,6 +26,13 @@ const config: NextConfig = {
     "@turbineh/storage",
   ],
   serverExternalPackages: ["pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
+  // /cli and /docs were merged into /use (how to use: people, coding agents, API); old links land on their section.
+  async redirects() {
+    return [
+      { source: "/cli", destination: "/use#agents", permanent: false },
+      { source: "/docs", destination: "/use#api", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

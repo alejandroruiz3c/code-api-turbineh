@@ -37,9 +37,29 @@ interface ImprovementEstimate {
   minutes: { min: number; max: number };
 }
 
+/** One failing check of a delivered, not verified package (ADR-0037 §D1). */
+interface DeliveryFailure {
+  step: string;
+  test: string | null;
+  where: string;
+  owner: string | null;
+  message: string;
+  rerun: string;
+  fix: string;
+}
+
 interface BuildResult {
   status: string;
   error: string | null;
+  /** True only when every check passed (ADR-0037). */
+  verified?: boolean | null;
+  delivery?: {
+    kind: "verified" | "unverified" | "report_only";
+    label: string;
+    checks_passed: number;
+    checks_total: number;
+    failures: DeliveryFailure[];
+  } | null;
   repo_url: string | null;
   improvement_build_id: string | null;
   metrics: {
@@ -54,11 +74,16 @@ interface BuildResult {
   };
   artifact: {
     slug?: string;
-    zip_url: string;
+    zip_url: string | null;
     files: string[];
     docs: Record<string, string>;
+    report_only?: boolean;
   } | null;
 }
+
+/** A failed gate that still delivered its package (never presented as verified). */
+const notVerified = (r: BuildResult) =>
+  r.status === "failed" && r.delivery?.kind === "unverified" && Boolean(r.artifact?.zip_url);
 
 /** Live trace, in the order the orchestration works: understand → decide → execute → verify. */
 const PHASES: { key: string; label: string; match: string[]; optional?: boolean }[] = [
@@ -140,7 +165,9 @@ export function FlowView({ id }: { id: string }) {
         ? "deployed"
         : "verified"
       : result.status === "failed"
-        ? "failed"
+        ? notVerified(result)
+          ? "generated"
+          : "failed"
         : "generating"
     : finished
       ? finished.data.status === "done"
@@ -159,13 +186,19 @@ export function FlowView({ id }: { id: string }) {
         ) : null}
       </div>
 
-      {result?.artifact ? (
+      {result && notVerified(result) && result.delivery ? (
+        <NotVerifiedPanel delivery={result.delivery} />
+      ) : null}
+      {result?.artifact?.zip_url ? (
         <ResultScreen id={id} result={result} onReload={() => void loadResult()} />
       ) : null}
-      {result && !result.artifact ? (
+      {result && !result.artifact?.zip_url ? (
         <Panel title="What happened">
           <p className="text-sm text-bad">
-            {result.error ?? "A check did not pass, so nothing was delivered."}
+            {result.error ??
+              (result.artifact?.report_only
+                ? "A security or policy check blocks delivery: only the report was delivered, never runnable code."
+                : "A check did not pass, so nothing was delivered.")}
           </p>
           <p className="mt-2 text-sm text-ice-2">
             → Start the flow again with more detail about the rule that matters, or narrow it to one
@@ -249,6 +282,38 @@ export function FlowView({ id }: { id: string }) {
   );
 }
 
+/** "Delivered, not verified: N/M": the exact failures and the suggested fix, before anything else (ADR-0037). */
+function NotVerifiedPanel({ delivery }: { delivery: NonNullable<BuildResult["delivery"]> }) {
+  return (
+    <Panel title={delivery.label}>
+      <p className="text-sm text-ice-2">
+        The package is delivered so you or your coding agent can continue, but the TurbineH gate did
+        not pass: it is <strong className="text-bad">not verified</strong>. Fix the failure below
+        first — AGENTS.md and turbineh.json in the package say the same.
+      </p>
+      <ul className="mt-3 flex flex-col gap-3 text-sm">
+        {delivery.failures.map((f) => (
+          <li
+            key={`${f.step}-${f.where}-${f.test ?? ""}`}
+            className="rounded-lg border border-bad/50 p-3"
+          >
+            <p className="text-bad">
+              ✗ {f.step}
+              {f.test ? ` · ${f.test}` : ""}
+            </p>
+            <p className="mt-1 font-mono text-xs text-ice-2">
+              {f.where}
+              {f.owner ? ` · ${f.owner}` : ""}
+            </p>
+            {f.message ? <p className="mt-1 text-xs text-muted">{f.message}</p> : null}
+            <p className="mt-2 text-xs text-cream">{f.fix}</p>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 function ResultScreen({
   id,
   result,
@@ -287,8 +352,9 @@ function ResultScreen({
               <span className="text-teal" aria-hidden="true">
                 ✓
               </span>
-              Package verified in the sandbox: {h?.checksPassed ?? "—"}/{h?.checksTotal ?? "—"}{" "}
-              checks (build, tests, end-to-end, secrets, security rules, vulnerabilities, licences)
+              {result.verified === false
+                ? `Not verified: ${h?.checksPassed ?? "—"}/${h?.checksTotal ?? "—"} checks passed in the sandbox — see the failure above`
+                : `Package verified in the sandbox: ${h?.checksPassed ?? "—"}/${h?.checksTotal ?? "—"} checks (build, tests, end-to-end, secrets, security rules, vulnerabilities, licences)`}
             </li>
             {works.slice(0, 6).map((c) => (
               <li key={c.criterion} className="flex gap-2">
@@ -365,17 +431,19 @@ function ResultScreen({
           Try example
         </button>
         <a
-          href={result.artifact?.zip_url}
+          href={result.artifact?.zip_url ?? undefined}
           className="rounded-full border border-teal px-5 py-2 text-sm text-teal hover:bg-teal/10"
         >
           Download ZIP
         </a>
-        <a
-          href="#integrate"
-          className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal"
-        >
-          Integrate into repository
-        </a>
+        {result.verified === false ? null : (
+          <a
+            href="#integrate"
+            className="rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal"
+          >
+            Integrate into repository
+          </a>
+        )}
         <button
           type="button"
           onClick={() =>
@@ -390,9 +458,11 @@ function ResultScreen({
         </button>
       </div>
 
-      <div id="integrate" className="scroll-mt-24">
-        <RepoIntegration planId={id} />
-      </div>
+      {result.verified === false ? null : (
+        <div id="integrate" className="scroll-mt-24">
+          <RepoIntegration planId={id} />
+        </div>
+      )}
 
       <div>
         <div

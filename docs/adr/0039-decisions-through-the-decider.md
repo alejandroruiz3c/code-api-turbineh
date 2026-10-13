@@ -1,4 +1,4 @@
-# ADR-0038 · Decisions through the decider
+# ADR-0039 · Decisions through the decider
 
 - Status: accepted
 - Date: 2026-10-13

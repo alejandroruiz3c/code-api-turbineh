@@ -100,7 +100,7 @@ describe("zero-friction packages (ADR-0035)", () => {
       ...spec("saas-crud", [
         "The owner adds a supplier",
         "Owners edit a supplier",
-        // The generated create test leaves the optional contact email empty: not proven (ADR-0038 §4).
+        // The generated create test leaves the optional contact email empty: not proven (ADR-0039 §4).
         "The owner adds a supplier with a contact email",
       ]),
       entities: [

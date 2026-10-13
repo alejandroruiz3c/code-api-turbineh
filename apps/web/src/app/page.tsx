@@ -101,7 +101,7 @@ export default async function Home() {
       </section>
       <p className="mt-4 text-sm text-muted">
         Same engine for people and agents:{" "}
-        <Link href="/cli" className="text-teal underline-offset-4 hover:underline">
+        <Link href="/use#agents" className="text-teal underline-offset-4 hover:underline">
           the CLI
         </Link>{" "}
         speaks to humans and returns structured state to your coding agent.

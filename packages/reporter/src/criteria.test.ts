@@ -11,7 +11,7 @@ const evidence = [
 ];
 
 describe("deterministic criteria → test mapping", () => {
-  // Precision first (ADR-0038 §4): the deterministic pass accepts a test only when it exercises every salient word of
+  // Precision first (ADR-0039 §4): the deterministic pass accepts a test only when it exercises every salient word of
   // the criterion; long Given/When/Then criteria whose extra details the title does not show go to the decider.
   it("leaves criteria with details the test title does not show to the decider", () => {
     expect(

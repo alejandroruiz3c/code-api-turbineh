@@ -176,7 +176,7 @@ const isTestEvidence = (e: string) => /^(End-to-end|Unit) test: /.test(e);
 /**
  * A decider match is accepted only at this confidence (precision first: a false "met" is worse than "open"). 0.8 is a
  * probability of at least 0.9 on a two-option question; on the labelled pairs (bench/agent-decisions/criteria.ts) the
- * true matches score 0.82–0.92 and the only wrong "test" pick 0.1 (ADR-0038 §4).
+ * true matches score 0.82–0.92 and the only wrong "test" pick 0.1 (ADR-0039 §4).
  */
 export const CRITERION_MATCH_CONFIDENCE = 0.8;
 

@@ -1,5 +1,5 @@
 /**
- * Adaptation decisions of the GitHub integration (ADR-0034) — code vs decider, on 20 labelled repositories (ADR-0038).
+ * Adaptation decisions of the GitHub integration (ADR-0034) — code vs decider, on 20 labelled repositories (ADR-0039).
  * Three decisions per repository: which app of the project receives the capability, the database strategy and the
  * authentication strategy. "code" is the engine's deterministic analysis (pickAppPath + analysisFindings, what runs
  * today); "decider" asks the configured decider (primary + fallback, as selection) one batched request per repository

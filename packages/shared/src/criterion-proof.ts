@@ -1,5 +1,5 @@
 /**
- * Does a test prove an acceptance criterion? (ADR-0035, ADR-0038). Precision first: a false "met" is worse than
+ * Does a test prove an acceptance criterion? (ADR-0035, ADR-0039). Precision first: a false "met" is worse than
  * "open" — a coding agent trusts it and skips the work. Deterministic, never a model. A test proves a criterion only
  * when its title (plus its key assertions, when known) exercises the criterion's subject, action and expected outcome:
  *   1. negation — a criterion that says something must NOT happen ("cannot", "denies", "rejects"…) is proven only by a

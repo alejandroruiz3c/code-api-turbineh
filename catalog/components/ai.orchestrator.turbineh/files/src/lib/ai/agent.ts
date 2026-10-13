@@ -31,7 +31,7 @@ import {
  *   3. Tool loop: in the same request, TurbineH orchestration decides the turn's first action — which tool, or a
  *      reply — and the open model writes only that (the chosen tool's arguments, or the reply). After a tool result,
  *      when the decision is not confident enough, or without a decider, the model sees every tool and chooses itself
- *      (ADR-0038). The model may only act through the tools it is given. Arguments are validated with each tool's Zod schema; unknown tools and invalid
+ *      (ADR-0039). The model may only act through the tools it is given. Arguments are validated with each tool's Zod schema; unknown tools and invalid
  *      arguments go back to the model as errors; a step limit and timeouts bound every run.
  *   4. Irreversible tools (create, move, cancel, send, pay…) never run on the model's say-so: their `prepare` step
  *      validates against real data and returns a summary; the person must explicitly confirm it in their next

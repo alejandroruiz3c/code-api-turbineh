@@ -159,7 +159,7 @@ export interface AgentTurnDecision {
 }
 
 /**
- * runAgent's decision for one turn (ADR-0038), in the same single request as before: the route, the safety check and
+ * runAgent's decision for one turn (ADR-0039), in the same single request as before: the route, the safety check and
  * the first action — one of the tools or a plain reply — as one Choice over the tools the app offers. The open model
  * then writes only the chosen tool's arguments, or only the reply. Later steps of the turn (after a tool result) are
  * left to the model: a decider request per step was measured slower and costlier for the same accuracy.

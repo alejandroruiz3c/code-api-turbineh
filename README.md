@@ -55,7 +55,7 @@ curl -X POST https://software.turbineh.com/v1/builds \
 # → { "build_id", "status_url", "events_url" }  ·  live trace: GET /v1/builds/{id}/events (SSE)
 ```
 
-OpenAPI: [`/v1/openapi.json`](https://software.turbineh.com/v1/openapi.json) · docs: [`/docs`](https://software.turbineh.com/docs).
+OpenAPI: [`/v1/openapi.json`](https://software.turbineh.com/v1/openapi.json) · how to use (people, coding agents, API): [`/use`](https://software.turbineh.com/use).
 
 ## Repository
 

@@ -30,7 +30,7 @@ export const STATE_LABEL: Record<string, string> = {
   planning: "preparing the plan",
   planned: "plan ready — nothing generated yet",
   generating: "generating and verifying",
-  generated: "package generated, checks not all green",
+  generated: "delivered, not verified — checks not all green (see the failure and fix)",
   verified: "package generated and verified",
   integrated: "integrated in this project (not verified here yet)",
   integration_verified: "integrated and verified in this project",

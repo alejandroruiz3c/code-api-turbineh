@@ -11,7 +11,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- Decisions through the decider (ADR-0038): audit of every model call (`docs/decisions-audit.md`) and the rule —
+- Decisions through the decider (ADR-0039): audit of every model call (`docs/decisions-audit.md`) and the rule —
   decisions among options → the decider, generation → open models, deterministic questions → code. **runAgent**
   (component `ai.orchestrator.turbineh` 0.3.0) takes each turn's first action — which tool, or a reply — from the
   decider in the request it already made (route + safety), and the open model writes only that tool's arguments or the
@@ -21,6 +21,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   single-action turns. The GitHub integration's adaptation decisions stay in code (measured: database and auth are
   fixed policy and compatibility; the decider is more accurate on monorepo app choice but slower and costlier — owner
   decision). `verify:recipe` assembles the domain components a prompt names (e.g. bookings).
+- **How to use** page, `/use` (ADR-0038): one public page for the three ways in — people on the web (invitation,
+  describe → plan → generate → verified result → integrate as ZIP or pull request, what each package contains, the
+  states), coding agents (install, `turbineh init`, `turbineh build @spec.md --json` with events, exit codes, timeout
+  and resume, `left`/`verify`, `apply --pr`, MCP for Claude Code, Codex, Cursor and any client, rules for agents) and
+  the API (Bearer token, why the workspace id must be a random UUID, main endpoints, catalogue index); use cases come
+  from the catalogue recipes. `/cli` and `/docs` redirect to its sections; the navigation shows "How to use". Tests
+  render the page and check every CLI command and flag shown against `turbineh --help`.
 
 - Native fit in the coding agent's flow (ADR-0036, Frontiers R1): **`turbineh build "<spec>" | @spec.md`** — plan →
   generate → wait → write → commit → summary in one command. Empty folder: the complete verified app (agent files
@@ -38,6 +45,29 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   glue that passed the gate is reused by later builds (verified-glue cache). **Full specs**: up to 20,000 characters
   and up to 15 compiled criteria, each returned as covered/open in the plan (`criteria`) and met/open in the summary.
   `GET /v1/plans/{id}/package?format=app`; `install.sh` points the CLI at the server it came from.
+- Robust builds (ADR-0037, from the Frontiers booking-agent rerun 7362be2a / 66af3182, which delivered nothing after a
+  single cross-component E2E failure):
+  - **Never deliver nothing.** When only quality checks fail after corrections, the package is still delivered
+    (ZIP, bundle, docs), marked `verified: false`. AGENTS.md, `turbineh.json` and TURBINEH_REPORT.md give the failing
+    step, test, file:line, owner and a suggested fix. The API (`verified`, `delivery`, `error`), the UI and the CLI show
+    "Delivered, not verified: N/M checks passed". The build status stays `failed` and the flow state is `generated`,
+    never `verified`, so deploy, improve and pull requests still require a passed gate. If a security or policy check
+    blocks (secrets, static security errors, blocking advisories, licences, or a scan that did not report), only the
+    report is delivered.
+  - **Corrections never remove unrelated components.** Every package records file ownership in
+    `.turbineh/owners.json`. A failure is attributed to the owner of the failing test file and of its imports, and only
+    implicated parts (glue, Backup Coder fill, business rules, integrated library) can be removed. There is no more
+    full swap. The attribution is recorded in `metrics.attribution`.
+  - **Non-functional requirements are not entities.** Rate limits, input limits, prompt-injection and abuse
+    protection, timeouts, logging and similar requirements map to capabilities (Security Pack, AI Safety Pack,
+    retries, logging) through the compiler prompt and a deterministic guard. They are never CRUD entities, so there is
+    no `RateLimitTracker` with pages and E2E.
+  - **Cross-component regressions are caught before main.** `verify:recipe` assembles recipes the way the pipeline
+    does: required, domain and native components. `--list` and `--all` cover every combination. CI runs typecheck and
+    unit tests of every recipe + domain-component combination on each PR that touches the catalogue or the assembler.
+  - The gate output now keeps each failing step's key lines, and licence results always survive the output tail.
+  - Test-only forced failure (`TURBINEH_TEST_FLAGS=1` on the worker plus a prompt marker). `deploy.sh` refuses a
+    production worker that sets it.
 - Zero-friction packages (ADR-0035, from the Frontiers shop rerun R2–R5), for every recipe and enforced by
   `catalog:validate`: **zero-setup local database** — `pnpm db:local`, and `db:migrate`, `dev` and `test:e2e` use a
   local PostgreSQL when `DATABASE_URL` is unset (real PostgreSQL 17 binaries via `embedded-postgres`, PGlite with
@@ -110,13 +140,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
-- Acceptance criteria are "met" only when a test exercises them (ADR-0038 §4): generated CRUD tests no longer prove
+- Acceptance criteria are "met" only when a test exercises them (ADR-0039 §4): generated CRUD tests no longer prove
   refusals, other roles or features they do not touch (production build `f195341c` showed "a viewer cannot edit a
   note", "invite a teammate", "audit log" and "search / tag filter" as met by create/edit tests); the report's mapping
   checks the test's steps and assertions and accepts the decider's match only at confidence ≥ 0.8. Labelled set of 38
   pairs: precision 1.00, recall 0.95.
 - TurbineH AI gateway: `tools`, `tool_choice` and tool-call turns are forwarded (validated and bounded). They were
   dropped, so runAgent never called a tool through the gateway (6/20 correct first actions on staging before the fix).
+- Agent instructions (AGENTS.md block, Claude Code skill, /use): run `turbineh build` in the foreground with a long timeout instead of in the background — in the Frontiers shop rerun the agent polled with blind sleeps and waited ~130 s after the result was ready.
+- `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0038);
+  API callers without it get a 401 problem instead of a redirect to the access page.
 
 - `turbineh init` without `--agent` writes the agent-neutral `AGENTS.md` (read by Codex, Cursor and most coding agents) unless the project already has `CLAUDE.md`; `--agent claude` still writes `CLAUDE.md` and the skill.
 - Web deploys: agent worktrees (`.claude/`) are excluded from the Vercel upload (it exceeded 15,000 files and the production web silently stayed on an old build), and `deploy.sh` now stops with Vercel's error instead of filtering it out (text or JSON CLI output).

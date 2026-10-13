@@ -70,7 +70,7 @@ export function run(
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], detached: true });
     let out = "";
     const keep = (d: Buffer) => {
-      out = fullOutput ? out + d.toString() : (out + d.toString()).slice(-8000);
+      out = fullOutput ? out + d.toString() : (out + d.toString()).slice(-12000);
     };
     child.stdout.on("data", keep);
     child.stderr.on("data", keep);
@@ -80,7 +80,7 @@ export function run(
       resolve({
         code: code ?? 1,
         ms: Math.round(performance.now() - start),
-        tail: fullOutput ? out : out.slice(-3000),
+        tail: fullOutput ? out : out.slice(-6000),
       });
     });
   });

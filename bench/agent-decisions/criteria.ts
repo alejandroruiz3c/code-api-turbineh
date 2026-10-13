@@ -1,5 +1,5 @@
 /**
- * Acceptance criterion → test matching (ADR-0038 §4): precision and recall on the labelled pairs of
+ * Acceptance criterion → test matching (ADR-0039 §4): precision and recall on the labelled pairs of
  * packages/shared/src/criterion-proof.fixtures.ts, for
  *   - the deterministic verdict alone (what acceptance rules and the report's first pass use);
  *   - deterministic, then the decider for pairs that pass the refusal/actor veto, accepted at confidence ≥ 0.9

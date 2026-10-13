@@ -9,3 +9,4 @@ export * from "./rule-fixtures.js";
 export * from "./currencies.js";
 export * from "./acceptance.js";
 export * from "./agent-guide.js";
+export * from "./ownership.js";
