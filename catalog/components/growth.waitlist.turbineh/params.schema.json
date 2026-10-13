@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "growth.waitlist.turbineh params (src/waitlist/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["doubleOptIn", "showPosition", "referral", "ownerCanExport", "ownerCanRemove"],
+  "properties": {
+    "doubleOptIn": {
+      "type": "boolean",
+      "description": "A signup counts only after the person opens the confirmation link emailed to them (logged without an email provider)."
+    },
+    "showPosition": {
+      "type": "boolean",
+      "description": "Confirmed people see their position in the queue."
+    },
+    "referral": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "boost"],
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Confirmed people get a personal referral link." },
+        "boost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Positions a referrer moves up for every confirmed referral."
+        }
+      }
+    },
+    "ownerCanExport": { "type": "boolean", "description": "Staff export the list as CSV." },
+    "ownerCanRemove": { "type": "boolean", "description": "Staff remove entries." }
+  }
+}
