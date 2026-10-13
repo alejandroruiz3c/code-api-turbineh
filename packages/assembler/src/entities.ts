@@ -817,7 +817,7 @@ ${
   const itemOf = (id: string) => items.find((i) => i.subjectId === id);
 `
     : ""
-}  const canExport = can(ctx.role, "export", ${resource});
+}${features.csvExport ? `  const canExport = can(ctx.role, "export", ${resource});\n` : ""}
   const exportQuery = ${listQuery}(filters);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canDelete = ${settings ? "false" : `can(ctx.role, ${act("delete")})`};

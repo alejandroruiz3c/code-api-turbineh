@@ -9,9 +9,9 @@ describe("staff allowlist", () => {
     expect(isStaffEmail("OWNER@example.com")).toBe(true);
     expect(isStaffEmail("visitor@example.com")).toBe(false);
     expect(isStaffEmail("owner@example.com", "")).toBe(false);
-    expect(maySignUp("visitor@example.com", "open")).toBe(true);
-    expect(maySignUp("visitor@example.com", "staff")).toBe(false);
-    expect(maySignUp("staff@example.com", "staff")).toBe(true);
+    expect(maySignUp("visitor@example.com", "open", undefined, [])).toBe(true);
+    expect(maySignUp("visitor@example.com", "staff", undefined, [])).toBe(false);
+    expect(maySignUp("staff@example.com", "staff", undefined, [])).toBe(true);
     expect(maySignUp("staff@example.com", "staff", "")).toBe(false);
   });
 

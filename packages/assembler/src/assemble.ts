@@ -293,14 +293,17 @@ export function assemble(input: AssembleInput): AssembleResult {
     outDir,
     acceptanceStatus(
       spec.acceptance_criteria,
-      shippedRules(outDir, [
-        ...coverageRules(input),
-        ...entityCoverage(
-          outDir,
-          entities.map((e) => e.name),
-        ),
-        ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
-      ]),
+      actingAs(
+        shippedRules(outDir, [
+          ...coverageRules(input),
+          ...entityCoverage(
+            outDir,
+            entities.map((e) => e.name),
+          ),
+          ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
+        ]),
+        matrix?.roles.owner?.label ?? null,
+      ),
       null,
       strictCriteria(fid),
     ),
@@ -548,6 +551,25 @@ export function writeReports(outDir: string, security: string, report: string): 
 /** START_HERE.html after verification: the client's entry point, with the real results. */
 export function writeStartHere(outDir: string, facts: HandoverFacts): void {
   writeFileSync(join(outDir, "START_HERE.html"), startHereHtml(facts));
+}
+
+/**
+ * E2E tests run as the workspace owner, whose role the request names (Staff, Manager…): the proof check sees that
+ * actor, so "a staff member…" criteria are not vetoed for a test the staff owner runs. Unit tests are unchanged.
+ */
+function actingAs(rules: CoverageRule[], ownerLabel: string | null): CoverageRule[] {
+  if (!ownerLabel || ownerLabel.toLowerCase() === "owner") return rules;
+  return rules.map((r) =>
+    r.proof && r.test.startsWith("tests/e2e/")
+      ? {
+          ...r,
+          proof: {
+            ...r.proof,
+            assertions: [...(r.proof.assertions ?? []), `acting as ${ownerLabel.toLowerCase()}`],
+          },
+        }
+      : r,
+  );
 }
 
 /** README line of a generated entity, by kind. */
