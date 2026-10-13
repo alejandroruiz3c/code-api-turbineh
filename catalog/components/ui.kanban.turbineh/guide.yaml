@@ -1,0 +1,76 @@
+schema: turbineh.guide/v0.1
+component: ui.kanban.turbineh
+title: Accessible kanban board with drag and drop and keyboard moves over workflow states
+summary: >-
+  Turns the list of a status workflow (tasks, pieces, requests) into a kanban board: one column per state, cards moved
+  by drag and drop or with the keyboard alone, every step announced to screen readers. A move is the same server-checked
+  transition as on the record page — the workflow's definition, the current state and the person's role decide, under a
+  row lock — and lands in the record's immutable history with who and when. A refused move puts the card back and says
+  why. Overdue and stuck cards are highlighted. It needs domain.workflow.turbineh; it does not reorder cards inside a
+  column or add swimlanes.
+keywords:
+  [kanban, board, drag and drop, drag-and-drop, columns, statuses, stages, cards, keyboard accessible, a11y, task board,
+   production board, trello-like, move card]
+synonyms:
+  kanban: [board, task board, status board, stage board]
+  move: [drag, drop, change status, transition]
+use_cases:
+  - "A kanban board per project with drag and drop between task statuses"
+  - "A board by stage for production pieces, highlighting the ones stuck too long"
+  - "Staff moving client requests through review statuses"
+use_when:
+  - "The request mentions a kanban, a board by status or stage, or drag and drop between statuses"
+  - "Records already follow a status workflow"
+avoid_when:
+  - "Free ordering of items without statuses (a sortable list)"
+  - "Gantt charts or timelines"
+tradeoffs:
+  - { choice: "Columns are workflow states", gain: "One rule set and one history for the board and the record page", cost: "Columns change only by editing the workflow" }
+  - { choice: "Native drag events + keyboard model, no library", gain: "No dependency; works with keyboard and screen readers", cost: "No touch-specific drag (touch users open the card and use its buttons)" }
+config:
+  - { name: "src/kanban/params.json", default: "every workflow, drag and drop on, overdue highlighted", description: "Which workflows are boards, whether cards move, whether late cards are highlighted" }
+interfaces:
+  - { name: KanbanBoard, signature: "<KanbanBoard columns={{ key, label }[]} cards={{ id, title, column, href, allowed[], badges[] }[]} dragAndDrop move={(id, to) => Promise<{ ok, message }>} />", where: src/components/kanban/kanban-board.tsx }
+  - { name: moveCard, signature: "moveCard(id, to) → { ok, message } — a workflow transition, re-checked on the server", where: src/app/dashboard/workflow/board-actions.ts }
+  - { name: WorkflowBoard, signature: "<WorkflowBoard ctx wf items /> — the board on /dashboard/workflow/<key>", where: src/workflow/board.tsx }
+  - { name: "Keyboard", signature: "keyAction(key, { picked, home, target }, columns, allowed); nextColumn(columns, allowed, current, dir)", where: src/kanban/keyboard.ts }
+extension_points:
+  - what: "Show more on a card (assignee, priority, a photo)"
+    where: "src/workflow/board.tsx (cards mapping), src/components/kanban/kanban-board.tsx"
+    how: "Add the field to the card object and render it; keep the move handle and its aria-label."
+  - what: "Allow or forbid a move"
+    where: "src/workflow/params.json (transitions)"
+    how: "Moves are workflow transitions: edit the transitions and roles; the board follows."
+  - what: "Use the board for another kind of record"
+    where: "src/components/kanban/kanban-board.tsx"
+    how: "Pass columns, cards and a server action `move(id, to)` that checks the change on the server."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 (server actions, client components), react 19"
+  recipes: [projects, tracker, internal-tool, client-portal]
+  requires: [domain.workflow.turbineh]
+  works_with: [storage.private-uploads.turbineh, jobs.scheduled.turbineh]
+  notes: "Without domain.workflow.turbineh the board has no data; the pipeline adds it through `requires`."
+security:
+  - "The browser only proposes a move; the server re-checks membership, the transition and the role under a row lock"
+  - "Moves are rate-limited per person and recorded in the immutable history"
+guarantees:
+  - { claim: "Drag and drop moves a card and records the change with who and when", test: "tests/e2e/kanban.spec.ts › a card dragged to another status column is saved, with who and when in its history" }
+  - { claim: "The board works with the keyboard alone and announces each step", test: "tests/e2e/kanban.spec.ts › a card can be moved with the keyboard alone, and each step is announced" }
+  - { claim: "Moves the workflow does not allow are refused and the card stays", test: "tests/e2e/kanban.spec.ts › a move the workflow does not allow is refused by the server and the card stays where it was" }
+  - { claim: "Keyboard moves only target columns the card may go to", test: "tests/unit/kanban.test.ts › moves with the keyboard only between the columns the card may go to" }
+limits:
+  - "No ordering inside a column, WIP limits or swimlanes"
+  - "Touch devices drag through the record page's buttons"
+example: |
+  // src/kanban/params.json — a board for the "task" workflow only
+  { "workflows": ["task"], "dragAndDrop": true, "highlightOverdue": true }
+params:
+  file: src/kanban/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "workflows", default: "[\"*\"]", description: "Workflow keys shown as boards; \"*\" = every workflow" }
+    - { name: "dragAndDrop", default: "true", description: "Cards move by drag and drop and keyboard; false = read-only board" }
+    - { name: "highlightOverdue", default: "true", description: "Overdue and stuck cards are highlighted" }
+  example: |
+    { "workflows": ["task"], "dragAndDrop": true, "highlightOverdue": true }

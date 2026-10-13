@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: ui.kanban.turbineh
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:generic/turbineh/ui.kanban.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Accessible kanban board over workflow states (domain.workflow.turbineh): one column per state, cards moved by drag and drop or with the keyboard alone (Space to pick up, arrows to choose a column, Space/Enter to drop, Escape to cancel) with every step announced in a live region; each move is a server-checked workflow transition (definition, current state, role) recorded in the immutable history; a refused move puts the card back with the reason; overdue and stuck cards highlighted."
+  does_not: "Does not reorder cards inside a column, set WIP limits or swimlanes; boards only exist for workflows"
+  use_cases: [projects, tracker, internal-tool, client-portal]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "No drag-and-drop dependency: native HTML5 drag events plus a keyboard model",
+      "Moves are the same transitions as the record page: one rule set, one history",
+    ]
+  cons: ["No ordering within a column"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/kanban/params.json (workflows[] keys or \"*\", dragAndDrop, highlightOverdue)",
+      "<KanbanBoard columns cards dragAndDrop move /> with move(id, to) → { ok, message }",
+    ]
+  outputs: ["the workflow list page renders a kanban board (src/workflow/board.tsx); moveCard(id, to) server action"]
+  errors: ["a refused move returns the workflow's reason (UserFacingError) and the card returns to its column"]
+  limits: ["500 cards per board (the workflow list limit); 60 moves per minute per person"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler: files/ src/kanban/{config,keyboard}.ts + params.json, src/components/kanban/kanban-board.tsx, tests/unit/kanban.test.ts; files-with/domain.workflow.turbineh/ replaces src/workflow/board.tsx and adds the moveCard action and the kanban E2E."
+  config: []
+  migrations: false
+params:
+  file: src/kanban/params.json
+  schema: params.schema.json
+  entities: [Board, Column, KanbanBoard, KanbanColumn, Lane, Swimlane]
+quality:
+  tests:
+    {
+      command: "unit (params, keyboard moves only to allowed columns) + E2E (drag to another column saved with history, keyboard-only move announced, refused move keeps the card); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: the browser only proposes a move; moveCard re-checks membership, rate limit and the workflow transition under a row lock; the allowed columns sent to the browser are a hint, never trusted."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "projects + workflow + kanban + uploads + jobs.scheduled passes the full verification gate with the kanban E2E suite"
+    origin: tested
+    ref: "verify:recipe (ADR-0043 combinations)"
+relations:
+  requires: [domain.workflow.turbineh]
+  provides: [ui.kanban]
+  conflicts: []
+  tested_with: [recipe.projects]

@@ -141,6 +141,67 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Brickline (learning round, projects): tasks with statuses on a kanban board with drag and drop, file attachments,
+    // overdue tasks emailed every morning (logged without an email provider).
+    recipe: "projects",
+    with: [
+      "domain.workflow.turbineh",
+      "ui.kanban.turbineh",
+      "storage.private-uploads.turbineh",
+      "jobs.scheduled.turbineh",
+    ],
+    prompt:
+      'Build "Brickline", a project management tool for a small construction company. Visual identity: slate ' +
+      "`#2F3A45`, safety yellow `#FFC300` accents. Projects have phases, tasks (title, assignee, due date, status, " +
+      "priority) and a Kanban board per project with drag-and-drop between statuses; each task has comments and file " +
+      'attachments. Members see only the projects they belong to; managers create projects and assign people. A "my ' +
+      'tasks" page lists what is due this week, and overdue tasks are emailed to the assignee every morning (log it ' +
+      "when no email provider is configured).",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "task",
+            label: "Task",
+            plural: "Tasks",
+            initial: "todo",
+            dueDate: true,
+            createRoles: ["*"],
+            states: [
+              { key: "todo", label: "To do", limitHours: null, final: false },
+              { key: "in_progress", label: "In progress", limitHours: 120, final: false },
+              { key: "done", label: "Done", limitHours: null, final: true },
+            ],
+            transitions: [
+              { from: ["todo"], to: "in_progress", label: "Start", roles: ["*"] },
+              { from: ["in_progress"], to: "done", label: "Complete", roles: ["*"] },
+              { from: ["in_progress"], to: "todo", label: "Back to do", roles: ["*"] },
+            ],
+          },
+        ],
+      },
+      "ui.kanban.turbineh": { workflows: ["task"], dragAndDrop: true, highlightOverdue: true },
+      "storage.private-uploads.turbineh": {
+        maxBytes: 10 * 1024 * 1024,
+        types: ["pdf", "png", "jpg"],
+        maxFilesPerRecord: 20,
+        notifyOnUpload: false,
+      },
+      "jobs.scheduled.turbineh": {
+        jobs: [
+          {
+            id: "overdue-reminders",
+            kind: "overdue-digest",
+            cron: "0 7 * * *",
+            timeZone: "UTC",
+            what: "Overdue tasks are emailed to the assignee every morning",
+          },
+        ],
+        logWhenNoEmailProvider: true,
+      },
+    },
+  },
+  {
     // Pixelyard (learning round, internal-tool): loans requested by staff, approved or rejected by a manager, returned;
     // overdue loans highlighted and the borrower emailed (logged without an email provider).
     recipe: "internal-tool",
