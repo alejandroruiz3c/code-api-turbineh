@@ -137,7 +137,7 @@ export async function compileIntent(
 
   const parsed = buildSpecSchema.safeParse({
     recipe: decisions.recipe.choice,
-    out_of_scope_reason: outOfScope ? "The prompt does not match any beta recipe." : null,
+    out_of_scope_reason: outOfScope ? "No ready-made template matches this need exactly." : null,
     closest_recipe: outOfScope ? (closest ?? null) : null,
     ...meta,
     ...entities,

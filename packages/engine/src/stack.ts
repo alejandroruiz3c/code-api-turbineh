@@ -77,8 +77,79 @@ const TRACKED = [
 ];
 
 /**
- * Stack from a repository's manifests, uploaded files or a declared stack. Deterministic; a declared stack is marked
- * `adaptationPending` because adapting to the concrete project is still to be done (PLAN §16.2).
+ * Canonical framework id from what a person types or picks ("Next.js", "next", "Vite + React"…). The web wizard
+ * sends display names; before ADR-0050 "Next.js" became "next.js", which never matched "nextjs" and blocked the main
+ * path with "pages need porting".
+ */
+export function normalizeFramework(name: string | null | undefined): string | null {
+  const raw = (name ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  const key = raw.replace(/[\s._-]/g, "");
+  const known: Record<string, string> = {
+    next: "nextjs",
+    nextjs: "nextjs",
+    vite: "vite",
+    "vite+react": "vite",
+    react: "vite",
+    nest: "nestjs",
+    nestjs: "nestjs",
+    express: "express",
+    expressjs: "express",
+    remix: "remix",
+    hono: "hono",
+    fastify: "fastify",
+    nuxt: "nuxt",
+    nuxtjs: "nuxt",
+    sveltekit: "sveltekit",
+    astro: "astro",
+    django: "django",
+    fastapi: "fastapi",
+    flask: "flask",
+    gin: "gin",
+    "net/http": "net/http",
+    rails: "rails",
+    rubyonrails: "rails",
+    laravel: "laravel",
+  };
+  return known[key] ?? raw;
+}
+
+const FRAMEWORK_LABELS: Record<string, string> = {
+  nextjs: "Next.js",
+  vite: "Vite + React",
+  nestjs: "NestJS",
+  express: "Express",
+  remix: "Remix",
+  hono: "Hono",
+  fastify: "Fastify",
+  nuxt: "Nuxt",
+  sveltekit: "SvelteKit",
+  astro: "Astro",
+  django: "Django",
+  fastapi: "FastAPI",
+  flask: "Flask",
+  gin: "Gin",
+  "net/http": "Go net/http",
+  rails: "Ruby on Rails",
+  laravel: "Laravel",
+};
+const LANGUAGE_LABELS: Record<string, string> = {
+  typescript: "TypeScript",
+  javascript: "JavaScript",
+  python: "Python",
+  go: "Go",
+  ruby: "Ruby",
+  php: "PHP",
+};
+
+/** Display name for a framework or language id ("nextjs" → "Next.js"). */
+export const frameworkLabel = (id: string | null | undefined): string =>
+  id ? (FRAMEWORK_LABELS[id] ?? id) : "";
+export const languageLabel = (id: string): string => LANGUAGE_LABELS[id] ?? id;
+
+/**
+ * Stack from a repository's manifests, uploaded files or a declared stack. Deterministic. A declared stack (no
+ * repository, no files) means a new project: TurbineH builds a complete app, so nothing is left to adapt (ADR-0050).
  */
 export function detectStack(env: EnvironmentInput): DetectedStack {
   const files = env.files ?? {};
@@ -89,12 +160,12 @@ export function detectStack(env: EnvironmentInput): DetectedStack {
       : "files";
   if (source === "declared" && env.stack) {
     return {
-      language: env.stack.language.toLowerCase(),
-      framework: env.stack.framework?.toLowerCase() ?? null,
+      language: env.stack.language.trim().toLowerCase() || "typescript",
+      framework: normalizeFramework(env.stack.framework),
       packageManager: null,
       versions: env.stack.versions ?? {},
       source,
-      adaptationPending: true,
+      adaptationPending: false,
     };
   }
   const pkg = ((): PackageJson => {
@@ -173,7 +244,7 @@ export function dependencyDiff(
       major(have) !== major(d.version)
     )
       conflicts.push(
-        `${d.name}: the package is verified with ${d.version}, the project has ${have} (kept). Check the integration with \`turbineh verify\` or align the version.`,
+        `${d.name}: your project has ${have}, the package was verified with ${d.version}. Your version is kept; the checks in your project (pull request or \`turbineh verify\`) show whether it works. To be safe, upgrade ${d.name} to ${major(d.version)}.`,
       );
   }
   return { added, conflicts };
@@ -197,47 +268,48 @@ export interface Compatibility {
  * Deterministic compatibility between the detected stack and what a capability needs. Full flows are Next.js
  * (App Router) + TypeScript + PostgreSQL; standalone components need a JS/TS runtime; the AI orchestrator is also
  * reachable over HTTP from any language.
+ *
+ * Every message says what happened, what it means for the person and what to do next (ADR-0050). A declared stack
+ * is a new project: TurbineH builds a complete app, so a declared stack is never "incompatible" — `planOutcome`
+ * explains what the person gets for stacks other than Next.js and offers a complete Next.js app in one click.
  */
 export function compatibility(stack: DetectedStack, kind: "use_case" | "component"): Compatibility {
   const incompatibilities: string[] = [];
   const missing: string[] = [];
+  if (stack.source === "declared") return { compatible: true, incompatibilities, missing };
   const js = stack.language === "typescript" || stack.language === "javascript";
+  const fw = frameworkLabel(stack.framework);
   if (stack.language === "unknown") {
     missing.push(
-      "The project's stack: connect the repository, upload package.json or declare the stack.",
+      "We could not tell your project's stack from the files you sent. Connect the repository or upload its package.json — or build a new, complete app instead.",
     );
   } else if (!js) {
     incompatibilities.push(
-      `${stack.language} project: TurbineH packages are TypeScript. Use the package as a separate service, or integrate the AI orchestrator over HTTP.`,
+      `Your project is written in ${languageLabel(stack.language)} and TurbineH builds TypeScript apps, so nothing can be added inside your code. You get a complete, verified Next.js app that runs as its own service next to yours (your code calls it over HTTP). Approve to continue, or build a standalone Next.js app instead.`,
     );
   }
   if (kind === "use_case" && js) {
     if (stack.framework && stack.framework !== "nextjs") {
       incompatibilities.push(
-        `${stack.framework} detected: this flow ships Next.js App Router routes. Its server modules (src/) can be reused; the pages need porting.`,
+        `Your project uses ${fw} and TurbineH builds Next.js apps. You get a complete, verified Next.js app: its server code under src/ (data access, validation, business rules) is plain TypeScript you can import into ${fw}; its screens are Next.js pages, so ${fw} does not use them — rebuild them in ${fw} or run the Next.js app next to yours. Approve to continue, or build a standalone Next.js app instead.`,
       );
     }
     const next = major(stack.versions.next);
     if (stack.framework === "nextjs" && Number.isFinite(next) && next < 15) {
       incompatibilities.push(
-        `Next.js ${stack.versions.next} detected: the package targets Next.js ${TARGET_STACK.versions.next} (App Router, async request APIs). Upgrade or adapt the route handlers.`,
+        `Your project uses Next.js ${stack.versions.next}; the package needs Next.js 15 or later (it is verified on ${TARGET_STACK.versions.next}). Upgrade Next.js in your project first (\`npx @next/codemod upgrade\`), or build a standalone app instead.`,
       );
     }
     if (stack.language === "javascript") {
       missing.push(
-        "TypeScript: the package is written in TypeScript (add a tsconfig.json or transpile the modules).",
+        "Your project is JavaScript and the package is TypeScript: add a tsconfig.json with `allowJs` so both work together (the package's README shows how).",
       );
     }
   }
   const nodeMajor = major(stack.versions.node);
   if (Number.isFinite(nodeMajor) && nodeMajor < 20) {
     incompatibilities.push(
-      `Node.js ${stack.versions.node} detected: Node.js 20 or later is required.`,
-    );
-  }
-  if (stack.adaptationPending) {
-    missing.push(
-      "Adaptation to your concrete project is pending: only the stack was declared, no project files were analysed.",
+      `Your project runs on Node.js ${stack.versions.node}; the package needs Node.js 20 or later. Upgrade Node.js (\`.nvmrc\` or \`engines.node\` in package.json) and approve to continue.`,
     );
   }
   return { compatible: incompatibilities.length === 0, incompatibilities, missing };

@@ -1,6 +1,6 @@
 import { posix } from "node:path";
 import type { RepositoryFit } from "@turbineh/shared";
-import { cleanVersion, major } from "./stack.js";
+import { cleanVersion, frameworkLabel, major } from "./stack.js";
 
 /**
  * Repository analysis (PLAN §16 P5, ADR-0034): what a client's project is made of and how it is written, from its
@@ -661,7 +661,7 @@ export function analysisFindings(a: RepoAnalysis, needs: PackageNeeds): Analysis
     if (a.language !== "typescript" && a.language !== "javascript") {
       compatible = false;
       conflicts.push(
-        "No JavaScript/TypeScript application found: the capability is TypeScript. Use it as a separate service.",
+        "No JavaScript or TypeScript app was found in this repository, and the capability is TypeScript, so it cannot be added inside your code. Run it as a separate service next to yours, or build a standalone Next.js app instead.",
       );
     }
   }
@@ -672,14 +672,14 @@ export function analysisFindings(a: RepoAnalysis, needs: PackageNeeds): Analysis
   if (needs.kind === "use_case" && a.framework.name && a.framework.name !== "nextjs") {
     compatible = false;
     conflicts.push(
-      `${a.framework.name} project: this complete flow ships Next.js App Router routes. Its server modules can be reused; the pages need porting.`,
+      `Your project uses ${frameworkLabel(a.framework.name)} and this capability is a Next.js app. Its server code (data access, validation, business rules) is plain TypeScript you can import into ${frameworkLabel(a.framework.name)}; its screens are Next.js pages that ${frameworkLabel(a.framework.name)} does not use, so you rebuild them there. To get everything working at once, build a standalone Next.js app instead.`,
     );
   }
   const next = major(a.framework.version);
   if (a.framework.name === "nextjs" && Number.isFinite(next) && next < 15) {
     compatible = false;
     conflicts.push(
-      `Next.js ${a.framework.version}: the capability targets Next.js 15+ (async request APIs). Upgrade Next.js first.`,
+      `Your project uses Next.js ${a.framework.version}; the capability needs Next.js 15 or later. Upgrade Next.js first (\`npx @next/codemod upgrade\`), then integrate again — or build a standalone app instead.`,
     );
   }
   if (a.framework.name === "nextjs" && a.framework.router === "pages" && needs.kind === "use_case")

@@ -4,6 +4,8 @@ export * from "./plan.js";
 export * from "./result.js";
 export * from "./search.js";
 export * from "./stack.js";
+export * from "./outcome.js";
+export * from "./messages.js";
 export * from "./types.js";
 export * from "./use-cases.generated.js";
 export * from "./zip.js";

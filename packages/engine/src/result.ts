@@ -7,6 +7,7 @@ import type {
   Requirement,
 } from "@turbineh/shared";
 import { ERRORS } from "./errors.js";
+import { asProductError, explainFailure } from "./messages.js";
 
 /** The parts of a build row the product reads (the same row carries the plan and the generation). */
 export interface FlowRow {
@@ -129,9 +130,12 @@ export function flowResult(
   }
   if (state === "failed") {
     errors.push(
-      row.options.mode === "plan" && /out of scope/i.test(row.error ?? "")
-        ? ERRORS.outOfScope(row.error ?? "")
-        : ERRORS.generationFailed(row.id, row.error ?? "a verification step failed"),
+      asProductError(
+        explainFailure(row.error, {
+          id: row.id,
+          fromPlan: row.options.mode === "generate" && Boolean(plan),
+        }),
+      ),
     );
   }
   const reuse = row.metrics.reuse as { reusedShare?: number; generatedLines?: number } | undefined;
