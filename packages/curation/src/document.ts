@@ -30,6 +30,10 @@ export interface ComponentFacts {
   pkg: { name: string; version: string };
   /** Names the code really exposes or uses from the package (imports in tests/glue, exports of glue/files). */
   symbols: string[];
+  /** Import specifier → names importable from it (the package itself, the curated glue, native files). */
+  importable: Record<string, string[]>;
+  /** Interface kind of each exported name, from its declaration. */
+  kinds: Record<string, "export" | "route" | "component" | "hook" | "type">;
   env: string[];
   tests: { file: string; title: string }[];
   /** Short source excerpts (contract test, glue) for the model. */
@@ -74,6 +78,39 @@ export function symbolsOf(src: string, pkg: string): string[] {
   for (const m of src.matchAll(/export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)\b/g))
     out.add(m[1] as string);
   return [...out];
+}
+
+/** Names imported from `pkg` (default, named, namespace). */
+export function importsFrom(src: string, pkg: string): string[] {
+  const own = new Set(symbolsOf(src, pkg));
+  for (const e of exportsOf(src)) own.delete(e.name);
+  return [...own];
+}
+
+/** Exported declarations with their interface kind. */
+export function exportsOf(
+  src: string,
+  tsx = false,
+): { name: string; kind: "export" | "route" | "component" | "hook" | "type" }[] {
+  return [
+    ...src.matchAll(
+      /export\s+(default\s+)?(?:async\s+)?(function|const|class|interface|type)\s+([A-Za-z_$][\w$]*)/g,
+    ),
+  ].map((m) => {
+    const name = m[3] as string;
+    const decl = m[2] as string;
+    const kind =
+      decl === "interface" || decl === "type"
+        ? ("type" as const)
+        : /^(GET|POST|PUT|PATCH|DELETE)$/.test(name)
+          ? ("route" as const)
+          : /^use[A-Z]/.test(name)
+            ? ("hook" as const)
+            : tsx && /^[A-Z]/.test(name)
+              ? ("component" as const)
+              : ("export" as const);
+    return { name, kind };
+  });
 }
 
 export function envOf(src: string): string[] {
@@ -126,7 +163,29 @@ export async function componentFacts(
   };
   const sources = walk(dir).filter((p) => /\.(ts|tsx|mjs)$/.test(p) || p.endsWith(".append"));
   const all = sources.map((p) => readFileSync(p, "utf8")).join("\n");
-  const symbols = symbolsOf(all, pkg.name);
+  const importable: Record<string, string[]> = {};
+  const kinds: ComponentFacts["kinds"] = {};
+  if (!pkg.name.startsWith("turbineh/")) {
+    importable[pkg.name] = importsFrom(all, pkg.name);
+    for (const n of importable[pkg.name] ?? [])
+      kinds[n] = /^use[A-Z]/.test(n) ? "hook" : "export";
+  }
+  const glue = join(dir, "glue.ts");
+  if (existsSync(glue)) {
+    const cap = manifest.relations.provides[0] ?? id;
+    const spec = `@/integrations/${cap.replace(/\./g, "-")}`;
+    const ex = exportsOf(readFileSync(glue, "utf8"), cap.startsWith("ui."));
+    importable[spec] = ex.map((e) => e.name);
+    for (const e of ex) kinds[e.name] = e.kind;
+  }
+  for (const f of walk(join(dir, "files/src")).filter((x) => /\.(ts|tsx)$/.test(x))) {
+    const spec = `@/${relative(join(dir, "files/src"), f).replace(/\.(ts|tsx)$/, "")}`;
+    const ex = exportsOf(readFileSync(f, "utf8"), f.endsWith(".tsx"));
+    if (ex.length === 0) continue;
+    importable[spec] = ex.map((e) => e.name);
+    for (const e of ex) kinds[e.name] = e.kind;
+  }
+  const symbols = [...new Set(Object.values(importable).flat())];
   const env = [
     ...new Set([
       ...envOf(all),
@@ -143,6 +202,8 @@ export async function componentFacts(
     manifest,
     pkg,
     symbols,
+    importable,
+    kinds,
     env,
     tests: testsOf(dir),
     code: excerpt,
@@ -185,9 +246,9 @@ export type Draft = z.infer<typeof draftSchema>;
 const SYSTEM =
   "You document one software component for engineers and for an automated selector. Use ONLY the facts given " +
   "(manifest, code, tests, README). Never invent APIs, options, env vars or guarantees. Interfaces must be names " +
-  "from `symbols`. Each guarantee must quote one exact title from `tests`. `when_not_to_use.instead` names another " +
-  "catalog component id from `alternatives` or a plain approach. The example is short TypeScript using only " +
-  "`symbols`. Plain, specific English; no marketing. Answer with JSON only.";
+  "from `import_from`. Each guarantee must quote one exact title from `tests`. `when_not_to_use.instead` names another " +
+  "catalog component id from `alternatives` or a plain approach. The example is short TypeScript that imports " +
+  "only names listed in `import_from` from exactly that specifier. Plain, specific English; no marketing. Answer with JSON only.";
 
 export function draftPrompt(f: ComponentFacts): string {
   const alternatives = f.catalogIds.filter(
@@ -205,7 +266,7 @@ export function draftPrompt(f: ComponentFacts): string {
     provides: f.manifest.relations.provides,
     effects: f.manifest.effects ?? {},
     license: f.manifest.license.detected,
-    symbols: f.symbols,
+    import_from: f.importable,
     env: f.env,
     tests: f.tests.map((t) => t.title),
     alternatives: alternatives.slice(0, 12),
@@ -226,10 +287,13 @@ export function checkDraft(
       (x) => x.slice(0, max),
     );
   const symbols = new Set(f.symbols);
-  const interfaces = d.interfaces.filter((i) => {
-    const ok = symbols.has(i.name.replace(/\(.*$/, "").trim());
-    if (!ok) dropped.push(`interface ${i.name} (not in the code)`);
-    return ok;
+  const interfaces = d.interfaces.flatMap((i) => {
+    const name = i.name.replace(/\(.*$/, "").trim();
+    if (!symbols.has(name)) {
+      dropped.push(`interface ${i.name} (not in the code)`);
+      return [];
+    }
+    return [{ name, kind: f.kinds[name] ?? "export", about: i.about.trim().slice(0, 400) }];
   });
   const guarantees = d.guarantees.flatMap((g) => {
     const t = f.tests.find((x) => x.title === g.test_title.trim());
@@ -247,9 +311,9 @@ export function checkDraft(
     }
     return true;
   });
-  const usesKnown = [...symbols, f.pkg.name].some((s) => s && d.example.includes(s));
-  const example = usesKnown ? d.example.trim().split("\n").slice(0, 30).join("\n") : "";
-  if (!usesKnown) dropped.push("example (uses no symbol of the component)");
+  const exampleIssue = exampleProblem(d.example, f.importable);
+  const example = exampleIssue ? "" : d.example.trim().split("\n").slice(0, 30).join("\n");
+  if (exampleIssue) dropped.push(`example (${exampleIssue})`);
   const m = f.manifest;
   const security = [
     `Licence ${m.license.detected}${m.security?.scanned_at ? `; ${m.security.findings?.length ?? 0} known advisories (OSV) on ${m.security.scanned_at}` : ""}.`,
@@ -309,7 +373,17 @@ export function checkDraft(
     limits: clean(d.limits),
     example,
     keywords: [
-      ...new Set(d.keywords.map((k) => k.toLowerCase().trim()).filter((k) => k.length >= 2 && k.length <= 40)),
+      ...new Set(
+        [
+          // Deterministic: package name, capability ids and their words.
+          f.pkg.name.replace(/^turbineh\//, ""),
+          ...m.relations.provides,
+          ...m.relations.provides.flatMap((p) => p.split(/[.-]/)),
+          ...d.keywords,
+        ]
+          .map((k) => k.toLowerCase().trim())
+          .filter((k) => k.length >= 2 && k.length <= 40),
+      ),
     ].slice(0, 30),
     generated: {
       by: meta.by,
@@ -337,6 +411,40 @@ export function checkDraft(
     },
   };
   return { docs, dropped };
+}
+
+/** Why an example is not supported by the code (imports from unknown specifiers or of unknown names), or null. */
+export function exampleProblem(
+  example: string,
+  importable: Record<string, string[]>,
+): string | null {
+  const imports = [...example.matchAll(/import\s+([^;]*?)\s+from\s+["']([^"']+)["']/g)];
+  if (imports.length === 0) return "imports nothing from the component";
+  for (const m of imports) {
+    const from = m[2] as string;
+    const names = importable[from];
+    if (!names) return `imports from ${from}, which the component does not provide`;
+    const clause = (m[1] ?? "").replace(/^type\s+/, "");
+    const wanted = [
+      ...(/^([A-Za-z_$][\w$]*)/.exec(clause)?.[1] && !clause.startsWith("{")
+        ? [/^([A-Za-z_$][\w$]*)/.exec(clause)?.[1] as string]
+        : []),
+      ...(/\{([^}]*)\}/.exec(clause)?.[1] ?? "")
+        .split(",")
+        .map(
+          (n) =>
+            n
+              .trim()
+              .replace(/^type\s+/, "")
+              .split(/\s+as\s+/)[0]
+              ?.trim() ?? "",
+        )
+        .filter(Boolean),
+    ];
+    const unknown = wanted.filter((n) => !names.includes(n));
+    if (unknown.length) return `${unknown.join(", ")} not exported by ${from}`;
+  }
+  return null;
 }
 
 export interface ModelConfig {
@@ -369,7 +477,7 @@ export async function documentComponent(
     const res = await client.chat.completions.create({
       model: model.model,
       temperature: 0,
-      max_tokens: 2500,
+      max_tokens: 5000,
       messages,
       response_format: { type: "json_schema", json_schema: { name: "docs", schema, strict: true } },
       ...(model.reasoningEffort

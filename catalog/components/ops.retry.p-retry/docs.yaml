@@ -1,0 +1,98 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ops.retry.p-retry
+does: Retries failing async operations with exponential backoff
+does_not: Does not make operations idempotent
+use_cases:
+  - Retrying transient network errors or rate limits.
+  - Handling operations that can be safely repeated.
+when_to_use:
+  - When an async operation fails due to transient issues and needs to be re-attempted with increasing delays.
+when_not_to_use:
+  - instead: ops.concurrency.p-limit
+    why: If you need to limit concurrency rather than retry failures.
+  - instead: ops.http-client.ky
+    why: If you need built-in retry logic within an HTTP client.
+  - instead: ops.queue-throttle.p-queue
+    why: If you need to manage a queue of tasks.
+  - instead: ops.rate-limit.rate-limiter-flexible
+    why: If you need to manage rate limiting across multiple requests.
+tradeoffs:
+  - Does not make operations idempotent
+inputs:
+  - name: pnpm add p-retry@8.0.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: AbortError
+    kind: type
+    about: Throws this error to abort retries for non-transient errors (e.g., validation, 4xx).
+  - name: withRetry
+    kind: component
+    about: "Retries a transient operation with exponential backoff and jitter. Bounded: at most 10 retries."
+  - name: pRetry
+    kind: component
+    about: The core retry function. Returns a promise that fulfills when the input function fulfills, or rejects
+      with the last error after max retries.
+extension_points: []
+dependencies:
+  package: p-retry
+  version: 8.0.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No side effects on network, fs, or db.
+guarantees:
+  - claim: retries until success
+    test:
+      file: contract.test.ts
+      title: retries until success
+limits:
+  - Maximum of 10 retries regardless of input.
+  - Does not make operations idempotent.
+  - Non-network TypeErrors abort retries.
+example: |-
+  import { withRetry } from 'p-retry';
+
+  await withRetry(async (attempt) => {
+    if (attempt < 2) throw new Error('fail');
+    return 'success';
+  }, { retries: 3 });
+keywords:
+  - p-retry
+  - ops.retry
+  - ops
+  - retry
+  - backoff
+  - exponential
+  - jitter
+  - transient
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest
