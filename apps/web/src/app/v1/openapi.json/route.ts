@@ -8,7 +8,13 @@ const spec = {
   },
   servers: [{ url: "https://software.turbineh.com" }],
   components: {
-    securitySchemes: { bearer: { type: "http", scheme: "bearer", description: "API key (tbh_…)" } },
+    securitySchemes: {
+      bearer: {
+        type: "http",
+        scheme: "bearer",
+        description: "API key (tbh_…) or access token (TURBINEH_TOKEN)",
+      },
+    },
     schemas: {
       Problem: {
         type: "object",
@@ -137,10 +143,116 @@ const spec = {
         responses: { "200": { description: "Deployment status" } },
       },
     },
+    "/v1/capabilities": {
+      get: {
+        summary: "Search verified capabilities (complete flows and components) for a need",
+        parameters: [
+          { name: "q", in: "query", required: true, schema: { type: "string" } },
+          { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+        ],
+        responses: { "200": { description: "{ query, total, results: CapabilitySummary[] }" } },
+      },
+    },
+    "/v1/capabilities/{id}": {
+      get: {
+        summary: "Inspect a capability: components, requirements, compatibility, licences",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Capability detail" },
+          "404": { description: "ProductError" },
+        },
+      },
+    },
+    "/v1/plans": {
+      post: {
+        summary: "Plan a need against your stack (nothing is generated)",
+        description:
+          'Body: { need, environment: { repo | files | stack }, preferences? }. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
+        responses: {
+          "200": { description: "Plan" },
+          "202": { description: "{ id, state: planning, status_url }" },
+          "4XX": { description: "ProductError { code, message, action, resume? }" },
+        },
+      },
+    },
+    "/v1/plans/{id}": {
+      get: {
+        summary: "Plan and flow result with precise states",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "Plan fields + { state, plan, result: FlowResult }" } },
+      },
+    },
+    "/v1/plans/{id}/generate": {
+      post: {
+        summary: 'Generate and verify the package; { "approve": true } acknowledges needsApproval',
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "202": { description: "{ id, state: generating }" },
+          "409": { description: "ProductError" },
+        },
+      },
+    },
+    "/v1/plans/{id}/events": {
+      get: {
+        summary: "Live progress (Server-Sent Events)",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "text/event-stream" } },
+      },
+    },
+    "/v1/plans/{id}/package": {
+      get: {
+        summary: "Download the capability package (ZIP) or ?format=manifest",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": { description: "ZIP or manifest.json" },
+          "302": { description: "Signed URL" },
+        },
+      },
+    },
+    "/v1/plans/{id}/pull-request": {
+      post: {
+        summary: "Deliver the package as a pull request on your GitHub repository (never merged)",
+        description:
+          "Body: { repo: owner/name, base?, github_token } — the token is used once and never stored.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "201": { description: "{ integration, pull_request }" } },
+      },
+    },
+    "/v1/plans/{id}/integrations": {
+      post: {
+        summary:
+          "Report an integration state (integrated, integration_verified, reverted, integration_failed)",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "201": { description: "{ integration }" } },
+      },
+    },
+    "/v1/repos": {
+      get: {
+        summary: "GitHub repositories you can integrate into (x-github-token header, not stored)",
+        responses: { "200": { description: "{ repos }" } },
+      },
+    },
+    "/v1/activity": {
+      get: {
+        summary: "Your flows, states, time and tokens",
+        responses: { "200": { description: "{ totals, flows }" } },
+      },
+    },
     "/v1/components": {
       get: {
         summary: "Search the catalog",
-        security: [],
         parameters: [
           { name: "q", in: "query", schema: { type: "string" } },
           { name: "category", in: "query", schema: { type: "string" } },
@@ -152,7 +264,6 @@ const spec = {
     "/v1/components/{id}": {
       get: {
         summary: "Component manifest",
-        security: [],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: { "200": { description: "Manifest (turbineh.component/v0.1)" } },
       },

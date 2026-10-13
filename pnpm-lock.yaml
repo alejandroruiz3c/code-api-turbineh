@@ -50,6 +50,9 @@ importers:
       '@turbineh/deployer':
         specifier: workspace:*
         version: link:../../packages/deployer
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -84,6 +87,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: 4.3.3
         version: 4.3.3
+      '@turbineh/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
@@ -129,6 +135,9 @@ importers:
       '@turbineh/deployer':
         specifier: workspace:*
         version: link:../../packages/deployer
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@turbineh/integrator':
         specifier: workspace:*
         version: link:../../packages/integrator
@@ -233,6 +242,18 @@ importers:
         specifier: 2.9.1
         version: 2.9.1
 
+  packages/cli:
+    devDependencies:
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+
   packages/compiler:
     dependencies:
       '@turbineh/decider':
@@ -286,6 +307,16 @@ importers:
         version: 0.6.0
 
   packages/deployer: {}
+
+  packages/engine:
+    dependencies:
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/integrator:
     dependencies:

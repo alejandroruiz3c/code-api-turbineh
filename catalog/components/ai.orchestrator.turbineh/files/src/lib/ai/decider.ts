@@ -1,34 +1,44 @@
-import { choice, noul, TypeSafeClient } from "@typesafe-ai/sdk";
 import { z } from "zod";
 import type { ToolSpec } from "./guard";
 import type { Route } from "./models";
 import type { Plan } from "./plan";
 
 /**
- * Orchestrator decisions with JEV by TypeSafe (component ai.orchestrator.turbineh, ADR-0028/ADR-0029), through the
- * official SDK pointed at the TurbineH AI gateway (same SystemOne request shape; TurbineH holds the JEV key). One
- * request carries every question; thresholds are applied in code, not by a model.
+ * Orchestrator decisions (component ai.orchestrator.turbineh, ADR-0028/ADR-0029): one plain request to the TurbineH
+ * AI gateway, which holds every provider key. One request carries every question; thresholds are applied in code,
+ * not by a model. The app talks only to TurbineH.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
   TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
   TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
-  TYPESAFE_MODEL: z.preprocess(empty, z.string().min(1).default("jev-1.13.0")),
 });
 
-let client: TypeSafeClient | undefined;
-function decider(): { client: TypeSafeClient; model: string } | null {
-  const cfg = Env.parse(process.env);
-  if (!cfg.TURBINEH_AI_TOKEN) return null;
-  client ??= new TypeSafeClient({
-    apiKey: cfg.TURBINEH_AI_TOKEN,
-    defaultModel: cfg.TYPESAFE_MODEL,
-    timeout: 15_000,
-    logLevel: "off",
-    baseURL: cfg.TURBINEH_AI_URL.replace(/\/$/, ""),
-  });
-  return { client, model: cfg.TYPESAFE_MODEL };
-}
+type Question =
+  | { type: "choice"; instructions: string; criteria: Record<string, string> }
+  | { type: "noul"; instructions: string; criteria?: undefined };
+
+const choice = (instructions: string, criteria: Record<string, string>): Question => ({
+  type: "choice",
+  instructions,
+  criteria,
+});
+const noul = (instructions: string): Question => ({ type: "noul", instructions });
+
+const Answer = z.union([
+  z.object({
+    type: z.literal("choice"),
+    choice: z.string(),
+    confidence: z.number(),
+    probabilities: z.record(z.string(), z.number()),
+  }),
+  z.object({ type: z.literal("noul"), noul: z.number() }),
+]);
+const Decision = z.object({
+  answers: z.record(z.string(), Answer),
+  model: z.string(),
+  usage: z.object({ input_tokens: z.number(), output_tokens: z.number() }),
+});
 
 export interface RouteDecision {
   route: string;
@@ -45,14 +55,33 @@ export interface RouteDecision {
 /** Thrown when no decider is configured; the orchestrator then uses its default route (recorded in the audit). */
 export class DeciderUnavailable extends Error {}
 
+async function decide(
+  cfg: { url: string; token: string },
+  state: unknown,
+  questions: Record<string, Question>,
+): Promise<z.infer<typeof Decision>> {
+  const res = await fetch(`${cfg.url}/v1/systemone`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${cfg.token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ state, questions }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`TurbineH AI gateway answered ${res.status}`);
+  return Decision.parse(await res.json());
+}
+
 export async function decideRoute(
   plan: Plan,
   routes: readonly Route[],
   tools: readonly ToolSpec[],
   requestPreview: string,
 ): Promise<RouteDecision> {
-  const d = decider();
-  if (!d) throw new DeciderUnavailable("TURBINEH_AI_TOKEN is not set");
+  const cfg = Env.parse(process.env);
+  if (!cfg.TURBINEH_AI_TOKEN) throw new DeciderUnavailable("TURBINEH_AI_TOKEN is not set");
   const state = {
     request: requestPreview.slice(0, 2000),
     intent: plan.intent,
@@ -60,44 +89,38 @@ export async function decideRoute(
     needs_reasoning: plan.needs_reasoning,
     needs_long_context: plan.needs_long_context,
   };
-  const routeQ = choice(
-    "Which model route fits this request best (cheapest that can do it well)?",
-    Object.fromEntries(routes.map((r) => [r.name, r.description])),
-  );
-  const unsafeQ = noul(
-    "The request asks for something harmful, deceptive, illegal or clearly outside the purpose of a business assistant.",
-  );
-  const toolQ =
-    tools.length > 0
-      ? choice("Which tool, if any, must be used to fulfil the request?", {
-          none: "No tool: answer directly.",
-          ...Object.fromEntries(tools.map((t) => [t.name, t.description])),
-        })
-      : null;
-  const res = await d.client.systemOne({
+  const questions: Record<string, Question> = {
+    route: choice(
+      "Which model route fits this request best (cheapest that can do it well)?",
+      Object.fromEntries(routes.map((r) => [r.name, r.description])),
+    ),
+    unsafe: noul(
+      "The request asks for something harmful, deceptive, illegal or clearly outside the purpose of a business assistant.",
+    ),
+  };
+  if (tools.length > 0)
+    questions.tool = choice("Which tool, if any, must be used to fulfil the request?", {
+      none: "No tool: answer directly.",
+      ...Object.fromEntries(tools.map((t) => [t.name, t.description])),
+    });
+  const res = await decide(
+    { url: cfg.TURBINEH_AI_URL.replace(/\/$/, ""), token: cfg.TURBINEH_AI_TOKEN },
     state,
-    questions: { route: routeQ, unsafe: unsafeQ, ...(toolQ ? { tool: toolQ } : {}) },
-  });
-  const answers = res.answers as Record<
-    string,
-    | { type: "choice"; choice: string; confidence: number; probabilities: Record<string, number> }
-    | { type: "noul"; noul: number }
-    | undefined
-  >;
-  const route = answers.route?.type === "choice" ? answers.route.choice : (routes[0]?.name ?? "");
-  const unsafe = answers.unsafe?.type === "noul" ? answers.unsafe.noul : 0;
-  const tool =
-    answers.tool?.type === "choice" && answers.tool.choice !== "none" ? answers.tool.choice : null;
-  const toolConfidence = answers.tool?.type === "choice" ? answers.tool.confidence : 0;
+    questions,
+  );
+  const { route: r, unsafe: u, tool: t } = res.answers;
+  const route = r?.type === "choice" ? r.choice : (routes[0]?.name ?? "");
+  const unsafe = u?.type === "noul" ? u.noul : 0;
+  const tool = t?.type === "choice" && t.choice !== "none" ? t.choice : null;
   return {
     route,
     unsafe,
     tool,
-    toolConfidence,
+    toolConfidence: t?.type === "choice" ? t.confidence : 0,
     probabilities: {
-      ...(answers.route?.type === "choice" ? { route: answers.route.probabilities } : {}),
+      ...(r?.type === "choice" ? { route: r.probabilities } : {}),
       unsafe,
-      ...(answers.tool?.type === "choice" ? { tool: answers.tool.probabilities } : {}),
+      ...(t?.type === "choice" ? { tool: t.probabilities } : {}),
     },
     model: res.model,
     inputTokens: res.usage.input_tokens,

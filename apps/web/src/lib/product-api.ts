@@ -68,7 +68,7 @@ export const productApi = {
   generate: (planId: string) =>
     call<{ id: string; state: string }>(`/v1/plans/${encodeURIComponent(planId)}/generate`, {
       method: "POST",
-      body: "{}",
+      body: JSON.stringify({ approve: true }), // the wizard enables this only after every decision is approved
     }),
   flow: (id: string) =>
     call<Plan & { result?: FlowResult | null }>(`/v1/plans/${encodeURIComponent(id)}`),

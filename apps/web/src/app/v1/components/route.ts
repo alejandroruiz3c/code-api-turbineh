@@ -1,7 +1,10 @@
 import { db } from "@/server/db";
+import { requireCaller } from "@/server/product";
 
-/** GET /v1/components?q=&category=&status= — catalog search (public). */
+/** GET /v1/components?q=&category=&status= — catalog search (access token or API key). */
 export async function GET(req: Request): Promise<Response> {
+  const caller = await requireCaller();
+  if (caller instanceof Response) return caller;
   const u = new URL(req.url);
   const q = (u.searchParams.get("q") ?? "").slice(0, 100);
   const category = u.searchParams.get("category");

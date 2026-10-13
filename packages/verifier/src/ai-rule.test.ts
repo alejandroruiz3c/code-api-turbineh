@@ -40,7 +40,7 @@ describe.skipIf(!semgrepAvailable)("AI enforcement rules (ADR-0028)", () => {
           'export const r = () => fetch("https://api.example.com/v1/chat/completions", { method: "POST" });\n',
         "src/server/decide.ts":
           'import { TypeSafeClient } from "@typesafe-ai/sdk";\nexport const t = TypeSafeClient;\n',
-        "package.json": '{ "dependencies": { "openai": "6.0.0", "@typesafe-ai/sdk": "0.6.0" } }\n',
+        "package.json": '{ "dependencies": { "@typesafe-ai/sdk": "0.6.0" } }\n',
       });
       const findings = (await staticScan(dir)) ?? [];
       const hits = findings
@@ -58,17 +58,17 @@ describe.skipIf(!semgrepAvailable)("AI enforcement rules (ADR-0028)", () => {
   );
 
   it(
-    "allows the orchestrator's own transport and the decider SDK dependency",
+    "allows the orchestrator's own transport (plain requests to the gateway, no SDK)",
     { timeout: 300_000 },
     async () => {
       const dir = app({
         "src/lib/ai/models.ts":
           'export const chat = (base: string) => fetch(`${base}/chat/completions`, { method: "POST" });\n',
         "src/lib/ai/decider.ts":
-          'import { TypeSafeClient } from "@typesafe-ai/sdk";\nexport const t = TypeSafeClient;\n',
+          'export const d = (base: string) => fetch(`${base}/v1/systemone`, { method: "POST" });\n',
         "src/app/page.tsx":
           'import { orchestrate } from "@/lib/ai/orchestrator";\nexport const o = orchestrate;\n',
-        "package.json": '{ "dependencies": { "@typesafe-ai/sdk": "0.6.0", "zod": "4.6.5" } }\n',
+        "package.json": '{ "dependencies": { "zod": "4.6.5" } }\n',
       });
       const findings = (await staticScan(dir)) ?? [];
       expect(findings.filter((f) => f.rule.startsWith("turbineh.ai-"))).toEqual([]);

@@ -22,6 +22,11 @@ export function Panel({
 
 /** Precise states (PLAN §16.2): each means something different; nothing here says "ready". */
 export const STATE_LABEL: Record<FlowState, { label: string; hint: string; tone: string }> = {
+  planning: {
+    label: "Planning",
+    hint: "Reading the stack and choosing components",
+    tone: "border-amber/60 text-amber",
+  },
   planned: {
     label: "Planned",
     hint: "Plan built, not generated yet",

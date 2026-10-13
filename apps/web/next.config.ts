@@ -21,6 +21,7 @@ const config: NextConfig = {
   transpilePackages: [
     "@turbineh/db",
     "@turbineh/deployer",
+    "@turbineh/engine",
     "@turbineh/shared",
     "@turbineh/storage",
   ],
