@@ -49,47 +49,90 @@ rules:
   - id: turbineh.server-action-without-authz
     languages: [typescript]
     severity: ERROR
-    message: Exported server action does not check who is calling it (no authorization call before doing work).
+    message: >-
+      Exported server action does not check who is calling it (no authorization call before doing work). Start it with
+      `await requireMember()` / `await requireAdmin()` (workspace data) or `await requireSession()` (signed in, not a
+      member yet: accept an invitation, onboarding); for anonymous visitors (public booking, contact, waitlist) export
+      it as `publicAction(name, { rateLimit, schema }, handler)`. All in src/server/authz.ts; your own authorization
+      helpers count when named require*/assert*/ensure* (e.g. `await requireEditableTask(id)`).
     metadata:
       {
         explain: "A server function that changes data can be called without checking who the user is or what workspace they belong to.",
       }
     match:
-      all:
-        - inside: |
-            "use server";
-            ...
-        - |
-          export async function $F(...) { ... }
-        # Signing in, out or up needs no prior authorization (the action itself establishes or ends the session).
-        - not:
-            all:
-              - |
-                export async function $F(...) { ... }
-            where:
-              - metavariable: $F
-                regex: (?i)^(handle|do|submit)?(sign_?(in|out|up)|log_?(in|out)|logon|logoff)(_?action)?$
-        - not:
-            all:
-              - |
-                export async function $F(...) { ... await $G(...); ... }
-            where:
-              - metavariable: $G
-                regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect|with)\w*$
-        - not:
-            all:
-              - |
-                export async function $F(...) { ... await $O.$M(...); ... }
-            where:
-              - metavariable: $M
-                regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect)\w*$
-        - not:
-            all:
-              - |
-                export async function $F(...) { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
-            where:
-              - metavariable: $G
-                regex: (?i)^(get(Server)?Session|getCurrent(User|Member|Session)|auth)$
+      any:
+        # Function declarations and async function expressions: an authorization call must come first.
+        - all:
+            - inside: |
+                "use server";
+                ...
+            - any:
+                - |
+                  export async function $F(...) { ... }
+                - |
+                  export const $F = async (...) => { ... }
+                - |
+                  export const $F = async function (...) { ... }
+            # Signing in, out or up needs no prior authorization (the action itself establishes or ends the session).
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... }
+                      - |
+                        export const $F = async (...) => { ... }
+                      - |
+                        export const $F = async function (...) { ... }
+                where:
+                  - metavariable: $F
+                    regex: (?i)^(handle|do|submit)?(sign_?(in|out|up)|log_?(in|out)|logon|logoff)(_?action)?$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... await $G(...); ... }
+                      - |
+                        export const $F = async (...) => { ... await $G(...); ... }
+                      - |
+                        export const $F = async function (...) { ... await $G(...); ... }
+                where:
+                  - metavariable: $G
+                    regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect|with)\w*$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... await $O.$M(...); ... }
+                      - |
+                        export const $F = async (...) => { ... await $O.$M(...); ... }
+                      - |
+                        export const $F = async function (...) { ... await $O.$M(...); ... }
+                where:
+                  - metavariable: $M
+                    regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect)\w*$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
+                      - |
+                        export const $F = async (...) => { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
+                where:
+                  - metavariable: $G
+                    regex: (?i)^(get(Server)?Session|getCurrent(User|Member|Session)|auth)$
+        # Anonymous visitors only through publicAction(), and only with its per-IP rate limit and Zod schema.
+        - all:
+            - inside: |
+                "use server";
+                ...
+            - |
+              export const $F = publicAction(...)
+            - not:
+                all:
+                  - |
+                    export const $F = publicAction($N, { ..., rateLimit: $R, ... }, ...)
+                  - |
+                    export const $F = publicAction($N, { ..., schema: $Z, ... }, ...)
 
   - id: turbineh.hardcoded-secret
     languages: [typescript]

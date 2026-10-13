@@ -23,3 +23,6 @@ guide:
     - what: "Change where contact messages go"
       where: "src/app/contact/actions.ts, ADMIN_EMAILS"
       how: "Messages are stored and emailed to every staff email."
+    - what: "Add another public form (quote request, job application…)"
+      where: "src/app/<route>/actions.ts, src/server/authz.ts (publicAction)"
+      how: "Same pattern as sendContact: `publicAction(name, { rateLimit, schema, refuse }, handler)`."

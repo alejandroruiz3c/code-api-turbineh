@@ -7,7 +7,7 @@ source:
   purl: pkg:generic/turbineh/authz.roles.turbineh@0.1.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
-  does: "Role policy (owner/admin/member) and requireMember guard used by every page and server action"
+  does: "Role policy (owner/admin/member), requireMember guard for every page and server action, requireSession for signed-in non-members and publicAction (per-IP rate limit + Zod) for anonymous visitors"
   does_not: "Does not implement fine-grained per-record permissions"
   use_cases: [saas-crud, landing-waitlist, internal-tool, bookings, client-portal]
   pros: ["Maintained by TurbineH", "No third-party runtime dependency beyond the stack"]
