@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Domain components, part 2 (ADR-0045): `storage.private-uploads.turbineh` (limits and types from params, local disk
+  or S3-compatible storage with SigV4 and an offline mock, per-scope authorised downloads, staff email on client
+  uploads), the bookings recipe on `domain.bookings.turbineh` (public `/book` page, cancel link with the notice policy,
+  staff day/week calendar per team member, time off, staff move/cancel with customer emails; the recipe's own booking
+  code removed) and `jobs.scheduled.turbineh` (cron route protected by `CRON_SECRET`, idempotent runs, overdue and
+  daily email digests). New seams: `src/server/body-limit.ts`, `src/workflow/extras.tsx`, `src/workflow/board.tsx`.
+  Checked combinations: Ledgerline, Sala Nueve, Pixelyard.
 - Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists

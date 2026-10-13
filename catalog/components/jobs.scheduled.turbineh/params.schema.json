@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "jobs.scheduled.turbineh params (src/jobs/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobs", "logWhenNoEmailProvider"],
+  "properties": {
+    "jobs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "cron", "timeZone", "what"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$" },
+          "kind": {
+            "enum": ["overdue-digest", "daily-digest", "custom"],
+            "description": "overdue-digest: each person's overdue or stuck records; daily-digest: what needs attention, to members who manage the workspace; custom: a handler added in src/jobs/digests.ts."
+          },
+          "cron": {
+            "type": "string",
+            "pattern": "^\\S+ \\S+ \\S+ \\S+ \\S+$",
+            "description": "Five-field cron in the job's time zone, e.g. \"0 7 * * *\" (every morning at 07:00)."
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA time zone, e.g. Europe/Madrid."
+          },
+          "what": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The request's words."
+          }
+        }
+      }
+    },
+    "logWhenNoEmailProvider": {
+      "type": "boolean",
+      "description": "Without RESEND_API_KEY emails are logged (always true in practice: the email component logs them)."
+    }
+  }
+}

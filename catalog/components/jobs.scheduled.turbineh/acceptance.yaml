@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/jobs-digests.spec.ts › overdue records are emailed every morning to the person who created them, logged when there is no email provider"
+  covers: ["overdue|late|past due", "e-?mail|notif|remind"]
+- test: "tests/e2e/jobs-digests.spec.ts › overdue records are emailed every morning to the person who created them, logged when there is no email provider"
+  covers: ["every (morning|day|night)|daily|schedul|cron"]
+- test: "tests/e2e/jobs-digests.spec.ts › the daily digest lists what needs attention to the members who manage the workspace"
+  covers: ["digest|summary|daily (e-?mail|report)"]
+- test: "tests/e2e/scheduled-jobs.spec.ts › a due job runs once per scheduled time: calling again sends nothing (idempotent)"
+  covers: ["once|twice|duplicate|idempot"]
+- test: "tests/e2e/scheduled-jobs.spec.ts › the cron route refuses calls without the secret header"
+  covers: ["cron|scheduled job|scheduler", "secret|protect|authori|secure"]
+- test: "tests/unit/scheduled-jobs.test.ts › finds the latest scheduled time in the job's time zone, across daylight saving"
+  covers: ["time ?zone|europe/|america/|local time|dst"]

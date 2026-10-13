@@ -1,0 +1,19 @@
+{
+  "jobs": [
+    {
+      "id": "overdue-reminders",
+      "kind": "overdue-digest",
+      "cron": "0 7 * * *",
+      "timeZone": "UTC",
+      "what": "Email each person their overdue records every morning"
+    },
+    {
+      "id": "daily-digest",
+      "kind": "daily-digest",
+      "cron": "0 8 * * 1-5",
+      "timeZone": "UTC",
+      "what": "Email workspace managers what needs attention on weekdays"
+    }
+  ],
+  "logWhenNoEmailProvider": true
+}

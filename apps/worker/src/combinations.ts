@@ -141,6 +141,61 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Pixelyard (learning round, internal-tool): loans requested by staff, approved or rejected by a manager, returned;
+    // overdue loans highlighted and the borrower emailed (logged without an email provider).
+    recipe: "internal-tool",
+    with: ["domain.workflow.turbineh", "jobs.scheduled.turbineh"],
+    prompt:
+      'Build an internal equipment-loan tool for "Pixelyard", a video production company. Visual identity: black, ' +
+      "white and red `#E63946`. Staff sign in with company emails only (@pixelyard.test). Equipment items have a name, " +
+      "category, serial number, condition and photo URL. Staff request items for a date range; a manager approves or " +
+      "rejects; an item cannot be lent twice for overlapping dates. Returns are checked in with condition notes; overdue " +
+      "loans are highlighted and the borrower is emailed (log it when no email provider is configured). Managers see a " +
+      "dashboard of utilisation per category and export loans as CSV.",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "loan",
+            label: "Loan",
+            plural: "Loans",
+            initial: "requested",
+            dueDate: true,
+            createRoles: ["*"],
+            states: [
+              { key: "requested", label: "Requested", limitHours: 48, final: false },
+              { key: "approved", label: "Approved", limitHours: null, final: false },
+              { key: "rejected", label: "Rejected", limitHours: null, final: true },
+              { key: "returned", label: "Returned", limitHours: null, final: true },
+            ],
+            transitions: [
+              { from: ["requested"], to: "approved", label: "Approve", roles: ["owner", "admin"] },
+              { from: ["requested"], to: "rejected", label: "Reject", roles: ["owner", "admin"] },
+              {
+                from: ["approved"],
+                to: "returned",
+                label: "Check in",
+                roles: ["owner", "admin", "creator"],
+              },
+            ],
+          },
+        ],
+      },
+      "jobs.scheduled.turbineh": {
+        jobs: [
+          {
+            id: "overdue-reminders",
+            kind: "overdue-digest",
+            cron: "0 8 * * *",
+            timeZone: "UTC",
+            what: "Overdue loans are emailed to the borrower",
+          },
+        ],
+        logWhenNoEmailProvider: true,
+      },
+    },
+  },
+  {
     // Sala Nueve (learning round, bookings): public booking page, stylist or any, cancel link up to 12 hours before,
     // no double bookings, staff day/week calendar per stylist, time off, staff move/cancel with customer emails.
     // Parameters come from the request through detectDomains (recipe bookings requires domain.bookings).
