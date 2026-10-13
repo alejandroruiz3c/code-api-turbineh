@@ -44,6 +44,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- `/cli/turbineh.mjs` was missing in production when the CLI build came from cache (turbo restores only `dist/**`): the web build now copies the bundle itself before `next build`.
 - Recipe choice: an AI agent specialised in bookings (or support, sales, intake) now maps to `ai-agents` (with the orchestrator) instead of `bookings`; the recipe descriptions given to the decider say so explicitly.
 - Licence scan: the SPDX expression was cut one word too far when read from a scan line, so `jszip` (MIT OR GPL-3.0-or-later, via mammoth) blocked builds as unparseable. Whole-line parsing now has its own tests. Staging only; never reached production.
 - The corrector never edits the Security Pack (`src/security/`) or the AI orchestrator and AI Safety Pack (`src/lib/ai/`): they are certified code and the only files allowed to talk to models. The direct-model-call rule also covers JavaScript files.
