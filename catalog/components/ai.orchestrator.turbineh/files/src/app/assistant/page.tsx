@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { publicAssistant } from "@/lib/ai/assistant";
 
-/** Public assistant page (ADR-0032): available only when a toolkit is meant for the public. */
+/** Public assistant page (ADR-0033): available only when a toolkit is meant for the public. */
 export default function AssistantPage() {
   const assistant = publicAssistant();
   if (!assistant.enabled) notFound();

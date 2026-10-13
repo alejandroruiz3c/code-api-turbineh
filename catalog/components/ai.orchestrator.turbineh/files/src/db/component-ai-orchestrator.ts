@@ -25,7 +25,7 @@ export const aiUsage = pgTable(
 );
 
 /**
- * Conversation state of runAgent (component ai.orchestrator.turbineh, ADR-0032): messages and the pending
+ * Conversation state of runAgent (component ai.orchestrator.turbineh, ADR-0033): messages and the pending
  * confirmation live on the server, keyed by an unguessable id; the browser only holds the id.
  */
 export const agentSessions = pgTable(

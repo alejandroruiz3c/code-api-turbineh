@@ -1,0 +1,29 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
+  covers: ["\\bbook|appointment|session|reserv"]
+- test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
+  covers: ["confirm"]
+- test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
+  covers: ["e-?mail"]
+- test: "tests/e2e/booking-assistant.spec.ts › finds upcoming bookings by email"
+  covers: ["(find|look ?up|search|retriev).*e-?mail|e-?mail.*(find|look ?up|search)"]
+- test: "tests/e2e/booking-assistant.spec.ts › never books an invented time"
+  covers: ["availab|free (time|slot)|slot|invent|real data|never"]
+- test: "tests/e2e/booking-assistant.spec.ts › reschedules with reference + email after confirmation"
+  covers: ["reschedul|\\bmove|change (a|the|their) (booking|appointment|session)"]
+- test: "tests/e2e/booking-assistant.spec.ts › refuses to cancel inside the notice period"
+  covers: ["cancel"]
+- test: "tests/unit/bookings.test.ts › allows changes only with enough notice (24 h)"
+  covers: ["\\d+ ?(h|hours?)|notice|in advance|before"]
+- test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments"
+  covers: ["staff|admin|sign[ -]?in|log[ -]?in|dashboard|manage"]
+- test: "tests/e2e/booking-assistant.spec.ts › answers common questions from the business's data"
+  covers: ["question|faq|price|address|bring|opening hours"]
+- test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)"
+  covers: ["time ?zone|europe/|america/|dst|daylight|local time"]
+- test: "tests/unit/bookings.test.ts › offers every 45-minute start that ends by closing time, in local time"
+  covers: ["\\d+[- ]?min|duration|opening hours|business hours|monday|weekday"]
+- test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)"
+  covers: ["double|overlap|conflict|same (time|slot)"]
+- test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email"
+  covers: ["physiotherapist|stylist|therapist|staff member|chosen|any (one|available)"]

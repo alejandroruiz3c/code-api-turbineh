@@ -16,7 +16,7 @@ import {
 import { describeLocal } from "./time";
 
 /**
- * The booking domain as tools for runAgent (component domain.bookings.turbineh, ADR-0032). Read tools answer from
+ * The booking domain as tools for runAgent (component domain.bookings.turbineh, ADR-0033). Read tools answer from
  * real data; create/move/cancel are irreversible: `prepare` checks the slot and the policy and describes exactly
  * what will happen, and the person confirms before `execute` runs.
  */

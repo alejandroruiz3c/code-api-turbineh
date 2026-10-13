@@ -2,7 +2,7 @@ import { z } from "zod";
 import params from "./params.json";
 
 /**
- * Booking domain parameters (component domain.bookings.turbineh, ADR-0032). params.json is written by TurbineH from
+ * Booking domain parameters (component domain.bookings.turbineh, ADR-0033). params.json is written by TurbineH from
  * the request (business name, team, services and prices, opening hours, time zone, notice policy, questions to
  * answer); edit it to change them. Validated at start-up: a wrong value fails loudly instead of inventing slots.
  */

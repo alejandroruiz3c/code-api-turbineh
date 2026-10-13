@@ -3,7 +3,7 @@ import type { AnyAgentTool, Toolkit } from "./agent";
 import { TOOLKITS } from "./toolkits";
 
 /**
- * The public assistant (ADR-0032): end users without an account talk to the toolkits whose audience is "public".
+ * The public assistant (ADR-0033): end users without an account talk to the toolkits whose audience is "public".
  * Limits on top of the AI Safety Pack: short messages, requests per minute per IP, turns per conversation.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);

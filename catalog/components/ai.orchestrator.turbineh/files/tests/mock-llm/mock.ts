@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 
 /**
- * Scripted OpenAI-compatible model for tests (component ai.orchestrator.turbineh, ADR-0032). No model, no network:
+ * Scripted OpenAI-compatible model for tests (component ai.orchestrator.turbineh, ADR-0033). No model, no network:
  *   - POST /v1/chat/completions: when tools are offered, the first script rule whose pattern matches the last user
  *     message (and whose tool is offered) returns a tool call; after a tool result, the script's renderer (or a
  *     generic one) turns it into text. Without tools it behaves like the verification simulator: JSON_SCHEMA

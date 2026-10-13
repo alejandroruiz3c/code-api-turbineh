@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029/ADR-0032). With
+ * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029/ADR-0033). With
  * decider.ts, the only place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call).
  *
  * Model endpoint, chosen by configuration only:

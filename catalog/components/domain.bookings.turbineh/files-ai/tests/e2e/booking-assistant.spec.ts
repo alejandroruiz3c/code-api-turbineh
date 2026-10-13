@@ -105,6 +105,14 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     expect(done).toContain(`Moved booking ${reference}`);
   });
 
+  test("finds upcoming bookings by email", async ({ page }) => {
+    test.skip(!reference, "needs the booking from the previous tests");
+    await page.goto("/");
+    const reply = await say(page, `Show my appointments for ${email}`);
+    expect(reply).toContain("Upcoming:");
+    expect(reply).not.toContain(reference); // references are only in the confirmation email
+  });
+
   test("never books an invented time", async ({ page }) => {
     await page.goto("/");
     const day = openDay(3, 13);

@@ -13,7 +13,7 @@ type Reply = {
 const KEY = "turbineh-assistant-session";
 
 /**
- * Public assistant chat (component ai.orchestrator.turbineh, ADR-0032). Talks to POST /api/assistant; irreversible
+ * Public assistant chat (component ai.orchestrator.turbineh, ADR-0033). Talks to POST /api/assistant; irreversible
  * actions show Confirm / Cancel buttons (typing "yes" or "no" works too). Text only: replies are never rendered
  * as HTML.
  */

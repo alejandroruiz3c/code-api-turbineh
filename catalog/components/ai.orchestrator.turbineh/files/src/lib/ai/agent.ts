@@ -23,7 +23,7 @@ import {
 } from "./safety";
 
 /**
- * runAgent — the TurbineH tool-calling runtime (component ai.orchestrator.turbineh, ADR-0032). Every AI feature that
+ * runAgent — the TurbineH tool-calling runtime (component ai.orchestrator.turbineh, ADR-0033). Every AI feature that
  * acts on the app's data (bookings, orders, tickets, CRM, intake…) runs through here:
  *
  *   1. AI Safety Pack: input size, prompt-injection refusal, per-user/workspace limits (same as orchestrate()).
@@ -78,7 +78,7 @@ export function defineTool<S extends z.ZodType, R>(
 }
 
 /**
- * What a domain component exposes to the orchestrator (ADR-0032): instructions for the model, the tools, and who may
+ * What a domain component exposes to the orchestrator (ADR-0033): instructions for the model, the tools, and who may
  * talk to it. The assembler lists every installed toolkit in src/lib/ai/toolkits.ts.
  */
 export interface Toolkit {

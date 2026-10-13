@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Domain components (ADR-0032): reusable business domains (bookings today; orders, CRM, tickets next) that a
+ * Domain components (ADR-0033): reusable business domains (bookings today; orders, CRM, tickets next) that a
  * recipe can host. Detection and parameters come from the request **by code** (deterministic, no model): the same
  * prompt always yields the same parameters, and anything the prompt does not say is a documented default, never an
  * invented fact.

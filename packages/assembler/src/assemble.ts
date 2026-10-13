@@ -23,7 +23,14 @@ import { entityNames } from "./naming.js";
 import { applyBrand, type Brand } from "./brand-theme.js";
 import { writeSiteContent } from "./site-content.js";
 import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
-import { materializeRecipe, mergedRecipe } from "./recipes.js";
+import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
+import {
+  acceptanceStatus,
+  acceptanceSection,
+  readCoverage,
+  writeAcceptance,
+  type CoverageRule,
+} from "./acceptance.js";
 
 export interface SelectedComponent {
   capability: string;
@@ -45,6 +52,15 @@ export interface AssembleInput {
   gaps: { capability: string; trigger: string }[];
   /** Client brand (validated); applied as theme tokens and logo. */
   brand?: Brand | null;
+  /** Domain components detected in the request by code (ADR-0033): parameters and the entities they implement. */
+  domains?: {
+    id: string;
+    component: string;
+    paramsFile: string;
+    params: unknown;
+    providedEntities: string[];
+    assumptions?: string[];
+  }[];
 }
 
 export interface AssembleResult {
@@ -119,6 +135,22 @@ export function assemble(input: AssembleInput): AssembleResult {
       appendFileSync(join(outDir, ".env.example"), readFileSync(extraEnv, "utf8"));
     }
   }
+  // AI parts of components (files-ai/: toolkits, mock-model scripts, assistant E2E) only when the app has runAgent.
+  const aiApp = existsSync(join(outDir, "src/lib/ai/agent.ts"));
+  for (const s of input.selected) {
+    const filesAi = join(componentsDir, s.component.id, "files-ai");
+    if (aiApp && s.component.pkg.name.startsWith("turbineh/") && existsSync(filesAi))
+      cpSync(filesAi, outDir, { recursive: true });
+  }
+  // Domain parameters from the request (deterministic), e.g. src/bookings/params.json.
+  for (const d of input.domains ?? []) {
+    if (!input.selected.some((s) => s.component.id === d.component)) continue;
+    const target = join(outDir, d.paramsFile);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, `${JSON.stringify(d.params, null, 2)}\n`);
+  }
+  if (aiApp) writeToolkits(outDir);
+
   const componentTables = existsSync(join(outDir, "src/db"))
     ? readdirSync(join(outDir, "src/db"))
         .filter((f) => /^component-[a-z0-9-]+\.ts$/.test(f))
@@ -133,6 +165,7 @@ export function assemble(input: AssembleInput): AssembleResult {
   const entities = entitiesToGenerate(spec, [
     ...recipe.providedEntities,
     ...providedTables(outDir),
+    ...(input.domains ?? []).flatMap((d) => d.providedEntities),
   ]);
   const chosen = new Set(input.selected.map((s) => s.capability));
   const features = {
@@ -159,6 +192,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, f.content);
   }
+  writeAcceptance(outDir, acceptanceStatus(spec.acceptance_criteria, coverageRules(input)));
 
   const generatedPaths = new Set(generated.map((f) => f.path));
   const files = walk(outDir)
@@ -221,10 +255,7 @@ logo, if any, is in \`public/brand/\` and referenced from \`src/brand.ts\`. Chan
 
 \`pnpm typecheck\` · \`pnpm lint\` · \`pnpm test\` · \`pnpm build\` · \`pnpm test:e2e\`
 
-## Acceptance criteria
-
-${spec.acceptance_criteria.map((c) => `- ${c}`).join("\n")}
-`;
+${(input.domains ?? []).some((d) => d.assumptions?.length) ? `## Defaults used (the request did not say)\n\n${(input.domains ?? []).flatMap((d) => d.assumptions ?? []).map((a) => `- ${a}`).join("\n")}\n\n` : ""}${acceptanceSection(acceptanceStatus(spec.acceptance_criteria, coverageRules(input))).replace("## Acceptance criteria", "## Acceptance criteria ([ACCEPTANCE.md](ACCEPTANCE.md))")}`;
   const components = `${MD}
 # Components
 
@@ -264,6 +295,41 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
     { path: "ARCHITECTURE.md", content: architecture },
     { path: "DEPLOY.md", content: `${MD}\n${deployGuide(spec.app_name, envExample)}` },
   ];
+}
+
+/** Coverage rules of the recipe chain and of every native component in the app (acceptance.yaml files). */
+export function coverageRules(input: Pick<AssembleInput, "recipesDir" | "recipe" | "selected">): CoverageRule[] {
+  const componentsDir = join(input.recipesDir, "..", "components");
+  return [
+    ...recipeChain(input.recipesDir, input.recipe).flatMap((m) =>
+      readCoverage(join(input.recipesDir, m.id, "acceptance.yaml"), `recipe ${m.id}`),
+    ),
+    ...[...new Set(input.selected.map((s) => s.component.id))].flatMap((id) =>
+      readCoverage(join(componentsDir, id, "acceptance.yaml"), id),
+    ),
+  ];
+}
+
+/** src/lib/ai/toolkits.ts: every installed domain toolkit (src/<domain>/toolkit.ts exporting `toolkit`). */
+export function writeToolkits(outDir: string): string[] {
+  const src = join(outDir, "src");
+  const domains = readdirSync(src)
+    .filter((d) => /^[a-z][a-z0-9-]*$/.test(d) && existsSync(join(src, d, "toolkit.ts")))
+    .sort();
+  const ident = (d: string) => `${d.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())}Toolkit`;
+  writeFileSync(
+    join(src, "lib/ai/toolkits.ts"),
+    [
+      "// turbineh:generated",
+      'import type { Toolkit } from "./agent";',
+      ...domains.map((d) => `import { toolkit as ${ident(d)} } from "@/${d}/toolkit";`),
+      "",
+      "/** Toolkits installed in this app (ADR-0033): one per domain component that exposes tools to runAgent. */",
+      `export const TOOLKITS: Toolkit[] = [${domains.map(ident).join(", ")}];`,
+      "",
+    ].join("\n"),
+  );
+  return domains;
 }
 
 /** Writes SECURITY.md and TURBINEH_REPORT.md after verification (they report real results). */

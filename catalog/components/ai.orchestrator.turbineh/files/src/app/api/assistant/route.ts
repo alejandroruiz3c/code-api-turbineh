@@ -12,7 +12,7 @@ import { toUserMessage, UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 
 /**
- * Public assistant endpoint (component ai.orchestrator.turbineh, ADR-0032): no sign-in; every turn goes through
+ * Public assistant endpoint (component ai.orchestrator.turbineh, ADR-0033): no sign-in; every turn goes through
  * runAgent (AI Safety Pack, tools, confirmation of irreversible actions, usage and audit). The conversation state is
  * kept on the server; the browser only holds the session id.
  */

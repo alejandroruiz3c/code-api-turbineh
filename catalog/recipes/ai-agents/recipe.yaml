@@ -9,6 +9,8 @@ providedEntities:
     Conversation,
     Chat,
     Message,
+    ChatMessage,
+    ChatSession,
     Document,
     Chunk,
     KnowledgeBase,

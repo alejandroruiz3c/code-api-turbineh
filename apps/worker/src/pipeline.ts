@@ -18,6 +18,7 @@ import {
 import type { BackupCoder } from "@turbineh/backup-coder";
 import {
   compileIntent,
+  detectDomains,
   type BuildSpec,
   type CompileResult,
   type CompilerConfig,
@@ -205,6 +206,17 @@ export async function runBuild(
   spec.capabilities = [
     ...new Set([...spec.capabilities, ...recipe.defaultCapabilities]),
   ] as typeof spec.capabilities;
+  // Domain components (ADR-0033): detected and parameterised from the request by code, selected by code.
+  const domains = detectDomains(prompt, recipeId, spec.app_name);
+  if (domains.length > 0) {
+    recipe.requiredComponents = {
+      ...(recipe.requiredComponents ?? {}),
+      ...Object.fromEntries(domains.map((d) => [d.capability, d.component])),
+    };
+    await deps.emit(buildId, "compiling", "domains", {
+      domains: domains.map((d) => ({ id: d.id, component: d.component, assumptions: d.assumptions })),
+    });
+  }
 
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
@@ -343,6 +355,7 @@ export async function runBuild(
     // Docs list only what is in the repository now; the integration step updates COMPONENTS.md when it succeeds.
     selected: selected.filter((x) => integrable(x.component)),
     brand,
+    domains,
     gaps: [
       ...gaps,
       ...external.map((e) => ({

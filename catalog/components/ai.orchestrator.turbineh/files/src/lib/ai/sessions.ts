@@ -6,7 +6,7 @@ import { agentSessions } from "@/db/schema";
 import type { AgentState } from "./agent";
 
 /**
- * Server-side conversation state for runAgent (component ai.orchestrator.turbineh, ADR-0032). The browser keeps only
+ * Server-side conversation state for runAgent (component ai.orchestrator.turbineh, ADR-0033). The browser keeps only
  * the session id (random UUID); a missing, expired or foreign id starts a new conversation.
  */
 export const SESSION_TTL_MS = 24 * 3_600_000;
