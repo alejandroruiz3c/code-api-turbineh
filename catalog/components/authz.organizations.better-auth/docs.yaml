@@ -1,0 +1,109 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: authz.organizations.better-auth
+does: Organizations (workspaces) with members, roles (owner, admin, member), invitations and an active
+  organization per session
+does_not: Does not scope application data by itself; the app must filter every query by the active organization
+use_cases:
+  - Managing organizations (workspaces) with members and roles (owner, admin, member)
+  - Handling organization invitations
+  - Maintaining an active organization per session
+when_to_use:
+  - When you need built-in workspace and role management in a TypeScript application
+when_not_to_use:
+  - instead: authz.roles.turbineh
+    why: If you only require role-based access control without organization/workspace structures
+tradeoffs:
+  - Does not scope application data by itself; the app must filter every query by the active organization
+inputs:
+  - name: pnpm add better-auth@1.7.6
+    kind: install
+    about: Exact version, added by TurbineH.
+  - name: BETTER_AUTH_SECRET
+    kind: env
+    about: Read by the component's code.
+  - name: BETTER_AUTH_URL
+    kind: env
+    about: Read by the component's code.
+interfaces:
+  - name: toNextJsHandler
+    kind: export
+    about: Handler for Next.js integration
+  - name: organizationClient
+    kind: export
+    about: Client for interacting with organization features
+  - name: createAuthClient
+    kind: export
+    about: Factory to create an authentication client
+  - name: betterAuth
+    kind: export
+    about: Core authentication instance
+  - name: APIError
+    kind: export
+    about: Error type for API failures
+  - name: nextCookies
+    kind: export
+    about: Utility for handling cookies in Next.js
+  - name: organization
+    kind: export
+    about: Organization type definition
+extension_points: []
+dependencies:
+  package: better-auth
+  version: 1.7.6
+  runtime: node@>=20
+  peers:
+    next: ^14.0.0 || ^15.0.0 || ^16.0.0
+    react: ^18.0.0 || ^19.0.0
+  requires:
+    - auth.session
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: next@^14.0.0 || ^15.0.0 || ^16.0.0, react@^18.0.0 || ^19.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database yes."
+  - Denies framing and sniffing
+  - Sets a restrictive CSP
+  - Blocks after the limit within the window
+guarantees:
+  - claim: Members can read and create but cannot update or delete resources
+    test:
+      file: recipe template saas-crud/tests/unit/authz.test.ts
+      title: lets members read and create but not update or delete
+limits:
+  - Enforces limits on operations
+example: import { createAuthClient, organizationClient } from 'better-auth';
+keywords:
+  - better-auth
+  - authz.organizations
+  - authz
+  - organizations
+  - authentication
+  - workspaces
+  - roles
+  - memberships
+  - typescript
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

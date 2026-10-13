@@ -1,0 +1,151 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: security.ai-safety.turbineh
+does: "AI Safety Pack, always installed with the AI orchestrator: refuses prompt-injection requests and
+  oversized input, keeps documents as data, optional redaction of personal data, scans answers for secrets,
+  per-user rate limit and daily token allowances per user and workspace, tool allow-list with human
+  confirmation for irreversible actions, audit record of every AI call (content stored only as a hash)"
+does_not: Does not replace content moderation by a dedicated model; cannot be switched off
+use_cases:
+  - Preventing prompt-injection requests
+  - Enforcing per-user and per-workspace token allowances
+  - Redacting personal data from AI inputs
+  - Scanning AI model outputs for secrets
+  - Auditing AI calls via content hashes
+when_to_use:
+  - When using an AI orchestrator that requires integrated safety controls
+  - When irreversible tool actions require human confirmation
+when_not_to_use:
+  - instead: dedicated content moderation model
+    why: Does not replace content moderation by a dedicated model
+tradeoffs:
+  - Always installed with the AI orchestrator; cannot be switched off
+inputs:
+  - name: "Copied by the assembler from files/ together with ai.orchestrator.turbineh:
+      src/lib/ai/{guard,safety}.ts, src/db/component-ai-safety.ts, tests/unit/ai-safety.test.ts"
+    kind: install
+    about: Exact version, added by TurbineH.
+  - name: AI_MAX_INPUT_CHARS
+    kind: env
+    about: Read by the component's code.
+  - name: AI_REDACT_PII
+    kind: env
+    about: Read by the component's code.
+  - name: AI_REQUESTS_PER_MINUTE_PER_USER
+    kind: env
+    about: Read by the component's code.
+  - name: AI_DAILY_TOKENS_PER_USER
+    kind: env
+    about: Read by the component's code.
+  - name: AI_DAILY_TOKENS_PER_WORKSPACE
+    kind: env
+    about: Read by the component's code.
+interfaces:
+  - name: aiAudit
+    kind: export
+    about: Audit record of every AI call where content is stored only as a hash
+  - name: AiSafetyError
+    kind: export
+    about: Error type for safety violations
+  - name: guardConfig
+    kind: export
+    about: Configuration for the guard mechanism
+  - name: looksLikeInjection
+    kind: export
+    about: Detection for prompt-injection attempts
+  - name: Guarded
+    kind: type
+    about: Type representing a guarded interaction
+  - name: guardInput
+    kind: export
+    about: Function to validate and sanitize input
+  - name: redactPii
+    kind: export
+    about: Optional redaction of personal data
+  - name: scanOutput
+    kind: export
+    about: Scans answers for secrets
+extension_points:
+  - Tool allow-list configuration
+dependencies:
+  package: turbineh/security.ai-safety.turbineh
+  version: 0.1.0
+  runtime: node@>=20
+  peers: {}
+  requires:
+    - ai.orchestrator.turbineh
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database yes."
+  - Prompt-injection refusal
+  - PII redaction via redactPii
+  - Secret scanning in outputs via scanOutput
+  - Per-user and per-workspace rate limiting
+guarantees:
+  - claim: refuses prompt-injection requests and oversized input
+    test:
+      file: files/tests/unit/ai-safety.test.ts
+      title: refuses requests that try to override the instructions
+  - claim: keeps documents as data but removes chat control tokens
+    test:
+      file: files/tests/unit/ai-safety.test.ts
+      title: keeps documents as data but removes chat control tokens
+  - claim: rejects empty and oversized input
+    test:
+      file: files/tests/unit/ai-safety.test.ts
+      title: rejects empty and oversized input
+  - claim: redacts personal data and never lets secrets out
+    test:
+      file: files/tests/unit/ai-safety.test.ts
+      title: redacts personal data and never lets secrets out
+  - claim: only enables registry tools and asks before irreversible ones
+    test:
+      file: files/tests/unit/ai-safety.test.ts
+      title: only enables registry tools and asks before irreversible ones
+limits:
+  - AI_MAX_INPUT_CHARS limit on input size","AI_REQUESTS_PER_MINUTE_PER_USER rate
+    limiting","AI_DAILY_TOKENS_PER_USER/WORKSPACE token quotas
+example: |-
+  import { guardInput, redactPii, scanOutput } from '@/lib/ai/guard';
+
+  const safeInput = await guardInput(userInput);
+  const redacted = redactPii(safeInput);
+  const response = await aiCaller.call(redacted);
+  const cleanResponse = scanOutput(response);
+keywords:
+  - security.ai-safety.turbineh
+  - security.ai-safety
+  - security
+  - ai
+  - safety
+  - ai-safety
+  - prompt-injection
+  - pii-redaction
+  - rate-limiting
+  - audit-log
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

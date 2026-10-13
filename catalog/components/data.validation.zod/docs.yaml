@@ -1,0 +1,98 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.validation.zod
+does: Declares runtime schemas with inferred static types and validates untrusted input at every boundary
+does_not: Does not persist data, sanitize HTML or enforce authorization
+use_cases:
+  - Declaring runtime schemas with inferred static types
+  - Validating untrusted input at boundaries
+  - AOT compilation for hot validation paths
+when_to_use:
+  - When TypeScript-first schema declaration and static type inference are required
+  - When needing a zero-dependency validation library for Node.js or browsers
+when_not_to_use:
+  - instead: data.csv-import.papaparse
+    why: Zod does not parse CSV data
+  - instead: data.dates.date-fns
+    why: Zod is for schema validation, not date manipulation
+  - instead: sanitization logic
+    why: Does not sanitize HTML or enforce authorization
+tradeoffs:
+  - Compilation via `z.compile` provides speedups but uses `new Function`, which may be restricted by CSP
+  - Async refinements and transforms cannot be compiled via the fast path
+inputs:
+  - name: pnpm add zod@4.6.5
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: z
+    kind: export
+    about: The main Zod namespace containing schema constructors and configuration methods
+extension_points:
+  - "`z.compile(schema)` for ahead-of-time compilation"
+  - "`z.config({ jitless: true })` to disable global compilation mode"
+dependencies:
+  package: zod
+  version: 4.6.5
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Can be used to ensure inputs 'matches emails case-insensitively and denies by default'
+guarantees:
+  - claim: Enforces schema constraints on input data
+    test:
+      file: recipe template saas-crud/tests/unit/csv.test.ts
+      title: enforces limits
+  - claim: Validates string patterns such as email addresses
+    test:
+      file: recipe template saas-crud/tests/unit/staff.test.ts
+      title: matches emails case-insensitively and denies by default
+limits:
+  - Schemas with async refinements or transforms cannot be compiled via `z.compile`
+example: |-
+  import * as z from "zod";
+
+  const User = z.object({
+    username: z.string(),
+    xp: z.number(),
+  });
+
+  const data = User.parse({ username: "billie", xp: 100 });
+keywords:
+  - zod
+  - data.validation
+  - data
+  - validation
+  - schema
+  - typescript
+  - inference
+  - parsing
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

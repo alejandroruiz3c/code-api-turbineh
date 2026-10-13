@@ -6,7 +6,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
+import { docsIssues } from "@turbineh/catalog";
+import { loadLocalEnv, readEnv } from "@turbineh/shared";
 import { certify } from "./certify.js";
+import { documentComponent } from "./document.js";
 import { evaluate, type CurationEntry } from "./evaluate.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -37,3 +40,16 @@ for (const r of results)
 console.log(
   `\n${results.filter((r) => r.approved).length}/${results.length} approved · evidence: ${relative(repoRoot, evidence)}`,
 );
+
+// Documentation step (ADR-0032): a component that is not documented to the standard is documented, not rejected.
+loadLocalEnv(repoRoot);
+const env = readEnv();
+for (const r of results.filter((x) => x.approved)) {
+  if (docsIssues(join(componentsDir, r.id), r.id).length === 0) continue;
+  const d = await documentComponent(componentsDir, r.id, {
+    baseURL: env.COMPILER_BASE_URL,
+    model: env.COMPILER_MODEL,
+    ...(env.COMPILER_API_KEY ? { apiKey: env.COMPILER_API_KEY } : {}),
+  });
+  console.log(`${d.ok ? "documented" : "NOT documented (run pnpm catalog:document)"}  ${r.id}`);
+}

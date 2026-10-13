@@ -1,0 +1,93 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.notifications.sonner
+does: Toast notifications for React
+does_not: Does not send push or email notifications
+use_cases:
+  - Displaying opinionated toast notifications in React applications
+  - Triggering imperative toast messages from anywhere in the application
+when_to_use:
+  - When you need a centralized component to render toast notifications
+  - When you require an imperative API to trigger toasts
+when_not_to_use:
+  - instead: push or email notifications
+    why: The component does not send push or email notifications
+tradeoffs:
+  - Uses an opinionated design which may limit customization compared to non-opinionated alternatives
+inputs:
+  - name: pnpm add sonner@2.0.8
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Toaster
+    kind: export
+    about: The container component where all toasts are rendered
+  - name: toast
+    kind: export
+    about: An imperative API used to trigger toast notifications
+extension_points: []
+dependencies:
+  package: sonner
+  version: 2.0.8
+  runtime: node@>=20
+  peers:
+    react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+    react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+    "@types/react": ^18.0.0 || ^19.0.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^18.0.0 || ^19.0.0 || ^19.0.0-rc, react-dom@^18.0.0 || ^19.0.0 || ^19.0.0-rc,
+    @types/react@^18.0.0 || ^19.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access is performed by this component
+guarantees:
+  - claim: exposes a toaster and an imperative API
+    test:
+      file: contract.test.ts
+      title: exposes a toaster and an imperative API
+limits:
+  - Does not send push or email notifications
+example: |-
+  import { Toaster, toast } from 'sonner';
+
+  function App() {
+    return (
+      <>
+        <Toaster />
+        <button onClick={() => toast('My first toast')}>Give me a toast</button>
+      </>
+    );
+  }
+keywords:
+  - sonner
+  - ui.notifications
+  - ui
+  - notifications
+  - react
+  - toast
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

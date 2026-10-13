@@ -1,0 +1,100 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.csv-export.turbineh
+does: CSV export of workspace-scoped records with spreadsheet formula-injection neutralisation
+does_not: Does not export binary formats such as XLSX
+use_cases:
+  - Exporting workspace-scoped records to CSV format
+  - Generating CSV strings with spreadsheet formula-injection protection
+when_to_use:
+  - When you need to export data to CSV while neutralizing potential formula injection attacks
+when_not_to_use:
+  - instead: data.csv-export.csv-stringify
+    why: If you require a different CSV generation implementation
+  - instead: XLSX binary formats
+    why: This component does not export binary formats such as XLSX
+tradeoffs:
+  - Provides security against formula injection at the cost of adding a single quote prefix to sensitive cells
+inputs:
+  - name: Included in recipe templates at src/lib/csv.ts + generated export routes
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: toCsv
+    kind: export
+    about: Converts an array of objects into a CSV string with formula neutralization and proper quoting
+  - name: CSV_LIMITS
+    kind: export
+    about: Constants defining maxBytes and maxRows for CSV operations
+  - name: parseCsv
+    kind: export
+    about: Parses RFC 4180 CSV text into objects keyed by the header row with size and row constraints
+extension_points: []
+dependencies:
+  package: turbineh/data.csv-export.turbineh
+  version: 0.1.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database yes."
+  - Neutralises spreadsheet formula injection by prefixing cells starting with =, +, -, @, or tab with a
+    single quote
+guarantees:
+  - claim: neutralises formula injection and quotes special characters
+    test:
+      file: recipe template template/tests/unit/csv.test.ts
+      title: neutralises formula injection and quotes special characters
+  - claim: round-trips quoted fields and CRLF
+    test:
+      file: recipe template template/tests/unit/csv.test.ts
+      title: round-trips quoted fields and CRLF
+  - claim: enforces limits
+    test:
+      file: recipe template template/tests/unit/csv.test.ts
+      title: enforces limits
+limits:
+  - "maxBytes: 1,000,000"
+  - "maxRows: 1,000"
+example: |-
+  import { toCsv } from '@/lib/csv';
+
+  const data = [{ id: 1, name: '=unsafe' }];
+  const csv = toCsv(data, ['id', 'name']);
+keywords:
+  - data.csv-export.turbineh
+  - data.csv-export
+  - data
+  - csv
+  - export
+  - formula-injection
+  - spreadsheet
+  - neutralization
+  - rfc4180
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

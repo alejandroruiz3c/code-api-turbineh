@@ -10,3 +10,4 @@ builds
 next-env.d.ts
 .claude
 packages/engine/src/use-cases.generated.ts
+apps/web/public/catalog

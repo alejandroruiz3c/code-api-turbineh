@@ -3,7 +3,7 @@
 schema: turbineh.component-docs/v1
 id: data.ids.ulid
 does: Time-sortable unique ids
-does_not: Encodes creation time
+does_not: Does not hide when an id was created (the time is encoded in it)
 use_cases:
   - Generating unique, lexicographically sortable identifiers
   - Creating 128-bit compatible IDs for data structures to prevent fragmentation

@@ -1,0 +1,126 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: auth.session.better-auth
+does: Email/password and OAuth authentication with database-backed sessions and cookie handling
+does_not: Does not implement enterprise SSO (SAML) in the core package
+use_cases:
+  - Email/password authentication
+  - OAuth authentication
+  - Database-backed session management
+  - Cookie-based authentication
+when_to_use:
+  - When TypeScript-based authentication with database sessions is required
+  - When OAuth and email/password flows are needed
+when_not_to_use:
+  - instead: auth.mfa.otpauth
+    why: The core package does not implement enterprise SSO (SAML)
+tradeoffs:
+  - Requires database connectivity for session management
+inputs:
+  - name: pnpm add better-auth@1.7.6
+    kind: install
+    about: Exact version, added by TurbineH.
+  - name: BETTER_AUTH_SECRET
+    kind: env
+    about: Read by the component's code.
+  - name: BETTER_AUTH_URL
+    kind: env
+    about: Read by the component's code.
+interfaces:
+  - name: betterAuth
+    kind: export
+    about: Main authentication instance creator
+  - name: createAuthClient
+    kind: export
+    about: Client-side authentication client
+  - name: toNextJsHandler
+    kind: export
+    about: Handler for Next.js integration
+  - name: organizationClient
+    kind: export
+    about: Client for managing organizations
+  - name: organization
+    kind: export
+    about: Organization type definition
+  - name: APIError
+    kind: export
+    about: Error type for API failures
+  - name: nextCookies
+    kind: export
+    about: Utility for Next.js cookie handling
+extension_points:
+  - Organization management via organizationClient
+dependencies:
+  package: better-auth
+  version: 1.7.6
+  runtime: node@>=20
+  peers:
+    next: ^14.0.0 || ^15.0.0 || ^16.0.0
+    react: ^18.0.0 || ^19.0.0
+    drizzle-orm: ^0.45.2
+  requires:
+    - data.orm
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: next@^14.0.0 || ^15.0.0 || ^16.0.0, react@^18.0.0 || ^19.0.0, drizzle-orm@^0.45.2."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network yes, filesystem no, database yes."
+  - Denies framing and sniffing
+  - Sets a restrictive CSP
+  - Blocks after the limit within the window
+guarantees:
+  - claim: Email matching is case-insensitive and denies by default
+    test:
+      file: recipe template saas-crud/tests/unit/staff.test.ts
+      title: matches emails case-insensitively and denies by default
+  - claim: Input is sanitized against formula injection and special characters
+    test:
+      file: recipe template saas-crud/tests/unit/csv.test.ts
+      title: neutralises formula injection and quotes special characters
+  - claim: Session persistence allows returning users to resume workspaces
+    test:
+      file: recipe template saas-crud/tests/e2e/auth.spec.ts
+      title: a returning user signs out, signs in again and resumes their workspace
+limits:
+  - Rate limiting via windowed blocks
+example: |-
+  import { betterAuth } from 'better-auth';
+
+  const auth = betterAuth({
+    // configuration
+  });
+keywords:
+  - better-auth
+  - auth.session
+  - auth
+  - session
+  - authentication
+  - oauth
+  - sessions
+  - typescript
+  - cookies
+  - database-backed
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

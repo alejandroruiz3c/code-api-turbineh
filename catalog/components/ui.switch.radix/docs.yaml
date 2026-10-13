@@ -1,0 +1,92 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.switch.radix
+does: Accessible on/off switches for settings
+does_not: Unstyled
+use_cases:
+  - Accessible on/off switches for settings
+  - Toggleable user preferences
+when_to_use:
+  - When building accessible toggle controls
+when_not_to_use:
+  - instead: ui.checkbox.radix
+    why: When a checkbox input is more appropriate than a switch
+tradeoffs:
+  - The component is unstyled
+inputs:
+  - name: pnpm add @radix-ui/react-switch@1.3.7
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Root
+    kind: export
+    about: The main switch container
+  - name: Thumb
+    kind: export
+    about: The movable element inside the switch
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-switch"
+  version: 1.3.7
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database access required
+guarantees:
+  - claim: renders accessibly on the server
+    test:
+      file: contract.test.ts
+      title: renders accessibly on the server
+limits:
+  - Unstyled
+example: |-
+  import { Root, Thumb } from "@radix-ui/react-switch";
+
+  const Switch = () => (
+    <Root aria-label="Notifications">
+      <Thumb />
+    </Root>
+  );
+keywords:
+  - "@radix-ui/react-switch"
+  - ui.switch
+  - ui
+  - switch
+  - toggle
+  - accessible
+  - radix-ui
+  - on/off
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

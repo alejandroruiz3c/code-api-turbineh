@@ -112,19 +112,18 @@ export function docsIssues(componentDir: string, id: string): string[] {
   return r.data.id === id ? [] : [`docs.yaml id "${r.data.id}" must equal "${id}"`];
 }
 
-/** Compact card for the decider: what it does, when (not) to use it, main trade-off, tested guarantees. */
+/**
+ * Compact card for the decider: what it does, what it is best for and its search keywords. Only positive,
+ * discriminating facts: limits and "avoid when" read as risk to the risk question and lowered selection quality on the
+ * selection bench (bench/results/*-selection-*.json); they stay in the full docs, search and the index.
+ */
 export function decisionCard(d: ComponentDocs, provides: string[]): string {
-  const not = d.when_not_to_use[0];
   const parts = [
     `${d.does.replace(/\.$/, "")}.`,
-    d.does_not ? `Not: ${d.does_not.replace(/\.$/, "")}.` : "",
-    `Use when: ${d.when_to_use.slice(0, 2).join("; ")}.`,
-    not ? `Avoid when: ${not.why.replace(/\.$/, "")} (use ${not.instead}).` : "",
-    `Trade-off: ${d.tradeoffs[0]}`,
-    `Tested: ${d.guarantees.length} guarantee(s). Limits: ${d.limits[0]}`,
+    `Use cases: ${d.use_cases.slice(0, 2).join("; ").replace(/\.$/, "")}.`,
     `Provides: ${provides.join(", ")}.`,
   ];
-  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, 700);
+  return parts.join(" ").replace(/\s+/g, " ").slice(0, 600);
 }
 
 /** Text used for search (CLI, API, index). */

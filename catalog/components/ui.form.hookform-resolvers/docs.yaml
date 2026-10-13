@@ -1,0 +1,112 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.form.hookform-resolvers
+does: Connects react-hook-form with Zod schemas for typed client validation
+does_not: Requires react-hook-form
+use_cases:
+  - Integrating Zod schemas with react-hook-form for client-side validation
+  - Providing typed form values by inferring output types from Zod schemas
+when_to_use:
+  - When using react-hook-form and requiring external schema validation libraries like Zod
+when_not_to_use:
+  - instead: writing custom validation logic
+    why: If you are not using an external validation library
+tradeoffs:
+  - Requires installing a validation library (e.g., zod) alongside the resolvers package
+inputs:
+  - name: pnpm add @hookform/resolvers@5.9.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: zodResolver
+    kind: export
+    about: A resolver function that connects a Zod schema to react-hook-form
+extension_points: []
+dependencies:
+  package: "@hookform/resolvers"
+  version: 5.9.1
+  runtime: node@>=20
+  peers:
+    ajv: ^8.12.0
+    joi: ^17.0.0 || ^18.0.0
+    yup: ^1.0.0
+    zod: ^3.25.0 || ^4.0.0
+    vest: ">=6.0.0"
+    fp-ts: ^2.7.0
+    io-ts: ^2.0.0
+    effect: ^3.10.3
+    arktype: ^2.0.0
+    valibot: ">=0.31.0 || ^1.0.0-beta.4 || ^1.0.0-rc"
+    typanion: ^3.3.2
+    ajv-errors: ^3.0.0
+    ajv-formats: ^2.1.1
+    superstruct: ">=0.12.0"
+    "@vinejs/vine": ^2.0.0 || ^3.0.0 || ^4.0.0
+    ata-validator: ^1.2.0
+    computed-types: ^1.0.0
+    nope-validator: ">=0.12.0"
+    class-validator: ">=0.12.0"
+    react-hook-form: ^7.55.0
+    "@typeschema/main": ">=0.13.7"
+    "@sinclair/typebox": ">=0.25.24"
+    class-transformer: ">=0.4.0"
+    fluentvalidation-ts: ^3.0.0
+    "@standard-schema/spec": ^1.0.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: ajv@^8.12.0, joi@^17.0.0 || ^18.0.0, yup@^1.0.0, zod@^3.25.0 || ^4.0.0, vest@>=6.0.0,
+    fp-ts@^2.7.0, io-ts@^2.0.0, effect@^3.10.3, arktype@^2.0.0, valibot@>=0.31.0 || ^1.0.0-beta.4 ||
+    ^1.0.0-rc, typanion@^3.3.2, ajv-errors@^3.0.0, ajv-formats@^2.1.1, superstruct@>=0.12.0,
+    @vinejs/vine@^2.0.0 || ^3.0.0 || ^4.0.0, ata-validator@^1.2.0, computed-types@^1.0.0,
+    nope-validator@>=0.12.0, class-validator@>=0.12.0, react-hook-form@^7.55.0, @typeschema/main@>=0.13.7,
+    @sinclair/typebox@>=0.25.24, class-transformer@>=0.4.0, fluentvalidation-ts@^3.0.0,
+    @standard-schema/spec@^1.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+guarantees:
+  - claim: validates form values with a Zod schema
+    test:
+      file: contract.test.ts
+      title: validates form values with a Zod schema
+limits:
+  - Does not require react-hook-form to function as a standalone resolver unit
+example: |-
+  import { zodResolver } from "@hookform/resolvers/zod";
+
+  const resolver = zodResolver(z.object({ email: z.string().email() }));
+keywords:
+  - "@hookform/resolvers"
+  - ui.form
+  - ui
+  - form
+  - react-hook-form
+  - zod
+  - validation
+  - resolver
+  - schema
+  - typescript
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

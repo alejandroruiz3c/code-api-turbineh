@@ -22,7 +22,9 @@ interface Manifest {
  * `docs: false` keeps the manifest one-liner (selection bench baseline).
  */
 export function loadCatalog(componentsDir: string, opts: { docs?: boolean } = {}): CandidateCard[] {
-  const useDocs = opts.docs ?? true;
+  // Measured on the selection bench (bench/results/2026-10-13-selection-*.json): documentation cards did not beat the
+  // manifest one-liners (16/19 vs 17/19), so they are opt-in (DECIDER_DOC_CARDS=1) until a bench run shows a gain.
+  const useDocs = opts.docs ?? process.env.DECIDER_DOC_CARDS === "1";
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => ({

@@ -80,10 +80,19 @@ export function symbolsOf(src: string, pkg: string): string[] {
   return [...out];
 }
 
-/** Names imported from `pkg` (default, named, namespace). */
+/** Names imported from `pkg` (default, named; for a namespace import `* as A`, the members used as `A.Name`). */
 export function importsFrom(src: string, pkg: string): string[] {
   const own = new Set(symbolsOf(src, pkg));
   for (const e of exportsOf(src)) own.delete(e.name);
+  const esc = pkg.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  for (const m of src.matchAll(
+    new RegExp(`import\\s+\\*\\s+as\\s+([A-Za-z_$][\\w$]*)\\s+from\\s+["']${esc}["']`, "g"),
+  )) {
+    const ns = m[1] as string;
+    own.delete(ns);
+    for (const u of src.matchAll(new RegExp(`\\b${ns}\\.([A-Za-z_$][\\w$]*)`, "g")))
+      own.add(u[1] as string);
+  }
   return [...own];
 }
 
@@ -155,9 +164,13 @@ async function readme(name: string): Promise<string> {
 export function vendoredFiles(
   componentsDir: string,
   install: string,
-): { files: { abs: string; spec: string }[]; tests: { abs: string; rel: string }[] } {
+): {
+  files: { abs: string; spec: string }[];
+  tests: { abs: string; rel: string }[];
+  base: boolean;
+} {
   const recipes = join(componentsDir, "../recipes");
-  if (!existsSync(recipes)) return { files: [], tests: [] };
+  if (!existsSync(recipes)) return { files: [], tests: [], base: false };
   const templates = readdirSync(recipes).map((r) => join(recipes, r, "template"));
   const files: { abs: string; spec: string }[] = [];
   for (const path of install.match(/\bsrc\/[\w./-]+/g) ?? []) {
@@ -180,12 +193,42 @@ export function vendoredFiles(
   for (const t of templates) {
     for (const f of walk(join(t, "tests/unit")).filter((x) => x.endsWith(".test.ts"))) {
       const src = readFileSync(f, "utf8");
-      const imports = [...src.matchAll(/from\s+["'](@\/[^"']+)["']/g)].map((m) => m[1] as string);
+      const imports = [...src.matchAll(/(?:from\s+|import\(\s*)["'](@\/[^"']+)["']/g)].map(
+        (m) => m[1] as string,
+      );
       if (imports.some((i) => specs.has(i)) && !tests.some((x) => x.rel.endsWith(relative(t, f))))
         tests.push({ abs: f, rel: `recipe template ${relative(join(t, ".."), f)}` });
     }
   }
-  return { files, tests };
+  return { files, tests, base: files.some((f) => f.abs.includes(`/recipes/${BASE}/`)) };
+}
+
+const BASE = "saas-crud";
+
+/**
+ * Packages of the base template stack (e.g. better-auth, zod, drizzle-orm): the names the templates import from them
+ * and the base template's tests, which exercise that stack in every build.
+ */
+export function stackFacts(
+  componentsDir: string,
+  pkg: string,
+): { names: string[]; tests: { abs: string; rel: string }[] } {
+  const base = join(componentsDir, "../recipes", BASE, "template");
+  const pj = join(base, "package.json");
+  const tests = [...walk(join(base, "tests"))]
+    .filter((f) => /\.(test|spec)\.ts$/.test(f))
+    .map((f) => ({ abs: f, rel: `recipe template ${BASE}/${relative(base, f)}` }));
+  if (!existsSync(pj)) return { names: [], tests };
+  const deps = (JSON.parse(readFileSync(pj, "utf8")) as { dependencies?: Record<string, string> })
+    .dependencies;
+  if (!deps || !(pkg in deps)) return { names: [], tests };
+  const recipes = join(componentsDir, "../recipes");
+  const src = readdirSync(recipes)
+    .flatMap((r) => walk(join(recipes, r, "template/src")))
+    .filter((f) => /\.(ts|tsx)$/.test(f))
+    .map((f) => readFileSync(f, "utf8"))
+    .join("\n");
+  return { names: importsFrom(src, pkg), tests };
 }
 
 /** Bounds the model's draft (truncates over-long strings and lists) before validation. */
@@ -241,9 +284,10 @@ export async function componentFacts(
   ];
   const all = sources.map((p) => readFileSync(p, "utf8")).join("\n");
   const importable: Record<string, string[]> = {};
+  const stack = stackFacts(componentsDir, pkg.name);
   const kinds: ComponentFacts["kinds"] = {};
   if (!pkg.name.startsWith("turbineh/")) {
-    importable[pkg.name] = importsFrom(all, pkg.name);
+    importable[pkg.name] = [...new Set([...importsFrom(all, pkg.name), ...stack.names])];
     for (const n of importable[pkg.name] ?? []) kinds[n] = /^use[A-Z]/.test(n) ? "hook" : "export";
   }
   for (const f of vendored.files) {
@@ -289,10 +333,11 @@ export async function componentFacts(
     env,
     tests: [
       ...testsOf(dir),
-      ...vendored.tests.flatMap((t) =>
-        [
-          ...readFileSync(t.abs, "utf8").matchAll(/\b(?:it|test)\(\s*["'`]([^"'`]{3,200})["'`]/g),
-        ].map((m) => ({ file: t.rel, title: m[1] as string })),
+      ...[...vendored.tests, ...(stack.names.length || vendored.base ? stack.tests : [])].flatMap(
+        (t) =>
+          [
+            ...readFileSync(t.abs, "utf8").matchAll(/\b(?:it|test)\(\s*["'`]([^"'`]{3,200})["'`]/g),
+          ].map((m) => ({ file: t.rel, title: m[1] as string })),
       ),
     ],
     code: excerpt,
@@ -323,7 +368,7 @@ export const draftSchema = z.object({
     .min(1)
     .max(8),
   extension_points: z.array(S).max(4),
-  security: z.array(S).min(1).max(4),
+  security: z.array(S).max(4),
   guarantees: z
     .array(z.object({ claim: S, test_title: S }))
     .min(1)
@@ -513,7 +558,9 @@ export function exampleProblem(
   if (imports.length === 0) return "imports nothing from the component";
   for (const m of imports) {
     const from = m[2] as string;
-    const names = importable[from];
+    // A package subpath ("@hookform/resolvers/zod") belongs to its package.
+    const key = Object.keys(importable).find((k) => from === k || from.startsWith(`${k}/`));
+    const names = key ? importable[key] : undefined;
     if (!names) return `imports from ${from}, which the component does not provide`;
     const clause = (m[1] ?? "").replace(/^type\s+/, "");
     const wanted = [
@@ -588,7 +635,7 @@ export async function documentComponent(
       const { docs, dropped } = checkDraft(facts, draft, { by: model.model, at });
       const valid = componentDocsSchema.safeParse(docs);
       if (!valid.success) {
-        last = valid.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+        last = `${valid.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}${dropped.length ? ` (dropped: ${dropped.join("; ")})` : ""}`;
         messages.push(
           { role: "assistant", content },
           {

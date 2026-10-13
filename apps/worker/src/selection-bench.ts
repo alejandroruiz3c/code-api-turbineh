@@ -2,7 +2,8 @@
  * `pnpm --filter @turbineh/worker run bench:selection <label> [--manifest-cards]` — selection quality and latency on
  * labelled cases (capabilities with several approved candidates, where the app states what decides the choice).
  * Writes bench/results/<date>-selection-<label>.json. `--manifest-cards` uses the manifest one-liners (baseline);
- * the default uses the documentation cards (docs.yaml).
+ * the default uses the documentation cards (docs.yaml); production selection uses manifest cards unless
+ * DECIDER_DOC_CARDS=1.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
