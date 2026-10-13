@@ -99,6 +99,27 @@ function restoreOrRemove(dir: string, commit: string, file: string): void {
   }
 }
 
+/**
+ * Metrics shown in the delivered report: decisions are TurbineH orchestration, so no decider model or backend names
+ * (PLAN §16 P8). The internal record keeps them.
+ */
+export function publicMetrics(metrics: Record<string, unknown>): Record<string, unknown> {
+  const { decider, tokens, ...rest } = metrics;
+  const d = (decider ?? {}) as Record<string, unknown>;
+  const t = { ...((tokens ?? {}) as Record<string, unknown>) };
+  delete t.decider;
+  return {
+    ...rest,
+    tokens: t,
+    decisions: {
+      questions: d.questions,
+      requests: d.requests,
+      latencyMs: d.latencyMs,
+      cached: d.cached,
+    },
+  };
+}
+
 const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
 
 /** Evidence actually produced by this build's checks: E2E and unit test titles found in the repository. */
@@ -342,7 +363,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),
-    reportMarkdown(report, JSON.stringify(metrics, null, 2)),
+    reportMarkdown(report, JSON.stringify(publicMetrics(metrics), null, 2)),
   );
   execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
   execFileSync(

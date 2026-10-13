@@ -21,7 +21,7 @@ import {
  * through here (enforced by the TurbineH rule turbineh.ai-direct-model-call):
  *   1. AI Safety Pack checks the request (injection, size, limits, budgets);
  *   2. a small open model decomposes it into a plan;
- *   3. JEV (TypeSafe) decides the route (which open model), whether it is acceptable and which tool, if any;
+ *   3. TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool, if any;
  *   4. the chosen open model produces the result (validated against a schema when one is given);
  *   5. the answer is scanned (secrets, optional PII), and usage + audit are recorded per workspace.
  */
@@ -142,7 +142,7 @@ export async function orchestrate<T = string>(
     const { plan, fallback } = parsePlan(planReply.text, req.task, Boolean(req.schema));
     if (fallback) flags.push("plan-fallback");
 
-    // 3 · Decision with JEV (or the configured open decider).
+    // 3 · Decision through the TurbineH AI gateway.
     const available = routes();
     try {
       decision = await decideRoute(plan, available, req.tools ?? [], request.text);

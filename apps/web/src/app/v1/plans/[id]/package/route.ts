@@ -31,5 +31,21 @@ export async function GET(
       ),
     );
   }
-  return Response.redirect(await storage.url(key), 302);
+  const url = await storage.url(key);
+  // Local storage answers with an app path behind the browser session: serve the bytes here for API callers.
+  if (url.startsWith("/")) {
+    const manifest = key.endsWith(".json");
+    return new Response(new Uint8Array(await storage.get(key)), {
+      headers: {
+        "Content-Type": manifest ? "application/json" : "application/zip",
+        "Cache-Control": "no-store",
+        ...(manifest
+          ? {}
+          : {
+              "Content-Disposition": `attachment; filename="${key.split("/").pop() ?? "package.zip"}"`,
+            }),
+      },
+    });
+  }
+  return Response.redirect(url, 302);
 }

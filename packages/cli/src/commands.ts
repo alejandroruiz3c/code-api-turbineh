@@ -511,6 +511,15 @@ export async function apply(c: Ctx): Promise<CommandResult> {
 
 // ── verify / revert / status ──────────────────────────────────────────────────────────────────────────────
 
+/** The line that explains a failure: the first error line, else the last line that is not the script banner. */
+function headline(detail: string): string {
+  const lines = detail
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith(">"));
+  return lines.find((l) => /\berror\b/i.test(l)) ?? lines.at(-1) ?? detail.split("\n")[0] ?? "";
+}
+
 function run(cwd: string, cmd: string, args: string[]): { ok: boolean; detail: string } {
   try {
     execFileSync(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"], timeout: 15 * 60_000 });
@@ -623,7 +632,7 @@ export async function verify(c: Ctx): Promise<CommandResult> {
       bold(`Verification of ${e.slug} in this project`),
       ...checks.map(
         (x) =>
-          `  ${x.ok ? green("✔") : red("✖")} ${x.name}${x.detail ? dim(` — ${x.detail.split("\n")[0]}`) : ""}`,
+          `  ${x.ok ? green("✔") : red("✖")} ${x.name}${x.detail ? dim(` — ${headline(x.detail)}`) : ""}`,
       ),
     ],
     ...(first
@@ -634,7 +643,7 @@ export async function verify(c: Ctx): Promise<CommandResult> {
               first.name === "settings"
                 ? `Settings missing: ${missing.join(", ")}.`
                 : `${first.name} failed.`,
-            action: first.detail?.split("\n")[0] ?? "Fix it and verify again.",
+            action: first.detail ? headline(first.detail) : "Fix it and verify again.",
             resume: `turbineh verify ${e.id}`,
           },
         }
