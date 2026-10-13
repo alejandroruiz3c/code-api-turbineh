@@ -41,6 +41,23 @@ export interface StaticFinding {
   line: number;
   message: string;
   explain: string;
+  /**
+   * security: a weakness an attacker could use. policy: our delivery policy (e.g. a secret-shaped test placeholder in
+   * a tracked file) — it still blocks when its severity says so, but it is reported as what it is.
+   */
+  category?: FindingCategory;
+}
+
+export type FindingCategory = "security" | "policy";
+
+/** Gate findings grouped honestly: what is a vulnerability, what is our policy, what is app quality. */
+export interface GateFinding {
+  category: FindingCategory | "quality";
+  /** Rule id, licence expression or failing step. */
+  rule: string;
+  where: string;
+  blocking: boolean;
+  message: string;
 }
 
 export interface StepResult {
@@ -65,6 +82,87 @@ export interface VerifyResult {
     static: StaticFinding[];
   };
   scannedAt: string;
+}
+
+/** Files that are never shipped to users: test code, test configuration and examples. */
+const TEST_FILE =
+  /(^|\/)(tests?|e2e|__tests__|fixtures?)\/|(^|\/)(playwright|vitest|jest)\.config\.[cm]?[jt]s$|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)\.env\.example$/;
+/** Words that mark a value as a placeholder rather than a credential. */
+const PLACEHOLDER =
+  /(test|e2e|local|example|dummy|placeholder|change[-_]?me|stub|fake|sandbox|synthetic)/i;
+
+/**
+ * Deterministic category of a static finding. A secret-shaped literal is a security finding unless it sits in test
+ * code/configuration or is an obvious placeholder: then it is a policy finding (no literal secrets in tracked files).
+ */
+export function findingCategory(f: StaticFinding, lineText = ""): FindingCategory {
+  if (f.rule !== "turbineh.hardcoded-secret") return "security";
+  return TEST_FILE.test(f.path) || PLACEHOLDER.test(lineText) ? "policy" : "security";
+}
+
+/** Every gate finding with its honest category (security / policy / quality), blocking or not. */
+export function gateFindings(v: VerifyResult): GateFinding[] {
+  const out: GateFinding[] = [];
+  for (const f of v.findings.static) {
+    out.push({
+      category: f.category ?? findingCategory(f),
+      rule: f.rule,
+      where: `${f.path}:${f.line}`,
+      blocking: f.severity === "ERROR",
+      message: f.message,
+    });
+  }
+  for (const a of v.findings.advisories) {
+    out.push({
+      category: "security",
+      rule: a.id,
+      where: a.pkg,
+      blocking: a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH"),
+      message: `${a.severity} advisory (${a.scope})`,
+    });
+  }
+  for (const l of v.findings.licenses) {
+    const [pkg = l, ...expr] = l.split(" ");
+    out.push({
+      category: "policy",
+      rule: "licence-policy",
+      where: pkg,
+      blocking: true,
+      message: `Licence ${expr.join(" ")} is outside the delivery licence policy (copyleft or unknown); not a vulnerability. If it comes from an optional binary (e.g. sharp → libvips), exclude it with pnpm.ignoredOptionalDependencies.`,
+    });
+  }
+  if (v.findings.secrets > 0) {
+    out.push({
+      category: "security",
+      rule: "gitleaks",
+      where: "git history",
+      blocking: true,
+      message:
+        "A secret-shaped value is in the git history (redacted). Generate test secrets at runtime instead of committing them.",
+    });
+  }
+  for (const s of v.steps) {
+    if (s.ok || ["secrets", "static", "dependencies", "licenses"].includes(s.name)) continue;
+    out.push({
+      category: "quality",
+      rule: s.name,
+      where: failureLocation(s.detail) ?? s.name,
+      blocking: true,
+      message: `${s.name} failed`,
+    });
+  }
+  return out;
+}
+
+/** First "file:line" a failing step points to (tsc, eslint, vitest or Playwright output), if any. */
+export function failureLocation(detail: string): string | null {
+  const tsc = /((?:src|tests|scripts)\/[\w./[\]-]+\.[cm]?[jt]sx?)\((\d+),\d+\)/.exec(detail);
+  if (tsc) return `${tsc[1]}:${tsc[2]}`;
+  const any = /((?:src|tests|scripts)\/[\w./[\]-]+\.[cm]?[jt]sx?):(\d+)/.exec(detail);
+  if (any) return `${any[1]}:${any[2]}`;
+  const eslint = /^(\/?[\w./[\]-]+\.[cm]?[jt]sx?)\n\s+(\d+):\d+\s+error/m.exec(detail);
+  if (eslint) return `${eslint[1]?.replace(/^\/(work|src|opt\/base|tmp\/app)\//, "")}:${eslint[2]}`;
+  return null;
 }
 
 /** Copyleft / unknown licenses that block delivery in the beta (direct and transitive dependencies). */
@@ -235,7 +333,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
     if (aiApp) await run("docker", ["rm", "-f", aiHost]);
     await run("docker", ["network", "rm", net]);
   }
-  const [secrets, staticFindings, advisories] = await scans;
+  const [secrets, scanned, advisories] = await scans;
+  const staticFindings = scanned ? labelFindings(dir, scanned) : null;
 
   const steps: StepResult[] = [];
   for (const line of main.tail.split("\n")) {
@@ -263,7 +362,9 @@ export async function verify(dir: string): Promise<VerifyResult> {
     detail:
       staticFindings === null
         ? "static scanner gave no result (retried once)"
-        : staticFindings.map((f) => `${f.severity} ${f.rule} ${f.path}:${f.line}`).join("\n"),
+        : staticFindings
+            .map((f) => `${f.severity} [${f.category}] ${f.rule} ${f.path}:${f.line}`)
+            .join("\n"),
   });
   steps.push({
     name: "dependencies",
@@ -500,6 +601,19 @@ async function staticScanOnce(dir: string): Promise<StaticFinding[] | null> {
     true,
   );
   return parseSemgrep(r.tail);
+}
+
+/** Adds the deterministic category to each finding (reads the flagged line to recognise placeholders). */
+export function labelFindings(dir: string, findings: StaticFinding[]): StaticFinding[] {
+  return findings.map((f) => {
+    let line = "";
+    try {
+      line = readFileSync(join(dir, f.path), "utf8").split("\n")[f.line - 1] ?? "";
+    } catch {
+      // unreadable file: categorised from its path only
+    }
+    return { ...f, category: findingCategory(f, line) };
+  });
 }
 
 /** Semgrep JSON → findings; null when the output is not a complete result (the scan did not run). */

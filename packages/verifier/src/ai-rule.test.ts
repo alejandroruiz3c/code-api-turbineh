@@ -44,6 +44,13 @@ describe.skipIf(!semgrepAvailable)("AI enforcement rules (ADR-0028)", () => {
         "src/server/decide.ts":
           'import { TypeSafeClient } from "@typesafe-ai/sdk";\nexport const t = TypeSafeClient;\n',
         "package.json": '{ "dependencies": { "@typesafe-ai/sdk": "0.6.0" } }\n',
+        // Frontiers agent runs: an OpenAI-compatible endpoint from env, URL built from a configurable base.
+        "src/lib/assistant/llm.ts":
+          "export const call = (config: { baseUrl: string }) =>\n" +
+          '  fetch(`${config.baseUrl.replace(/\\/+$/, "")}/chat/completions`, { method: "POST" });\n',
+        "src/clinic/config.ts":
+          'import { z } from "zod";\nexport const cfg = z.object({ LLM_BASE_URL: z.url().optional() }).parse(process.env);\n',
+        "src/clinic/model.ts": "export const base = process.env.OPENAI_API_BASE;\n",
       });
       const findings = (await staticScan(dir)) ?? [];
       const hits = findings
@@ -55,6 +62,9 @@ describe.skipIf(!semgrepAvailable)("AI enforcement rules (ADR-0028)", () => {
           "turbineh.ai-direct-model-call src/server/summary.ts",
           "turbineh.ai-direct-model-call src/clinic/llm.ts",
           "turbineh.ai-direct-model-call src/server/decide.ts",
+          "turbineh.ai-direct-model-call src/lib/assistant/llm.ts",
+          "turbineh.ai-direct-model-call src/clinic/config.ts",
+          "turbineh.ai-direct-model-call src/clinic/model.ts",
           "turbineh.ai-sdk-dependency package.json",
         ]),
       );
@@ -76,6 +86,8 @@ describe.skipIf(!semgrepAvailable)("AI enforcement rules (ADR-0028)", () => {
           'import { chatWithTools } from "./models";\nexport const runAgent = () => chatWithTools("m", [], []);\n',
         "tests/mock-llm/mock.ts":
           'export const path = (u: string) => u.endsWith("/chat/completions");\n',
+        "src/env.ts":
+          "export const e = { TURBINEH_AI_URL: process.env.TURBINEH_AI_URL, url: `${process.env.BETTER_AUTH_URL}/api/auth` };\n",
         "package.json": '{ "dependencies": { "zod": "4.6.5" } }\n',
       });
       const findings = (await staticScan(dir)) ?? [];
