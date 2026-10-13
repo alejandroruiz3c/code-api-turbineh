@@ -233,6 +233,12 @@ async function main(): Promise<number> {
   }
 
   if (!local) return run(command, configured);
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "local-db: DATABASE_URL is required in production (the local database is for dev and tests).",
+    );
+    return 1;
+  }
 
   let db: (Db & { label: string }) | null = null;
   let url = LOCAL_DATABASE_URL;

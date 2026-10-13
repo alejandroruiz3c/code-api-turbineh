@@ -143,7 +143,11 @@ test.describe.serial("storefront", () => {
     await page.goto("/dashboard/products");
     await page.getByRole("link", { name: "Linen Shirt", exact: true }).click();
     await page.getByLabel("Product price in USD").fill("54.00");
-    await page.getByRole("button", { name: "Save prices" }).click();
+    // Wait for the server action itself: navigating away first would cancel it.
+    await Promise.all([
+      page.waitForResponse((r) => r.request().method() === "POST"),
+      page.getByRole("button", { name: "Save prices" }).click(),
+    ]);
     await expect(page.getByLabel("Product price in USD")).toHaveValue("54.00");
 
     await page.goto("/dashboard/shipping");
@@ -164,6 +168,8 @@ test.describe.serial("storefront", () => {
     await page.getByLabel("Description").fill("A mug used to check price updates.");
     await page.getByRole("button", { name: "Create product" }).click();
     await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
+    // The list page has a create form with the same labels: wait for the edit page before filling.
+    await expect(page.getByRole("button", { name: "Save product" })).toBeVisible();
     await page.getByLabel(/^Price/).fill("12.50");
     await page.getByRole("button", { name: "Save product" }).click();
     // The action redirects back to the list once saved.
@@ -188,6 +194,8 @@ test.describe.serial("storefront", () => {
     const setStock = async (stock: string) => {
       await page.goto("/dashboard/products");
       await page.getByRole("link", { name: "Stock Test Grinder", exact: true }).click();
+      // The list page has a create form with the same labels: wait for the edit page before filling.
+      await expect(page.getByRole("button", { name: "Save product" })).toBeVisible();
       await page.getByLabel(/Stock/).fill(stock);
       await page.getByRole("button", { name: "Save product" }).click();
       await expect(page).toHaveURL(/\/dashboard\/products$/);

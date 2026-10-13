@@ -300,6 +300,16 @@ export const BASE_EXTEND: PackageGuide["extend"] = [
     how: "Read its base URL from env; ship a local mock named after that env var (it starts automatically in E2E and must answer GET /health).",
   },
   {
+    what: "Use your own PostgreSQL instead of the local one",
+    where: "DATABASE_URL (.env.local), scripts/local-db.ts",
+    how: "Set DATABASE_URL and every command uses it; leave it unset (or the .env.example value) for the zero-setup local database. E2E always starts a fresh one when DATABASE_URL is unset.",
+  },
+  {
+    what: "Prove a new acceptance criterion",
+    where: "tests/e2e/<area>.spec.ts",
+    how: 'Add an E2E test whose title states the criterion; run `pnpm test:e2e <spec> -g "<title>"` (no database setup needed).',
+  },
+  {
     what: "Allow images or connections from another origin",
     where: "src/security/csp-sources.ts",
     how: "Add the source (https only); the CSP in src/security/headers.ts picks it up.",
