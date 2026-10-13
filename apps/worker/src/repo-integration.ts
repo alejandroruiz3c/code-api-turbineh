@@ -31,7 +31,9 @@ import {
   GitHubError,
   isReadable,
   loadFoundation,
+  envDocs,
   mergePackageJson,
+  settingKind,
   pickAppPath,
   prBody,
   prTitle,
@@ -619,17 +621,20 @@ async function runJob(
   });
   // The project's own settings get placeholders; the capability's optional settings keep their documented
   // non-secret defaults (a placeholder would break e.g. numeric limits) and the rest stay unset.
-  const names = envNames(original, clean.paths);
+  // Placeholders for the project's own settings and the capability's required ones (the reviewer sets the real
+  // values); documented non-secret defaults are used as is; optional settings stay unset (their defaults apply).
   const capEnv = adaptation.steps
     .flatMap((s) => s.files)
     .find((f) => f.path === `${adaptation.namespace}/config/.env.example`);
+  const docs = envDocs(String(capEnv?.content ?? ""));
+  const names = [
+    ...envNames(original, clean.paths),
+    ...Object.keys(docs).filter((k) => settingKind(k, docs[k]) === "required"),
+  ];
   const defaults = Object.fromEntries(
-    String(capEnv?.content ?? "")
-      .split("\n")
-      .map((l) => /^([A-Z][A-Z0-9_]*)=(\S+)$/.exec(l.trim()))
-      .filter((m): m is RegExpExecArray => Boolean(m?.[1] && m[2]))
-      .filter((m) => !/(SECRET|TOKEN|KEY|PASSWORD)/.test(m[1] ?? ""))
-      .map((m) => [m[1] ?? "", m[2] ?? ""]),
+    Object.entries(docs)
+      .filter(([k, d]) => settingKind(k, d) === "default")
+      .map(([k, d]) => [k, d.value]),
   );
   const prepNotes: string[] = [];
   if (pm && !unsafe.length) {
