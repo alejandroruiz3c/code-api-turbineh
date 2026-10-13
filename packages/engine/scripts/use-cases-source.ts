@@ -111,7 +111,10 @@ const KEYWORDS: Record<string, string[]> = {
 const human = (id: string) =>
   id
     .split("-")
-    .map((w) => (w === "ai" ? "AI" : w.charAt(0).toUpperCase() + w.slice(1)))
+    .map(
+      (w) =>
+        ({ ai: "AI", saas: "SaaS", crud: "CRUD" })[w] ?? w.charAt(0).toUpperCase() + w.slice(1),
+    )
     .join(" ");
 
 export function readUseCases(recipesDir: string): UseCaseSource[] {
