@@ -59,7 +59,8 @@ const EVENTS = `{"event":"started","id":"<id>","target":"app","resume":"turbineh
 {"ok":true,"command":"build",…}   ← the last line is the result`;
 
 const LEFT = `turbineh left --json      # what is left: open criteria (each with where), gate, settings
-turbineh verify --json    # fast checks with file:line and the fix`;
+turbineh verify --json    # fast checks with file:line and the fix
+turbineh verify --full --json   # before handing over: the gate's security and policy checks, here`;
 
 const REPO = `turbineh connect github                 # opens GitHub in the browser (public repositories)
 turbineh connect github --private       # also private repositories (GitHub scope repo)
@@ -418,6 +419,16 @@ export default function UsePage() {
           <p className="mt-2 text-xs text-muted">
             Run them where the build wrote the code (the folder with <Code>turbineh.json</Code>).
           </p>
+          <p className="mt-3 text-sm text-ice-2">
+            <Code>verify --full</Code> runs the same security and policy checks as the TurbineH
+            gate, with the same pinned versions: secret scan, our static rules, known
+            vulnerabilities and the licence policy, plus typecheck, lint and unit tests. Each
+            finding has its file and line, a security, policy or quality label and the fix; with{" "}
+            <Code>--json</Code>, the same shape as the gate&apos;s findings. It uses Docker when it
+            is available and pinned local binaries otherwise; a check that cannot run is reported as
+            not run, never as clean. Your code never leaves the machine: only package names and
+            versions are looked up. Exit 1 means a blocking finding or a check not run.
+          </p>
         </Sub>
 
         <Sub title="Integrate into an existing repository">
@@ -465,6 +476,10 @@ export default function UsePage() {
             <li>
               In a delivered package, read <Code>AGENTS.md</Code> first; re-run only what your
               change touches.
+            </li>
+            <li>
+              Before handing over, run <Code>turbineh verify --full --json</Code> and fix every
+              blocking finding.
             </li>
             <li>Exit 3: show the decision to the user; add --approve only after they agree.</li>
           </ul>

@@ -36,6 +36,7 @@ import {
   missingEnv,
 } from "./project.js";
 import { left as leftOf, readGuide, verifyPackage } from "./package-guide.js";
+import { verifyFull } from "./verify-full.js";
 
 export interface Ctx {
   cwd: string;
@@ -566,6 +567,12 @@ function run(cwd: string, cmd: string, args: string[]): { ok: boolean; detail: s
 }
 
 export async function verify(c: Ctx): Promise<CommandResult> {
+  // The gate's security and policy checks here, same pinned versions (ADR-0040 G4c).
+  if (c.flags.full === true)
+    return verifyFull(c.cwd, {
+      skipScripts: c.flags["skip-scripts"] === true,
+      offline: c.flags.offline === true,
+    });
   const project = readProject(c.cwd);
   // A delivered TurbineH package (turbineh.json) without capability integrations: check the package itself.
   const guide = readGuide(c.cwd);

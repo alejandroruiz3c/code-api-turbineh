@@ -396,8 +396,8 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
     },
     {
       change: "Before handing over (everything)",
-      run: "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e",
-      note: "Same steps as the TurbineH gate (which also runs gitleaks, Semgrep rules, OSV and the licence policy). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
+      run: "turbineh verify --full && pnpm build && pnpm test:e2e",
+      note: "`turbineh verify --full` runs the TurbineH gate's security and policy checks here with the same pinned versions (gitleaks, Semgrep rules, OSV, licence policy; Docker, else local binaries) plus lint, typecheck and unit tests, each finding with file:line and the fix; exit 1 on a blocking one. Without the CLI: pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e (the gate still runs the scans). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
     },
   ];
 }
@@ -484,7 +484,8 @@ ${g.app.summary}
 Recipe \`${g.recipe.id}\`: ${g.recipe.description}. Build \`${g.buildId}\`. ${status}
 
 Read this file instead of the whole repository. The same facts are machine-readable in \`turbineh.json\`
-(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix;
+(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix,
+before handing over \`turbineh verify --full\` runs the gate's security and policy checks here;
 install: \`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
 
 ## What is left
