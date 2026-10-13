@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { buildSpecSchema, type BuildSpec } from "./build-spec.js";
 import { extractPalette } from "./palette.js";
+import { separateNonFunctional, type NonFunctionalRequirement } from "./non-functional.js";
 import {
   ABUSE_QUESTIONS,
   ABUSE_THRESHOLD,
@@ -53,6 +54,8 @@ export interface CompileResult {
   escalate: boolean;
   /** Set when the Abuse Guard rejects the prompt (never escalated). */
   rejected?: string;
+  /** Non-functional requirements the model proposed as entities, removed and mapped to capabilities (ADR-0036). */
+  nonFunctional?: NonFunctionalRequirement[];
 }
 
 const SYSTEM =
@@ -148,9 +151,12 @@ export async function compileIntent(
     errors.push(...parsed.error.issues.map((i) => `${i.path.join(".") || "/"}: ${i.message}`));
     return { ok: false, decisions, attempts, latencyMs, usage, errors, escalate: true };
   }
+  // Deterministic guard (ADR-0036 §D3): rate limits, input limits, logging… are capabilities, never CRUD entities.
+  const separated = separateNonFunctional(parsed.data);
   return {
     ok: true,
-    spec: parsed.data,
+    spec: separated.spec,
+    nonFunctional: separated.requirements,
     decisions,
     attempts,
     latencyMs,

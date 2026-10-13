@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { CAPABILITIES, RECIPES } from "./build-spec.js";
 import { normalizeFaq, sitePart } from "./build-spec.js";
+import { NON_FUNCTIONAL_INSTRUCTION } from "./non-functional.js";
 
 /**
  * The BuildSpec is produced in small, simple pieces (owner principle: decomposed content and simple tasks degrade
@@ -270,7 +271,7 @@ export const PARTS = {
   entities: {
     schema: entitiesPart,
     instruction:
-      "List the data entities (PascalCase) and their fields (camelCase). Only what the prompt needs. No user/auth tables: auth is provided.",
+      `List the data entities (PascalCase) and their fields (camelCase). Only what the prompt needs. No user/auth tables: auth is provided. ${NON_FUNCTIONAL_INSTRUCTION}`,
   },
   pages: {
     schema: pagesPart,

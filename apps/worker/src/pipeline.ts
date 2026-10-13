@@ -22,6 +22,7 @@ import {
   compileIntent,
   detectDomains,
   extractPalette,
+  separateNonFunctional,
   type BuildSpec,
   type CompileResult,
   type CompilerConfig,
@@ -208,7 +209,19 @@ export async function runBuild(
   if (!compiled.ok || !compiled.spec) {
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
-  const spec = compiled.spec;
+  // Non-functional requirements are capabilities, never entities (ADR-0036 §D3): also for specs stored before the rule.
+  const separated = separateNonFunctional(compiled.spec);
+  const spec = separated.spec;
+  const nonFunctional = [...(compiled.nonFunctional ?? []), ...separated.requirements];
+  if (nonFunctional.length > 0) {
+    await deps.emit(buildId, "compiling", "non-functional", {
+      requirements: nonFunctional.map((r) => ({
+        kind: r.kind,
+        source: r.source,
+        capabilities: r.capabilities,
+      })),
+    });
+  }
   // Specs stored before palettes existed (approved plans) still get the colours stated in the prompt.
   if (spec.palette === undefined) spec.palette = extractPalette(prompt);
   if (spec.recipe === "out_of_scope" && options.plan) {
@@ -594,6 +607,7 @@ export async function runBuild(
       ).toFixed(3),
     },
     recipe: { requested: spec.recipe, built: recipeId },
+    nonFunctional,
     brand: brand
       ? { color: brand.primaryColor ?? null, font: brand.font ?? null, logo: Boolean(brand.logo) }
       : null,
