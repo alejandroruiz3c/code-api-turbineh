@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Criteria aliases (ADR-0047): domain components declare in `aliases.yaml` which params hold this app's word for
+  the generic words their tests use (bookings: customer → patient, staff member → physiotherapist, business → clinic,
+  services; workflow: record → piece, status → stage). The assembler resolves them per app (`.turbineh/aliases.json`)
+  for that component's tests only; facts count only when the test asserts the value from params; aliases never satisfy
+  a refusal. New params from the request: bookings `businessKind`, workflow `stateNoun`. Frontiers ai-agents +
+  bookings spec 1/14 → 5/14; 109 labelled pairs stay at precision 1.00, recall 0.92.
+
 - Agent brain speed (ADR-0046): runAgent answers a confirmed irreversible action that ran from a template (the tool's
   `message`, else the confirmed summary and reference) without a decider or model call, and bounds each model attempt
   (15 s, one retry when stuck) and each decision attempt (5 s, one retry). On the 54-conversation agent bench, same

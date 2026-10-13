@@ -1,0 +1,19 @@
+# Criteria aliases (ADR-0047): the words this component's tests use ("record", "status"), and which of its params hold
+# this app's word for each ("piece", "stage"). Resolved by the assembler from src/workflow/params.json and applied to
+# these tests' proofs only. State names (`asserted`) count only when the test asserts the states it reads from params.
+file: src/workflow/params.json
+tests:
+  - tests/e2e/workflow.spec.ts
+  - tests/unit/workflow.test.ts
+aliases:
+  - term: record
+    from: "workflows[].label"
+  - term: records
+    from: "workflows[].plural"
+  - term: status
+    from: "workflows[].stateNoun"
+  - term: state
+    from: "workflows[].stateNoun"
+  - term: states
+    from: "workflows[].states[].label"
+    asserted: "params\\.workflows"

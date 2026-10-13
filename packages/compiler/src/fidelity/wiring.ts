@@ -204,6 +204,9 @@ function workflowParams(
       key: keyOf(w.join("_")).slice(0, 40),
       label: humanize(w.join(" ")).slice(0, 40),
       plural: humanize([...w.slice(0, -1), plural(w.at(-1) ?? "")].join(" ")).slice(0, 40),
+      ...(typeof p.params.field === "string" && p.params.field.trim()
+        ? { stateNoun: nameWords(p.params.field).join(" ").toLowerCase().slice(0, 40) }
+        : {}),
       initial: keyOf(String(p.params.initial)),
       dueDate: due,
       createRoles: creators.length === Object.keys(app.roles).length ? ["*"] : creators,

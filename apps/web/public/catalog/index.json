@@ -7070,15 +7070,15 @@
         },
         {
           "claim": "Books only after confirmation and records the confirmation email",
-          "test": "tests/e2e/booking-assistant.spec.ts › the assistant books only a real free slot after the person confirms the date, time and staff member; the confirmation email is logged and staff see the booking"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"
         },
         {
           "claim": "Reschedules with reference + email",
-          "test": "tests/e2e/booking-assistant.spec.ts › the assistant reschedules (moves) an existing booking to a new free slot, with its reference and email, after the person confirms"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms"
         },
         {
           "claim": "Refuses cancellations inside the notice period",
-          "test": "tests/e2e/booking-assistant.spec.ts › the assistant refuses to cancel a booking inside the notice period (fewer hours before it starts than the cancellation notice)"
+          "test": "tests/e2e/booking-assistant.spec.ts › a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation"
         },
         {
           "claim": "DST-correct local times",

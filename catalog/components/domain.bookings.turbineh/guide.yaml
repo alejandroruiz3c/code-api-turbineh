@@ -66,9 +66,9 @@ security:
   - "Queries only through Drizzle; dates validated; errors to people are PolicyError messages only"
 guarantees:
   - { claim: "Never books an invented or taken time", test: "tests/e2e/booking-assistant.spec.ts › never books an invented time" }
-  - { claim: "Books only after confirmation and records the confirmation email", test: "tests/e2e/booking-assistant.spec.ts › the assistant books only a real free slot after the person confirms the date, time and staff member; the confirmation email is logged and staff see the booking" }
-  - { claim: "Reschedules with reference + email", test: "tests/e2e/booking-assistant.spec.ts › the assistant reschedules (moves) an existing booking to a new free slot, with its reference and email, after the person confirms" }
-  - { claim: "Refuses cancellations inside the notice period", test: "tests/e2e/booking-assistant.spec.ts › the assistant refuses to cancel a booking inside the notice period (fewer hours before it starts than the cancellation notice)" }
+  - { claim: "Books only after confirmation and records the confirmation email", test: "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking" }
+  - { claim: "Reschedules with reference + email", test: "tests/e2e/booking-assistant.spec.ts › a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms" }
+  - { claim: "Refuses cancellations inside the notice period", test: "tests/e2e/booking-assistant.spec.ts › a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation" }
   - { claim: "DST-correct local times", test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)" }
   - { claim: "Database-level double-booking guard", test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)" }
   - { claim: "Only staff on ADMIN_EMAILS see appointments", test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments" }
