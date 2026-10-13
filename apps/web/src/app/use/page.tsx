@@ -402,7 +402,8 @@ export default function UsePage() {
             In the result, <Code>criteria.items</Code> not <Code>met</Code> and <Code>left[]</Code>{" "}
             are the only work left, each with <Code>where</Code>; <Code>settings.missing</Code> go
             in <Code>.env.local</Code>; <Code>gate.ok</Code> means lint, types, unit, build and E2E
-            already passed. Run it in the background or give the call a long timeout.
+            already passed. Run it in the foreground with a long timeout (10 min): it returns as
+            soon as the result is ready, so there is no need to poll.
           </p>
           <Table caption="Exit codes" rows={EXIT_CODES} />
         </Sub>

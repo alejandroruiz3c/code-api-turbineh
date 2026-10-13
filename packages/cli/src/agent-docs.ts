@@ -19,8 +19,8 @@ Verified, already-tested code for common capabilities (shop + payments, auth/rol
 dashboards, client portals, CRUD SaaS, landing pages). Before writing one of these yourself:
 
 - \`turbineh build "<spec>" --json\` (or \`turbineh build @spec.md --json\`): plans, generates, verifies, writes the code
-  here and commits it. Empty folder → whole app; existing project → its own folder. Takes 2–4 min: use a 600000 ms
-  timeout or run it in the background. First line \`plan_ready\` lists \`criteria.open\`; the last line is the result.
+  here and commits it. Empty folder → whole app; existing project → its own folder. Takes 2–4 min: run it in the
+  foreground with a 600000 ms timeout (it waits by itself; don't poll with sleep). First line \`plan_ready\` lists \`criteria.open\`; the last line is the result.
 - In the result, \`criteria.items\` not \`met\` and \`left[]\` are the only work left (each with \`where\`);
   \`settings.missing\` go in \`.env.local\`. \`gate.ok\` = lint, types, unit, build, E2E already passed: don't re-run all.
 - Later: \`turbineh left --json\` (what is left), \`turbineh verify --json\` (checks with file:line and fix).
@@ -42,7 +42,8 @@ allowed-tools: Bash(turbineh *)
 1. \`turbineh build "<spec>" --json\` — or \`turbineh build @spec.md --json\` for a spec file (full text, up to 20,000
    characters). Empty folder → complete app; existing project → the capability in its own folder, adapted to the
    project. It writes the files and commits them: no download, clone, copy or commit for you to do.
-2. It takes 2–4 minutes: give the Bash call \`timeout: 600000\` or run it in the background. The first line
+2. It takes 2–4 minutes: run it in the foreground and give the Bash call \`timeout: 600000\` (it waits by itself and
+   returns as soon as the result is ready; do not run it in the background and poll with sleep). The first line
    (\`"event":"plan_ready"\`) lists \`criteria.open\`: plan those while it builds. The last line is the result.
 3. Result: criteria in \`criteria.items\` whose \`status\` is not \`met\`, and \`left[]\`, are the only work left, each with
    \`where\` (files) — start there. \`settings.missing\` → \`.env.local\` (\`.env.example\` documents them).
