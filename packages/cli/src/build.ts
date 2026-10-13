@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 import { isGapNotice, readZip } from "@turbineh/engine";
 import type { FlowResult, Plan } from "@turbineh/shared";
 import { adaptLocally } from "./adapt-local.js";
+import { cliCommand } from "./agent-docs.js";
 import { api, sleep } from "./api.js";
 import type { Ctx } from "./commands.js";
 import {
@@ -44,6 +45,9 @@ export const EXIT = {
 } as const;
 
 export const MAX_SPEC = 20_000;
+
+/** The command as this machine runs it (full path when not on PATH), for the next steps printed. */
+const bin = () => cliCommand();
 
 interface PlanResponse {
   id: string;
@@ -145,7 +149,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
     startedAt: new Date().toISOString(),
   };
   writeProject(c.cwd, project);
-  c.emit?.({ event: "started", id: created.id, target, resume: `turbineh resume ${created.id}` });
+  c.emit?.({ event: "started", id: created.id, target, resume: `${bin()} resume ${created.id}` });
   return follow(c, created.id, target as Target, Date.now());
 }
 
@@ -248,7 +252,7 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
             code: "needs_approval",
             message: `The plan has ${decisions.length} decision(s) for a person.`,
             action: "Show them to the user; if they agree, continue with --approve.",
-            resume: `turbineh resume ${id} --approve`,
+            resume: `${bin()} resume ${id} --approve`,
           },
         };
       }
@@ -283,7 +287,7 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
           code: "timeout",
           message: `Still ${r.state} after ${minutes} minutes; nothing was written.`,
           action: "Continue waiting with the resume command (it writes the code when ready).",
-          resume: `turbineh resume ${id}`,
+          resume: `${bin()} resume ${id}`,
         },
       };
     }
@@ -474,7 +478,7 @@ async function writeRepo(
         code: "dirty_files",
         message: `Uncommitted changes in files TurbineH has to modify: ${clash.join(", ")}.`,
         action: "Commit or stash those files, then run the resume command.",
-        resume: `turbineh resume ${id}`,
+        resume: `${bin()} resume ${id}`,
       },
       EXIT.conflict,
     );
@@ -628,12 +632,12 @@ function summary(
   const install =
     w.target === "app" ? "pnpm install" : `${w.adaptation?.packageManager ?? "npm"} install`;
   const next = !gateOk
-    ? `${install}, then fix what \`turbineh left\` lists and run \`turbineh verify\``
+    ? `${install}, then fix what \`${bin()} left\` lists and run \`${bin()} verify\``
     : left.length
-      ? `${install}, then work on the ${left.length} open item(s) above (\`turbineh left\` lists them), then \`turbineh verify\``
+      ? `${install}, then work on the ${left.length} open item(s) above (\`${bin()} left\` lists them), then \`${bin()} verify\``
       : w.target === "app"
         ? `${install} — nothing is left from the spec; only change what your task asks`
-        : `${install}, wire it in following ${w.namespace}/agent/INTEGRATE.md, then \`turbineh verify\``;
+        : `${install}, wire it in following ${w.namespace}/agent/INTEGRATE.md, then \`${bin()} verify\``;
   const data = {
     id,
     target: w.target,

@@ -28,13 +28,13 @@ echo "✔ turbineh installed in $DIR/bin"
 CMD=turbineh
 if [ "$(command -v turbineh 2>/dev/null)" = "" ]; then
   CMD="$DIR/bin/turbineh"
-  echo "  Not on your PATH: run it as $CMD (or: export PATH=\"$DIR/bin:\$PATH\")"
+  echo "  Not on your PATH: run it as $CMD (or add $DIR/bin to your PATH)"
 fi
 echo ""
 echo "Next (TURBINEH_TOKEN in the environment replaces login):"
 echo "  $CMD login <your access token>"
 echo "  cd your-project && $CMD init --agent claude     # or codex / cursor"
-echo "  $CMD build \"<what to build>\"   # or: $CMD build @spec.md"
+echo "  $CMD build '<what to build>'   # or: $CMD build @spec.md"
 `;
   return new Response(script, {
     headers: {
