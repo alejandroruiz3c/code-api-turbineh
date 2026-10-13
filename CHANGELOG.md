@@ -69,6 +69,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Verifier: `server-action-without-authz` no longer flags sign-in/out/up actions; `ai-direct-model-call` catches
   OpenAI-compatible endpoints from env and URLs built from a configurable base; findings labelled security / policy /
   quality (licence policy and secret-shaped test placeholders are policy, still blocking).
+- Deploys: one deploy per environment at a time (local lock; parallel agents no longer overwrite each other's staging deploy) and the deployed branch@commit is recorded on the worker and printed before it is replaced.
 - `/cli/turbineh.mjs` was missing in production when the CLI build came from cache (turbo restores only `dist/**`): the web build now copies the bundle itself before `next build`.
 - Recipe choice: an AI agent specialised in bookings (or support, sales, intake) now maps to `ai-agents` (with the orchestrator) instead of `bookings`; the recipe descriptions given to the decider say so explicitly.
 - Licence scan: the SPDX expression was cut one word too far when read from a scan line, so `jszip` (MIT OR GPL-3.0-or-later, via mammoth) blocked builds as unparseable. Whole-line parsing now has its own tests. Staging only; never reached production.
