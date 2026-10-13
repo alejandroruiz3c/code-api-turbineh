@@ -62,8 +62,13 @@ if [ "$WHAT" = web ] || [ "$WHAT" = all ]; then
   TOKEN="$(grep '^VERCEL_TOKEN=' .env.local | cut -d= -f2-)"
   PID="$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.vercel.com/v9/projects/$PROJECT?teamId=$TEAM" \
     | python3 -I -c 'import sys,json; print(json.load(sys.stdin)["id"])')"
-  VERCEL_ORG_ID="$TEAM" VERCEL_PROJECT_ID="$PID" vercel deploy --prod --yes --token "$TOKEN" 2>&1 \
-    | grep -E '^(Production|Error)' | head -2 || true
+  # A failed web deploy must stop the script (it used to be filtered out, leaving the old web online).
+  OUT="$(VERCEL_ORG_ID="$TEAM" VERCEL_PROJECT_ID="$PID" vercel deploy --prod --yes --token "$TOKEN" 2>&1)" || true
+  # The CLI prints text (Production: …) or, in non-interactive shells, JSON ("status": "error" on failure).
+  if printf '%s\n' "$OUT" | grep -qE '"status": *"error"|^Error'; then
+    echo "web deploy FAILED:"; printf '%s\n' "$OUT" | grep -v -i token | head -12; exit 1
+  fi
+  echo "web: $(printf '%s\n' "$OUT" | grep -oE 'https://[a-z0-9.-]+\.vercel\.app' | head -1)"
   for _ in $(seq 1 30); do curl -fs "$URL/health" >/dev/null && break; sleep 5; done
   echo "$URL/health → $(curl -s "$URL/health")"
 fi
