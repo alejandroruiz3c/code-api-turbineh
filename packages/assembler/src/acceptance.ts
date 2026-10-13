@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { proofVerdict, type ProofCandidate } from "@turbineh/shared";
 import { parse } from "yaml";
 
 /**
@@ -16,6 +17,11 @@ export interface CoverageRule {
   covers: string[];
   /** Where the rule comes from (recipe or component id). */
   from?: string;
+  /**
+   * Generated tests (no hand-written rule): beyond `covers`, the test's title and key assertions must exercise the
+   * criterion's subject, action, actor and any negation (`proofVerdict`, precision first).
+   */
+  proof?: ProofCandidate;
 }
 
 export interface CriterionStatus {
@@ -47,7 +53,8 @@ const matches = (criterion: string, rule: CoverageRule) =>
     } catch {
       return false;
     }
-  });
+  }) &&
+  (!rule.proof || proofVerdict(criterion, rule.proof).proven);
 
 export function acceptanceStatus(
   criteria: readonly string[],

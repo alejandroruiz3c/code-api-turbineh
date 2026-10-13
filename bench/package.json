@@ -10,6 +10,7 @@
   "dependencies": {
     "@turbineh/decider": "workspace:*",
     "@turbineh/engine": "workspace:*",
+    "@turbineh/reporter": "workspace:*",
     "@turbineh/shared": "workspace:*",
     "@turbineh/verifier": "workspace:*",
     "zod": "4.6.5"

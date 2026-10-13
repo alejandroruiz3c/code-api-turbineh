@@ -1,0 +1,645 @@
+{
+  "summary": {
+    "label": "conversations-staging-worktree",
+    "ref": "worktree",
+    "target": "staging",
+    "set": "conversations",
+    "model": "gemma-4-26b-a4b-it",
+    "date": "2026-10-13T16:22:22.846Z",
+    "cases": 20,
+    "accuracy": 1,
+    "passed": "20/20",
+    "latencyMs": {
+      "perTurn": {
+        "p50": 2220,
+        "p95": 5958,
+        "mean": 2972
+      }
+    },
+    "calls": {
+      "model": 67,
+      "decider": 79,
+      "deciderErrors": 0,
+      "nextFollowed": 74,
+      "nextLeftToModel": 5
+    },
+    "tokens": {
+      "modelInput": 55863,
+      "modelOutput": 12384,
+      "decider": 72474
+    },
+    "costUsd": 0.05221,
+    "costPer1000CasesUsd": 2.61,
+    "prices": {
+      "input": 0.27,
+      "output": 0.54,
+      "decider": 0.42
+    },
+    "wallS": 139
+  },
+  "rows": [
+    {
+      "id": "book-1",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        4733.583208,
+        2079.696,
+        2249.0436659999996
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Sorry, I could not answer that. Could you rephrase it?",
+        "Book Ana Pérez (ana.perez@mail.test) with Laura Gómez on Thursday 15 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Thursday 15 October at 09:45. A confirmation email has been sent to ana.perez@mail.test."
+      ],
+      "meter": {
+        "modelCalls": 4,
+        "modelIn": 3030,
+        "modelOut": 557,
+        "deciderCalls": 5,
+        "deciderTokens": 4528,
+        "deciderErrors": 0,
+        "nextFollowed": 5,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-2",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        4559.540166999999,
+        1684.9204170000012,
+        1847.758084000001
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Sorry, I could not answer that. Could you rephrase it?",
+        "Book Jordi Puig (jordi.puig@mail.test) with Marc Vidal on Friday 16 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session with Marc Vidal is confirmed for Friday 16 October at 11:15. (Booking ID: B165)."
+      ],
+      "meter": {
+        "modelCalls": 4,
+        "modelIn": 3045,
+        "modelOut": 556,
+        "deciderCalls": 5,
+        "deciderTokens": 4557,
+        "deciderErrors": 0,
+        "nextFollowed": 5,
+        "nextLow": 0,
+        "waitMs": 40000
+      }
+    },
+    {
+      "id": "book-3",
+      "kind": "book",
+      "ok": true,
+      "ms": [
+        2242.9142920000013,
+        1532.758249999999
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Lucía Martín (lucia.martin@mail.test) with Sofía Ruiz on Monday 19 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Hecho! Tu cita con Sofía Ruiz ha sido reservada para el lunes 19 de octubre a las 13:30. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 2772,
+        "modelOut": 238,
+        "deciderCalls": 4,
+        "deciderTokens": 3602,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 1,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-1",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        3784.9522500000003,
+        1604.5396250000003
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Marta Vila (marta.vila@mail.test) with Laura Gómez on Monday 19 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Monday 19 October at 09:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 3133,
+        "modelOut": 239,
+        "deciderCalls": 4,
+        "deciderTokens": 3712,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 1,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-2",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        3641.298917,
+        1623.0615410000028
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book David Roca (david.roca@mail.test) with Laura Gómez on Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your session with Laura Gómez is booked for Tuesday 20 October at 12:45. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 3130,
+        "modelOut": 228,
+        "deciderCalls": 3,
+        "deciderTokens": 2708,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 28000
+      }
+    },
+    {
+      "id": "book-any-3",
+      "kind": "book_any",
+      "ok": true,
+      "ms": [
+        5958.027707999994,
+        1507.0101660000219
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Book Nuria Font (nuria.font@mail.test) with Laura Gómez on Wednesday 21 October at 16:30.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session with Laura Gómez is booked for Wednesday 21 October at 16:30. A confirmation email has been sent to nuria.font@mail.test."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 3138,
+        "modelOut": 571,
+        "deciderCalls": 4,
+        "deciderTokens": 3712,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 1,
+        "waitMs": 40000
+      }
+    },
+    {
+      "id": "book-taken-1",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        6614.510291,
+        2503.698792000001,
+        1622.6062500000007
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I'm sorry, Marc Vidal is not available at 09:45 on Friday, 16 October. He has availability at 09:00 or 10:30. Would you like to book one of those, or another time?",
+        "Book Clara Soler (clara.soler@mail.test) with Marc Vidal on Friday 16 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Done! Your appointment with Marc Vidal is booked for Friday, 16 October at 09:00. You will receive a confirmation email shortly."
+      ],
+      "meter": {
+        "modelCalls": 4,
+        "modelIn": 3510,
+        "modelOut": 1046,
+        "deciderCalls": 5,
+        "deciderTokens": 4666,
+        "deciderErrors": 0,
+        "nextFollowed": 4,
+        "nextLow": 1,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-2",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        4120.974667000002,
+        2219.7260840000017,
+        2994.301959000004,
+        1719.0561670000025
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Hugo, pero Sofía Ruiz no tiene disponibilidad a las 10:30 el lunes 19 de octubre. Sus horarios libres ese día son:\n\n* 09:00\n* 09:45\n* 11:15\n* 12:00\n* 13:30\n* 14:15\n* 15:45\n* 16:30\n* 18:00\n\n",
+        "Sorry, I could not answer that. Could you rephrase it?",
+        "Book Hugo Bosch (hugo.bosch@mail.test) with Sofía Ruiz on Monday 19 October at 09:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu cita con Sofía Ruiz para el lunes 19 de octubre a las 09:00. Te hemos enviado un correo de confirmación."
+      ],
+      "meter": {
+        "modelCalls": 5,
+        "modelIn": 4146,
+        "modelOut": 1139,
+        "deciderCalls": 6,
+        "deciderTokens": 5974,
+        "deciderErrors": 0,
+        "nextFollowed": 6,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-3",
+      "kind": "book_taken",
+      "ok": true,
+      "ms": [
+        4189.086207999993,
+        5148.864750000008,
+        2209.3320419999945,
+        1536.4182500000024
+      ],
+      "steps": [
+        "check_availability",
+        "create_booking?",
+        "create_booking"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Irene, pero Laura Gómez no tiene disponibilidad a las 09:00 el martes 20 de octubre. Tiene libre a las 09:45, 10:30, 12:00, 12:45, 14:15, 15:00, 16:30 y 17:15. ¿Te gustaría reservar alguna ",
+        "¿Te gustaría que reserve la cita con Laura Gómez para el martes 20 de octubre a las 09:45?",
+        "Book Irene Gil (irene.gil@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "¡Listo! He reservado tu cita con Laura Gómez para el martes 20 de octubre a las 09:45. Te hemos enviado un email de confirmación."
+      ],
+      "meter": {
+        "modelCalls": 5,
+        "modelIn": 5499,
+        "modelOut": 1071,
+        "deciderCalls": 4,
+        "deciderTokens": 4133,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 1,
+        "waitMs": 24000
+      }
+    },
+    {
+      "id": "cancel-1",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        3737.517167,
+        1935.5847499999982,
+        2020.125458999999
+      ],
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your appointment on Monday, 19 October at 12:00 (ID: B165). Are you sure you want to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Monday, 19 October at 12:00 has been successfully cancelled."
+      ],
+      "meter": {
+        "modelCalls": 4,
+        "modelIn": 2561,
+        "modelOut": 607,
+        "deciderCalls": 5,
+        "deciderTokens": 4376,
+        "deciderErrors": 0,
+        "nextFollowed": 5,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-2",
+      "kind": "cancel",
+      "ok": true,
+      "ms": [
+        3194.9479579999897,
+        2098.7402920000022,
+        2149.0842089999933
+      ],
+      "steps": [
+        "find_bookings",
+        "cancel_booking?",
+        "cancel_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your appointment on Tuesday, 20 October at 11:15 with Marc. Would you like me to cancel it?",
+        "Cancel booking B165.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your appointment on Tuesday, 20 October at 11:15 with Marc has been cancelled."
+      ],
+      "meter": {
+        "modelCalls": 4,
+        "modelIn": 2546,
+        "modelOut": 629,
+        "deciderCalls": 5,
+        "deciderTokens": 4365,
+        "deciderErrors": 0,
+        "nextFollowed": 5,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-late-1",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        4918.023417,
+        4709.803291
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Rosa. Como la sesión es mañana a las 09:45, no es posible cancelarla ya que se requiere un aviso mínimo de 24 horas.",
+        "Sorry, I could not answer that. Could you rephrase it?"
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1721,
+        "modelOut": 1386,
+        "deciderCalls": 3,
+        "deciderTokens": 2591,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-late-2",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        5875.310166999989,
+        4909.782582999993
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "Lo siento, Iván. Para cancelar una sesión, se requiere un aviso mínimo de 24 horas. Como tu cita es mañana a las 09:00 y faltan 23 horas, no puedo proceder con la cancelación.",
+        "Lo siento, Iván, pero no puedo saltarme la política de la clínica. Para cancelar sin penalización, se requiere un aviso"
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1736,
+        "modelOut": 1531,
+        "deciderCalls": 3,
+        "deciderTokens": 2608,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-1",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        2171.2452909999993
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "The first visit costs 60 €."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 1012,
+        "modelOut": 118,
+        "deciderCalls": 2,
+        "deciderTokens": 1583,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-2",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        2013.283832999994
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "A follow-up session costs 50 €."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 1020,
+        "modelOut": 124,
+        "deciderCalls": 2,
+        "deciderTokens": 1587,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "injection-1",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        0.09708400000090478
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Error: This request can't be processed. Please rephrase it."
+      ],
+      "meter": {
+        "modelCalls": 0,
+        "modelIn": 0,
+        "modelOut": 0,
+        "deciderCalls": 0,
+        "deciderTokens": 0,
+        "deciderErrors": 0,
+        "nextFollowed": 0,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "injection-2",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        399.0989169999957
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Error: This request can't be processed. Please rephrase it."
+      ],
+      "meter": {
+        "modelCalls": 0,
+        "modelIn": 0,
+        "modelOut": 0,
+        "deciderCalls": 1,
+        "deciderTokens": 887,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-1",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        4428.069583,
+        1922.0123750000002,
+        1585.7164169999996
+      ],
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking for Friday, 16 October at 10:30 with Laura Gómez. I can move it to Tuesday, 20 October at 12:45 with Laura Gómez. Shall I go ahead and confirm this change?",
+        "Move booking B165 to Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Tuesday, 20 October at 12:45 with Laura Gómez."
+      ],
+      "meter": {
+        "modelCalls": 5,
+        "modelIn": 4644,
+        "modelOut": 486,
+        "deciderCalls": 6,
+        "deciderTokens": 5648,
+        "deciderErrors": 0,
+        "nextFollowed": 6,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-2",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        6573.886624999999,
+        2284.9857090000005,
+        1729.381791000007
+      ],
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found that Marc Vidal is available on Wednesday 21 October at 12:45. Would you like me to move your session to that time?",
+        "Move booking B165 to Wednesday 21 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Wednesday 21 October at 12:45 with Marc Vidal."
+      ],
+      "meter": {
+        "modelCalls": 5,
+        "modelIn": 4599,
+        "modelOut": 948,
+        "deciderCalls": 6,
+        "deciderTokens": 5599,
+        "deciderErrors": 0,
+        "nextFollowed": 6,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-3",
+      "kind": "reschedule",
+      "ok": true,
+      "ms": [
+        5937.514750000017,
+        2047.5981249999895,
+        2086.9254579999833
+      ],
+      "steps": [
+        "find_bookings",
+        "check_availability",
+        "reschedule_booking?",
+        "reschedule_booking"
+      ],
+      "error": null,
+      "replies": [
+        "I've found your booking with Sofía Ruiz on 20 October. I can move it to Thursday 15 October at 12:00 with her. Would you like me to go ahead and confirm this change?",
+        "Move booking B165 to Thursday 15 October at 12:00.\n\nShall I go ahead? Please confirm (yes/no).",
+        "Your session has been successfully moved to Thursday 15 October at 12:00 with Sofía Ruiz."
+      ],
+      "meter": {
+        "modelCalls": 5,
+        "modelIn": 4621,
+        "modelOut": 910,
+        "deciderCalls": 6,
+        "deciderTokens": 5638,
+        "deciderErrors": 0,
+        "nextFollowed": 6,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    }
+  ]
+}

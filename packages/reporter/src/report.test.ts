@@ -13,7 +13,7 @@ const facts: ReportFacts = {
   summary: "Course management for a small academy.",
   recipe: "saas-crud",
   entities: ["courses"],
-  acceptanceCriteria: ["Members can create courses", "Admins can export invoices"],
+  acceptanceCriteria: ["Courses are listed with their teacher", "Admins can export invoices"],
   evidence: ["End-to-end test: owner creates a course"],
   checks: [{ name: "e2e", ok: true }],
   components: [],
@@ -37,17 +37,40 @@ const decider = (answers: Record<string, { choice: string; confidence: number }>
   }) as unknown as Decider;
 
 describe("buildReport", () => {
-  it("marks a criterion verified only with matching evidence and enough confidence", async () => {
-    const r = await buildReport(
+  it("marks a criterion verified only with a high-confidence decider match", async () => {
+    const high = await buildReport(
       facts,
-      decider({
-        c0: { choice: "End-to-end test: owner creates a course", confidence: 0.9 },
-        c1: { choice: "End-to-end test: owner creates a course", confidence: 0.3 },
-      }),
+      decider({ c0: { choice: "End-to-end test: owner creates a course", confidence: 0.95 } }),
       offline,
     );
-    expect(r.criteria.map((c) => c.verified)).toEqual([true, false]);
-    expect(r.criteria[1]?.evidence).toBe("Not verified automatically");
+    expect(high.criteria.map((c) => c.verified)).toEqual([true, false]);
+    expect(high.criteria[1]?.evidence).toBe("Not verified automatically");
+    const unsure = await buildReport(
+      facts,
+      decider({ c0: { choice: "End-to-end test: owner creates a course", confidence: 0.6 } }),
+      offline,
+    );
+    expect(unsure.criteria.map((c) => c.verified)).toEqual([false, false]);
+  });
+
+  it("never offers the decider a test that ignores the criterion's actor or refusal", async () => {
+    let asked: Record<string, unknown> = {};
+    const spy = {
+      ask: async (_s: unknown, q: Record<string, unknown>) => {
+        asked = q;
+        return { answers: {} };
+      },
+    } as unknown as Decider;
+    const r = await buildReport(
+      {
+        ...facts,
+        acceptanceCriteria: ["A viewer cannot create courses", "Members can create courses"],
+      },
+      spy,
+      offline,
+    );
+    expect(Object.keys(asked)).toEqual([]);
+    expect(r.criteria.map((c) => c.verified)).toEqual([false, false]);
   });
 
   it("falls back to plain-language templates when the writer is unavailable", async () => {

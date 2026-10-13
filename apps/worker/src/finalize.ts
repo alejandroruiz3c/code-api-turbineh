@@ -131,9 +131,13 @@ export function publicMetrics(metrics: Record<string, unknown>): Record<string, 
 
 const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
 
-/** Evidence actually produced by this build's checks: E2E and unit test titles found in the repository. */
-function evidenceOf(repoDir: string): string[] {
+/**
+ * Evidence actually produced by this build's checks: E2E and unit test titles found in the repository, with each
+ * test's key assertions (expect lines) so a criterion is matched on what the test checks, not on its title alone.
+ */
+function evidenceOf(repoDir: string): { evidence: string[]; detail: Record<string, string[]> } {
   const out = new Set<string>();
+  const detail: Record<string, string[]> = {};
   for (const dir of [
     "tests/e2e",
     "tests/unit",
@@ -146,14 +150,24 @@ function evidenceOf(repoDir: string): string[] {
     const files = readdirSync(path);
     for (const f of files.filter((x) => /\.(spec|test|setup)\.ts$/.test(x))) {
       const src = readFileSync(join(repoDir, dir, f), "utf8");
-      for (const m of src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,200})"/g)) {
-        out.add(`${dir.endsWith("e2e") ? "End-to-end test" : "Unit test"}: ${m[1]}`);
-      }
+      const starts = [...src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,200})"/g)];
+      starts.forEach((m, i) => {
+        const e = `${dir.endsWith("e2e") ? "End-to-end test" : "Unit test"}: ${m[1]}`;
+        out.add(e);
+        const body = src.slice(m.index, starts[i + 1]?.index ?? src.length);
+        detail[e] = [
+          ...(detail[e] ?? []),
+          ...body
+            .split("\n")
+            .filter((l) => /expect\(|getByLabel\(/.test(l))
+            .map((l) => l.trim().slice(0, 200)),
+        ].slice(0, 12);
+      });
     }
   }
   out.add("Strict type checking and production build");
   out.add("Input validation with Zod schemas on every form and action");
-  return [...out];
+  return { evidence: [...out], detail };
 }
 
 /**
@@ -362,6 +376,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
 
   await deps.emit("reporting", "start", {});
   const swapped = new Set(swappedOut);
+  const produced = evidenceOf(input.repoDir);
   const facts: ReportFacts = {
     ...input.facts,
     components: input.facts.components.filter((c) => !swapped.has(c.capability)),
@@ -371,7 +386,8 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       ...r,
       implemented: !swapped.has(r.capability),
     })),
-    evidence: evidenceOf(input.repoDir),
+    evidence: produced.evidence,
+    evidenceDetail: produced.detail,
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,
     remediation,

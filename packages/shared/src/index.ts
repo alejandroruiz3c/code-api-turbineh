@@ -3,3 +3,4 @@ export * from "./logger.js";
 export * from "./timing.js";
 export * from "./crypto.js";
 export * from "./product.js";
+export * from "./criterion-proof.js";
