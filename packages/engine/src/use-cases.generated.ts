@@ -68,19 +68,17 @@ export const USE_CASES: UseCase[] = [
   {
     "id": "bookings",
     "name": "Bookings",
-    "description": "Bookings and appointments with weekly availability, conflict-free booking, a calendar and email confirmations",
+    "description": "Online booking site for an appointment business — public booking page (service, team member or any, real free times, no account), confirmation email with a cancel link and a notice policy, no double bookings, staff calendar per team member (day and week), time off, move and cancel with customer emails",
     "extends": "saas-crud",
     "capabilities": [
       "email.transactional",
       "ops.rate-limit",
       "data.pagination"
     ],
-    "requiredComponents": [],
-    "sections": [
-      "Bookings",
-      "Calendar",
-      "Availability"
+    "requiredComponents": [
+      "domain.bookings.turbineh"
     ],
+    "sections": [],
     "keywords": [
       "booking",
       "bookings",
