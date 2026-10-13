@@ -40,6 +40,10 @@ done
 trap 'rm -rf "$LOCK"' EXIT
 
 if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
+  # Test-only flags (ADR-0037: forced-failure builds) are never honoured in production.
+  if [ "$TARGET" = production ] && ssh -i "$KEY" $SSH_OPTS "root@$HOST" "grep -q '^TURBINEH_TEST_FLAGS=' $ENVFILE"; then
+    echo "refusing: $ENVFILE sets TURBINEH_TEST_FLAGS (test-only, never in production)"; exit 1
+  fi
   echo "$TARGET worker: replacing $(ssh -i "$KEY" $SSH_OPTS "root@$HOST" "cat $DIR/.deployed-rev 2>/dev/null || echo unknown") with $REV"
   rsync -az --delete -e "ssh -i $KEY $SSH_OPTS" --exclude node_modules --exclude .git --exclude '.env*.local' \
     --exclude /builds --exclude /artifacts --exclude .next --exclude .turbo --exclude .vercel \

@@ -28,6 +28,7 @@ describe("precise states (PLAN §16.2)", () => {
     expect(stateOfBuild("done", false)).toBe("verified");
     expect(stateOfBuild("done", true)).toBe("deployed");
     expect(stateOfBuild("failed", false)).toBe("failed");
+    expect(stateOfBuild("failed", false, true)).toBe("generated");
     expect(stateOfBuild("queued", false)).toBe("planned");
     expect(stateOfBuild("verifying", false)).toBe("generating");
   });

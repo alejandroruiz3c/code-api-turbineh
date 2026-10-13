@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateFailures, rerunCommand, testTitle } from "./failures.js";
+import { deliveryKind, gateFailures, rerunCommand, testTitle } from "./failures.js";
 import { parseSteps, type VerifyResult } from "./verify.js";
 
 const result = (tail: string): VerifyResult => {
@@ -89,6 +89,33 @@ src/bookings/service.ts(12,7): error TS2322: Type 'string' is not assignable to 
           "src/bookings/service.ts(12,7): error TS2322: Type 'string' is not assignable to type 'number'.",
       },
     ]);
+  });
+
+  it("decides what is delivered from the gate only (ADR-0037 §D1)", () => {
+    const scans = "STEP secrets 0 1\nSTEP static 0 1\nSTEP dependencies 0 1\nSTEP licenses 0 1";
+
+    const ok = result(`STEP lint 0 1\n${scans}`);
+    expect(deliveryKind({ ...ok, ok: true })).toBe("verified");
+    // Quality failure only → the package is delivered, not verified.
+    expect(deliveryKind(result(`${E2E_TAIL}\n${scans}`))).toBe("unverified");
+    // A security scan failed (secrets in history, static ERROR, blocking advisory, licence) → report only.
+    for (const step of ["secrets", "static", "dependencies", "licenses"]) {
+      const v = result(`${E2E_TAIL}\n${scans.replace(`STEP ${step} 0`, `STEP ${step} 1`)}`);
+      expect(deliveryKind(v), step).toBe("report_only");
+    }
+    // A blocking security finding, even with the steps reporting ok.
+    const finding = result(`STEP e2e 1 1\n${scans}`);
+    finding.findings.static.push({
+      rule: "turbineh.sql-injection",
+      severity: "ERROR",
+      path: "src/app/x.ts",
+      line: 3,
+      message: "x",
+      explain: "x",
+    });
+    expect(deliveryKind(finding)).toBe("report_only");
+    // A scan that did not report fails closed.
+    expect(deliveryKind(result(E2E_TAIL))).toBe("report_only");
   });
 
   it("ignores security scans and passing steps", () => {
