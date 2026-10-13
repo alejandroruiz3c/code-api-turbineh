@@ -4,8 +4,18 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+
+- Spec fidelity in the compiler (ADR-0042): entity kinds (business, relationship, event, configuration, log) by code with decider fallback only for unsure entities, roles and permission rules from the request mapped onto workspace roles, constraints (time zone, uploads, notice, hours, prices, statuses, sort, schedules, email domains) and domain-pattern detection with catalog-gated component selection. Regression tests over the 9 learning-round specs; offline summary in `bench/frontiers/fidelity-2026-10-13.md`. The generator supports `tags` fields with a tag filter and enum options from stated status lists.
+
 ### Security
 
+- Public and pre-membership server actions (ADR-0040): the base template ships `publicAction(name, { rateLimit,
+schema }, handler)` (per-IP rate limit + Zod before anything runs) and `requireSession()` (signed in, not a member
+  yet). `turbineh.server-action-without-authz` accepts both, now also checks async function-expression exports and
+  rejects `publicAction` without its rate limit or schema; the waitlist and contact templates use it instead of
+  `nosemgrep`. `src/env.ts` generates build-only values at runtime instead of secret-shaped placeholders; AGENTS.md
+  documents both patterns.
 - GitHub connections only in private workspaces: with the shared invitation token the workspace comes from a header (or the shared `api-default`), so connecting, using or opening pull requests with GitHub requires a random workspace id (what the browser and `turbineh init` create); guessable names get an actionable 403 and stored credentials are never used for them.
 - Booking assistant: "find my bookings by email" emails the list (with references) to that address instead of showing it in the chat; the reply is the same whether or not bookings exist, with a 10-minute cooldown per address (no disclosure of someone else's appointments, no inbox flooding).
 
@@ -23,6 +33,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   turn p50 3.30–3.51 s vs 4.18–4.28 s, p95 7.73–7.86 s vs 8.12–9.62 s; 2.07–2.11 vs 11.61–19.40 USD per 1,000
   conversations. Results and the dedicated-vs-serverless decision note in `bench/agent-brain/RESULTS.md`.
 
+- Domain components for common business patterns (ADR-0041): `domain.workflow.turbineh` (states, role-gated
+  transitions, immutable history, stuck/overdue alerts), `domain.membership-access.turbineh` (roles from the request,
+  invitations by email with a role, accept flow with `requireSession()`, per-record scopes) and
+  `domain.audit-log.turbineh` (append-only audit log, owner page with filters and CSV export). Parameters declared with
+  a JSON Schema (`params` in component.yaml, checked by `catalog:validate`); base seams `src/server/role-policy.ts`,
+  `src/server/record-access.ts`, `src/lib/audit.ts` (generated entities record their changes); `src/db/sql/*.sql`
+  applied by `db:migrate`; assembler adapters `files-recipe/` and `files-with/`; `verify:recipe` component
+  combinations with request params.
 - Which app of a monorepo receives a capability is decided by the decider when the repository has several Next.js
   apps (ADR-0039 Amendment 1, owner decision): plans, the repository analysis and the worker's integration use
   `chooseAppPath`; the path heuristic stays as the fallback (one app, low confidence, no decider, errors, the CLI).

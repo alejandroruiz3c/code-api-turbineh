@@ -301,7 +301,22 @@ export const BASE_EXTEND: PackageGuide["extend"] = [
   {
     what: "Add a server action",
     where: "src/app/<route>/actions.ts",
-    how: '"use server"; first line of every exported action: `await requireMember()` (or requireAdmin()); validate input with Zod; filter by organizationId.',
+    how: '"use server"; first line of every exported action: `await requireMember()` (or requireAdmin()); validate input with Zod; filter by organizationId. Own authorization helpers count only when named require*/assert*/ensure*.',
+  },
+  {
+    what: "Add a public action (anonymous visitors: public booking, contact, waitlist, a link from an email)",
+    where: "src/app/<route>/actions.ts, src/server/authz.ts",
+    how: '"use server"; `export const x = publicAction("<name>", { rateLimit: { limit: 5 }, schema, refuse }, async (input) => …)`: per-IP rate limit and Zod validation run first (both mandatory); never a plain exported function or a nosemgrep comment.',
+  },
+  {
+    what: "Add an action for signed-in non-members (accept an invitation, onboarding, first workspace)",
+    where: "src/app/<route>/actions.ts, src/server/authz.ts",
+    how: "First line: `const { userId, email } = await requireSession()` (signed in, no workspace needed); anything that touches workspace data uses requireMember().",
+  },
+  {
+    what: "Add a setting or secret",
+    where: "src/env.ts, .env.example, playwright.config.ts",
+    how: "Required settings have no .default() and no placeholder value in code (no secret-shaped literal anywhere, tests included): `pnpm build` gets build-only values generated in src/env.ts, tests generate theirs at runtime (randomBytes in playwright.config.ts), real values go in .env.local.",
   },
   {
     what: "Add a business rule",
@@ -377,12 +392,12 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
     {
       change: "Environment variable",
       run: "pnpm typecheck",
-      note: "Declare it in src/env.ts (Zod) and .env.example; optional unless the app cannot start without it (build and tests run with only the required ones); never commit values.",
+      note: "Declare it in src/env.ts (Zod) and .env.example; optional unless the app cannot start without it (build and tests run with only the required ones); no .default() or placeholder for a required one; never commit values.",
     },
     {
       change: "Before handing over (everything)",
       run: "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e",
-      note: "Same steps as the TurbineH gate (which also runs gitleaks, Semgrep rules, OSV and the licence policy).",
+      note: "Same steps as the TurbineH gate (which also runs gitleaks, Semgrep rules, OSV and the licence policy). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
     },
   ];
 }
@@ -573,6 +588,8 @@ export function initialGuide(input: {
   recipe: { id: string; description: string; guide?: RecipeGuide };
   criteria: string[];
   gaps: { capability: string; trigger: string }[];
+  /** Installed catalog components and their extension points (guide.yaml), listed after the recipe's. */
+  components?: { id: string; extend: { what: string; where: string; how: string }[] }[];
 }): Omit<PackageGuide, "left"> {
   const files = fileMap(input.outDir);
   const tests = testsOf(input.outDir);
@@ -589,7 +606,13 @@ export function initialGuide(input: {
     })),
     gate: null,
     files,
-    extend: [...(input.recipe.guide?.extend ?? []), ...BASE_EXTEND],
+    extend: [
+      ...(input.recipe.guide?.extend ?? []),
+      ...(input.components ?? []).flatMap((c) =>
+        c.extend.map((e) => ({ ...e, what: `${e.what} (${c.id})` })),
+      ),
+      ...BASE_EXTEND,
+    ],
     theme: themeOf(input.outDir),
     env: envOf(input.outDir),
     tests,
