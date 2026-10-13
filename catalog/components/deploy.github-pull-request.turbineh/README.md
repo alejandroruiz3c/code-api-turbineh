@@ -1,6 +1,6 @@
 # deploy.github-pull-request.turbineh — integrate into an existing repository as a verified pull request
 
-TurbineH platform service (not code copied into an app). Decision record: `docs/adr/0032-github-integration-repo-analysis.md`.
+TurbineH platform service (not code copied into an app). Decision record: `docs/adr/0034-github-integration-repo-analysis.md`.
 
 ## What it does
 

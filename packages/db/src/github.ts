@@ -1,7 +1,7 @@
 import type pg from "pg";
 
 /**
- * GitHub connection per workspace and repository integration jobs (PLAN §16 P5, ADR-0032). Tokens arrive here
+ * GitHub connection per workspace and repository integration jobs (PLAN §16 P5, ADR-0034). Tokens arrive here
  * already encrypted (AES-256-GCM, DELIVERY_TOKEN_KEY) and only `githubTokenEnc` returns the ciphertext — to the
  * server code that calls GitHub, never to a client.
  */

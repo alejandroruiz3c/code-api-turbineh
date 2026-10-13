@@ -1,4 +1,4 @@
-# ADR-0032 · Connect GitHub and integrate into the client's repository as a verified pull request
+# ADR-0034 · Connect GitHub and integrate into the client's repository as a verified pull request
 
 - Status: accepted
 - Date: 2026-10-12

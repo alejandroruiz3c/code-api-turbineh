@@ -7,7 +7,7 @@ import { htmlPage } from "@/server/html-page";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/auth/callback/github/workspace — end of "Connect GitHub" (ADR-0032). Under the OAuth app's registered
+ * GET /api/auth/callback/github/workspace — end of "Connect GitHub" (ADR-0034). Under the OAuth app's registered
  * callback path, separate from sign-in. Checks the state cookie and the stored state (one use), the workspace, then
  * exchanges the code with the PKCE verifier and stores the token encrypted. Never echoes GitHub's answer.
  */

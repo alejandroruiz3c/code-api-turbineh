@@ -229,12 +229,21 @@ describe("adaptation to the client's conventions", () => {
     const ns = "src/turbineh/ai-assistant";
     expect(x.namespace).toBe(ns);
     const paths = files(x).map((f) => f.path);
-    // Unrelated files are never touched: every change is in the namespace or one of three integration points.
-    expect(paths.filter((p) => !p.startsWith(`${ns}/`)).sort()).toEqual([
-      ".env.example",
-      "package.json",
-      "src/db/schema.ts",
-    ]);
+    // Unrelated files are never touched: existing files change only at three integration points; anything else
+    // outside the namespace is a new route of the capability in the project's App Router (never an existing file).
+    expect(
+      files(x)
+        .filter((f) => f.action === "modify")
+        .map((f) => f.path)
+        .sort(),
+    ).toEqual([".env.example", "package.json", "src/db/schema.ts"]);
+    for (const p of paths.filter(
+      (q) =>
+        !q.startsWith(`${ns}/`) && !/^(\.env\.example|package\.json|src\/db\/schema\.ts)$/.test(q),
+    )) {
+      expect(p.startsWith("src/app/")).toBe(true);
+      expect(appRouterSrc.paths).not.toContain(p);
+    }
     expect(files(x).find((f) => f.path === "src/db/schema.ts")?.action).toBe("modify");
     const orchestrator = text(x, `${ns}/lib/ai/orchestrator.ts`);
     expect(orchestrator).not.toMatch(/from "@\//);
@@ -472,6 +481,26 @@ describe("complete flows in a client project", () => {
     ),
     f("examples/app/package.json", "{}"),
     f(
+      "examples/app/turbineh.json",
+      JSON.stringify({
+        schema: "turbineh.package/v1",
+        left: [
+          {
+            kind: "criterion",
+            what: "Refunds are not covered",
+            where: "src/lib/x.ts",
+            how: "Add a refund rule in src/lib/x.ts",
+          },
+          {
+            kind: "setting",
+            what: "RESEND_API_KEY is not set",
+            where: ".env.local",
+            how: "Set it",
+          },
+        ],
+      }),
+    ),
+    f(
       "src/app/dashboard/page.tsx",
       '// eslint-disable-next-line @next/next/no-img-element -- static asset\nimport { x } from "@/lib/x";\nexport default function P() { return x; }\n',
     ),
@@ -498,6 +527,27 @@ describe("complete flows in a client project", () => {
     expect(all.some((y) => y.path.includes("tests/e2e"))).toBe(false);
     expect(get("src/turbineh/flow/tests/unit/x.test.ts")).toContain('from "../../lib/x"');
     expect(get("src/app/dashboard/page.tsx")).toContain('from "../../turbineh/flow/lib/x"');
+  });
+  it("carries the package's own 'what is left' into the PR, with paths in the project", () => {
+    expect(x.packageLeft).toEqual([
+      {
+        kind: "criterion",
+        what: "Refunds are not covered",
+        where: "src/turbineh/flow/lib/x.ts",
+        how: "Add a refund rule in src/turbineh/flow/lib/x.ts",
+      },
+    ]);
+    const body = prBody({
+      need: "n",
+      planId: "p",
+      adaptation: x,
+      analysis: analyse(appRouterSrc),
+      commits: [],
+      verification: { state: "running" },
+      glue: [],
+    });
+    expect(body).toContain("## What is left in the capability itself");
+    expect(body).toContain("Refunds are not covered");
   });
   it("drops lint directives for ESLint plugins the project does not use", () => {
     expect(get("src/app/dashboard/page.tsx")).not.toContain("@next/next");

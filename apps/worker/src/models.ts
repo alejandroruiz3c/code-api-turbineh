@@ -6,7 +6,7 @@ import type { WriterConfig } from "@turbineh/reporter";
 const modelOf = (ref: string) => ref.slice(ref.indexOf(":") + 1);
 
 /**
- * Adaptation model for client repositories (ADR-0032): quality over cost, so the strongest documented open coder
+ * Adaptation model for client repositories (ADR-0034): quality over cost, so the strongest documented open coder
  * among the configured slots goes first — GLM-5.2 (the only open model in the independent SWE-rebench top 5, 62.9 %
  * [indep.]) — with DeepSeek-V4-Flash-0731 as automatic fallback. `ADAPTATION_MODEL_ORDER=primary-first` reverses it.
  */

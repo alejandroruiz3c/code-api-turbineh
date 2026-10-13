@@ -11,7 +11,7 @@ import {
 import { readZip } from "./zip.js";
 
 /**
- * Adaptation of a capability package to a client's project (PLAN §16 P5, ADR-0032). Deterministic: placement,
+ * Adaptation of a capability package to a client's project (PLAN §16 P5, ADR-0034). Deterministic: placement,
  * import rewriting, foundation modules, dependency merge (exact versions, never a downgrade), settings and the
  * database wiring are code. Only glue that cannot be derived (e.g. reusing a database client exported in an unusual
  * way) is requested from the adaptation model, with a deterministic fallback. Unrelated files are never touched:
@@ -102,6 +102,12 @@ export interface Adaptation {
   /** Tests of the capability, as paths relative to the app, and whether the project's own runner picks them up. */
   tests: { files: string[]; runInProjectSuite: boolean };
   glue: GlueRequest[];
+  /**
+   * What is left from the package's own agent guide (AGENTS.md / turbineh.json of the verified example): open
+   * criteria, gaps and gate findings, with paths mapped to where the code now lives in the project. null = the
+   * package has no guide (component packages).
+   */
+  packageLeft: { kind: string; what: string; where: string; how: string }[] | null;
 }
 
 export interface AdaptInput {
@@ -221,7 +227,7 @@ export function envDocs(text: string): Record<string, SettingDoc> {
 /** required = no default and a credential or connection; default = the package documents a value; else optional. */
 export function settingKind(name: string, doc?: SettingDoc): "required" | "default" | "optional" {
   const said = (doc?.comment ?? []).join(" ");
-  if (/\boptional\b/i.test(said)) return "optional";
+  if (/\b(optional|only when|only if|empty = default|defaults?\))/i.test(said)) return "optional";
   // Credentials and connections are never "defaults", even when the example file shows a sample value.
   if (/(TOKEN|SECRET|PASSWORD|_KEY|DATABASE_URL)$/.test(name)) return "required";
   if (doc?.value && !/localhost|127\.0\.0\.1|example\.(com|test)/.test(doc.value)) return "default";
@@ -792,6 +798,25 @@ export const db = drizzle(pool, { schema });
     }))
     .filter((s) => s.files.length > 0);
 
+  const guideText = files.get("examples/app/turbineh.json")?.toString("utf8");
+  let packageLeft: Adaptation["packageLeft"] = null;
+  if (guideText) {
+    try {
+      const g = JSON.parse(guideText) as {
+        left?: { kind: string; what: string; where: string; how: string }[];
+      };
+      const place = (w: string) =>
+        w
+          .replace(/(^|[\s(`])src\/app\//g, `$1${at(a, appDir)}/`)
+          .replace(/(^|[\s(`])src\//g, `$1${ns}/`);
+      packageLeft = (g.left ?? [])
+        // Settings are listed in "What you must configure" with the project's own names and files.
+        .filter((l) => l.kind !== "setting")
+        .map((l) => ({ ...l, where: place(l.where), how: place(l.how) }));
+    } catch {
+      packageLeft = null;
+    }
+  }
   const testFiles = [...out.keys()]
     .filter((p) => p.startsWith(`${ns}/tests/`) && /\.(test|vitest)\.(ts|tsx)$/.test(p))
     .map((p) => (a.appPath ? p.slice(a.appPath.length + 1) : p));
@@ -809,5 +834,6 @@ export const db = drizzle(pool, { schema });
     migration,
     tests: { files: testFiles, runInProjectSuite: a.tests.runner === "vitest" },
     glue,
+    packageLeft,
   };
 }

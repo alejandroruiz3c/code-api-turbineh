@@ -59,7 +59,7 @@ import {
 } from "./integration-sandbox.js";
 
 /**
- * Repository integration job (PLAN §16 P5, ADR-0032): analyse the client's project → adapt the capability package to
+ * Repository integration job (PLAN §16 P5, ADR-0034): analyse the client's project → adapt the capability package to
  * its conventions (glue by the adaptation model when needed) → lockfile and migration generated in the sandbox →
  * one commit per logical step on `turbineh/<capability>` → draft pull request → verification of the PR branch in
  * the sandbox → ready for review and `integration_verified` only when every check passes; otherwise the PR stays a
@@ -74,7 +74,7 @@ export interface IntegrationDeps {
   tokenKey: string;
   repoRoot: string;
   workerId: string;
-  /** Adaptation model (strongest open coder first, ADR-0032); null when no model is configured. */
+  /** Adaptation model (strongest open coder first, ADR-0034); null when no model is configured. */
   coder: BackupCoder | null;
   appUrl: string | null;
   log: Log;
@@ -866,6 +866,7 @@ async function runJob(
       conflicts: adaptation.findings.conflicts,
       limits: adaptation.limits,
       reviewerSetup: adaptation.reviewerSetup,
+      packageLeft: adaptation.packageLeft,
       dependencies: adaptation.dependencies,
       settings: adaptation.settings,
       glue: glueUsed.map(({ path, by }) => ({ path, by })),

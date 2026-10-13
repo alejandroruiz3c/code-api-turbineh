@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { GithubConnection, OAuthStateRow } from "@turbineh/db";
 
 /**
- * "Connect GitHub" for the product area (PLAN §16 P5, ADR-0032): an OAuth flow bound to the access workspace,
+ * "Connect GitHub" for the product area (PLAN §16 P5, ADR-0034): an OAuth flow bound to the access workspace,
  * separate from any sign-in. Protections:
  *  - state: 32 random bytes, kept raw only in an httpOnly/Secure/SameSite=Lax cookie scoped to the callback path and
  *    in GitHub's redirect; the server stores only its SHA-256 (one use, 10 minutes). The callback requires the

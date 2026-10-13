@@ -1,4 +1,4 @@
--- Connect GitHub and integrate into the client's repository (PLAN §16 P5, ADR-0032).
+-- Connect GitHub and integrate into the client's repository (PLAN §16 P5, ADR-0034).
 
 -- One GitHub connection per workspace (owner). The token is AES-256-GCM encrypted with DELIVERY_TOKEN_KEY, never
 -- returned by the API and never logged; "Disconnect GitHub" deletes the row and revokes the OAuth grant.

@@ -55,7 +55,7 @@ compat:
 effects: { network: true, fs: true, db: true, external_services: [github] }
 integration:
   strategy: adapter
-  install: "Platform service of TurbineH (apps/web routes + worker job apps/worker/src/repo-integration.ts); nothing is vendored into the client's app by this component. See catalog/components/deploy.github-pull-request.turbineh/README.md and docs/adr/0032-github-integration-repo-analysis.md"
+  install: "Platform service of TurbineH (apps/web routes + worker job apps/worker/src/repo-integration.ts); nothing is vendored into the client's app by this component. See catalog/components/deploy.github-pull-request.turbineh/README.md and docs/adr/0034-github-integration-repo-analysis.md"
   config: [GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, DELIVERY_TOKEN_KEY]
   migrations: true
 quality:

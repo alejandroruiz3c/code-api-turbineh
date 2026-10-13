@@ -148,6 +148,23 @@ export function prBody(input: PrBodyInput): string {
     "",
     ...a.reviewerSetup.map((s, i) => `${i + 1}. ${s}`),
     "",
+    `## What is left in the capability itself`,
+    "",
+    ...(a.packageLeft === null
+      ? [
+          "Component package: no open criteria. Usage and examples are in the capability's `agent/INTEGRATE.md`.",
+        ]
+      : a.packageLeft.length
+        ? [
+            "From the package's agent guide (AGENTS.md / turbineh.json), with paths in your project:",
+            "",
+            ...a.packageLeft.map(
+              (l) =>
+                `- **[${esc(l.kind)}]** ${esc(l.what)} — where: \`${esc(l.where)}\` — how: ${esc(l.how)}`,
+            ),
+          ]
+        : ["Nothing: every acceptance criterion of the package is met and proven by a test."]),
+    "",
     `## How to revert`,
     "",
     "- Before merging: close this pull request and delete the branch — nothing else changed.",

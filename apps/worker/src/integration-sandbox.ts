@@ -16,7 +16,7 @@ import type { RepoAnalysis } from "@turbineh/engine";
 import { POSTGRES_IMAGE, run, SANDBOX_IMAGE } from "@turbineh/verifier";
 
 /**
- * Verification inside the client's project (PLAN §16 P5, ADR-0032). Third-party code only ever runs in the
+ * Verification inside the client's project (PLAN §16 P5, ADR-0034). Third-party code only ever runs in the
  * ephemeral sandbox image, never on the worker:
  *  - phase A ("install"): the project's package manager talks to the npm registry only, with install scripts
  *    disabled, so no dependency code runs while there is network; dependencies from git/URLs are refused before;

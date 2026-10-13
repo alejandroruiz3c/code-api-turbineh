@@ -21,7 +21,7 @@ import { adaptationCoderFromEnv } from "./models.js";
 import { processRepoIntegration } from "./repo-integration.js";
 
 /**
- * Full repository integration against a REAL throwaway GitHub repository (PLAN §16 P5, ADR-0032). Opt-in:
+ * Full repository integration against a REAL throwaway GitHub repository (PLAN §16 P5, ADR-0034). Opt-in:
  *   TURBINEH_E2E_GITHUB=1 pnpm --filter @turbineh/worker exec vitest run src/repo-integration.e2e.test.ts
  * Needs GITHUB_TOKEN (create/delete repositories) and DELIVERY_TOKEN_KEY in .env.local, Docker with the sandbox
  * image and a PostgreSQL (E2E_DATABASE_URL, default: infra/docker-compose). Creates a private repository with a

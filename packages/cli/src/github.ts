@@ -6,7 +6,7 @@ import { bold, dim, green, red, yellow, type CommandResult } from "./output.js";
 import { git, isGitRepo } from "./project.js";
 
 /**
- * GitHub for the CLI (PLAN §16 P5, ADR-0032): `connect github` opens the product's OAuth flow in a browser for this
+ * GitHub for the CLI (PLAN §16 P5, ADR-0034): `connect github` opens the product's OAuth flow in a browser for this
  * project's workspace (or stores a token read from stdin), `disconnect github` deletes and revokes it, and
  * `apply --pr` integrates the plan into a repository as a verified pull request. Tokens are never printed.
  */

@@ -3,7 +3,7 @@ import type { RepositoryFit } from "@turbineh/shared";
 import { cleanVersion, major } from "./stack.js";
 
 /**
- * Repository analysis (PLAN §16 P5, ADR-0032): what a client's project is made of and how it is written, from its
+ * Repository analysis (PLAN §16 P5, ADR-0034): what a client's project is made of and how it is written, from its
  * file list and a small set of configuration files read through the GitHub API — never cloned, never a secret. Env
  * files are reported by name only; their contents are never requested. Deterministic: the adaptation decisions that
  * follow from it are code, not a model.

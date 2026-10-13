@@ -1,6 +1,6 @@
 # ops.repo-analysis.turbineh — analyse an existing repository (stack, conventions, conflicts)
 
-TurbineH platform service (not code copied into an app). Decision record: `docs/adr/0032-github-integration-repo-analysis.md`.
+TurbineH platform service (not code copied into an app). Decision record: `docs/adr/0034-github-integration-repo-analysis.md`.
 
 ## What it does
 
