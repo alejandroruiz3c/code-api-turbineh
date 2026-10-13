@@ -43,13 +43,19 @@ export function catalogDocs(raw: unknown): CatalogDocs | null {
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
   return {
     useCases: strings(d.use_cases),
-    useWhen: strings(d.when_to_use),
-    avoidWhen: Array.isArray(d.when_not_to_use)
-      ? (d.when_not_to_use as { instead?: unknown; why?: unknown }[])
-          .filter((w) => typeof w.instead === "string" && typeof w.why === "string")
-          .map((w) => ({ instead: w.instead as string, why: w.why as string }))
+    useWhen: strings(d.use_when),
+    // guide.yaml (turbineh.guide/v0.1) writes "why — use <alternative>".
+    avoidWhen: strings(d.avoid_when).map((w) => {
+      const [why = w, instead = ""] = w.split(/\s+—\s+use\s+/);
+      return { instead, why };
+    }),
+    tradeoffs: Array.isArray(d.tradeoffs)
+      ? (d.tradeoffs as unknown[]).map((t) =>
+          typeof t === "string"
+            ? t
+            : `${String((t as { choice?: unknown }).choice ?? "")}: ${String((t as { gain?: unknown }).gain ?? "")} (cost: ${String((t as { cost?: unknown }).cost ?? "")})`,
+        )
       : [],
-    tradeoffs: strings(d.tradeoffs),
     limits: strings(d.limits),
     keywords: strings(d.keywords),
     guarantees: Array.isArray(d.guarantees) ? d.guarantees.length : 0,

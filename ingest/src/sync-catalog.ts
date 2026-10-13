@@ -36,7 +36,7 @@ for (const m of manifests) {
 const cards = manifests.map((m) => {
   const docs = (m as Manifest & { docs?: Parameters<typeof decisionCard>[0] }).docs;
   return docs
-    ? `${m.id}: ${decisionCard(docs, m.relations.provides)}`
+    ? `${m.id}: ${decisionCard(docs, m.relations.provides, m.capability.does)}`
     : `${m.id}: ${m.capability.does}. Provides ${m.relations.provides.join(", ")}.`;
 });
 const vectors = await embedderFromEnv(env).embed(cards);

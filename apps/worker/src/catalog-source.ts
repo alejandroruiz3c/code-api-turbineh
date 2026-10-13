@@ -43,7 +43,7 @@ export function loadCatalog(componentsDir: string, opts: { docs?: boolean } = {}
         conflicts: m.relations.conflicts,
         requires: m.relations.requires,
         card: docs
-          ? decisionCard(docs, m.relations.provides)
+          ? decisionCard(docs, m.relations.provides, m.capability.does)
           : `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${guideCard(join(componentsDir, m.id))}`,
       };
     });

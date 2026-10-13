@@ -41,18 +41,23 @@ export function buildIndex(componentsDir: string): { json: string; llms: string 
         ...(m.capability.does_not ? { doesNot: m.capability.does_not } : {}),
         ...(d
           ? {
+              title: d.title,
+              summary: d.summary,
               useCases: d.use_cases,
-              useWhen: d.when_to_use,
-              avoidWhen: d.when_not_to_use,
+              useWhen: d.use_when,
+              avoidWhen: d.avoid_when,
               tradeoffs: d.tradeoffs,
-              inputs: d.inputs,
-              interfaces: d.interfaces.map((i) => ({ name: i.name, kind: i.kind, about: i.about })),
+              config: d.config,
+              interfaces: d.interfaces,
+              extensionPoints: d.extension_points,
               compatibility: d.compatibility,
               security: d.security,
               guarantees: d.guarantees,
               limits: d.limits,
               example: d.example,
               keywords: d.keywords,
+              ...(d.synonyms ? { synonyms: d.synonyms } : {}),
+              ...(d.generated ? { generated: { by: d.generated.by, at: d.generated.at } } : {}),
             }
           : {}),
         details: `${SITE}/v1/capabilities/${m.id}`,
@@ -78,10 +83,7 @@ export function buildIndex(componentsDir: string): { json: string; llms: string 
 ${approved
   .map((c) => {
     const use = "useWhen" in c && c.useWhen?.[0] ? ` Use when: ${c.useWhen[0]}` : "";
-    const not =
-      "avoidWhen" in c && c.avoidWhen?.[0]
-        ? ` Not when: ${c.avoidWhen[0].why} (use ${c.avoidWhen[0].instead}).`
-        : "";
+    const not = "avoidWhen" in c && c.avoidWhen?.[0] ? ` Not when: ${c.avoidWhen[0]}.` : "";
     return `- [${c.id}](${c.details}): ${c.does}.${use}${not} Provides ${c.provides.join(", ")}.`;
   })
   .join("\n")}
