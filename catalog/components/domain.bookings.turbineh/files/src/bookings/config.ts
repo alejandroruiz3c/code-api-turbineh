@@ -68,6 +68,8 @@ export const BookingParams = z
         }),
       )
       .max(30),
+    /** The public booking page asks for a phone number (required when true). */
+    askPhone: z.boolean().default(false),
   })
   .superRefine((p, ctx) => {
     p.hours.forEach((h, i) => {

@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: site.public-pages.turbineh
+version: 0.1.0
+status: approved
+category: site
+source:
+  purl: pkg:generic/turbineh/site.public-pages.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Public collections of a website from the request — portfolio projects, open positions, team members, services: a list per collection with filters by its fields (sector, location…), a page per entry with SEO metadata (title, description, canonical URL, Open Graph, JSON-LD) and a generated Open Graph image in the brand colours, published entries in the sitemap; staff add, edit, publish and delete entries; drafts are never shown."
+  does_not: "Does not provide a page builder, rich-text editor, image uploads or multiple languages"
+  use_cases: [corporate-site, landing-waitlist, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Collections, paths and filters come from the request as data",
+      "Open Graph images generated with Next's own next/og (no extra dependency)",
+    ]
+  cons: ["Entries share one shape (title, summary, text, image URL, filter fields)"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/site-pages/params.json (pages[]: entity, path, detail, filters[], title?; seo)",
+      "staff forms (requireAdmin): title, slug?, summary, filter fields, image URL, order, text, published",
+    ]
+  outputs: ["site_entries rows; /<path> (list with filters), /<path>/<slug> (page, metadata, opengraph-image); sitemapEntries() for the sitemap"]
+  errors: ["unknown collections and drafts are 404; image URLs other than http(s) are refused"]
+  limits: ["12 collections, 10 filters each, 500 entries listed per collection"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/site-pages/{config,rules,service}.ts + params.json, src/db/component-site-pages.ts, src/app/[collection]/** (list, page, opengraph-image), src/app/dashboard/site-pages/**, src/components/site-pages/*, unit and E2E tests. files-recipe/corporate-site/ puts the pages in the site's shell and navigation and adds them to its sitemap."
+  config: [ADMIN_EMAILS]
+  migrations: true
+params:
+  file: src/site-pages/params.json
+  schema: params.schema.json
+  entities: [Project, PortfolioItem, CaseStudy, JobPosition, JobOpening, Position, Vacancy, TeamMember, Service, Page]
+quality:
+  tests:
+    {
+      command: "unit (collections and filters from params, slugs, filters, safe image URLs) + E2E (staff publish, visitors filter, a page per entry with metadata and an Open Graph PNG, drafts hidden, sitemap); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: visitor reads only published entries; staff writes behind requireAdmin; text rendered as text (no HTML); JSON-LD with '<' escaped; image URLs restricted to http(s); filter values compared, never interpolated into queries."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "corporate-site + site.public-pages (Altamira) passes the full verification gate with the public-pages E2E suite"
+    origin: tested
+    ref: "verify:recipe (ADR-0048 combinations)"
+relations:
+  requires: []
+  provides: [site.public-pages]
+  conflicts: []
+  tested_with: [recipe.corporate-site]

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { bookingAppointments, bookingFaq, bookingResources } from "@/db/schema";
+import { addTimeOff, removeTimeOff, staffMove } from "@/bookings/manage";
 import { cancelAppointment, createAppointment, PolicyError } from "@/bookings/service";
 import { UserFacingError } from "@/security/errors";
 import { requireAdmin } from "@/server/authz";
@@ -46,7 +47,62 @@ export async function staffCancel(formData: FormData): Promise<void> {
     .where(eq(bookingAppointments.id, id));
   if (!a) throw new UserFacingError("Appointment not found.");
   await cancelAppointment(a.reference, a.email, { byStaff: true });
-  revalidatePath("/dashboard/appointments");
+  revalidatePath("/dashboard/appointments", "layout");
+}
+
+const moveSchema = z.object({
+  id: z.uuid(),
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  resource: z.string().trim().max(80).optional(),
+});
+
+/** Staff move a booking to another free time (and team member); the customer is emailed. */
+export async function staffMoveBooking(_prev: StaffState, formData: FormData): Promise<StaffState> {
+  await requireAdmin();
+  const parsed = moveSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Check the date and time.", done: null };
+  try {
+    const { id, ...to } = parsed.data;
+    const m = await staffMove(id, { ...to, resource: to.resource || undefined });
+    revalidatePath("/dashboard/appointments", "layout");
+    return {
+      error: null,
+      done: `Moved ${m.reference} to ${m.when} with ${m.resource}. The customer was emailed.`,
+    };
+  } catch (err) {
+    if (err instanceof PolicyError) return { error: err.message, done: null };
+    throw err;
+  }
+}
+
+const timeOffSchema = z.object({
+  resourceId: z.uuid(),
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  from: z.string().regex(/^\d{2}:\d{2}$/),
+  to: z.string().regex(/^\d{2}:\d{2}$/),
+  reason: z.string().trim().max(120).optional(),
+});
+
+/** Staff block time off for a team member; refused while bookings fall inside it. */
+export async function staffAddTimeOff(_prev: StaffState, formData: FormData): Promise<StaffState> {
+  const admin = await requireAdmin();
+  const parsed = timeOffSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Check the team member, day and times.", done: null };
+  try {
+    await addTimeOff({ ...parsed.data, by: admin.email });
+    revalidatePath("/dashboard/appointments", "layout");
+    return { error: null, done: "Time off saved." };
+  } catch (err) {
+    if (err instanceof PolicyError) return { error: err.message, done: null };
+    throw err;
+  }
+}
+
+export async function staffRemoveTimeOff(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await removeTimeOff(z.uuid().parse(formData.get("id")));
+  revalidatePath("/dashboard/appointments", "layout");
 }
 
 export async function saveResource(formData: FormData): Promise<void> {

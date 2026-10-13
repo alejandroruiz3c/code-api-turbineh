@@ -1,4 +1,24 @@
 # Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+  covers: ["\\bbook|appointment|reserv", "pick|choose|select|free (slot|time)|public|online|without (an )?account"]
+- test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+  covers: ["confirm|e-?mail", "link|cancel|confirm"]
+- test: "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+  covers: ["double|overlap|conflict|same (time|slot)|twice"]
+- test: "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+  covers: ["cancel", "\\d+ ?(h|hours?)|notice|before|link"]
+- test: "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+  covers: ["calendar|day and week|week view|day view|schedule", "staff|stylist|per|team"]
+- test: "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+  covers: ["time off|block|holiday|absence|unavailab"]
+- test: "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+  covers: ["move|reschedul|cancel", "e-?mail|notif"]
+- test: "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+  covers: ["staff|admin", "\\bmove|reschedul|different (time|slot)"]
+- test: "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"
+  covers: ["opening hours|outside|closed|working hours|business hours|availab"]
+- test: "tests/e2e/bookings.spec.ts › people who are not staff cannot see the bookings"
+  covers: ["staff|admin|sign[ -]?in|log[ -]?in", "see|manage|dashboard|calendar|only"]
 - test: "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"
   covers: ["\\bbook|appointment|session|reserv"]
 - test: "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"

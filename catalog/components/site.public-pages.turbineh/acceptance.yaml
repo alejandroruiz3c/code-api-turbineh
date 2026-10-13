@@ -1,0 +1,11 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/public-pages.spec.ts › staff publish entries and visitors browse the list, filtered by its field"
+  covers: ["portfolio|projects|careers|positions|team|list", "filter"]
+- test: "tests/e2e/public-pages.spec.ts › staff publish entries and visitors browse the list, filtered by its field"
+  covers: ["staff|admin|owner", "edit|publish|manage|add"]
+- test: "tests/e2e/public-pages.spec.ts › each entry has its own page with title, description, canonical URL and an Open Graph image"
+  covers: ["(its|their) own page|page (per|for each)|detail page"]
+- test: "tests/e2e/public-pages.spec.ts › each entry has its own page with title, description, canonical URL and an Open Graph image"
+  covers: ["open ?graph|og image|social (image|preview)"]
+- test: "tests/e2e/public-pages.spec.ts › drafts are never shown to visitors, and the sitemap lists only published pages"
+  covers: ["sitemap|draft|unpublished"]

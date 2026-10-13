@@ -1,0 +1,5 @@
+{
+  "workflows": ["*"],
+  "dragAndDrop": true,
+  "highlightOverdue": true
+}

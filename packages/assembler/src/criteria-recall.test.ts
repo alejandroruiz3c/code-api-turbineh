@@ -33,8 +33,9 @@ const RENAMED: Record<string, string> = {
     "a visitor on the landing page submits their name and email and joins the waitlist",
   "an allowlisted email gets staff access only after the address is verified":
     "a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified",
+  // The bookings recipe now runs on domain.bookings (ADR-0048): its double-booking test replaced the recipe's.
   "an overlapping booking is rejected":
-    "a slot that is already taken cannot be booked again: the overlapping (double) booking is rejected",
+    "a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
   "answers common questions from the business's data":
     "a customer asks about prices: the assistant responds stating each service with its price, from the business's data",
   "books only a real free time, after the person confirms, and logs the confirmation email":
@@ -81,10 +82,8 @@ const RENAMED: Record<string, string> = {
     "the owner accesses the admin area and sees the list of all orders with their payment status",
   "the owner accesses the admin area, creates a product, then edits its price; the public catalogue shows it at once":
     "the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once",
-  "the owner books a slot and sees it in the calendar":
-    "the owner books a slot for a customer (name and email): the booking is confirmed and the owner sees it in the calendar",
-  "the owner opens every day from 08:00 to 20:00 (UTC)":
-    "the owner sets the availability (opening hours): every day from 08:00 to 20:00 (UTC)",
+  // ADR-0048: the recipe's own calendar and availability tests are gone (opening hours come from params; staff see
+  // the calendar in domain.bookings); these two pairs are scored with their learning-round titles.
 };
 
 function walk(d: string): string[] {

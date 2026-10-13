@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { requireMember } from "@/server/authz";
 import { workflowOf } from "@/workflow/config";
 import { allowedTransitions, isOverdue, stateLabel, stuckHours } from "@/workflow/engine";
+import { ItemExtras } from "@/workflow/extras";
 import { getItem, history } from "@/workflow/service";
 import { TransitionForm } from "../../transition-form";
 
@@ -65,6 +66,7 @@ export default async function WorkflowItemPage({ params }: Props) {
           <p className="text-sm text-muted">No status change available to you from here.</p>
         )}
       </Card>
+      <ItemExtras ctx={ctx} wf={wf} item={item} />
       <Card title="History">
         <ol className="flex flex-col gap-2 text-sm" data-testid="history">
           {events.map((e) => (

@@ -1,0 +1,7 @@
+{
+  "doubleOptIn": true,
+  "showPosition": true,
+  "referral": { "enabled": true, "boost": 1 },
+  "ownerCanExport": true,
+  "ownerCanRemove": true
+}

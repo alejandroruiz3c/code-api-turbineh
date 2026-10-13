@@ -1,0 +1,15 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/uploads.spec.ts › a member uploads an allowed file and downloads exactly the same bytes"
+  covers: ["upload|attach|\\bfiles?\\b|document", "download|upload|attach|store"]
+- test: "tests/e2e/uploads.spec.ts › a file larger than the size limit, or whose content is not an allowed type, is refused"
+  covers: ["\\bfiles?\\b|upload|document|attach", "\\d+ ?mb|size|limit|type|pdf|jpe?g|png|only|allowed"]
+- test: "tests/e2e/uploads.spec.ts › files are stored privately: never under public/, never readable without the app"
+  covers: ["privat|secure|not public|stored"]
+- test: "tests/e2e/uploads.spec.ts › only people who may see a file can download it: not anonymous visitors, not other workspaces"
+  covers: ["download|access|see", "only|own|that client|staff|permission|authori"]
+- test: "tests/unit/uploads.test.ts › accepts only the configured types, recognised by content whatever the file name"
+  covers: ["pdf|jpe?g|png|type|format|malicious|disguis"]
+- test: "tests/e2e/uploads-scopes.spec.ts › a client downloads only their own company's files, never another company's"
+  covers: ["download|see|access|\\bfiles?\\b|document", "only|own|that client|their"]
+- test: "tests/e2e/uploads-scopes.spec.ts › staff see every client's files and are emailed when a client uploads"
+  covers: ["e-?mail|notif", "upload"]

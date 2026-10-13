@@ -12,6 +12,7 @@ import {
 } from "./acceptance.js";
 import { readAcceptanceJson, verifiedGuide } from "./agent-guide.js";
 import { assemble, coverageRules } from "./assemble.js";
+import { shippedDirs } from "@turbineh/catalog";
 import { recipeChain } from "./recipes.js";
 
 /** Hand-written acceptance.yaml rules go through proofVerdict (ADR-0043, learning round G3). */
@@ -31,12 +32,49 @@ const BOOKINGS_CRITERIA = [
   "Given a staff member is authenticated, they can move an existing booking to a different time slot.",
   "Given a staff member is authenticated, they can cancel a booking, triggering an automated email to the customer.",
 ];
-const DOUBLE_BOOKING = BOOKINGS_CRITERIA[3] as string;
-// What the shipped bookings tests do prove.
-const PROVEN = [
-  "The owner books a slot and sees it in the calendar.",
-  "A booking outside the opening hours is rejected.",
+// The bookings recipe is built on domain.bookings (ADR-0048): its E2E titles state the criteria they prove. Every
+// Sala Nueve criterion but the first (no test chooses a service and checks durations end to end) is proven, each by
+// the test that exercises it.
+const BOOKINGS = "domain.bookings.turbineh";
+const t = (title: string) => `tests/e2e/bookings.spec.ts › ${title}`;
+const PROVING = [
+  null,
+  t(
+    "a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent",
+  ),
+  t(
+    "a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused",
+  ),
+  t(
+    "a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
+  ),
+  t(
+    "a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)",
+  ),
+  t(
+    "a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them",
+  ),
+  t(
+    "a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time",
+  ),
+  t(
+    "a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time",
+  ),
 ];
+const bookingsComponent = {
+  capability: "domain.bookings",
+  component: {
+    id: BOOKINGS,
+    status: "approved" as const,
+    provides: ["domain.bookings"],
+    pkg: { name: "turbineh/domain.bookings", version: "0.1.0" },
+    license: { declared: "Apache-2.0", detected: "Apache-2.0" },
+    peer: {},
+    conflicts: [],
+    requires: [],
+  },
+  why: { pBest: 1, covers: 1, risk: 0 },
+};
 
 const spec = (criteria: string[]): BuildSpec => ({
   recipe: "bookings",
@@ -60,7 +98,7 @@ function bookingsPackage(criteria: string[]): string {
     recipe: "bookings",
     outDir,
     spec: spec(criteria),
-    selected: [],
+    selected: [bookingsComponent],
     gaps: [],
   });
   return outDir;
@@ -75,41 +113,30 @@ const gate = {
 };
 
 describe("criteria honesty for hand-written acceptance rules", () => {
-  it("the bookings calendar test proves none of the seven criteria it was cited for", () => {
+  it("the booking domain's tests prove the Sala Nueve criteria their titles state, and nothing else", () => {
+    // Without the component the recipe proves nothing (its old calendar rule was cited for seven criteria).
+    expect(
+      acceptanceStatus(
+        BOOKINGS_CRITERIA,
+        coverageRules({ recipesDir, recipe: "bookings", selected: [] }),
+      ).map((s) => s.status),
+    ).toEqual(BOOKINGS_CRITERIA.map(() => "open"));
     const statuses = acceptanceStatus(
-      [...BOOKINGS_CRITERIA, ...PROVEN],
-      coverageRules({ recipesDir, recipe: "bookings", selected: [] }),
+      BOOKINGS_CRITERIA,
+      coverageRules({ recipesDir, recipe: "bookings", selected: [bookingsComponent] }),
     );
-    const calendar = (t: string) => t.includes("sees it in the calendar");
-    for (const s of statuses.slice(0, BOOKINGS_CRITERIA.length))
-      expect(s.tests.filter(calendar), s.criterion).toEqual([]);
-    // Only the double-booking criterion is proven, by the test that books a taken slot again (ADR-0044 titles).
-    expect(statuses.slice(0, BOOKINGS_CRITERIA.length).map((s) => s.status)).toEqual(
-      BOOKINGS_CRITERIA.map((c) => (c === DOUBLE_BOOKING ? "covered" : "open")),
-    );
-    expect(statuses[BOOKINGS_CRITERIA.indexOf(DOUBLE_BOOKING)]?.tests).toEqual([
-      "tests/e2e/bookings.spec.ts › a slot that is already taken cannot be booked again: the overlapping (double) booking is rejected",
-    ]);
-    expect(statuses.slice(BOOKINGS_CRITERIA.length).map((s) => s.tests)).toEqual([
-      [
-        "tests/e2e/bookings.spec.ts › the owner books a slot for a customer (name and email): the booking is confirmed and the owner sees it in the calendar",
-      ],
-      ["tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected"],
-    ]);
+    expect(statuses.map((s) => (s.tests.length ? s.tests[0] : null))).toEqual(PROVING);
   });
 
   it("is met only when the proving test is in the delivered package (the agent deleted it)", () => {
-    const dir = bookingsPackage([...BOOKINGS_CRITERIA, ...PROVEN]);
-    const criteria = [...BOOKINGS_CRITERIA, ...PROVEN].map((criterion) => ({
+    const dir = bookingsPackage(BOOKINGS_CRITERIA);
+    const criteria = BOOKINGS_CRITERIA.map((criterion) => ({
       criterion,
       evidence: "Not verified automatically",
       verified: false,
     }));
     const before = verifiedGuide(dir, { gate, criteria });
-    expect(before?.criteria.filter((c) => c.status === "met").map((c) => c.text)).toEqual([
-      DOUBLE_BOOKING,
-      ...PROVEN,
-    ]);
+    expect(before?.criteria.filter((c) => c.status === "met")).toHaveLength(7);
     // What the learning-round agent did: it replaced tests/e2e/bookings.spec.ts with its own specs.
     rmSync(join(dir, "tests/e2e/bookings.spec.ts"));
     const after = verifiedGuide(dir, { gate, criteria });
@@ -131,7 +158,7 @@ describe("criteria honesty for hand-written acceptance rules", () => {
         .filter((id) => existsSync(join(componentsDir, id, "acceptance.yaml")))
         .map((id): [string, string[]] => [
           join(componentsDir, id, "acceptance.yaml"),
-          [join(componentsDir, id, "files"), join(componentsDir, id, "files-ai")],
+          shippedDirs(join(componentsDir, id)),
         ]),
     ];
     expect(sources.length).toBeGreaterThan(10);
