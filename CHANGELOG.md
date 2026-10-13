@@ -11,7 +11,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- **How to use** page, `/use` (ADR-0037): one public page for the three ways in — people on the web (invitation,
+- **How to use** page, `/use` (ADR-0038): one public page for the three ways in — people on the web (invitation,
   describe → plan → generate → verified result → integrate as ZIP or pull request, what each package contains, the
   states), coding agents (install, `turbineh init`, `turbineh build @spec.md --json` with events, exit codes, timeout
   and resume, `left`/`verify`, `apply --pr`, MCP for Claude Code, Codex, Cursor and any client, rules for agents) and
@@ -130,7 +130,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
-- `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0037);
+- `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0038);
   API callers without it get a 401 problem instead of a redirect to the access page.
 
 - `turbineh init` without `--agent` writes the agent-neutral `AGENTS.md` (read by Codex, Cursor and most coding agents) unless the project already has `CLAUDE.md`; `--agent claude` still writes `CLAUDE.md` and the skill.

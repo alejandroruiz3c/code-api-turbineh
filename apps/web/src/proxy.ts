@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { ACCESS_COOKIE, cookieSecret, safeEqual, verifyAccessCookie } from "./server/access-token";
 
 /**
- * Pages anyone can read without the invitation: /use explains how to get in and how to use the product (no data, no
+ * Pages anyone can read without the invitation (ADR-0038): /use explains how to get in and how to use the product (no data, no
  * token). Exact paths only — everything else stays behind the gate.
  */
 export const PUBLIC_PAGES: ReadonlySet<string> = new Set(["/use"]);

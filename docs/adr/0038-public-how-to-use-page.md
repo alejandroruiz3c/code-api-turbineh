@@ -1,4 +1,4 @@
-# ADR-0037 · Public "How to use" page and Bearer access to the catalogue index
+# ADR-0038 · Public "How to use" page and Bearer access to the catalogue index
 
 - Status: accepted
 - Date: 2026-10-13
