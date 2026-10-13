@@ -7,7 +7,7 @@ import { env } from "@/server/env";
 import { problem } from "@/server/problem";
 
 const Body = z.object({
-  prompt: z.string().trim().min(20, "Describe the app in at least 20 characters").max(4000),
+  prompt: z.string().trim().min(20, "Describe the app in at least 20 characters").max(20_000),
   github_username: z.string().regex(/^[A-Za-z0-9-]{1,39}$/).optional(),
   // Optional client brand; re-validated by content (magic bytes) in the worker before use.
   brand: z

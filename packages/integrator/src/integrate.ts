@@ -25,6 +25,8 @@ export interface IntegrationResult {
   contractTest: string | null;
   usage: Usage;
   error?: string;
+  /** The glue came from the verified-glue cache (no model call). */
+  reused?: boolean;
 }
 
 /** UI capabilities may render React, so their glue is a .tsx module; everything else is plain .ts. */
@@ -121,11 +123,38 @@ export async function writeGlue(
   return { file, usage };
 }
 
+/** Cache key of a component's glue: the same library version for the same capability gets the same module. */
+export const glueCacheKey = (c: Pick<ExternalComponent, "id" | "capability" | "pkg">) =>
+  `glue:v1:${c.id}:${c.pkg.name}@${c.pkg.version}:${c.capability}`;
+
+/**
+ * Glue that already passed the full verification gate in an earlier build (ADR-0036): reused as is instead of asking
+ * the model again, so a known-good module is not regenerated (and possibly broken) on every build.
+ */
+export interface GlueCache {
+  get: (key: string) => Promise<{ content: string } | null>;
+}
+
+/** Writes the cached, gate-verified glue of a component when there is one; returns its path or null. */
+export async function useVerifiedGlue(
+  dir: string,
+  c: ExternalComponent,
+  cache?: GlueCache,
+): Promise<string | null> {
+  const verified = await cache?.get(glueCacheKey(c)).catch(() => null);
+  if (!verified?.content) return null;
+  const file = glueFile(c.capability);
+  mkdirSync(dirname(join(dir, file)), { recursive: true });
+  writeFileSync(join(dir, file), verified.content);
+  return file;
+}
+
 /** Installs every component once, then writes contract tests and glue in parallel. */
 export async function integrateComponents(
   dir: string,
   comps: ExternalComponent[],
   cfg: ModelCfg,
+  glueCache?: GlueCache,
 ): Promise<IntegrationResult[]> {
   await installComponents(dir, comps);
   return Promise.all(
@@ -151,6 +180,17 @@ export async function integrateComponents(
           glue: curated,
           contractTest,
           usage: { input_tokens: 0, output_tokens: 0 },
+        };
+      }
+      const reused = await useVerifiedGlue(dir, c, glueCache);
+      if (reused) {
+        return {
+          component: c.id,
+          capability: c.capability,
+          glue: reused,
+          contractTest,
+          usage: { input_tokens: 0, output_tokens: 0 },
+          reused: true,
         };
       }
       try {

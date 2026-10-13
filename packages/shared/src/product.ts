@@ -123,6 +123,18 @@ export interface Plan {
   needsApproval: string[];
   /** Only when the environment is a connected repository. */
   repository?: RepositoryFit;
+  /**
+   * The request's acceptance criteria as compiled, and whether a test shipped with the selected recipe/components
+   * will prove each one (`covered`, becomes `met` when the gate passes) or nothing does yet (`open`). Matching is code
+   * (acceptance.yaml rules), never a model. Lets a coding agent start on the open ones while the package builds.
+   */
+  criteria?: PlanCriterion[];
+}
+
+export interface PlanCriterion {
+  criterion: string;
+  status: "covered" | "open";
+  tests: string[];
 }
 
 export interface CheckResult {

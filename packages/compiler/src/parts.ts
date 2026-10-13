@@ -237,7 +237,7 @@ export const pagesPart = z.object({
 });
 
 export const criteriaPart = z.object({
-  acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(10),
+  acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
 });
 
 /**
@@ -279,7 +279,8 @@ export const PARTS = {
   },
   criteria: {
     schema: criteriaPart,
-    instruction: "Write 3 to 10 concrete, testable acceptance criteria, one behaviour each.",
+    instruction:
+      "Write 3 to 15 concrete, testable acceptance criteria, one behaviour each: one per behaviour the request states (a long specification gets more), none it does not state.",
   },
   site: {
     schema: siteModelPart,

@@ -6,7 +6,7 @@ import type { VerifyResult } from "@turbineh/verifier";
 import { describe, expect, it } from "vitest";
 import { commit, correctableFiles, failureLog, qualityFailed } from "./corrector.js";
 import { isFillable } from "./gaps.js";
-import { copyCuratedGlue, glueFile } from "./integrate.js";
+import { copyCuratedGlue, glueCacheKey, glueFile, useVerifiedGlue } from "./integrate.js";
 import { withHeader } from "./model.js";
 
 const step = (name: string, ok: boolean, detail = "") => ({ name, ok, ms: 1, detail });
@@ -130,6 +130,38 @@ describe("curated glue", () => {
     expect(written).toContain("source=catalog");
     expect(written).toContain("export const ok = true;");
     expect(copyCuratedGlue(app, { ...comp, dir: mkdtempSync(join(tmpdir(), "none-")) })).toBeNull();
+  });
+});
+
+describe("verified glue cache", () => {
+  const comp = {
+    id: "data.fuzzy-search.fuse",
+    capability: "data.fuzzy-search",
+    label: "Fuzzy search",
+    pkg: { name: "fuse.js", version: "7.1.0" },
+    does: "",
+    doesNot: "",
+    dir: "/nonexistent",
+  };
+  it("reuses glue that passed the gate before, keyed by component, library version and capability", async () => {
+    const app = mkdtempSync(join(tmpdir(), "app-"));
+    const keys: string[] = [];
+    const cache = {
+      get: async (key: string) => {
+        keys.push(key);
+        return key.includes("fuse.js@7.1.0") ? { content: "export const search = 1;\n" } : null;
+      },
+    };
+    expect(await useVerifiedGlue(app, comp, cache)).toBe("src/integrations/data-fuzzy-search.ts");
+    expect(readFileSync(join(app, "src/integrations/data-fuzzy-search.ts"), "utf8")).toBe(
+      "export const search = 1;\n",
+    );
+    expect(keys).toEqual([glueCacheKey(comp)]);
+    // Another version of the library is not the same glue.
+    expect(
+      await useVerifiedGlue(app, { ...comp, pkg: { name: "fuse.js", version: "7.2.0" } }, cache),
+    ).toBeNull();
+    expect(await useVerifiedGlue(app, comp)).toBeNull();
   });
 });
 

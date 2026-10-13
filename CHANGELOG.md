@@ -11,6 +11,22 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Native fit in the coding agent's flow (ADR-0036, Frontiers R1): **`turbineh build "<spec>" | @spec.md`** — plan →
+  generate → wait → write → commit → summary in one command. Empty folder: the complete verified app (agent files
+  merged, `.gitignore` unioned, nothing of yours overwritten); existing project: the capability adapted locally with
+  the GitHub integration's rules, on a new branch when you are on the default one. One commit, with a fallback
+  identity when none is configured. Summary (human and `--json`): files, gate, criteria met/open with where, `left[]`,
+  settings, next command. `--json` streams `started` and `plan_ready` (components and criteria no shipped test will
+  prove) before the result. Meaningful exit codes (0 green, 3 decision, 4 timeout, 5 failed, 6 gate not green,
+  7 local conflict), `--timeout`, `turbineh resume [id]`. **`turbineh init --agent claude|codex|cursor`** writes a
+  short, idempotent block into `CLAUDE.md`/`AGENTS.md` and, for Claude Code, the skill
+  `.claude/skills/turbineh/SKILL.md` (full CLI path when it is not on PATH). **`turbineh mcp`**: MCP server on stdio
+  (build, resume, search, plan, apply, status, left, verify) whose results are the `--json` documents —
+  `claude mcp add turbineh -- turbineh mcp`. **Less waiting**: plans asked to continue go straight into generation
+  server-side (parts TurbineH writes itself no longer stop the build), the CLI checks every 1–2 s, and model-written
+  glue that passed the gate is reused by later builds (verified-glue cache). **Full specs**: up to 20,000 characters
+  and up to 15 compiled criteria, each returned as covered/open in the plan (`criteria`) and met/open in the summary.
+  `GET /v1/plans/{id}/package?format=app`; `install.sh` points the CLI at the server it came from.
 - Zero-friction packages (ADR-0035, from the Frontiers shop rerun R2–R5), for every recipe and enforced by
   `catalog:validate`: **zero-setup local database** — `pnpm db:local`, and `db:migrate`, `dev` and `test:e2e` use a
   local PostgreSQL when `DATABASE_URL` is unset (real PostgreSQL 17 binaries via `embedded-postgres`, PGlite with

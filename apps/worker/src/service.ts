@@ -28,6 +28,7 @@ import {
   getPool,
   heartbeat,
   putCachedSelection,
+  requeueForGeneration,
   requeueStale,
   requeueStaleRepoIntegrations,
   type BuildRow,
@@ -47,6 +48,7 @@ import {
   type Phase,
   type PipelineDeps,
 } from "./pipeline.js";
+import { isGapNotice } from "@turbineh/engine";
 import { catalogEntries, storeCapabilityPackage, type PlanRequest } from "./product.js";
 import type { BuildSpec } from "@turbineh/compiler";
 import { trackedTokens } from "@turbineh/engine";
@@ -129,6 +131,11 @@ async function handle(build: BuildRow): Promise<void> {
       get: (key: string) => getCachedSelection<SelectionResult>(db, key),
       put: (key: string, result: SelectionResult) => putCachedSelection(db, key, result),
     },
+    // Glue that already passed the full gate in an earlier build (same component, version and capability).
+    glueCache: {
+      get: (key: string) => getCachedSelection<{ content: string }>(db, key, 30),
+      put: (key: string, content: string) => putCachedSelection(db, key, { content }),
+    },
     ...modelSlotsFromEnv(env),
     compiler: {
       baseURL: env.COMPILER_BASE_URL,
@@ -192,6 +199,22 @@ async function handle(build: BuildRow): Promise<void> {
     reason: outcome.reason ?? null,
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
+  // `turbineh build` (ADR-0036): a plan asked to continue straight into generation goes back to the queue at once
+  // when nobody has to decide anything (TurbineH writing an uncovered part is what the build asked for) — no second
+  // request, no client poll interval in between.
+  const planned = outcome.metrics.plan as Plan | undefined;
+  if (
+    mode === "plan" &&
+    build.options.autoGenerate === true &&
+    outcome.status === "done" &&
+    planned &&
+    planned.needsApproval.every(isGapNotice) &&
+    build.owner_id &&
+    (await costToday(db)).eur < DAILY_CAP_EUR
+  ) {
+    await requeueForGeneration(db, build.id, build.owner_id);
+    log.info("plan continues into generation", { buildId: build.id });
+  }
 }
 
 /** Capability package of a verified app (complete flow). */

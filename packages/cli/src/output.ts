@@ -13,6 +13,8 @@ export interface CommandResult {
   error?: ProductError;
   /** Human rendering (ignored in --json). */
   lines?: string[];
+  /** Process exit code when it is not simply 0 (ok) / 1 (not ok): see EXIT in build.ts. */
+  exitCode?: number;
 }
 
 const useColor = () => process.stdout.isTTY && !process.env.NO_COLOR;
@@ -36,9 +38,12 @@ export const STATE_LABEL: Record<string, string> = {
   failed: "failed",
 };
 
-export function print(result: CommandResult, json: boolean): void {
+/** The --json document of a result (also what the MCP server returns): everything but the human lines. */
+export const jsonOf = (result: CommandResult) => ({ ...result, lines: undefined });
+
+export function print(result: CommandResult, json: boolean, compact = false): void {
   if (json) {
-    process.stdout.write(`${JSON.stringify({ ...result, lines: undefined }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(jsonOf(result), null, compact ? 0 : 2)}\n`);
     return;
   }
   for (const l of result.lines ?? []) process.stdout.write(`${l}\n`);

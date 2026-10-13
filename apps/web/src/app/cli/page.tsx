@@ -3,6 +3,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "CLI · YES IF for Builders" };
 
 const OPS: [cmd: string, what: string][] = [
+  [
+    "turbineh build @spec.md",
+    "Spec → verified code written and committed here, plus what is left (criteria, settings)",
+  ],
+  ["turbineh resume <id>", "Keep waiting for a build that timed out, then write it"],
+  ["turbineh left", "What is left in a delivered package, each item with where it goes"],
   ['turbineh search "support agent"', "Find complete flows and verified components for a need"],
   ["turbineh inspect ai-agents", "Components, versions, compatibility and requirements"],
   [
@@ -55,14 +61,17 @@ export default function CliPage() {
         <h2 className="eyebrow">Install</h2>
         <pre className="prose-doc mt-3 overflow-auto rounded-xl border border-line bg-navy-900/70 p-5 text-ice-2">
           {`curl -fsSL https://software.turbineh.com/install.sh | sh
-turbineh init        # asks for your access token, writes .turbineh/project.json
-                     # and proposes the instructions for CLAUDE.md / AGENTS.md`}
+turbineh login <token>              # or TURBINEH_TOKEN in the environment
+turbineh init --agent claude        # CLAUDE.md block + Claude Code skill (codex / cursor: AGENTS.md)
+claude mcp add turbineh -- turbineh mcp   # optional: the same commands as MCP tools`}
         </pre>
       </section>
 
       <section className="mt-10">
         <h2 className="eyebrow">The workflow</h2>
-        <p className="mt-2 text-sm text-ice-2">search → inspect → plan → apply → verify → revert</p>
+        <p className="mt-2 text-sm text-ice-2">
+          build (or search → plan → apply) → left → verify → revert
+        </p>
         <table className="mt-4 w-full text-left text-sm">
           <caption className="sr-only">Commands</caption>
           <tbody>
