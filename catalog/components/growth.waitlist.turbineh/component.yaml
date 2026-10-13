@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: growth.waitlist.turbineh
+version: 0.1.0
+status: approved
+category: growth
+source:
+  purl: pkg:generic/turbineh/growth.waitlist.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Waitlist mechanics from the request: join through publicAction (per-IP rate limit, Zod, honeypot, same answer for known emails), double opt-in by an emailed link (logged when there is no email provider; confirmed by a button, so mail scanners never confirm), position in the queue, a personal referral link and a boost of N places per confirmed referral, and a staff page with positions, referrals, CSV export and removal."
+  does_not: "Does not send launch invitations, run drip campaigns or verify that referrals are real people beyond the email confirmation"
+  use_cases: [landing-waitlist, corporate-site, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Opt-in, positions, referral boost and staff rights come from the request as data",
+      "Positions computed by one pure, unit-tested rule",
+    ]
+  cons: ["Positions are computed per request over every confirmed signup (fine for tens of thousands)"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/waitlist/params.json (doubleOptIn, showPosition, referral { enabled, boost }, ownerCanExport, ownerCanRemove)",
+      "joinWaitlist / confirmSignup (publicAction); <WaitlistForm /> reads ?ref= from the page URL",
+    ]
+  outputs: ["waitlist_signups rows; /waitlist/confirm/<token> (confirm, position, referral link); /dashboard/waitlist and its CSV export"]
+  errors: ["refusals are form states (invalid input, rate limited); invalid links show 'This link is not valid.'"]
+  limits: ["10 joins and 20 confirmations per minute per IP; referral boost 0–1000 places"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/waitlist/{config,rules,service}.ts + params.json, src/db/component-waitlist.ts, src/app/waitlist/{actions.ts,form.tsx,confirm/[token]/**}, src/app/dashboard/waitlist/**, unit and E2E tests. files-recipe/landing-waitlist/ empties the recipe's own waitlist table."
+  config: [ADMIN_EMAILS]
+  migrations: true
+params:
+  file: src/waitlist/params.json
+  schema: params.schema.json
+  entities: [WaitlistEntry, Waitlist, Signup, Subscriber, Referral, Lead, Registration]
+quality:
+  tests:
+    {
+      command: "unit (queue by confirmation, referral boost never above first place) + E2E (double opt-in then position and referral link, boost per confirmed referral, owner CSV export and removal); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: public writes only through publicAction (rate limit + Zod + honeypot), no enumeration of known emails, link tokens stored as SHA-256, confirmation by POST (button), self-referrals ignored, staff pages behind requireAdmin."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "landing-waitlist + growth.waitlist (Orbit Notes) passes the full verification gate with the waitlist E2E suites"
+    origin: tested
+    ref: "verify:recipe (ADR-0045 combinations)"
+relations:
+  requires: []
+  provides: [growth.waitlist]
+  conflicts: []
+  tested_with: [recipe.landing-waitlist]

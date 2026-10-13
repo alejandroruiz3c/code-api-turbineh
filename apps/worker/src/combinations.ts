@@ -141,6 +141,28 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Orbit Notes (learning round, landing-waitlist): double opt-in, position, referral link, +5 places per
+    // confirmed referral, owner export and removal.
+    recipe: "landing-waitlist",
+    with: ["growth.waitlist.turbineh"],
+    prompt:
+      'Build the launch landing page of "Orbit Notes", a note-taking app for students. Visual identity: midnight blue ' +
+      "`#0D1B3E` background, electric lime `#C6FF3D` call-to-action, white text, playful sans-serif. Sections: hero " +
+      "with a waitlist form, three benefits, how it works, FAQ, footer. The waitlist stores the email with double " +
+      "opt-in (a confirmation link sent by email, logged when no provider is configured), shows each confirmed person " +
+      "their position and a referral link; every confirmed referral moves the referrer up by five positions. The owner " +
+      "signs in to see the list, export it as CSV and remove entries.",
+    params: {
+      "growth.waitlist.turbineh": {
+        doubleOptIn: true,
+        showPosition: true,
+        referral: { enabled: true, boost: 5 },
+        ownerCanExport: true,
+        ownerCanRemove: true,
+      },
+    },
+  },
+  {
     // Brickline (learning round, projects): tasks with statuses on a kanban board with drag and drop, file attachments,
     // overdue tasks emailed every morning (logged without an email provider).
     recipe: "projects",

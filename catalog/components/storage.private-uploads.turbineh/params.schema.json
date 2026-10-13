@@ -14,20 +14,63 @@
     "types": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 10,
+      "maxItems": 20,
       "uniqueItems": true,
-      "items": { "enum": ["pdf", "png", "jpg", "webp", "gif", "txt", "csv", "docx", "xlsx"] },
-      "description": "Accepted types, recognised by content (magic bytes), never by name or browser-declared type."
+      "items": {
+        "enum": [
+          "pdf",
+          "png",
+          "jpg",
+          "webp",
+          "gif",
+          "txt",
+          "csv",
+          "docx",
+          "xlsx",
+          "application/pdf",
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/gif",
+          "text/plain",
+          "text/csv",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ]
+      },
+      "description": "Accepted types (extension or MIME type: pdf or application/pdf, jpg or image/jpeg\u2026), recognised by content (magic bytes), never by name or browser-declared type."
     },
     "maxFilesPerRecord": {
       "type": "integer",
       "minimum": 1,
       "maximum": 500,
-      "description": "Files one record (request, task, project…) may hold."
+      "description": "Files one record (request, task, project\u2026) may hold."
     },
     "notifyOnUpload": {
       "type": "boolean",
       "description": "Email the members who see every scope (staff) when someone restricted to a scope (a client) uploads; logged when no email provider is configured."
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]{1,8}$"
+      },
+      "maxItems": 20,
+      "description": "Extensions stated in the request (informative; types decide)."
+    },
+    "attachTo": {
+      "type": ["string", "null"],
+      "maxLength": 80,
+      "description": "Record kind files belong to in the request (informative; attachments are wired per record in src/uploads/subjects.ts)."
+    },
+    "private": {
+      "const": true,
+      "description": "Files are always private."
+    },
+    "downloadableBy": {
+      "enum": ["owner-and-staff", "scope-members", "workspace-members"],
+      "description": "Who downloads (informative): enforced by the record's scope through src/server/record-access.ts."
     }
   }
 }

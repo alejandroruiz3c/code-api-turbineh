@@ -37,7 +37,7 @@ export default async function WaitlistAdmin() {
               {cfg.ownerCanRemove ? (
                 <form action={removeSignup}>
                   <input type="hidden" name="id" value={r.id} />
-                  <Button type="submit" aria-label={`Remove ${r.email}`} className="bg-subtle px-2 py-1 text-xs text-ink">
+                  <Button type="submit" className="bg-subtle px-2 py-1 text-xs text-ink">
                     Remove
                   </Button>
                 </form>

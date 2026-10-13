@@ -24,6 +24,15 @@ export const FILE_TYPES = {
 } as const;
 export type FileType = keyof typeof FILE_TYPES;
 
+const TYPE_KEYS = Object.keys(FILE_TYPES) as FileType[];
+/** "pdf" or "application/pdf" → "pdf" (the request may state either); "jpeg" → "jpg". */
+export function toFileType(value: string): FileType | null {
+  const v = value.trim().toLowerCase();
+  if (v === "jpeg") return "jpg";
+  if ((TYPE_KEYS as string[]).includes(v)) return v as FileType;
+  return TYPE_KEYS.find((k) => FILE_TYPES[k].mime === v) ?? null;
+}
+
 export const UploadParams = z.object({
   maxBytes: z
     .number()
@@ -31,9 +40,14 @@ export const UploadParams = z.object({
     .min(1024)
     .max(100 * 1024 * 1024),
   types: z
-    .array(z.enum(Object.keys(FILE_TYPES) as [FileType, ...FileType[]]))
+    .array(z.string())
     .min(1)
-    .max(10),
+    .max(20)
+    .transform((list, ctx) => {
+      const out = [...new Set(list.map(toFileType))];
+      if (out.includes(null)) ctx.addIssue({ code: "custom", message: "unknown file type" });
+      return out.filter((t): t is FileType => t !== null);
+    }),
   maxFilesPerRecord: z.number().int().min(1).max(500),
   notifyOnUpload: z.boolean(),
 });

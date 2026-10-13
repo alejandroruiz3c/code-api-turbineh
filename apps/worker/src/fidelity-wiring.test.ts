@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,11 +66,25 @@ describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, (
     expect(wf?.key).toBe("loan_request");
     expect(wf?.dueDate).toBe(true);
     expect(wf?.transitions.find((t) => t.to === "approved")?.roles).toEqual(["owner", "admin"]);
-    expect(w.wired.patterns.find((p) => p.id === "jobs.scheduled")?.status).toBe("missing");
+    // The overdue emails are a scheduled job (jobs.scheduled.turbineh, ADR-0045): its kind is inferred from the words.
+    const jobs = w.wired.selected.find((x) => x.id === "jobs.scheduled");
+    expect(jobs?.component).toBe("jobs.scheduled.turbineh");
+    expect(validateParams(join(componentsDir, "jobs.scheduled.turbineh"), jobs?.params)).toEqual(
+      [],
+    );
   });
 
   it("patterns without a component stay missing with where to implement them", () => {
-    const w = wire("projects");
+    // A catalog without the components of ADR-0045: Brickline's board, attachments and overdue emails stay missing.
+    const dir = mkdtempSync(join(tmpdir(), "catalog-"));
+    cpSync(componentsDir, dir, { recursive: true });
+    for (const id of [
+      "ui.kanban.turbineh",
+      "storage.private-uploads.turbineh",
+      "jobs.scheduled.turbineh",
+    ])
+      rmSync(join(dir, id), { recursive: true });
+    const w = wire("projects", dir);
     const missing = w.wired.patterns.filter((p) => p.status === "missing");
     expect(missing.map((p) => p.id).sort()).toEqual([
       "jobs.scheduled",
@@ -80,9 +94,26 @@ describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, (
     for (const p of missing) expect(p.where.length).toBeGreaterThan(0);
   });
 
-  it("does not select a component for a recipe it is not declared for (bookings recipe ≠ domain.bookings)", () => {
+  it("does not select a component for a recipe it is not declared for", () => {
+    // domain.bookings is declared for the bookings recipe (ADR-0045): selected with the request's params.
     const w = wire("bookings");
-    expect(w.wired.patterns.find((p) => p.id === "bookings")).toMatchObject({ status: "missing" });
+    expect(w.wired.patterns.find((p) => p.id === "bookings")).toMatchObject({
+      status: "selected",
+      component: "domain.bookings.turbineh",
+    });
+    // The same component declared only for ai-agents is not selected for the bookings recipe.
+    const dir = mkdtempSync(join(tmpdir(), "catalog-"));
+    cpSync(componentsDir, dir, { recursive: true });
+    for (const f of ["component.yaml", "guide.yaml"]) {
+      const file = join(dir, "domain.bookings.turbineh", f);
+      writeFileSync(
+        file,
+        readFileSync(file, "utf8").replaceAll("[ai-agents, bookings]", "[ai-agents]"),
+      );
+    }
+    expect(wire("bookings", dir).wired.patterns.find((p) => p.id === "bookings")).toMatchObject({
+      status: "missing",
+    });
   });
 
   it("picks up a new component automatically when it appears in the catalog (existence + schema)", () => {

@@ -50,7 +50,8 @@ export const confirmSignup = publicAction(
     schema: z.object({ token: z.string().regex(/^[\w-]{20,64}$/) }),
     refuse: (reason): ConfirmState => ({
       ok: false,
-      message: reason === "rate-limited" ? "Too many attempts. Try again in a minute." : "Invalid link.",
+      message:
+        reason === "rate-limited" ? "Too many attempts. Try again in a minute." : "Invalid link.",
     }),
   },
   async ({ token }): Promise<ConfirmState> => {

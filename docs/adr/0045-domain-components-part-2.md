@@ -1,7 +1,7 @@
 # ADR-0045 · Domain components, part 2: uploads, bookings recipe, scheduled jobs, kanban, public pages, waitlist, analytics import
 
-- Status: accepted (in progress on `feat/domain-components-2`; the number may need renumbering at merge if another
-  branch takes 0043 first)
+- Status: accepted (on `feat/domain-components-2`; 0045 is the next free number after ADR-0043 and ADR-0044 on
+  `main` — it may need renumbering at merge if another branch takes it first)
 - Date: 2026-10-13
 - Context: learning round (`bench/frontiers/ANALYSIS.md` §12 on `wip/frontiers-bench`, G1) and the "What is left" list
   of PR #92 / ADR-0041. Coding agents rewrote, in every run, private uploads with limits from the spec, the booking site

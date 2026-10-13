@@ -26,7 +26,13 @@ export function WaitlistForm() {
           if (el) el.value = new URLSearchParams(window.location.search).get("ref") ?? "";
         }}
       />
-      <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+      <input
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        className="hidden"
+        aria-hidden="true"
+      />
       <Button type="submit" disabled={pending}>
         {pending ? "Joining…" : "Join the waitlist"}
       </Button>

@@ -64,7 +64,7 @@ license:
 evidence:
   - claim: "client-portal + membership-access + private-uploads + workflow (Ledgerline) and projects + workflow + kanban + private-uploads + jobs.scheduled pass the full verification gate with the uploads E2E suite"
     origin: tested
-    ref: "verify:recipe (ADR-0043 combinations)"
+    ref: "verify:recipe (ADR-0045 combinations)"
 relations:
   requires: []
   provides: [files.private-uploads, storage.private-uploads]

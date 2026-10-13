@@ -327,6 +327,21 @@ export async function runBuild(
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
   const catalog = loadCatalog(join(deps.repoRoot, "catalog/components"));
+  // Components a required component needs (e.g. ui.kanban → domain.workflow, ADR-0045) are required too, with their
+  // shipped default params when the request did not select them itself.
+  for (let changed = true; changed;) {
+    changed = false;
+    const req = (recipe.requiredComponents ??= {});
+    for (const id of Object.values(req)) {
+      for (const r of catalog.find((x) => x.id === id)?.requires ?? []) {
+        const c = catalog.find((x) => x.id === r && x.status === "approved");
+        if (c && !Object.values(req).includes(r)) {
+          req[c.provides[0] ?? r] = r;
+          changed = true;
+        }
+      }
+    }
+  }
   const selectionInput = {
     app: {
       recipe: spec.recipe,

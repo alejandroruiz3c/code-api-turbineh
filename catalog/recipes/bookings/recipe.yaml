@@ -7,7 +7,7 @@ providedEntities:
    TimeOff, Absence, Holiday, BlockedTime, Stylist, Service, Customer]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # The booking domain (public page, cancel link, staff calendar, time off) is the component domain.bookings.turbineh
-# (ADR-0033, ADR-0043): code selects it in every bookings build and writes its params from the request.
+# (ADR-0033, ADR-0045): code selects it in every bookings build and writes its params from the request.
 requiredComponents:
   domain.bookings: domain.bookings.turbineh
 nav: []

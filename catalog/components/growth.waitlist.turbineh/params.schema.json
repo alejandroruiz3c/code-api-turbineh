@@ -18,7 +18,10 @@
       "additionalProperties": false,
       "required": ["enabled", "boost"],
       "properties": {
-        "enabled": { "type": "boolean", "description": "Confirmed people get a personal referral link." },
+        "enabled": {
+          "type": "boolean",
+          "description": "Confirmed people get a personal referral link."
+        },
         "boost": {
           "type": "integer",
           "minimum": 0,

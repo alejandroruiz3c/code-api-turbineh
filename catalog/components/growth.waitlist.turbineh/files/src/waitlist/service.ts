@@ -20,7 +20,11 @@ export const referralLink = (referralCode: string) => `${appUrl()}/?ref=${referr
 export type Signup = typeof waitlistSignups.$inferSelect;
 
 /** Adds a signup (pending until confirmed when double opt-in is on) and emails the confirmation/status link. */
-export async function join(input: { name: string; email: string; ref?: string | null }): Promise<void> {
+export async function join(input: {
+  name: string;
+  email: string;
+  ref?: string | null;
+}): Promise<void> {
   const email = input.email.trim().toLowerCase();
   const token = randomBytes(24).toString("base64url");
   let referredBy: string | null = null;
@@ -123,7 +127,11 @@ export async function status(token: string) {
 
 /** Staff view: every signup, best position first, then pending ones. */
 export async function listSignups(limit = 1000) {
-  const rows = await db.select().from(waitlistSignups).orderBy(desc(waitlistSignups.createdAt)).limit(limit);
+  const rows = await db
+    .select()
+    .from(waitlistSignups)
+    .orderBy(desc(waitlistSignups.createdAt))
+    .limit(limit);
   const { pos, referrals } = await ranking();
   return rows
     .map((r) => ({ ...r, position: pos.get(r.id) ?? null, referrals: referrals.get(r.id) ?? 0 }))

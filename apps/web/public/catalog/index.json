@@ -9464,6 +9464,184 @@
       "details": "https://software.turbineh.com/v1/capabilities/files.upload.busboy"
     },
     {
+      "id": "growth.waitlist.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "growth",
+      "package": "pkg:generic/turbineh/growth.waitlist.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "growth.waitlist"
+      ],
+      "does": "Waitlist mechanics from the request: join through publicAction (per-IP rate limit, Zod, honeypot, same answer for known emails), double opt-in by an emailed link (logged when there is no email provider; confirmed by a button, so mail scanners never confirm), position in the queue, a personal referral link and a boost of N places per confirmed referral, and a staff page with positions, referrals, CSV export and removal.",
+      "doesNot": "Does not send launch invitations, run drip campaigns or verify that referrals are real people beyond the email confirmation",
+      "title": "Waitlist with double opt-in, positions, referral links and a referral boost",
+      "summary": "Turns a waitlist form into a launch queue: visitors join through a rate-limited public action, confirm by the link emailed to them (logged when there is no email provider), and then see their position and a personal referral link. Every friend who confirms through that link moves the referrer up by the number of places the request says. Staff see the list with positions and referrals, export it as CSV and remove entries. Known emails get the same answer as new ones, so the form never reveals who signed up. It does not send launch invitations or drip campaigns.",
+      "useCases": [
+        "A launch landing page whose waitlist confirms emails and shows each person their position",
+        "Referral links where every confirmed friend moves the referrer up five places",
+        "An owner who exports the list as CSV and removes spam entries"
+      ],
+      "useWhen": [
+        "The request mentions a waitlist with confirmation, positions or referrals",
+        "Signups must be confirmed before they count"
+      ],
+      "avoidWhen": [
+        "A plain newsletter signup with no queue (a simple form and email are enough)",
+        "Paid pre-orders (use a checkout)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Confirmation by a button on the link's page",
+          "gain": "Mail scanners that open links never confirm anyone",
+          "cost": "One extra click for the person"
+        },
+        {
+          "choice": "Positions computed on read from confirmations and referrals",
+          "gain": "Always consistent, no stored ranks to repair",
+          "cost": "Reads every confirmed signup per status view"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/waitlist/params.json",
+          "default": "double opt-in, positions, referral boost 1, export and removal on",
+          "description": "Mechanics from the request (validated at start-up)"
+        },
+        {
+          "name": "ADMIN_EMAILS",
+          "description": "Staff who see, export and remove entries (deny by default)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "joinWaitlist",
+          "signature": "publicAction(\"waitlist\", { rateLimit: 10/min, schema: { name, email, ref?, website } }) → { ok, message }",
+          "where": "src/app/waitlist/actions.ts"
+        },
+        {
+          "name": "confirmSignup",
+          "signature": "publicAction(\"waitlist-confirm\", { token }) → { ok, message }",
+          "where": "src/app/waitlist/actions.ts"
+        },
+        {
+          "name": "WaitlistForm",
+          "signature": "<WaitlistForm /> — name, email, hidden ref from ?ref=",
+          "where": "src/app/waitlist/form.tsx"
+        },
+        {
+          "name": "Service",
+          "signature": "join({ name, email, ref? }); confirm(token); status(token) → { confirmed, position, total, referrals, referralLink }; listSignups(); removeSignups(ids)",
+          "where": "src/waitlist/service.ts"
+        },
+        {
+          "name": "positions",
+          "signature": "positions(entries: { id, confirmedAt, referrals }[], boost) → Map<id, position>",
+          "where": "src/waitlist/rules.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/waitlist/confirm/<token> (confirm, position, referral link); /dashboard/waitlist (staff); /dashboard/waitlist/export (CSV)",
+          "where": "src/app/waitlist/confirm/[token]/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Change how many places a referral is worth, or turn off positions or opt-in",
+          "where": "src/waitlist/params.json",
+          "how": "Edit referral.boost, showPosition or doubleOptIn; validated at start-up; the unit tests cover the rule."
+        },
+        {
+          "what": "Change the ranking rule (e.g. cap the boost)",
+          "where": "src/waitlist/rules.ts",
+          "how": "positions() is pure; add a unit test in tests/unit/waitlist.test.ts for the new rule."
+        },
+        {
+          "what": "Add a field to the signup form",
+          "where": "src/db/component-waitlist.ts, src/app/waitlist/actions.ts, src/app/waitlist/form.tsx",
+          "how": "Add the column, the Zod field in joinWaitlist's schema (it stays a publicAction) and the input; then `pnpm db:generate`."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "landing-waitlist",
+          "corporate-site",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "email.transactional.turbineh"
+        ],
+        "notes": "Replaces the landing-waitlist recipe's own waitlist (same form and action names, so its home page keeps working)."
+      },
+      "security": [
+        "Public writes only through publicAction (per-IP rate limit, Zod, honeypot)",
+        "The same answer for known and new emails (no enumeration)",
+        "Link tokens are stored as SHA-256; confirming needs a POST from the link's page",
+        "Self-referrals are ignored; staff pages require a verified ADMIN_EMAILS account"
+      ],
+      "guarantees": [
+        {
+          "claim": "Signups count only after the emailed confirmation; confirmed people see their position and referral link",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link"
+        },
+        {
+          "claim": "Each confirmed referral moves the referrer up by the configured places",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › every confirmed referral moves the referrer up the list by the configured number of places"
+        },
+        {
+          "claim": "The owner exports the list as CSV and removes entries",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › the owner sees the list, exports it as CSV and removes an entry"
+        },
+        {
+          "claim": "Referral boosts never move anyone above first place",
+          "test": "tests/unit/waitlist.test.ts › every confirmed referral moves the referrer up by the boost, never above first place"
+        }
+      ],
+      "limits": [
+        "Positions are computed per view over every confirmed signup",
+        "No launch invitations or reminder emails"
+      ],
+      "example": "// src/waitlist/params.json — \"every confirmed referral moves the referrer up by five positions\"\n{ \"doubleOptIn\": true, \"showPosition\": true, \"referral\": { \"enabled\": true, \"boost\": 5 }, \"ownerCanExport\": true, \"ownerCanRemove\": true }\n",
+      "keywords": [
+        "waitlist",
+        "wait list",
+        "early access",
+        "double opt-in",
+        "confirmation email",
+        "referral",
+        "referral link",
+        "invite friends",
+        "position",
+        "queue",
+        "move up",
+        "viral",
+        "launch",
+        "signup",
+        "csv export"
+      ],
+      "synonyms": {
+        "waitlist": [
+          "wait list",
+          "early access list",
+          "beta list",
+          "launch list"
+        ],
+        "referral": [
+          "invite",
+          "share link",
+          "refer a friend"
+        ],
+        "double opt-in": [
+          "confirm your email",
+          "confirmation link"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/growth.waitlist.turbineh"
+    },
+    {
       "id": "jobs.queue.turbineh",
       "version": "0.1.0",
       "status": "approved",

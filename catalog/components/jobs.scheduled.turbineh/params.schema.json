@@ -12,12 +12,15 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "kind", "cron", "timeZone", "what"],
+        "required": ["id", "cron", "timeZone", "what"],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$" },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$"
+          },
           "kind": {
             "enum": ["overdue-digest", "daily-digest", "custom"],
-            "description": "overdue-digest: each person's overdue or stuck records; daily-digest: what needs attention, to members who manage the workspace; custom: a handler added in src/jobs/digests.ts."
+            "description": "overdue-digest: each person's overdue or stuck records; daily-digest: what needs attention, to members who manage the workspace; custom: a handler added in src/jobs/digests.ts. Optional: inferred from `what` (overdue \u2192 overdue-digest; digest, summary or daily report \u2192 daily-digest; otherwise custom)."
           },
           "cron": {
             "type": "string",
@@ -25,14 +28,13 @@
             "description": "Five-field cron in the job's time zone, e.g. \"0 7 * * *\" (every morning at 07:00)."
           },
           "timeZone": {
-            "type": "string",
-            "minLength": 1,
-            "description": "IANA time zone, e.g. Europe/Madrid."
+            "type": ["string", "null"],
+            "description": "IANA time zone, e.g. Europe/Madrid; null = UTC."
           },
           "what": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 200,
+            "maxLength": 500,
             "description": "The request's words."
           }
         }
