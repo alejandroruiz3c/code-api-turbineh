@@ -11,6 +11,7 @@ import {
   mergeEnvExample,
   mergePackageJson,
   rewriteImports,
+  settingKind,
 } from "./adapt.js";
 import { github } from "./github.js";
 import { buildPlan } from "./plan.js";
@@ -35,7 +36,7 @@ import {
   SECRET_CANARY,
   type RepoFixture,
 } from "./repos.fixtures.js";
-import { zipDirectory } from "./zip.js";
+import { createZip, zipDirectory } from "./zip.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -454,5 +455,62 @@ describe("plan for a connected repository", () => {
     );
     expect(plan.files[0]?.path.startsWith("apps/web/src/turbineh/ai-assistant/")).toBe(true);
     expect(plan.compatible).toBe(true);
+  });
+});
+
+describe("complete flows in a client project", () => {
+  const f = (path: string, text: string) => ({ path: `flow/${path}`, data: Buffer.from(text) });
+  const zip = createZip([
+    f(
+      "manifest.json",
+      JSON.stringify({
+        slug: "flow",
+        name: "Flow",
+        dependencies: {},
+        environment: ["RESEND_API_KEY", "BETTER_AUTH_SECRET"],
+      }),
+    ),
+    f("examples/app/package.json", "{}"),
+    f(
+      "src/app/dashboard/page.tsx",
+      '// eslint-disable-next-line @next/next/no-img-element -- static asset\nimport { x } from "@/lib/x";\nexport default function P() { return x; }\n',
+    ),
+    f("src/lib/x.ts", "export const x = 1;\n"),
+    f("tests/e2e/auth.spec.ts", 'import "../../src/lib/x";\n'),
+    f("tests/unit/x.test.ts", 'import { x } from "../../src/lib/x";\nexport { x };\n'),
+    f(
+      "config/.env.example",
+      "# Optional: transactional email\nRESEND_API_KEY=\n# Session secret\nBETTER_AUTH_SECRET=change-me-0123\n",
+    ),
+  ]);
+  const x = adaptPackage({
+    zip,
+    analysis: analyse(appRouterSrc),
+    read: (p) => appRouterSrc.files[p] ?? null,
+    foundation: {},
+    versions: {},
+    planId: "p",
+    need: "n",
+  });
+  const all = x.steps.flatMap((s) => s.files);
+  const get = (p: string) => String(all.find((y) => y.path === p)?.content ?? "");
+  it("keeps the example's end-to-end tests out and re-points relative imports", () => {
+    expect(all.some((y) => y.path.includes("tests/e2e"))).toBe(false);
+    expect(get("src/turbineh/flow/tests/unit/x.test.ts")).toContain('from "../../lib/x"');
+    expect(get("src/app/dashboard/page.tsx")).toContain('from "../../turbineh/flow/lib/x"');
+  });
+  it("drops lint directives for ESLint plugins the project does not use", () => {
+    expect(get("src/app/dashboard/page.tsx")).not.toContain("@next/next");
+  });
+  it("credentials are required even with a sample value; 'Optional' in the docs wins", () => {
+    expect(
+      settingKind("BETTER_AUTH_SECRET", { comment: ["Session secret"], value: "change-me" }),
+    ).toBe("required");
+    expect(settingKind("RESEND_API_KEY", { comment: ["Optional: email"], value: "" })).toBe(
+      "optional",
+    );
+    expect(
+      settingKind("TURBINEH_AI_URL", { comment: [], value: "https://software.turbineh.com/v1/ai" }),
+    ).toBe("default");
   });
 });

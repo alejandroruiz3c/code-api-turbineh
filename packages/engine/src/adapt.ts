@@ -220,9 +220,12 @@ export function envDocs(text: string): Record<string, SettingDoc> {
 
 /** required = no default and a credential or connection; default = the package documents a value; else optional. */
 export function settingKind(name: string, doc?: SettingDoc): "required" | "default" | "optional" {
-  if (doc?.value) return "default";
+  const said = (doc?.comment ?? []).join(" ");
+  if (/\boptional\b/i.test(said)) return "optional";
+  // Credentials and connections are never "defaults", even when the example file shows a sample value.
   if (/(TOKEN|SECRET|PASSWORD|_KEY|DATABASE_URL)$/.test(name)) return "required";
-  return doc && /optional|default|empty\s*=/i.test(doc.comment.join(" ")) ? "optional" : "required";
+  if (doc?.value && !/localhost|127\.0\.0\.1|example\.(com|test)/.test(doc.value)) return "default";
+  return doc && /default|empty\s*=/i.test(said) ? "optional" : "required";
 }
 
 /**
@@ -305,7 +308,13 @@ export function adaptPackage(input: AdaptInput): Adaptation {
   const target = new Map<string, string>();
   const skipped: string[] = [];
   for (const p of files.keys()) {
-    if (p.startsWith("examples/app/") || /^(vitest|playwright)\.config\.\w+$/.test(p)) continue;
+    // The example app and its end-to-end tests stay in the ZIP: they test the example, not the client's app.
+    if (
+      p.startsWith("examples/app/") ||
+      p.startsWith("tests/e2e/") ||
+      /^(vitest|playwright)\.config\.\w+$/.test(p)
+    )
+      continue;
     if (p.startsWith("src/app/")) {
       const route = p.slice("src/app/".length);
       // Root layout, home page and global styles belong to the client's app.
@@ -469,8 +478,56 @@ export const db = drizzle(pool, { schema });
 
   const out = new Map<string, AdaptedFile & { step: StepKey }>();
   let usesNode = false;
+  // ESLint plugins the project does not have: their disable comments would fail its lint ("rule not found").
+  const lintDeps = (() => {
+    try {
+      const j = JSON.parse(input.read(at(a, "package.json")) ?? "{}") as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const root = JSON.parse(input.read("package.json") ?? "{}") as typeof j;
+      return {
+        ...root.devDependencies,
+        ...root.dependencies,
+        ...j.devDependencies,
+        ...j.dependencies,
+      };
+    } catch {
+      return {} as Record<string, string>;
+    }
+  })();
+  const missingPlugins = [
+    ["@next/next/", ["@next/eslint-plugin-next", "eslint-config-next"]],
+    ["react-hooks/", ["eslint-plugin-react-hooks", "eslint-config-next"]],
+    ["jsx-a11y/", ["eslint-plugin-jsx-a11y", "eslint-config-next"]],
+  ]
+    .filter(([, pkgs]) => !(pkgs as string[]).some((d) => d in lintDeps))
+    .map(([prefix]) => prefix as string);
+  const stripDisables = (code: string) =>
+    missingPlugins.length
+      ? code.replace(
+          /^[ \t]*\/\/ eslint-disable(-next-line|-line)? ([^\n]*)\n/gm,
+          (all, _k, rest: string) => (missingPlugins.some((m) => rest.includes(m)) ? "" : all),
+        )
+      : code;
   const transform = (srcPath: string, dest: string, code: string): string => {
-    const rewritten = rewriteImports(code, (spec) => {
+    const rewritten = rewriteImports(stripDisables(code), (spec) => {
+      if (spec.startsWith(".")) {
+        // Relative imports were written for the package layout: re-point them at the files' new places.
+        const base = posix.normalize(posix.join(posix.dirname(srcPath), spec));
+        for (const c of [
+          base,
+          `${base}.ts`,
+          `${base}.tsx`,
+          `${base}.js`,
+          `${base}/index.ts`,
+          `${base}/index.tsx`,
+        ]) {
+          const t = target.get(c);
+          if (t) return rel(dest, t);
+        }
+        return null;
+      }
       if (spec.startsWith("@/")) {
         const own = pkgModule(spec.slice(2));
         if (own) {

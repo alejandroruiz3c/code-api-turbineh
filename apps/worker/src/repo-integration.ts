@@ -300,7 +300,14 @@ export function explain(log: string, max = 4): string {
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
-    .filter((l) => !/^(>|\$|npm (warn|notice)|WARN|Progress|Packages:|Done in|Scope:)/i.test(l));
+    .filter(
+      (l) =>
+        !/^(>|\$|npm (warn|notice)|WARN|Progress|Packages:|Done in|Scope:|Reading config|Using .* driver)/i.test(
+          l,
+        ),
+    )
+    .map((l) => l.replace(/\[[\u2800-\u28ff]\][^[]*/g, "").trim())
+    .filter(Boolean);
   const errs = lines.filter((l) => /\b(error|failed|fail|cannot|not found|ERR!|✗|×)\b/i.test(l));
   return (errs.length ? errs : lines.slice(-max)).slice(0, max).join(" · ").slice(0, 600);
 }
@@ -650,7 +657,25 @@ async function runJob(
         });
     }
     if (migDir) {
-      const changed = [...listDir(migDir)].filter(([p, c]) => migBefore.get(p) !== c);
+      const changed = [...listDir(migDir)]
+        .filter(([p, c]) => migBefore.get(p) !== c)
+        .map(([p, c]): [string, string] => {
+          // drizzle-kit does not emit extensions: tables with vector columns need pgvector enabled first.
+          if (
+            p.endsWith(".sql") &&
+            /\bvector\(/.test(c) &&
+            !/CREATE EXTENSION[^;]*vector/i.test(c)
+          ) {
+            const sql = `CREATE EXTENSION IF NOT EXISTS vector;\n--> statement-breakpoint\n${c}`;
+            writeFileSync(join(migDir, p), sql);
+            if (!adaptation.reviewerSetup.some((s) => s.includes("pgvector")))
+              adaptation.reviewerSetup.unshift(
+                "Your PostgreSQL needs the pgvector extension (the migration enables it with CREATE EXTENSION; managed databases such as Neon, Supabase and RDS support it).",
+              );
+            return [p, sql];
+          }
+          return [p, c];
+        });
       if (changed.length)
         extra.push({
           key: "migration",
