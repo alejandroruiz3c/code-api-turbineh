@@ -34,6 +34,15 @@ const Env = z.object({
     empty,
     z.coerce.number().int().min(1000).max(290_000).default(60_000),
   ),
+  /**
+   * One attempt of a tool-calling model call (runAgent; short outputs), ms: a stuck request is abandoned and retried
+   * once instead of using the whole budget (ADR-0046). The TurbineH gateway hedges slow chat requests itself after
+   * ~4 s. Plain chat and embeddings (possibly long outputs) keep the whole budget per attempt.
+   */
+  AI_ATTEMPT_TIMEOUT_MS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1000).max(290_000).default(15_000),
+  ),
 });
 export type AiConfig = z.infer<typeof Env>;
 /** Parsed on every call (cheap), so tests and long-running servers always see the current environment. */
@@ -137,13 +146,33 @@ export interface ModelReply {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** POST with timeout and up to 2 retries on rate limits, server errors and network failures. */
-async function post(path: string, body: unknown, timeoutMs?: number): Promise<unknown> {
+/**
+ * Attempts per model call (ADR-0046): up to 3 for transient failures (network errors, rate limits, server errors), as
+ * before; an attempt that hits its per-attempt timeout is retried once (a second stuck attempt ends the call).
+ * Transient failures keep the retries they had; the per-attempt timeout is the new bound.
+ */
+export const MODEL_ATTEMPTS = 3;
+export const MODEL_TIMEOUT_ATTEMPTS = 2;
+
+/**
+ * POST with a per-attempt timeout (`attemptMs`, default the whole budget) and retries (see MODEL_ATTEMPTS), all
+ * within the call's overall budget (`timeoutMs`, default AI_TIMEOUT_MS).
+ */
+async function post(
+  path: string,
+  body: unknown,
+  timeoutMs?: number,
+  attemptMs?: number,
+): Promise<unknown> {
   const cfg = aiConfig();
   const endpoint = modelEndpoint(cfg);
+  const deadline = Date.now() + (timeoutMs ?? cfg.AI_TIMEOUT_MS);
+  const perAttempt = attemptMs ?? Number.POSITIVE_INFINITY;
+  let timeouts = 0;
   for (let attempt = 0; ; attempt++) {
     // 0 = network failure, timeout or an unreadable body.
     let status: number;
+    const signal = AbortSignal.timeout(Math.max(1, Math.min(perAttempt, deadline - Date.now())));
     try {
       const res = await fetch(`${endpoint.baseUrl}${path}`, {
         method: "POST",
@@ -152,17 +181,24 @@ async function post(path: string, body: unknown, timeoutMs?: number): Promise<un
           ...(endpoint.key ? { Authorization: `Bearer ${endpoint.key}` } : {}),
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs ?? cfg.AI_TIMEOUT_MS),
+        signal,
       });
       status = res.status;
       if (res.ok) return (await res.json()) as unknown;
     } catch {
       status = 0;
+      if (signal.aborted) timeouts++;
     }
     const retryable = status === 0 || status === 429 || status >= 500;
-    if (!retryable || attempt >= 2)
+    const backoff = status === 429 ? 1000 * (attempt + 1) : 500 * 2 ** attempt;
+    if (
+      !retryable ||
+      attempt + 1 >= MODEL_ATTEMPTS ||
+      timeouts >= MODEL_TIMEOUT_ATTEMPTS ||
+      deadline - Date.now() < backoff + 1000
+    )
       throw new AiTransportError(`model endpoint failed (${status || "network"})`);
-    await sleep(500 * 2 ** attempt);
+    await sleep(backoff);
   }
 }
 
@@ -251,6 +287,7 @@ export async function chatWithTools(
           : {}),
       },
       opts.timeoutMs,
+      aiConfig().AI_ATTEMPT_TIMEOUT_MS,
     ),
   );
   if (!data.success) throw new AiTransportError("model endpoint returned an unexpected response");

@@ -10,14 +10,19 @@
  *   TURBINEH_AI_TOKEN=… pnpm --filter @turbineh/bench exec tsx agent-brain/run.ts --brain turbineh \
  *     [--token-file /private/file] \
  *     [--gateway https://software.turbineh.com/v1/ai] [--ref worktree|origin/main] [--env AI_ROUTES=…]… \
- *     [--limit 54] [--parallel 3] [--label name]
+ *     [--limit 54] [--parallel 3] [--label name] [--on-quota "<command that rewrites the token file>"]
  *   pnpm --filter @turbineh/bench exec tsx agent-brain/run.ts --brain claude [--env-file ../.env.local]
  *
  * Secrets are read from the environment (or the env file for the Anthropic key) and never printed or stored.
  * Latency is wall time per turn as the person sees it; back-off after a 429 of the bench's own rate limit is excluded
  * (and counted). Every HTTP call is metered per conversation, so tokens and cost do not depend on the code version.
+ * Staging apps have a 200,000-token daily quota (less than one run): with --on-quota the bench runs that command
+ * (which must write a fresh app token to --token-file, e.g. by rotating the build's token) and continues; the
+ * quota is a staging limit, not part of what is measured.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -77,13 +82,52 @@ interface Call {
 }
 interface Meter {
   usage: Usage[];
+  /**
+   * Gateway hedges (ADR-0046): the cancelled duplicate of each hedged call, counted at the answer's own tokens — an
+   * upper bound [est.] of what the provider charges for a request cancelled part-way. Not billed to the app.
+   */
+  hedgeUsage: Usage[];
   calls: Call[];
   waits: number;
   waitMs: number;
+  /** runAgent turns answered from the confirmed-action template, without a model call. */
+  templated: number;
 }
-const newMeter = (): Meter => ({ usage: [], calls: [], waits: 0, waitMs: 0 });
+const newMeter = (): Meter => ({
+  usage: [],
+  hedgeUsage: [],
+  calls: [],
+  waits: 0,
+  waitMs: 0,
+  templated: 0,
+});
+/** Hedge outcomes that mean a duplicate request was fired. */
+const FIRED = new Set(["primary-won", "hedge-won"]);
 const current = new AsyncLocalStorage<Meter>();
 const realFetch = globalThis.fetch;
+const ON_QUOTA = arg("--on-quota", "");
+let rotating: Promise<void> | null = null;
+/** Replaces a spent staging app token (never printed): runs --on-quota once, then rereads the token file. */
+function rotateToken(): Promise<void> {
+  rotating ??= (async () => {
+    // Asynchronous: a blocked event loop would stall (and fail) the other conversations' requests.
+    await promisify(exec)(ON_QUOTA);
+    process.env.TURBINEH_AI_TOKEN = readFileSync(arg("--token-file", ""), "utf8").trim();
+    console.error("app token rotated (staging daily quota)");
+  })().finally(() => {
+    rotating = null;
+  });
+  return rotating;
+}
+/** The request with the current app token (after a rotation). */
+function withToken(init: RequestInit | undefined): RequestInit | undefined {
+  const h = init?.headers as Record<string, string> | undefined;
+  if (!h?.Authorization?.startsWith("Bearer tbh_ai_")) return init;
+  return {
+    ...init,
+    headers: { ...h, Authorization: `Bearer ${process.env.TURBINEH_AI_TOKEN ?? ""}` },
+  };
+}
 globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const m = current.getStore();
@@ -93,16 +137,62 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
   } catch {
     model = "";
   }
+  let replayed = false;
   for (let attempt = 0; ; attempt++) {
     const t0 = performance.now();
-    const res = await realFetch(input, init);
+    if (rotating) {
+      // Waiting for a token rotation (a staging limit) is excluded from latency, like rate-limit back-off.
+      const w = performance.now();
+      await rotating;
+      if (m) m.waitMs += performance.now() - w;
+      replayed = true;
+    }
+    const sentWith = process.env.TURBINEH_AI_TOKEN;
+    let res: Response;
+    try {
+      const req = ON_QUOTA ? withToken(init) : init;
+      // A replay after the bench's own back-off (its shared rate limit or a token rotation, excluded from latency)
+      // must not run on the caller's timer: that time is not part of the call as the app would see it.
+      res = await realFetch(input, replayed ? { ...req, signal: null } : req);
+    } catch (err) {
+      // Network failures and timeouts are metered too (status 0), then rethrown to the code under test.
+      m?.calls.push({
+        kind: url.endsWith("/systemone")
+          ? "decider"
+          : url.includes("anthropic.com")
+            ? "claude"
+            : "chat",
+        model,
+        ms: Math.round(performance.now() - t0),
+        status: 0,
+      });
+      throw err;
+    }
     const ms = performance.now() - t0;
+    // A request that left with a token rotated meanwhile is replayed with the new one.
+    if (
+      ON_QUOTA &&
+      res.status === 401 &&
+      sentWith !== process.env.TURBINEH_AI_TOKEN &&
+      attempt < 8
+    ) {
+      if (m) m.waitMs += ms;
+      replayed = true;
+      continue;
+    }
     if (res.status === 429 && attempt < 8) {
       const why = (await res
         .clone()
         .json()
         .catch(() => ({}))) as { title?: string; detail?: string; error?: { type?: string } };
       if (/quota/i.test(`${why.title ?? ""} ${why.detail ?? ""}`)) {
+        if (ON_QUOTA) {
+          const w = performance.now();
+          if (sentWith === process.env.TURBINEH_AI_TOKEN) await rotateToken();
+          if (m) m.waitMs += performance.now() - w + ms;
+          replayed = true;
+          continue;
+        }
         console.error("daily AI quota reached: the run is not valid");
         process.exit(2);
       }
@@ -112,6 +202,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
         m.waitMs += wait + ms;
       }
       await new Promise((r) => setTimeout(r, wait));
+      replayed = true;
       continue;
     }
     if (m) {
@@ -138,6 +229,12 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
           ? { hedged: res.headers.get("x-turbineh-hedge") ?? "" }
           : {}),
       });
+      if (kind === "chat" && FIRED.has(res.headers.get("x-turbineh-hedge") ?? ""))
+        m.hedgeUsage.push({
+          model: usedModel,
+          input: u.prompt_tokens ?? 0,
+          output: u.completion_tokens ?? 0,
+        });
       m.usage.push(
         kind === "claude"
           ? {
@@ -313,6 +410,7 @@ async function main() {
                 : {};
             const r = await agent.runAgent({ ...base, input: turn, tools, state, now, ...confirm });
             state = r.state;
+            if (r.flags.includes("templated-reply")) meter.templated++;
             pending = r.status === "needs_confirmation";
             replies.push(r.reply);
             steps.push(...r.steps.map((s) => `${s.tool}${s.executed ? "" : "?"}`));
@@ -417,7 +515,19 @@ function summarise(rows: Row[], wallS: number) {
     latencyPerTurnMs: dist(turnMs),
     timePerConversationMs: dist(rows.map((r) => r.convMs)),
     callLatencyMs: callMs,
-    hedgedCalls: calls.filter((c) => c.hedged && c.hedged !== "none").length,
+    hedgedCalls: calls.filter((c) => FIRED.has(c.hedged ?? "")).length,
+    hedgeWins: calls.filter((c) => c.hedged === "hedge-won").length,
+    hedgeBudgetDenied: calls.filter((c) => c.hedged === "budget").length,
+    chatCalls: calls.filter((c) => c.kind === "chat").length,
+    deciderCalls: calls.filter((c) => c.kind === "decider").length,
+    templatedReplies: rows.reduce((n, r) => n + r.meter.templated, 0),
+    hedgeOverheadUsdUpperBound: Number(costOf(rows.flatMap((r) => r.meter.hedgeUsage)).toFixed(5)),
+    costPer1000ConversationsInclHedgesUsd: Number(
+      (
+        ((cost + costOf(rows.flatMap((r) => r.meter.hedgeUsage))) / Math.max(rows.length, 1)) *
+        1000
+      ).toFixed(2),
+    ),
     tokens: byModel,
     costUsd: Number(cost.toFixed(5)),
     costPer1000ConversationsUsd: Number(((cost / Math.max(rows.length, 1)) * 1000).toFixed(2)),

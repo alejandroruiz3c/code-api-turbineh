@@ -106,6 +106,7 @@ export default async function OpsPage() {
                 <th>Model</th>
                 <th>Calls</th>
                 <th>Tokens in / out</th>
+                <th>Hedges (won)</th>
                 <th>Est. cost</th>
               </tr>
             </thead>
@@ -117,6 +118,9 @@ export default async function OpsPage() {
                   <td>{u.calls}</td>
                   <td>
                     {u.inputTokens} / {u.outputTokens}
+                  </td>
+                  <td>
+                    {u.hedges} ({u.hedgeWins})
                   </td>
                   <td>{eur(aiUsageEur(u.model, u.inputTokens, u.outputTokens))}</td>
                 </tr>
