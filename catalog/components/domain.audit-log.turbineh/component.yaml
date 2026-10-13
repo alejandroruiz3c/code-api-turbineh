@@ -59,7 +59,7 @@ license:
 evidence:
   - claim: "saas-crud + membership-access + audit-log passes the full verification gate with the audit E2E suite"
     origin: tested
-    ref: "verify:recipe saas-crud+domain.membership-access.turbineh+domain.audit-log.turbineh (ADR-0040)"
+    ref: "verify:recipe saas-crud+domain.membership-access.turbineh+domain.audit-log.turbineh (ADR-0041)"
 relations:
   requires: []
   provides: [domain.audit-log]

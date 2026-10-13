@@ -63,7 +63,7 @@ license:
 evidence:
   - claim: "saas-crud + membership-access + audit-log and client-portal + membership-access + private-uploads + workflow pass the full verification gate with the membership E2E suite"
     origin: tested
-    ref: "verify:recipe (ADR-0040 combinations)"
+    ref: "verify:recipe (ADR-0041 combinations)"
 relations:
   requires: []
   provides: [domain.membership-access]

@@ -5,7 +5,7 @@ import { membershipConfig } from "@/membership/config";
 import { can } from "@/server/role-policy";
 
 /**
- * Per-record access scopes (ADR-0040), implemented by domain.membership-access.turbineh: a member whose role cannot
+ * Per-record access scopes (ADR-0041), implemented by domain.membership-access.turbineh: a member whose role cannot
  * "see_all_scopes" sees only records filed under the scopes they belong to (their company, project or shop); roles that
  * can see every scope (owner, staff, manager…) see the whole workspace. Uploads, workflow items and analytics rows ask
  * these functions, so the rule lives in one place.

@@ -34,7 +34,7 @@ export interface Combination {
   name: string;
   recipe: string;
   prompt: string;
-  /** Native components assembled with the recipe besides what the pipeline selects by code (ADR-0040). */
+  /** Native components assembled with the recipe besides what the pipeline selects by code (ADR-0041). */
   with?: string[];
   /** Request parameters per component (what the compiler writes to its params file); defaults otherwise. */
   params?: Record<string, Record<string, unknown>>;
@@ -43,7 +43,7 @@ export interface Combination {
 }
 
 /**
- * Recipe + component combinations shown assembled and verified (ADR-0040): the business patterns the learning round
+ * Recipe + component combinations shown assembled and verified (ADR-0041): the business patterns the learning round
  * found missing (bench/frontiers/ANALYSIS.md §12, G1), each with the request it comes from and the parameters a
  * compiler would write for it. `verify:recipe <name>` runs one; `--all` runs them all.
  */

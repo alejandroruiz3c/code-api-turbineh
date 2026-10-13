@@ -28,7 +28,7 @@ for (const dir of dirs) {
     if (id !== basename(dir.name)) res.errors.push(`directory "${dir.name}" must equal id "${id}"`);
     // Optional component guides (ADR-0033): complete, and every guarantee linked to a shipped test.
     res.errors.push(...guideErrors(join(root, dir.name), id));
-    // Parameterised components (ADR-0040): schema compiles and the shipped default satisfies it.
+    // Parameterised components (ADR-0041): schema compiles and the shipped default satisfies it.
     res.errors.push(...paramsErrors(join(root, dir.name)));
     res.ok = res.errors.length === 0;
   }

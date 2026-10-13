@@ -58,10 +58,25 @@ interfaces:
   - name: requireAdmin
     signature: "async function requireAdmin(): Promise<"
     where: "@/server/authz"
+  - name: requireSession
+    signature: "async function requireSession(): Promise<"
+    where: "@/server/authz"
+  - name: publicAction
+    signature: "function publicAction<S extends z.ZodType, R>("
+    where: "@/server/authz"
+  - name: clientIp
+    signature: "function clientIp(h: Headers): string"
+    where: "@/server/authz"
 extension_points:
   - what: Staff access control via email allow-list
     where: ADMIN_EMAILS environment variable
     how: Matches whole emails case-insensitively and denies by default
+  - what: Server actions for anonymous visitors (public booking, contact, waitlist, emailed links)
+    where: "@/server/authz (publicAction)"
+    how: "export const x = publicAction(name, { rateLimit, schema }, handler): per-IP rate limit and Zod validation run first"
+  - what: Server actions for signed-in users who are not members yet (accept an invitation, onboarding)
+    where: "@/server/authz (requireSession)"
+    how: First line await requireSession(); workspace data still needs requireMember()
 compatibility:
   package: turbineh/authz.roles.turbineh@0.1.0
   runtime: node@>=20
@@ -80,6 +95,13 @@ guarantees:
   - claim: The staff allow-list denies by default and requires exact email matches.
     test: recipe template saas-crud/tests/unit/authz.test.ts › staff allow-list denies by default and matches whole
       emails only
+  - claim: Public actions are rate-limited per client IP before anything runs.
+    test: recipe template saas-crud/tests/unit/authz.test.ts › rate-limits per client IP and throws a user-facing
+      error by default
+  - claim: Public actions refuse invalid input before the handler runs.
+    test: recipe template saas-crud/tests/unit/authz.test.ts › refuses invalid input before the handler runs
+  - claim: requireSession sends anonymous callers to sign-in.
+    test: recipe template saas-crud/tests/unit/authz.test.ts › sends anonymous callers to sign-in
 limits:
   - Does not support fine-grained per-record permissions
 example: import { Role, Action, can, requireMember } from '@/server/authz';

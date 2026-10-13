@@ -4,7 +4,7 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { parse } from "yaml";
 
 /**
- * Domain component parameters (ADR-0040). A component that is parameterised by the request declares
+ * Domain component parameters (ADR-0041). A component that is parameterised by the request declares
  * `params: { file, schema }` in component.yaml: `file` is the app file the assembler writes (e.g.
  * src/workflow/params.json) and `schema` a JSON Schema (draft 2020-12) in the component directory. The compiler
  * generates params against that schema; the shipped default (files/<file>) must satisfy it, so a component assembled

@@ -29,7 +29,7 @@ export interface ComponentGuide {
   limits: string[];
   example: string;
   /**
-   * Parameters from the request (ADR-0040), for components that declare `params` in component.yaml: the app file,
+   * Parameters from the request (ADR-0041), for components that declare `params` in component.yaml: the app file,
    * its JSON Schema and each field in words, so a compiler (or a person) can write them from a spec.
    */
   params?: {

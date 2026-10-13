@@ -151,7 +151,7 @@ export function assemble(input: AssembleInput): AssembleResult {
       appendFileSync(join(outDir, ".env.example"), readFileSync(extraEnv, "utf8"));
     }
   }
-  // Component adapters (ADR-0040), copied after every component's files/ so they win:
+  // Component adapters (ADR-0041), copied after every component's files/ so they win:
   //  - files-recipe/<recipe>/: glue for a recipe of the chain (e.g. the bookings recipe's home page);
   //  - files-with/<component>/: glue used only when that other component is in the app too.
   const selectedIds = new Set(input.selected.map((s) => s.component.id));

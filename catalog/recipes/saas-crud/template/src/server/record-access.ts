@@ -1,5 +1,5 @@
 /**
- * Per-record access scopes (ADR-0040). Base behaviour: every member sees every record of their workspace. The
+ * Per-record access scopes (ADR-0041). Base behaviour: every member sees every record of their workspace. The
  * component domain.membership-access.turbineh replaces this file with scope membership (company, project, shop…), and
  * every component that stores scoped records (uploads, workflow items, analytics rows) asks these functions.
  */

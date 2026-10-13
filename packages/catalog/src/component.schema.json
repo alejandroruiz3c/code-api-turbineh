@@ -358,7 +358,7 @@
       }
     },
     "params": {
-      "description": "Parameters a domain component reads from the request (ADR-0040): the app file the assembler writes and the JSON Schema it must satisfy (the shipped default in files/ satisfies it too).",
+      "description": "Parameters a domain component reads from the request (ADR-0041): the app file the assembler writes and the JSON Schema it must satisfy (the shipped default in files/ satisfies it too).",
       "type": "object",
       "additionalProperties": false,
       "required": ["file", "schema"],

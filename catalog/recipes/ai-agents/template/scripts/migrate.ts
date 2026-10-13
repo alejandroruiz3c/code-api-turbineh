@@ -22,7 +22,7 @@ await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
 if (existsSync("./drizzle/meta/_journal.json")) {
   await migrate(drizzle(pool), { migrationsFolder: "./drizzle" });
 }
-// Database rules drizzle-kit cannot express (ADR-0040), e.g. append-only triggers of audit and history tables:
+// Database rules drizzle-kit cannot express (ADR-0041), e.g. append-only triggers of audit and history tables:
 // src/db/sql/*.sql, idempotent (CREATE OR REPLACE / DROP … IF EXISTS), applied in name order after the tables exist.
 if (existsSync("./src/db/sql")) {
   for (const file of readdirSync("./src/db/sql")

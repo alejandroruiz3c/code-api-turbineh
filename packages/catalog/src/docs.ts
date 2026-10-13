@@ -58,7 +58,7 @@ export const componentDocsSchema = z.object({
     .max(20),
   limits: list(1, 10),
   example: z.string().min(10).max(3000),
-  /** Request parameters of a parameterised component (ADR-0040): app file, JSON Schema, fields in words. */
+  /** Request parameters of a parameterised component (ADR-0041): app file, JSON Schema, fields in words. */
   params: z
     .object({
       file: z.string().min(5),

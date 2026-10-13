@@ -1,5 +1,5 @@
 /**
- * Audit hook (ADR-0040). Every change made through generated entities and domain components calls `audit()`. In the
+ * Audit hook (ADR-0041). Every change made through generated entities and domain components calls `audit()`. In the
  * base template it does nothing; the component domain.audit-log.turbineh replaces this file with an append-only log
  * (who, when, what changed) and an owner-visible page.
  */

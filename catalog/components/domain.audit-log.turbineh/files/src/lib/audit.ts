@@ -4,7 +4,7 @@ import { auditConfig } from "@/audit/config";
 import { defaultSummary, diffChanges } from "@/audit/diff";
 
 /**
- * Audit hook (ADR-0040), implemented by domain.audit-log.turbineh: every change made through generated entities and
+ * Audit hook (ADR-0041), implemented by domain.audit-log.turbineh: every change made through generated entities and
  * domain components is appended to `audit_events` — who, when, what and which fields changed (sensitive values
  * redacted). Append-only: there is no update or delete anywhere, and the database refuses them.
  */

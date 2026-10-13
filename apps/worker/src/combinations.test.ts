@@ -58,7 +58,7 @@ describe("recipe + component combinations (ADR-0037 §D4)", () => {
     expect(owners["src/bookings/params.json"]).toBe("component:domain.bookings.turbineh");
   });
 
-  it("assembles component combinations with the request's parameters (ADR-0040)", () => {
+  it("assembles component combinations with the request's parameters (ADR-0041)", () => {
     const out = join(mkdtempSync(join(tmpdir(), "combo-")), "app");
     const combo = combinations(repo).find((c) => c.name === "tracker+domain.workflow.turbineh")!;
     const r = assembleCombination(repo, combo, out);

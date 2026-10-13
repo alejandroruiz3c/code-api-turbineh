@@ -1,4 +1,4 @@
-# ADR-0040 · Domain components for common business patterns
+# ADR-0041 · Domain components for common business patterns
 
 - Status: accepted (first part)
 - Date: 2026-10-13
