@@ -179,7 +179,7 @@ const Code = ({ children }: { children: ReactNode }) => (
 function Table({ caption, rows }: { caption: string; rows: string[][] }) {
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full min-w-[480px] text-left text-sm">
+      <table className="w-full text-left text-sm sm:min-w-[480px]">
         <caption className="sr-only">{caption}</caption>
         <tbody>
           {rows.map((r) => (
