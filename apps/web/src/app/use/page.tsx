@@ -82,7 +82,10 @@ const MORE: [cmd: string, what: string][] = [
   ['turbineh search "<need>"', "Complete flows and verified components that cover a need"],
   ["turbineh inspect <id>", "What a capability includes, needs and was verified with"],
   ["turbineh status", "Flows, states, pending build and integrations"],
-  ["turbineh login <token>", "Save the token instead of TURBINEH_TOKEN (it stays in your shell history)"],
+  [
+    "turbineh login <token>",
+    "Save the token instead of TURBINEH_TOKEN (it stays in your shell history)",
+  ],
 ];
 
 const EXIT_CODES: [code: string, meaning: string][] = [
@@ -247,9 +250,12 @@ export default function UsePage() {
       >
         <Sub title="Getting in">
           <p className="mt-2 text-sm text-ice-2">
-            Open <a className="text-teal underline" href="/access">/access</a> and enter the access
-            token from your invitation. Your browser keeps a signed cookie with a private workspace —
-            never the token itself. Not invited yet?{" "}
+            Open{" "}
+            <a className="text-teal underline" href="/access">
+              /access
+            </a>{" "}
+            and enter the access token from your invitation. Your browser keeps a signed cookie with
+            a private workspace — never the token itself. Not invited yet?{" "}
             <a className="text-teal underline" href="https://api.turbineh.com">
               Join the waitlist
             </a>
@@ -285,15 +291,16 @@ export default function UsePage() {
               project. It never merges.
             </li>
             <li>
-              <span className="text-cream">Private repositories are optional.</span> GitHub only lets
-              an app open pull requests on private repositories with its broad <Code>repo</Code>{" "}
-              permission; for public repositories the narrower <Code>public_repo</Code> is enough.
-              Pick “include private repositories” only if you need it; disconnect at any time.
+              <span className="text-cream">Private repositories are optional.</span> GitHub only
+              lets an app open pull requests on private repositories with its broad{" "}
+              <Code>repo</Code> permission; for public repositories the narrower{" "}
+              <Code>public_repo</Code> is enough. Pick “include private repositories” only if you
+              need it; disconnect at any time.
             </li>
             <li>
-              <span className="text-cream">Then:</span> Check (security and reports), Continue
-              (next steps and instructions for your coding agent) and Revert (one commit to undo,
-              your later work stays).
+              <span className="text-cream">Then:</span> Check (security and reports), Continue (next
+              steps and instructions for your coding agent) and Revert (one commit to undo, your
+              later work stays).
             </li>
           </ul>
         </Sub>
@@ -311,9 +318,18 @@ export default function UsePage() {
                 "What is done (with the test that proves it), what is left and where, what to re-run.",
               ],
               ["Docs", "README, architecture, security report and verification details."],
-              ["Integration guide", "docs/integration.md, plus agent/INTEGRATE.md for coding agents."],
-              ["Provenance", "Every component with its version, licence and source (COMPONENTS.md)."],
-              ["A clean revert", "It arrives as one commit or pull request: revert it, keep the rest."],
+              [
+                "Integration guide",
+                "docs/integration.md, plus agent/INTEGRATE.md for coding agents.",
+              ],
+              [
+                "Provenance",
+                "Every component with its version, licence and source (COMPONENTS.md).",
+              ],
+              [
+                "A clean revert",
+                "It arrives as one commit or pull request: revert it, keep the rest.",
+              ],
             ].map(([t, d]) => (
               <li key={t} className="rounded-xl border border-line bg-panel/30 p-4">
                 <p className="font-semibold text-cream">{t}</p>
@@ -358,10 +374,10 @@ export default function UsePage() {
             </li>
             <li>
               An instructions block (when to use TurbineH, the one command, exit codes) in{" "}
-              <Code>CLAUDE.md</Code> for Claude Code and in <Code>AGENTS.md</Code> for Codex,
-              Cursor and any other agent. Without <Code>--agent</Code>, <Code>--yes</Code> writes it
-              to the instructions file the project already has, or creates <Code>AGENTS.md</Code>;
-              plain <Code>turbineh init</Code> only shows the block. Re-running refreshes it in place.
+              <Code>CLAUDE.md</Code> for Claude Code and in <Code>AGENTS.md</Code> for Codex, Cursor
+              and any other agent. Without <Code>--agent</Code>, <Code>--yes</Code> writes it to the
+              instructions file the project already has, or creates <Code>AGENTS.md</Code>; plain{" "}
+              <Code>turbineh init</Code> only shows the block. Re-running refreshes it in place.
             </li>
             <li>
               Claude Code also gets the project skill <Code>.claude/skills/turbineh/SKILL.md</Code>.
@@ -372,15 +388,15 @@ export default function UsePage() {
         <Sub title="The one command">
           <CopyBlock label="build commands" code={BUILD} />
           <p className="mt-3 text-sm text-ice-2">
-            Plans, generates, verifies, writes the code here and commits it. An empty folder gets the
-            complete app; a JavaScript/TypeScript project gets the capability in its own folder. With{" "}
-            <Code>--json</Code> it prints one JSON event per line; the last line is the result.
+            Plans, generates, verifies, writes the code here and commits it. An empty folder gets
+            the complete app; a JavaScript/TypeScript project gets the capability in its own folder.
+            With <Code>--json</Code> it prints one JSON event per line; the last line is the result.
           </p>
           <CopyBlock label="example events" code={EVENTS} />
           <p className="mt-3 text-sm text-ice-2">
             In the result, <Code>criteria.items</Code> not <Code>met</Code> and <Code>left[]</Code>{" "}
-            are the only work left, each with <Code>where</Code>; <Code>settings.missing</Code> go in{" "}
-            <Code>.env.local</Code>; <Code>gate.ok</Code> means lint, types, unit, build and E2E
+            are the only work left, each with <Code>where</Code>; <Code>settings.missing</Code> go
+            in <Code>.env.local</Code>; <Code>gate.ok</Code> means lint, types, unit, build and E2E
             already passed. Run it in the background or give the call a long timeout.
           </p>
           <Table caption="Exit codes" rows={EXIT_CODES} />
@@ -400,15 +416,17 @@ export default function UsePage() {
         <Sub title="MCP">
           <p className="mt-2 text-sm text-ice-2">
             <Code>turbineh mcp</Code> is an MCP server on stdio. Its tools — build, resume, search,
-            plan, apply, status, left, verify — return exactly the command&apos;s <Code>--json</Code>{" "}
-            document. It uses the same token (<Code>TURBINEH_TOKEN</Code> or a saved login).
+            plan, apply, status, left, verify — return exactly the command&apos;s{" "}
+            <Code>--json</Code> document. It uses the same token (<Code>TURBINEH_TOKEN</Code> or a
+            saved login).
           </p>
           <p className="mt-4 text-xs text-muted">Claude Code</p>
           <CopyBlock label="Claude Code MCP command" code={MCP_CLAUDE} />
           <p className="mt-4 text-xs text-muted">Codex</p>
           <CopyBlock label="Codex MCP command" code={MCP_CODEX} />
           <p className="mt-4 text-xs text-muted">
-            Cursor: <Code>.cursor/mcp.json</Code> in the project (or <Code>~/.cursor/mcp.json</Code>)
+            Cursor: <Code>.cursor/mcp.json</Code> in the project (or <Code>~/.cursor/mcp.json</Code>
+            )
           </p>
           <CopyBlock label="Cursor MCP configuration" code={MCP_CURSOR} />
           <p className="mt-3 text-sm text-ice-2">
@@ -434,8 +452,8 @@ export default function UsePage() {
               Never print, echo or commit the token; keep it in <Code>TURBINEH_TOKEN</Code>.
             </li>
             <li>
-              In a delivered package, read <Code>AGENTS.md</Code> first; re-run only what your change
-              touches.
+              In a delivered package, read <Code>AGENTS.md</Code> first; re-run only what your
+              change touches.
             </li>
             <li>Exit 3: show the decision to the user; add --approve only after they agree.</li>
           </ul>

@@ -17,7 +17,10 @@ const text = html
   .replace(/&gt;/g, ">")
   .replace(/&amp;/g, "&");
 
-const CLI = join(dirname(fileURLToPath(import.meta.url)), "../../../../../packages/cli/dist/turbineh.mjs");
+const CLI = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../../packages/cli/dist/turbineh.mjs",
+);
 
 describe("/use page", () => {
   it("renders the four sections with headings and landmarks", () => {
@@ -53,7 +56,7 @@ describe("/use page", () => {
       true,
     );
     // Without VITEST in its environment: the CLI skips main() under vitest.
-    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== "VITEST"));
+    const env = { ...process.env, VITEST: undefined } as unknown as NodeJS.ProcessEnv;
     const help = spawnSync(process.execPath, [CLI, "--help"], { encoding: "utf8", env }).stdout;
     expect(help).toContain("turbineh build");
     const lines = text.split("\n").filter((l) => /(^|[\s(|])turbineh [a-z]/.test(l));
