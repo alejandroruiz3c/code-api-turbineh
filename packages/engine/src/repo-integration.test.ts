@@ -488,7 +488,7 @@ describe("complete flows in a client project", () => {
           {
             kind: "criterion",
             what: "Refunds are not covered",
-            where: "src/lib/x.ts",
+            where: "src/app/api/assistant/route.ts, src/lib/x.ts",
             how: "Add a refund rule in src/lib/x.ts",
           },
           {
@@ -533,7 +533,7 @@ describe("complete flows in a client project", () => {
       {
         kind: "criterion",
         what: "Refunds are not covered",
-        where: "src/turbineh/flow/lib/x.ts",
+        where: "src/app/api/assistant/route.ts, src/turbineh/flow/lib/x.ts",
         how: "Add a refund rule in src/turbineh/flow/lib/x.ts",
       },
     ]);

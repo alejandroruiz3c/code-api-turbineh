@@ -806,9 +806,10 @@ export const db = drizzle(pool, { schema });
         left?: { kind: string; what: string; where: string; how: string }[];
       };
       const place = (w: string) =>
-        w
-          .replace(/(^|[\s(`])src\/app\//g, `$1${at(a, appDir)}/`)
-          .replace(/(^|[\s(`])src\//g, `$1${ns}/`);
+        // One pass: routes go to the project's app folder, everything else to the capability folder.
+        w.replace(/(^|[\s(`,])src\/(app\/)?/g, (_m, lead: string, app?: string) =>
+          app ? `${lead}${at(a, appDir)}/` : `${lead}${ns}/`,
+        );
       packageLeft = (g.left ?? [])
         // Settings are listed in "What you must configure" with the project's own names and files.
         .filter((l) => l.kind !== "setting")
