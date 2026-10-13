@@ -24,12 +24,17 @@ printf '#!/bin/sh\\nexport TURBINEH_INSTALL_URL="%s"\\nexec node "%s/bin/turbine
 chmod +x "$DIR/bin/turbineh" "$DIR/bin/turbineh.mjs"
 if [ -w /usr/local/bin ] && [ ! -e /usr/local/bin/turbineh ]; then ln -s "$DIR/bin/turbineh" /usr/local/bin/turbineh; fi
 echo "✔ turbineh installed in $DIR/bin"
-case ":$PATH:" in *":$DIR/bin:"*|*":/usr/local/bin:"*) ;; *) echo "  Add it to your PATH: export PATH=\\"$DIR/bin:\\$PATH\\"";; esac
+# Not on PATH (e.g. no writable /usr/local/bin): show the full path, which also works in shells that start fresh.
+CMD=turbineh
+if [ "$(command -v turbineh 2>/dev/null)" = "" ]; then
+  CMD="$DIR/bin/turbineh"
+  echo "  Not on your PATH: run it as $CMD (or: export PATH=\"$DIR/bin:\$PATH\")"
+fi
 echo ""
 echo "Next (TURBINEH_TOKEN in the environment replaces login):"
-echo "  turbineh login <your access token>"
-echo "  cd your-project && turbineh init --agent claude     # or codex / cursor"
-echo '  turbineh build "<what to build>"   # or: turbineh build @spec.md'
+echo "  $CMD login <your access token>"
+echo "  cd your-project && $CMD init --agent claude     # or codex / cursor"
+echo "  $CMD build \"<what to build>\"   # or: $CMD build @spec.md"
 `;
   return new Response(script, {
     headers: {

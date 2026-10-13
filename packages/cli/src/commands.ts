@@ -17,7 +17,7 @@ import {
   type IntegrationEntry,
 } from "./context.js";
 import { bold, dim, green, red, STATE_LABEL, yellow, type CommandResult } from "./output.js";
-import { AGENT_BLOCK, writeAgentFiles, type AgentKind } from "./agent-docs.js";
+import { AGENT_BLOCK, cliCommand, writeAgentFiles, type AgentKind } from "./agent-docs.js";
 import {
   appendEnvExample,
   extractPackage,
@@ -91,7 +91,8 @@ export async function init(c: Ctx): Promise<CommandResult> {
   const agent = typeof agentFlag === "string" ? (agentFlag as AgentKind) : null;
   // --agent writes the instructions (and the Claude Code skill); without it, --yes writes them, otherwise they are shown.
   const write = agent !== null || c.flags.yes === true;
-  const docs = write ? writeAgentFiles(c.cwd, agent, baseUrl()) : null;
+  const cmd = cliCommand();
+  const docs = write ? writeAgentFiles(c.cwd, agent, baseUrl(), cmd) : null;
   const target =
     docs?.file ??
     (existsSync(join(c.cwd, "AGENTS.md")) && !existsSync(join(c.cwd, "CLAUDE.md"))
@@ -104,7 +105,12 @@ export async function init(c: Ctx): Promise<CommandResult> {
       project: ".turbineh/project.json",
       workspace: project.workspace,
       stack,
-      agentInstructions: { file: target, written: Boolean(docs), skill: docs?.skill ?? null },
+      agentInstructions: {
+        file: target,
+        written: Boolean(docs),
+        skill: docs?.skill ?? null,
+        command: cmd,
+      },
     },
     lines: [
       `${green("✔")} ${existing ? "Updated" : "Created"} .turbineh/project.json (workspace ${project.workspace.slice(0, 8)}…)`,

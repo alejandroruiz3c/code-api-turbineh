@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createZip } from "@turbineh/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AGENT_BLOCK, skillMarkdown, upsertBlock, writeAgentFiles } from "./agent-docs.js";
+import {
+  AGENT_BLOCK,
+  cliCommand,
+  skillMarkdown,
+  upsertBlock,
+  withCommand,
+  writeAgentFiles,
+} from "./agent-docs.js";
 import { build, EXIT, readSpec, targetOf, writeAppFiles } from "./build.js";
 import type { Ctx } from "./commands.js";
 import { readProject } from "./context.js";
@@ -413,5 +420,17 @@ describe("spec input and agent instructions", () => {
     expect(existsSync(join(cwd, ".claude/skills/turbineh/SKILL.md"))).toBe(true);
     writeAgentFiles(cwd, "codex", "https://example.test");
     expect(readFileSync(join(cwd, "AGENTS.md"), "utf8")).toContain("turbineh build");
+  });
+
+  it("writes the full CLI path when turbineh is not on PATH (fresh agent shells)", () => {
+    const bin = mkdtempSync(join(tmpdir(), "bin-"));
+    writeFileSync(join(bin, "turbineh.mjs"), "");
+    writeFileSync(join(bin, "turbineh"), "#!/bin/sh\n", { mode: 0o755 });
+    expect(cliCommand("/nowhere", join(bin, "turbineh.mjs"))).toBe(join(bin, "turbineh"));
+    expect(cliCommand(bin, join(bin, "turbineh.mjs"))).toBe("turbineh");
+    const md = withCommand(skillMarkdown("https://x.test"), "/h/.turbineh/bin/turbineh");
+    expect(md).toContain("allowed-tools: Bash(/h/.turbineh/bin/turbineh *)");
+    expect(md).toContain("`/h/.turbineh/bin/turbineh build");
+    expect(md).not.toMatch(/`turbineh /);
   });
 });

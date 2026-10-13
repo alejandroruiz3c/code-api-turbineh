@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { delimiter, dirname, join } from "node:path";
 
 /**
  * What a coding agent reads about TurbineH without being told (ADR-0036): a short block in CLAUDE.md / AGENTS.md and,
@@ -58,6 +58,30 @@ Not installed: \`curl -fsSL ${url}/install.sh | sh\` (token in \`TURBINEH_TOKEN\
 `;
 }
 
+/**
+ * How the agent should invoke the CLI on this machine: \`turbineh\` when it is on PATH, otherwise the installed
+ * wrapper's absolute path (e.g. a container where ~/.turbineh/bin is not on PATH and the agent's shell is fresh on
+ * every call), so the written instructions work as is.
+ */
+export function cliCommand(path = process.env.PATH ?? "", script = process.argv[1] ?? ""): string {
+  for (const dir of path.split(delimiter).filter(Boolean)) {
+    try {
+      accessSync(join(dir, "turbineh"), constants.X_OK);
+      return "turbineh";
+    } catch {
+      // not here
+    }
+  }
+  const wrapper = join(dirname(script), "turbineh");
+  return script.endsWith("turbineh.mjs") && existsSync(wrapper) ? wrapper : "turbineh";
+}
+
+/** The instructions with the command as this machine needs it. */
+export const withCommand = (text: string, cmd: string) =>
+  cmd === "turbineh"
+    ? text
+    : text.replace(/`turbineh /g, `\`${cmd} `).replace("Bash(turbineh *)", `Bash(${cmd} *)`);
+
 export const SKILL_PATH = join(".claude", "skills", "turbineh", "SKILL.md");
 
 /** Instruction file per agent: Claude Code reads CLAUDE.md; Codex and Cursor read AGENTS.md. */
@@ -72,32 +96,33 @@ export function instructionFile(cwd: string, agent: AgentKind | null): string {
 }
 
 /** Inserts or refreshes the block (between its markers); an older unmarked TurbineH section is replaced too. */
-export function upsertBlock(text: string): string {
+export function upsertBlock(text: string, block = AGENT_BLOCK): string {
   const s = text.indexOf(START);
   const e = text.indexOf(END);
   if (s !== -1 && e > s)
-    return `${text.slice(0, s)}${AGENT_BLOCK.trimEnd()}${text.slice(e + END.length)}`;
+    return `${text.slice(0, s)}${block.trimEnd()}${text.slice(e + END.length)}`;
   const legacy = /## TurbineH capabilities\n[\s\S]*?(?=\n## |\s*$)/.exec(text);
   if (legacy)
-    return `${text.slice(0, legacy.index)}${AGENT_BLOCK.trimEnd()}${text.slice(legacy.index + legacy[0].length)}\n`;
-  return `${text.trimEnd()}${text.trim() ? "\n\n" : ""}${AGENT_BLOCK}`;
+    return `${text.slice(0, legacy.index)}${block.trimEnd()}${text.slice(legacy.index + legacy[0].length)}\n`;
+  return `${text.trimEnd()}${text.trim() ? "\n\n" : ""}${block}`;
 }
 
 export function writeAgentFiles(
   cwd: string,
   agent: AgentKind | null,
   url: string,
+  cmd = "turbineh",
 ): { file: string; changed: boolean; skill: string | null } {
   const file = instructionFile(cwd, agent);
   const p = join(cwd, file);
   const before = existsSync(p) ? readFileSync(p, "utf8") : "";
-  const after = upsertBlock(before);
+  const after = upsertBlock(before, withCommand(AGENT_BLOCK, cmd));
   if (after !== before) writeFileSync(p, after);
   let skill: string | null = null;
   if (agent === "claude") {
     const sp = join(cwd, SKILL_PATH);
     mkdirSync(dirname(sp), { recursive: true });
-    writeFileSync(sp, skillMarkdown(url));
+    writeFileSync(sp, withCommand(skillMarkdown(url), cmd));
     skill = SKILL_PATH;
   }
   return { file, changed: after !== before, skill };
