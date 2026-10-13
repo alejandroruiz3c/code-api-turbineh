@@ -136,7 +136,9 @@ export async function verifyFull(
     ],
     ...(ok
       ? {
-          next: "Security, policy and quality checks pass here. Then `pnpm build && pnpm test:e2e` before handing over.",
+          next: opts.skipScripts
+            ? "Security and policy checks pass here (typecheck, lint and unit tests skipped: --skip-scripts). Then `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` before handing over."
+            : "Security, policy and quality checks pass here. Then `pnpm build && pnpm test:e2e` before handing over.",
         }
       : blocking.length
         ? {
