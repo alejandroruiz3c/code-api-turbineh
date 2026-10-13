@@ -11,6 +11,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- **How to use** page, `/use` (ADR-0037): one public page for the three ways in — people on the web (invitation,
+  describe → plan → generate → verified result → integrate as ZIP or pull request, what each package contains, the
+  states), coding agents (install, `turbineh init`, `turbineh build @spec.md --json` with events, exit codes, timeout
+  and resume, `left`/`verify`, `apply --pr`, MCP for Claude Code, Codex, Cursor and any client, rules for agents) and
+  the API (Bearer token, why the workspace id must be a random UUID, main endpoints, catalogue index); use cases come
+  from the catalogue recipes. `/cli` and `/docs` redirect to its sections; the navigation shows "How to use". Tests
+  render the page and check every CLI command and flag shown against `turbineh --help`.
+
 - Native fit in the coding agent's flow (ADR-0036, Frontiers R1): **`turbineh build "<spec>" | @spec.md`** — plan →
   generate → wait → write → commit → summary in one command. Empty folder: the complete verified app (agent files
   merged, `.gitignore` unioned, nothing of yours overwritten); existing project: the capability adapted locally with
@@ -121,6 +129,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Worker heartbeat: `/health` reports workers alive in the last 90 s, running builds and queue length.
 
 ### Fixed
+
+- `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0037);
+  API callers without it get a 401 problem instead of a redirect to the access page.
 
 - `turbineh init` without `--agent` writes the agent-neutral `AGENTS.md` (read by Codex, Cursor and most coding agents) unless the project already has `CLAUDE.md`; `--agent claude` still writes `CLAUDE.md` and the skill.
 - Web deploys: agent worktrees (`.claude/`) are excluded from the Vercel upload (it exceeded 15,000 files and the production web silently stayed on an old build), and `deploy.sh` now stops with Vercel's error instead of filtering it out (text or JSON CLI output).
