@@ -48,7 +48,10 @@ const ts = (v: unknown) => JSON.stringify(v, null, 2);
 
 /** src/server/permissions.ts from the request's role matrix. */
 export function permissionsFile(f: Fidelity, m: AppRoleMatrix): string {
-  const rules = f.permissions.rules.map((r) => ` *  - ${r.text}${r.source ? ` — "${r.source.slice(0, 140).replace(/\*\//g, "")}"` : ""}`);
+  const rules = f.permissions.rules.map(
+    (r) =>
+      ` *  - ${r.text}${r.source ? ` — "${r.source.slice(0, 140).replace(/\*\//g, "")}"` : ""}`,
+  );
   const assumptions = f.permissions.assumptions.map((a) => ` *  - default: ${a}`);
   return `${GENERATED}
 ${m.ownKeys ? `import { can as roleCan, type Action } from "@/server/role-policy";\n` : ""}
@@ -155,7 +158,15 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
       });
   }
   // Actions only some roles have (who approves, exports, manages members, sees the audit log…).
-  for (const action of ["approve", "export", "manage_members", "view_audit", "create", "update", "delete"] as Permission[]) {
+  for (const action of [
+    "approve",
+    "export",
+    "manage_members",
+    "view_audit",
+    "create",
+    "update",
+    "delete",
+  ] as Permission[]) {
     const yes = roles.filter(([, r]) => r.can.includes(action)).map(([k]) => k);
     const no = roles.filter(([, r]) => !r.can.includes(action)).map(([k]) => k);
     if (yes.length === 0 || no.length === 0) continue;
@@ -179,10 +190,12 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
         title: `only ${list([...new Set(allowed.map(labelOf))])} can ${VERB[action] ?? action} ${res.replace(/-/g, " ")}`,
         body: [
           ...allowed.map(
-            (k) => `expect(can(${JSON.stringify(k)}, "${action}", ${JSON.stringify(res)})).toBe(true);`,
+            (k) =>
+              `expect(can(${JSON.stringify(k)}, "${action}", ${JSON.stringify(res)})).toBe(true);`,
           ),
           ...others.map(
-            (k) => `expect(can(${JSON.stringify(k)}, "${action}", ${JSON.stringify(res)})).toBe(false);`,
+            (k) =>
+              `expect(can(${JSON.stringify(k)}, "${action}", ${JSON.stringify(res)})).toBe(false);`,
           ),
         ],
       });
@@ -354,9 +367,17 @@ export function fidelityFiles(
       path: "tests/unit/permissions.test.ts",
       content: permissionsTestFile(unit, m.signUpEmailDomains.length > 0),
     },
-    { path: "tests/unit/spec-constraints.test.ts", content: specConstraintsTest(a.fidelity.constraints) },
+    {
+      path: "tests/unit/spec-constraints.test.ts",
+      content: specConstraintsTest(a.fidelity.constraints),
+    },
     ...(m.signUpEmailDomains.length > 0
-      ? [{ path: "tests/e2e/sign-up-domains.spec.ts", content: signUpDomainsE2E(m.signUpEmailDomains) }]
+      ? [
+          {
+            path: "tests/e2e/sign-up-domains.spec.ts",
+            content: signUpDomainsE2E(m.signUpEmailDomains),
+          },
+        ]
       : []),
   ];
   return { files, unit };
@@ -364,7 +385,9 @@ export function fidelityFiles(
 
 /** The role matrix as stored in this app (request's keys when domain.membership-access is selected). */
 export function storedMatrix(a: FidelityAssembly): AppRoleMatrix {
-  const membership = a.patterns.some((p) => p.id === "membership-access" && p.status === "selected");
+  const membership = a.patterns.some(
+    (p) => p.id === "membership-access" && p.status === "selected",
+  );
   return appRoleMatrix(a.fidelity.permissions, membership);
 }
 

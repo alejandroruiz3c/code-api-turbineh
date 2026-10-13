@@ -497,12 +497,12 @@ import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
 ${scope ? `import { canSeeScope } from "@/server/record-access";\n` : ""}${workflow ? `import { createItem } from "@/workflow/service";\n` : ""}${events
-  .filter((l) => l.tracked)
-  .map((l) => {
-    const en = entityNames(l.event.name);
-    return `import { record${en.pascal} } from "@/entities/${en.slug}/record";\n`;
-  })
-  .join("")}import { related${n.pascal} } from "./related";
+    .filter((l) => l.tracked)
+    .map((l) => {
+      const en = entityNames(l.event.name);
+      return `import { record${en.pascal} } from "@/entities/${en.slug}/record";\n`;
+    })
+    .join("")}import { related${n.pascal} } from "./related";
 import { check${n.pascal}Rules } from "./rules";
 import { create${n.pascal}Schema, to${n.pascal}Values, type ${n.pascal}Row } from "./schema";
 
@@ -538,8 +538,8 @@ ${
     ? `  if (!(await canSeeScope(ctx, input.${scopeKey} ?? null))) throw new UserFacingError("Choose one of your ${scope.label.toLowerCase()} options.");\n`
     : ""
 }${
-  settings && settingKey
-    ? `  // A setting is one row per ${label(settingKey.name).toLowerCase()}: saving an existing one updates it (no duplicates, no delete).
+    settings && settingKey
+      ? `  // A setting is one row per ${label(settingKey.name).toLowerCase()}: saving an existing one updates it (no duplicates, no delete).
   const [same] = await db
     .select({ id: ${n.variable}.id })
     .from(${n.variable})
@@ -552,8 +552,8 @@ ${
     return;
   }
 `
-    : ""
-}  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
+      : ""
+  }  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
   const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
   await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
 ${
@@ -568,16 +568,16 @@ ${
 `
     : ""
 }${
-  events.some((l) => l.tracked)
-    ? `  if (created) {
+    events.some((l) => l.tracked)
+      ? `  if (created) {
 ${events
   .filter((l) => l.tracked)
   .map((l) => `    ${eventCall(l, "created.id", "null", `String(input.${l.tracked} ?? "")`)}`)
   .join("\n")}
   }
 `
-    : ""
-}  revalidatePath("${base}");
+      : ""
+  }  revalidatePath("${base}");
 }
 
 /** Changes one record of the active workspace; business rules run again with the previous values. */
@@ -885,8 +885,8 @@ ${
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-line">
 ${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField ? `scopes.find((s) => s.id === row.${camel(f.name)})?.name ?? ""` : f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : f.type === "tags" ? `(row.${camel(f.name)} ?? []).join(", ")` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}${
-  workflow
-    ? `
+    workflow
+      ? `
               <td className="px-3 py-2">
                 {(() => {
                   const item = itemOf(row.id);
@@ -898,8 +898,8 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField
                   );
                 })()}
               </td>`
-    : ""
-}
+      : ""
+  }
               <td className="flex items-center justify-end gap-3 px-3 py-2">
                 {canUpdate ? (
                   <Link className="text-sm underline" href={\`${base}/\${row.id}/edit\`}>
@@ -1017,16 +1017,16 @@ ${
 `
     : ""
 }${
-  workflow
-    ? `  const [item] = await db
+    workflow
+      ? `  const [item] = await db
     .select({ id: workflowItems.id, state: workflowItems.state })
     .from(workflowItems)
     .where(and(eq(workflowItems.organizationId, ctx.organizationId), eq(workflowItems.workflow, ${JSON.stringify(workflow.key)}), eq(workflowItems.subjectId, row.id)))
     .limit(1);
   const wf = workflowOf(${JSON.stringify(workflow.key)});
 `
-    : ""
-}  return (
+      : ""
+  }  return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Edit ${n.labelSingular.toLowerCase()}</h1>
@@ -1058,11 +1058,13 @@ ${
 `
     : ""
 }${[
-  ...children.map(
-    (l) => `      <${entityNames(l.child.name).pascal}Section parentId={row.id} />\n`,
-  ),
-  ...events.map((l) => `      <${entityNames(l.event.name).pascal}Timeline parentId={row.id} />\n`),
-].join("")}    </div>
+    ...children.map(
+      (l) => `      <${entityNames(l.child.name).pascal}Section parentId={row.id} />\n`,
+    ),
+    ...events.map(
+      (l) => `      <${entityNames(l.event.name).pascal}Timeline parentId={row.id} />\n`,
+    ),
+  ].join("")}    </div>
   );
 }
 `;
@@ -1177,7 +1179,10 @@ ${steps.join("\n")}
     .getByRole("link", { name: "Edit" })
     .click();
   await expect(page.getByRole("heading", { name: "Edit ${n.labelSingular.toLowerCase()}" })).toBeVisible();`;
-  const createWith = (marker: string, extra: Record<string, string> = {}) => `${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
+  const createWith = (
+    marker: string,
+    extra: Record<string, string> = {},
+  ) => `${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${uniqueFills(marker, extra)}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
   await expect(page.getByRole("cell", { name: "${markerText(marker)}", exact: true }).first()).toBeVisible();`;
@@ -1237,7 +1242,16 @@ test("${en.labelPlural.toLowerCase()} cannot be changed or deleted, not even dir
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
-    await client.query("insert into ${en.table} (organization_id, ${[l.parentField, l.map.to, l.map.at].filter(Boolean).map((k) => snake(k ?? "")).join(", ")}) values ('e2e-history', 'e2e-parent'${l.map.to ? ", 'e2e'" : ""}${l.map.at ? ", now()" : ""})");
+    await client.query("insert into ${en.table} (organization_id, ${[
+      l.parentField,
+      l.map.to,
+      l.map.at,
+    ]
+      .filter(Boolean)
+      .map((k) => snake(k ?? ""))
+      .join(
+        ", ",
+      )}) values ('e2e-history', 'e2e-parent'${l.map.to ? ", 'e2e'" : ""}${l.map.at ? ", now()" : ""})");
     await expect(client.query("update ${en.table} set organization_id = 'tampered' where organization_id = 'e2e-history'")).rejects.toThrow(/append-only/);
     await expect(client.query("delete from ${en.table} where organization_id = 'e2e-history'")).rejects.toThrow(/append-only/);
   } finally {

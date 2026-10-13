@@ -98,16 +98,17 @@ describe("domain components in an assembled app (ADR-0033)", () => {
     ).toBe(true);
 
     const acceptance = JSON.parse(readFileSync(join(out, ".turbineh/acceptance.json"), "utf8"));
+    // Precision first (ADR-0043): the assistant test never acts as a "patient", so the booking criterion stays open.
     expect(acceptance.map((a: { status: string }) => a.status)).toEqual([
-      "covered",
+      "open",
       "covered",
       "open",
     ]);
-    expect(readFileSync(join(out, "ACCEPTANCE.md"), "utf8")).toContain("1 of 3 criteria are open");
+    expect(readFileSync(join(out, "ACCEPTANCE.md"), "utf8")).toContain("2 of 3 criteria are open");
     expect(readFileSync(join(out, "README.md"), "utf8")).toContain(
       "[ACCEPTANCE.md](ACCEPTANCE.md)",
     );
-    expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["met", "met", "open"]);
+    expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["open", "met", "open"]);
   });
 
   it("maps criteria to tests with code only", () => {

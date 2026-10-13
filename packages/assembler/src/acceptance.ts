@@ -78,9 +78,7 @@ export function acceptanceStatus(
 ): CriterionStatus[] {
   return criteria.map((criterion) => {
     const hard = strict(criterion);
-    const tests = [
-      ...new Set(rules.filter((r) => matches(criterion, r, hard)).map((r) => r.test)),
-    ];
+    const tests = [...new Set(rules.filter((r) => matches(criterion, r, hard)).map((r) => r.test))];
     return {
       criterion,
       tests,

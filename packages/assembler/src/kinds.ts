@@ -134,7 +134,10 @@ ${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
 `;
 }
 
-const appendOnlySql = (table: string, about: string) => `-- ${about}: the database refuses to change or delete a row, whatever the code does (ADR-0043). Applied by
+const appendOnlySql = (
+  table: string,
+  about: string,
+) => `-- ${about}: the database refuses to change or delete a row, whatever the code does (ADR-0043). Applied by
 -- scripts/migrate.ts after the tables exist; idempotent.
 CREATE OR REPLACE FUNCTION turbineh_append_only() RETURNS trigger AS $$
 BEGIN
@@ -153,7 +156,8 @@ export function generateEventEntity(l: EventLink, parent: Entity): GeneratedFile
   const n = entityNames(e.name);
   const p = entityNames(parent.name);
   const fields = fieldsOf(e);
-  const shown = (k: string | undefined) => (k ? fields.find((f) => camel(f.name) === k) : undefined);
+  const shown = (k: string | undefined) =>
+    k ? fields.find((f) => camel(f.name) === k) : undefined;
   const when = shown(l.map.at);
   const record = `${GENERATED}
 import { db } from "@/db/client";
@@ -220,7 +224,10 @@ export async function ${n.pascal}Timeline({ parentId }: { parentId: string }) {
     { path: `src/entities/${n.slug}/timeline.tsx`, content: timeline },
     {
       path: `src/db/sql/120-${n.slug}-append-only.sql`,
-      content: appendOnlySql(n.table, `${n.labelPlural} (history of ${p.labelPlural.toLowerCase()})`),
+      content: appendOnlySql(
+        n.table,
+        `${n.labelPlural} (history of ${p.labelPlural.toLowerCase()})`,
+      ),
     },
   ];
 }
@@ -421,7 +428,9 @@ export async function record${n.pascal}(values: typeof ${n.variable}.$inferInser
 }
 
 /** Sample values a child's E2E test types (the same samples the entity generator uses). */
-export function childFills(l: ChildLink): { label: string; value: string; select: boolean; check: boolean }[] {
+export function childFills(
+  l: ChildLink,
+): { label: string; value: string; select: boolean; check: boolean }[] {
   const e = l.child;
   return fieldsOf(e)
     .filter((f) => camel(f.name) !== l.parentField && !isUserRef(f) && f.required)
@@ -516,7 +525,10 @@ export function generateByKind(input: KindPlanInput): KindPlan {
         entity: e.name,
         kind: `relationship (${m.shape ?? "link"})`,
         ui: "none",
-        where: m.shape === "membership" ? "src/app/dashboard/members/ (membership-access) or workspace members" : "—",
+        where:
+          m.shape === "membership"
+            ? "src/app/dashboard/members/ (membership-access) or workspace members"
+            : "—",
         reason: m.reason,
       });
       continue;
@@ -541,18 +553,20 @@ export function generateByKind(input: KindPlanInput): KindPlan {
     if (!generatedPages.includes(e) && kindOf(e.name) !== "event") continue;
     const settings = kindOf(e.name) === "configuration";
     const wf = settings ? undefined : input.workflows[e.name];
-    const scopeField =
-      input.scope && !settings ? parentFieldOf(e, input.scope.entity) : undefined;
+    const scopeField = input.scope && !settings ? parentFieldOf(e, input.scope.entity) : undefined;
     const fields = wf ? e.fields.filter((f) => camel(f.name) !== camel(wf.field)) : e.fields;
     const shaped: Entity = {
       ...e,
       fields: scopeField
-        ? fields.map((f) => (f === scopeField ? { ...f, type: "string" as const, required: false } : f))
+        ? fields.map((f) =>
+            f === scopeField ? { ...f, type: "string" as const, required: false } : f,
+          )
         : fields,
     };
     const dueField = wf
       ? (shaped.fields.find(
-          (f) => (f.type === "date" || f.type === "datetime") && /^(due|end|until|return)/i.test(f.name),
+          (f) =>
+            (f.type === "date" || f.type === "datetime") && /^(due|end|until|return)/i.test(f.name),
         )?.name ?? null)
       : null;
     const n = entityNames(e.name);

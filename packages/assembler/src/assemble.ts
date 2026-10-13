@@ -275,7 +275,10 @@ export function assemble(input: AssembleInput): AssembleResult {
       input,
       kinds
         ? kinds.generatedAs.map((g) => featureLine(g))
-        : entities.map((e) => `${entityNames(e.name).labelPlural}: create, list and delete, scoped to your workspace`),
+        : entities.map(
+            (e) =>
+              `${entityNames(e.name).labelPlural}: create, list and delete, scoped to your workspace`,
+          ),
       existsSync(join(outDir, ".env.example"))
         ? readFileSync(join(outDir, ".env.example"), "utf8")
         : "",
@@ -575,7 +578,8 @@ function actingAs(rules: CoverageRule[], ownerLabel: string | null): CoverageRul
 /** README line of a generated entity, by kind. */
 function featureLine(g: KindPlan["generatedAs"][number]): string {
   const what = entityNames(g.entity).labelPlural;
-  if (g.ui === "settings") return `${what}: a settings page (set per key, no list of records to delete)`;
+  if (g.ui === "settings")
+    return `${what}: a settings page (set per key, no list of records to delete)`;
   if (g.ui === "timeline") return `${what}: an append-only history shown on its parent's page`;
   if (g.ui === "parent") return `${what}: listed and added on its parent's page`;
   if (g.ui === "none") return `${what}: ${g.kind} — no page of its own (${g.where})`;

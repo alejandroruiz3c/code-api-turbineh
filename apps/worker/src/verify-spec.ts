@@ -67,7 +67,8 @@ function capabilityNatives(spec: BuildSpec, recipeId: string): string[] {
   return spec.capabilities.flatMap((cap) => {
     if (provided.has(cap)) return [];
     const c = catalog.find(
-      (x) => x.status === "approved" && x.pkg.name.startsWith("turbineh/") && x.provides.includes(cap),
+      (x) =>
+        x.status === "approved" && x.pkg.name.startsWith("turbineh/") && x.provides.includes(cap),
     );
     return c && !without.includes(c.id) ? [c.id] : [];
   });
@@ -84,10 +85,13 @@ interface Snapshot {
 function snapshot(dir: string, components: string[]): Snapshot {
   const owners = readOwners(dir);
   const byEntity = new Map<string, number>();
-  for (const [file, owner] of Object.entries(owners))
+  for (const owner of Object.values(owners))
     if (owner.startsWith("entity:")) byEntity.set(owner, (byEntity.get(owner) ?? 0) + 1);
   const pages = Object.entries(owners)
-    .filter(([f, o]) => o.startsWith("entity:") && /^src\/app\/.*page\.tsx$/.test(f) && !f.includes("[id]"))
+    .filter(
+      ([f, o]) =>
+        o.startsWith("entity:") && /^src\/app\/.*page\.tsx$/.test(f) && !f.includes("[id]"),
+    )
     .map(([f]) => `/${f.replace(/^src\/app\//, "").replace(/\/?page\.tsx$/, "")}`)
     .sort();
   const acc = join(dir, ".turbineh/acceptance.json");
@@ -100,7 +104,9 @@ function snapshot(dir: string, components: string[]): Snapshot {
     })),
     pages,
     components,
-    criteria: existsSync(acc) ? (JSON.parse(readFileSync(acc, "utf8")) as Snapshot["criteria"]) : [],
+    criteria: existsSync(acc)
+      ? (JSON.parse(readFileSync(acc, "utf8")) as Snapshot["criteria"])
+      : [],
   };
 }
 
@@ -126,11 +132,13 @@ function build(
         })
       : null;
   const spec = wired?.spec ?? base;
-  const domains = mergeDomains(wired?.wired.selected ?? [], detectDomains(s.prompt, recipeId, spec.app_name));
-  const extra = [
-    ...domains.map((d) => d.component),
-    ...capabilityNatives(spec, recipeId),
-  ].filter((id) => !without.includes(id));
+  const domains = mergeDomains(
+    wired?.wired.selected ?? [],
+    detectDomains(s.prompt, recipeId, spec.app_name),
+  );
+  const extra = [...domains.map((d) => d.component), ...capabilityNatives(spec, recipeId)].filter(
+    (id) => !without.includes(id),
+  );
   const { selected } = nativeSelection(repoRoot, recipeId, s.prompt, extra);
   const outDir = join(mkdtempSync(join(tmpdir(), `spec-${s.id}-${mode}-`)), "app");
   assemble({
@@ -144,7 +152,13 @@ function build(
     domains: domains.filter((d) => selected.some((x) => x.component.id === d.component)),
     ...(wired ? { fidelity: wired.assembly } : {}),
   });
-  return { snap: snapshot(outDir, selected.map((x) => x.component.id)), wired };
+  return {
+    snap: snapshot(
+      outDir,
+      selected.map((x) => x.component.id),
+    ),
+    wired,
+  };
 }
 
 async function gate(dir: string): Promise<VerifyResult> {
@@ -186,7 +200,10 @@ async function main() {
       dir: before.dir,
       entities: before.entities.map((e) => e.entity),
       pages: before.pages,
-      criteria: { covered: count(before.criteria, "covered"), open: count(before.criteria, "open") },
+      criteria: {
+        covered: count(before.criteria, "covered"),
+        open: count(before.criteria, "open"),
+      },
     },
     after: {
       dir: after.dir,
@@ -223,7 +240,10 @@ async function main() {
       },
     },
   };
-  writeFileSync(join(after.dir, ".turbineh/verify-spec.json"), `${JSON.stringify(summary, null, 2)}\n`);
+  writeFileSync(
+    join(after.dir, ".turbineh/verify-spec.json"),
+    `${JSON.stringify(summary, null, 2)}\n`,
+  );
   if (asJson) console.log(JSON.stringify(summary, null, 2));
   else {
     const a = summary.after;
@@ -233,11 +253,14 @@ async function main() {
         `before: ${before.entities.length} generated entities, pages ${before.pages.join(" ") || "—"}; criteria covered ${summary.before.criteria.covered}, open ${summary.before.criteria.open}`,
         `after:  ${a.entities.length} entities, pages ${a.pages.join(" ") || "—"}`,
         ...a.entities.map(
-          (e: { entity: string; kind: string; ui: string }) => `  - ${e.entity}: ${e.kind} → ${e.ui}`,
+          (e: { entity: string; kind: string; ui: string }) =>
+            `  - ${e.entity}: ${e.kind} → ${e.ui}`,
         ),
         `roles:  ${a.roles.join(" | ")}`,
         `patterns: ${(a.patterns ?? []).map((p) => `${p.id}=${p.status}${p.component ? `(${p.component})` : ""}`).join(", ") || "—"}`,
-        a.gate ? `gate (${a.gate.mode}): ${a.gate.ok ? "PASS" : "FAIL"} ${a.gate.steps.join(" ")}` : "gate: not run",
+        a.gate
+          ? `gate (${a.gate.mode}): ${a.gate.ok ? "PASS" : "FAIL"} ${a.gate.steps.join(" ")}`
+          : "gate: not run",
         `criteria: met ${a.criteria.met}, covered ${a.criteria.covered}, open ${a.criteria.open} of ${criteria.length}`,
         `package: ${after.dir}`,
       ].join("\n"),

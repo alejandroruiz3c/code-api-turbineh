@@ -34,7 +34,6 @@ export interface AppRoleMatrix {
   signUpEmailDomains: string[];
 }
 
-const KEY = /^[a-z][a-z0-9_]{0,23}$/;
 const keyOf = (s: string) =>
   s
     .toLowerCase()
@@ -86,7 +85,11 @@ export function appRoleMatrix(m: PermissionMatrix, ownKeys: boolean): AppRoleMat
     );
   }
   const member = m.roles.filter((r) => r.orgRoles.includes("member")).at(-1);
-  const defaultRole = ownKeys ? (member ? (keysOf[member.id]?.[0] ?? "member") : "member") : "member";
+  const defaultRole = ownKeys
+    ? member
+      ? (keysOf[member.id]?.[0] ?? "member")
+      : "member"
+    : "member";
   return {
     ownKeys,
     roles,
@@ -117,9 +120,9 @@ function membershipParams(m: PermissionMatrix): Record<string, unknown> {
     label: r.label.slice(0, 40),
     can: r.can.filter((a) => core.has(a)),
   }));
-  const invitable = [
-    ...new Set(m.invitations.roles.flatMap((id) => app.keysOf[id] ?? [])),
-  ].filter((k) => k !== "owner");
+  const invitable = [...new Set(m.invitations.roles.flatMap((id) => app.keysOf[id] ?? []))].filter(
+    (k) => k !== "owner",
+  );
   const scoped = m.roles.find((r) => r.scope.kind !== "all" && r.scope.of);
   const of = scoped?.scope.of ?? null;
   return {
@@ -127,7 +130,10 @@ function membershipParams(m: PermissionMatrix): Record<string, unknown> {
     defaultRole: app.defaultRole,
     inviteRoles: invitable.length
       ? invitable
-      : roles.map((r) => r.key).filter((k) => k !== "owner").slice(0, 8),
+      : roles
+          .map((r) => r.key)
+          .filter((k) => k !== "owner")
+          .slice(0, 8),
     invitationDays: 7,
     scope: of
       ? {
@@ -172,7 +178,10 @@ function workflowParams(
     .map(([k]) => k);
   const workflows = matches.map((p) => {
     const entity = String(p.params.entity);
-    const states = (p.params.states as string[]).map((s) => ({ key: keyOf(s), label: humanize(s) }));
+    const states = (p.params.states as string[]).map((s) => ({
+      key: keyOf(s),
+      label: humanize(s),
+    }));
     const transitions = (
       p.params.transitions as { from: string; to: string; roles: string[] }[]
     ).map((t) => {
@@ -187,7 +196,8 @@ function workflowParams(
     const leaving = new Set(transitions.flatMap((t) => t.from));
     const fields = spec.entities.find((e) => e.name === entity)?.fields ?? [];
     const due = fields.some(
-      (f) => (f.type === "date" || f.type === "datetime") && /^(due|end|until|return)/i.test(f.name),
+      (f) =>
+        (f.type === "date" || f.type === "datetime") && /^(due|end|until|return)/i.test(f.name),
     );
     const w = nameWords(entity);
     return {
@@ -296,7 +306,7 @@ export const PATTERN_GUIDE: Record<PatternId, { where: string[]; how: string }> 
   },
   "audit-log": {
     where: ["src/lib/audit.ts"],
-    how: "Replace the no-op audit() with an append-only table and an owner-only page (can(role, \"view_audit\")).",
+    how: 'Replace the no-op audit() with an append-only table and an owner-only page (can(role, "view_audit")).',
   },
   "private-uploads": {
     where: ["src/app/api/files/", "src/server/record-access.ts", "src/lib/spec-constraints.ts"],
@@ -331,7 +341,10 @@ export const PATTERN_GUIDE: Record<PatternId, { where: string[]; how: string }> 
 const approved = (c: ComponentCard) => c.status === "approved";
 
 /** The approved component implementing a pattern: one that provides one of its capabilities, or is named after it. */
-export function componentFor(id: PatternId, catalog: readonly ComponentCard[]): ComponentCard | null {
+export function componentFor(
+  id: PatternId,
+  catalog: readonly ComponentCard[],
+): ComponentCard | null {
   for (const cap of PATTERN_CAPABILITIES[id]) {
     const c = catalog.find((x) => approved(x) && x.provides.includes(cap));
     if (c) return c;
@@ -445,12 +458,15 @@ export function wirePatterns(
       `src/${p.id.replace(/\./g, "-")}/params.json`;
     out.selected.push({
       id: p.id,
-      capability: c.provides.find((x) => PATTERN_CAPABILITIES[p.id].includes(x)) ?? c.provides[0] ?? p.id,
+      capability:
+        c.provides.find((x) => PATTERN_CAPABILITIES[p.id].includes(x)) ?? c.provides[0] ?? p.id,
       component: c.id,
       recipes: [ctx.recipe],
       paramsFile,
       params: chosen,
-      providedEntities: [...new Set([...sameKind.flatMap((x) => x.providedEntities), ...c.entities])],
+      providedEntities: [
+        ...new Set([...sameKind.flatMap((x) => x.providedEntities), ...c.entities]),
+      ],
       assumptions: sameKind.flatMap((x) => x.assumptions),
     });
     out.patterns.push({

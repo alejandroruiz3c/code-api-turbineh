@@ -35,7 +35,9 @@ export function componentCards(componentsDir: string): ComponentCard[] {
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(join(componentsDir, d.name, "component.yaml")))
     .map((d) => {
-      const m = parse(readFileSync(join(componentsDir, d.name, "component.yaml"), "utf8")) as Manifest;
+      const m = parse(
+        readFileSync(join(componentsDir, d.name, "component.yaml"), "utf8"),
+      ) as Manifest;
       const decl = m.params ?? null;
       return {
         id: m.id,
@@ -46,7 +48,10 @@ export function componentCards(componentsDir: string): ComponentCard[] {
         entities: decl?.entities ?? [],
         inputs: m.contract?.inputs ?? [],
         recipes: [
-          ...new Set([...(m.capability?.use_cases ?? []), ...guideRecipes(join(componentsDir, d.name))]),
+          ...new Set([
+            ...(m.capability?.use_cases ?? []),
+            ...guideRecipes(join(componentsDir, d.name)),
+          ]),
         ],
       };
     });
