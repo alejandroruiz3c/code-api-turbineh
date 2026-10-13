@@ -19,6 +19,7 @@
   "dependencies": {
     "@turbineh/decider": "workspace:*",
     "@turbineh/remediation": "workspace:*",
+    "@turbineh/shared": "workspace:*",
     "openai": "7.23.0",
     "zod": "4.6.5"
   }

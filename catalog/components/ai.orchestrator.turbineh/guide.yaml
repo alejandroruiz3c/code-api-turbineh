@@ -6,7 +6,9 @@ title: TurbineH AI orchestrator and agent runtime (orchestrate, embed, runAgent)
 summary: >-
   Every AI call of the app goes through here. orchestrate() answers or returns structured output; embed() builds
   knowledge-base vectors; runAgent() is the tool-calling runtime: the model may only act through typed tools, irreversible
-  tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. The model
+  tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. TurbineH
+  orchestration decides each turn's first action (which tool, or a reply) and the model writes only its arguments or
+  the reply. The model
   endpoint is the TurbineH AI gateway or any OpenAI-compatible endpoint configured by environment variables.
 keywords:
   [ai, llm, agent, tool calling, function calling, assistant, chatbot, orchestrator, runAgent, tools, confirmation,

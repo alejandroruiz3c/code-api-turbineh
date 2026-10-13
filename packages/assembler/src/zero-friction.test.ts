@@ -98,8 +98,10 @@ describe("zero-friction packages (ADR-0035)", () => {
     expect(entityCoverage(dir, [])).toEqual([]);
     const withEntity: BuildSpec = {
       ...spec("saas-crud", [
-        "The owner adds a supplier with a contact email",
+        "The owner adds a supplier",
         "Owners edit a supplier",
+        // The generated create test leaves the optional contact email empty: not proven (ADR-0039 §4).
+        "The owner adds a supplier with a contact email",
       ]),
       entities: [
         {
@@ -123,7 +125,7 @@ describe("zero-friction packages (ADR-0035)", () => {
     });
     const rules = entityCoverage(outDir, ["Supplier"]);
     const statuses = acceptanceStatus(withEntity.acceptance_criteria, rules);
-    expect(statuses.map((s) => s.status)).toEqual(["covered", "covered"]);
+    expect(statuses.map((s) => s.status)).toEqual(["covered", "covered", "open"]);
     expect(statuses[0]?.tests[0]).toMatch(
       /^tests\/e2e\/suppliers?\.spec\.ts › owner creates a supplier/,
     );

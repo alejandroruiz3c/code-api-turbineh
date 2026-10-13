@@ -7,7 +7,7 @@ import { createServer, type Server } from "node:http";
  *     message (and whose tool is offered) returns a tool call; after a tool result, the script's renderer (or a
  *     generic one) turns it into text. Without tools it behaves like the verification simulator: JSON_SCHEMA
  *     requests get the minimal valid instance, anything else "Mock answer: <start of the message>".
- *   - POST /v1/embeddings (hash-seeded unit vectors), POST /v1/systemone (first choice, low risk), GET /health.
+ *   - POST /v1/embeddings (hash-seeded unit vectors), POST /v1/systemone (first choice, low risk; runAgent's next action follows the script rules), GET /health.
  * Domain components add their own rules in tests/mock-llm/scripts/<domain>.ts (default export: MockScript).
  */
 export interface MockMessage {
@@ -188,19 +188,45 @@ function vector(text: string, dims: number): number[] {
 
 type Question = { type?: string; criteria?: Record<string, string> };
 
-function systemOne(body: { model?: unknown; questions?: unknown }) {
+/**
+ * runAgent's first action of a turn, decided the way the scripted model would act: the first script rule that
+ * matches the latest message (and whose tool is an option), else reply.
+ */
+export function scriptedNext(
+  state: Record<string, unknown>,
+  options: string[],
+  scripts: MockScript[],
+): string {
+  const reply = options[0] ?? "reply";
+  const text = typeof state.latest_message === "string" ? state.latest_message : "";
+  for (const script of scripts)
+    for (const rule of script.rules) {
+      if (!options.includes(rule.tool)) continue;
+      rule.when.lastIndex = 0;
+      const m = rule.when.exec(text);
+      if (m && rule.args(text, m)) return rule.tool;
+    }
+  return reply;
+}
+
+function systemOne(
+  body: { model?: unknown; state?: unknown; questions?: unknown },
+  scripts: MockScript[],
+) {
   const answers: Record<string, unknown> = {};
   const questions = (body.questions ?? {}) as Record<string, Question>;
+  const state = (body.state ?? {}) as Record<string, unknown>;
   for (const [name, q] of Object.entries(questions)) {
     if (q.type === "noul") answers[name] = { type: "noul", noul: 0.05 };
     else if (q.type === "choice") {
       const labels = Object.keys(q.criteria ?? {});
+      const pick = name === "next" ? scriptedNext(state, labels, scripts) : labels[0];
       const rest = 0.1 / Math.max(labels.length - 1, 1);
       answers[name] = {
         type: "choice",
-        choice: labels[0],
+        choice: pick,
         confidence: 0.9,
-        probabilities: Object.fromEntries(labels.map((l, i) => [l, i === 0 ? 0.9 : rest])),
+        probabilities: Object.fromEntries(labels.map((l) => [l, l === pick ? 0.9 : rest])),
       };
     }
   }
@@ -252,7 +278,7 @@ export function startMockLlm(
           usage: { prompt_tokens: Math.ceil(inputs.join(" ").length / 4) },
         });
       }
-      if (path.endsWith("/systemone")) return send(200, systemOne(body));
+      if (path.endsWith("/systemone")) return send(200, systemOne(body, scripts));
       return send(404, { error: { message: "not found" } });
     });
   });

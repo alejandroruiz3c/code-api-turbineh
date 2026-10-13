@@ -11,6 +11,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Decisions through the decider (ADR-0039): audit of every model call (`docs/decisions-audit.md`) and the rule —
+  decisions among options → the decider, generation → open models, deterministic questions → code. **runAgent**
+  (component `ai.orchestrator.turbineh` 0.3.0) takes each turn's first action — which tool, or a reply — from the
+  decider in the request it already made (route + safety), and the open model writes only that tool's arguments or the
+  reply; below the confidence threshold, after a tool result or without a decider the model chooses among every tool
+  as before. A decider call at every step was measured slower and costlier and is not used. Measured on staging
+  (`bench/agent-decisions/`): same accuracy, −13 % model input tokens, −1.2 % cost per conversation, −17 % cost on
+  single-action turns. The GitHub integration's adaptation decisions stay in code (measured: database and auth are
+  fixed policy and compatibility; the decider is more accurate on monorepo app choice but slower and costlier — owner
+  decision). `verify:recipe` assembles the domain components a prompt names (e.g. bookings).
 - **How to use** page, `/use` (ADR-0038): one public page for the three ways in — people on the web (invitation,
   describe → plan → generate → verified result → integrate as ZIP or pull request, what each package contains, the
   states), coding agents (install, `turbineh init`, `turbineh build @spec.md --json` with events, exit codes, timeout
@@ -130,6 +140,13 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Acceptance criteria are "met" only when a test exercises them (ADR-0039 §4): generated CRUD tests no longer prove
+  refusals, other roles or features they do not touch (production build `f195341c` showed "a viewer cannot edit a
+  note", "invite a teammate", "audit log" and "search / tag filter" as met by create/edit tests); the report's mapping
+  checks the test's steps and assertions and accepts the decider's match only at confidence ≥ 0.8. Labelled set of 38
+  pairs: precision 1.00, recall 0.95.
+- TurbineH AI gateway: `tools`, `tool_choice` and tool-call turns are forwarded (validated and bounded). They were
+  dropped, so runAgent never called a tool through the gateway (6/20 correct first actions on staging before the fix).
 - Agent instructions (AGENTS.md block, Claude Code skill, /use): run `turbineh build` in the foreground with a long timeout instead of in the background — in the Frontiers shop rerun the agent polled with blind sleeps and waited ~130 s after the result was ready.
 - `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0038);
   API callers without it get a 401 problem instead of a redirect to the access page.

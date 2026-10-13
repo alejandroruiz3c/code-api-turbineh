@@ -182,9 +182,24 @@ importers:
 
   bench:
     dependencies:
+      '@turbineh/decider':
+        specifier: workspace:*
+        version: link:../packages/decider
+      '@turbineh/engine':
+        specifier: workspace:*
+        version: link:../packages/engine
+      '@turbineh/reporter':
+        specifier: workspace:*
+        version: link:../packages/reporter
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       '@turbineh/verifier':
         specifier: workspace:*
         version: link:../packages/verifier
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   infra:
     dependencies:
@@ -230,6 +245,9 @@ importers:
       '@turbineh/resolver':
         specifier: workspace:*
         version: link:../resolver
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
       yaml:
         specifier: 2.9.1
         version: 2.9.1
@@ -387,6 +405,9 @@ importers:
       '@turbineh/remediation':
         specifier: workspace:*
         version: link:../remediation
+      '@turbineh/shared':
+        specifier: workspace:*
+        version: link:../shared
       openai:
         specifier: 7.23.0
         version: 7.23.0(@aws-sdk/credential-provider-node@3.972.85)(@smithy/signature-v4@5.7.4)(zod@4.6.5)

@@ -1,4 +1,5 @@
 import { choice, type Decider } from "@turbineh/decider";
+import { proofVerdict, proofVeto } from "@turbineh/shared";
 import type { ImprovementEstimate, RemediationChange, SecurityAlert } from "@turbineh/remediation";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -14,6 +15,8 @@ export interface ReportFacts {
   acceptanceCriteria: string[];
   /** Evidence actually produced by the verification of this build (test names, checks). */
   evidence: string[];
+  /** Key assertions of each test in `evidence` (expect lines), so a match is judged on what the test checks. */
+  evidenceDetail?: Record<string, string[]>;
   checks: { name: string; ok: boolean }[];
   components: { capability: string; id: string }[];
   gaps: string[];
@@ -167,61 +170,110 @@ const stems = (s: string) =>
       .filter((w) => w.length > 2 && !STOP.has(w)),
   );
 
+const titleOf = (e: string) => e.replace(/^(End-to-end|Unit) test:\s*/, "");
+const isTestEvidence = (e: string) => /^(End-to-end|Unit) test: /.test(e);
+
 /**
- * Deterministic first pass: the passing test whose title states the criterion (strong word overlap). Only clear
- * matches count (at least 3 shared words covering at least 40 % of the criterion); everything else goes to the
- * decider. Test titles are evidence produced by this build's verification.
+ * A decider match is accepted only at this confidence (precision first: a false "met" is worse than "open"). 0.8 is a
+ * probability of at least 0.9 on a two-option question; on the labelled pairs (bench/agent-decisions/criteria.ts) the
+ * true matches score 0.82–0.92 and the only wrong "test" pick 0.1 (ADR-0039 §4).
  */
-export function lexicalEvidence(criterion: string, evidence: string[]): string | null {
+export const CRITERION_MATCH_CONFIDENCE = 0.8;
+
+/**
+ * Deterministic first pass: the passing test whose title states the criterion (strong word overlap: at least 3 shared
+ * words covering at least 40 % of the criterion) AND whose title and key assertions exercise the criterion's subject,
+ * action, actor and any negation (`proofVerdict`). Everything else goes to the decider. Test titles are evidence
+ * produced by this build's verification.
+ */
+export function lexicalEvidence(
+  criterion: string,
+  evidence: string[],
+  detail: Record<string, string[]> = {},
+): string | null {
   const want = stems(criterion);
   let best: { e: string; shared: number } | null = null;
   for (const e of evidence) {
-    const have = stems(e.replace(/^(End-to-end|Unit) test:\s*/, ""));
+    const have = stems(titleOf(e));
     const shared = [...want].filter((w) => have.has(w)).length;
     if (!best || shared > best.shared) best = { e, shared };
   }
-  return best && best.shared >= 3 && best.shared / Math.max(1, want.size) >= 0.4 ? best.e : null;
+  if (!best || best.shared < 3 || best.shared / Math.max(1, want.size) < 0.4) return null;
+  if (!isTestEvidence(best.e)) return best.e;
+  return proofVerdict(criterion, { title: titleOf(best.e), assertions: detail[best.e] ?? [] })
+    .proven
+    ? best.e
+    : null;
+}
+
+/** The decider's question for one criterion over the tests that pass the refusal and actor checks. */
+export function criterionQuestion(
+  criterion: string,
+  tests: string[],
+  detail: Record<string, string[]>,
+) {
+  return choice(
+    {
+      criterion,
+      question:
+        "Which test proves `criterion`: its title or assertions exercise the criterion's subject, action, expected outcome and actor (and the refusal when the criterion says something must not happen)? If none does, choose the last option.",
+    },
+    Object.fromEntries([
+      ...tests.map((e) => [e, (detail[e] ?? []).slice(0, 6).join("\n").slice(0, 600) || null]),
+      [NOT_VERIFIED, "No listed test proves it."],
+    ]),
+    { includeNone: false },
+  );
+}
+
+/** Tests the decider may consider for a criterion: never one that fails the refusal or actor check. */
+export function criterionCandidates(
+  criterion: string,
+  evidence: string[],
+  detail: Record<string, string[]>,
+): string[] {
+  return evidence.filter(
+    (e) =>
+      isTestEvidence(e) &&
+      !proofVeto(criterion, { title: titleOf(e), assertions: detail[e] ?? [] }),
+  );
 }
 
 /**
- * Maps each acceptance criterion to the evidence that verified it: a deterministic title match first, then the decider
- * (one atomic Choice per remaining criterion).
+ * Maps each acceptance criterion to the test that proves it: the deterministic match first, then the decider (one
+ * atomic Choice per remaining criterion over the tests that pass the refusal and actor checks, each described by its
+ * key assertions). The decider's match is accepted only at high confidence; anything else stays "not verified".
  */
 async function mapCriteria(facts: ReportFacts, decider: Decider): Promise<BuildReport["criteria"]> {
   if (facts.acceptanceCriteria.length === 0) return [];
-  const lexical = facts.acceptanceCriteria.map((c) => lexicalEvidence(c, facts.evidence));
-  if (lexical.every(Boolean)) {
-    return facts.acceptanceCriteria.map((criterion, i) => ({
-      criterion,
-      evidence: lexical[i] as string,
-      verified: true,
-      confidence: 1,
-    }));
-  }
-  const options = Object.fromEntries([...facts.evidence, NOT_VERIFIED].map((e) => [e, null]));
+  const detail = facts.evidenceDetail ?? {};
+  const lexical = facts.acceptanceCriteria.map((c) => lexicalEvidence(c, facts.evidence, detail));
+  const open = (criterion: string, confidence = 0) => ({
+    criterion,
+    evidence: NOT_VERIFIED,
+    verified: false,
+    confidence,
+  });
   const questions = Object.fromEntries(
-    facts.acceptanceCriteria.map((c, i) => [
-      `c${i}`,
-      choice(
-        {
-          criterion: c,
-          question: "Which verification step demonstrates `criterion` for this app?",
-        },
-        options,
-        { includeNone: false },
-      ),
-    ]),
+    facts.acceptanceCriteria.flatMap((c, i) => {
+      const tests = criterionCandidates(c, facts.evidence, detail);
+      return lexical[i] || tests.length === 0
+        ? []
+        : [[`c${i}`, criterionQuestion(c, tests, detail)]];
+    }),
   );
-  const d = await decider.ask({ app: facts.summary, evidence: facts.evidence }, questions);
+  const d =
+    Object.keys(questions).length > 0
+      ? await decider.ask({ app: facts.summary }, questions).catch(() => null)
+      : null;
   return facts.acceptanceCriteria.map((criterion, i) => {
     const direct = lexical[i];
     if (direct) return { criterion, evidence: direct, verified: true, confidence: 1 };
-    const a = d.answers[`c${i}`];
-    const evidence = a?.type === "choice" ? a.choice : NOT_VERIFIED;
-    const confidence = a?.type === "choice" ? a.confidence : 0;
-    // Low-confidence matches are reported honestly as not verified.
-    const verified = evidence !== NOT_VERIFIED && confidence >= 0.5;
-    return { criterion, evidence: verified ? evidence : NOT_VERIFIED, verified, confidence };
+    const a = d?.answers[`c${i}`];
+    if (a?.type !== "choice" || a.choice === NOT_VERIFIED) return open(criterion);
+    // Only high-confidence matches count; the rest is reported honestly as not verified.
+    if (a.confidence < CRITERION_MATCH_CONFIDENCE) return open(criterion, a.confidence);
+    return { criterion, evidence: a.choice, verified: true, confidence: a.confidence };
   });
 }
 

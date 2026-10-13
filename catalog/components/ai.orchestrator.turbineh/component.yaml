@@ -1,10 +1,10 @@
 schema: turbineh.component/v0.1
 id: ai.orchestrator.turbineh
-version: 0.2.0
+version: 0.3.0
 status: approved
 category: ai
 source:
-  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.2.0
+  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.3.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
   does: "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace"
@@ -23,7 +23,7 @@ contract:
     [
       "orchestrate({ task, input, purpose, organizationId, userId, instructions?, context?, history?, schema?, tools? })",
       "embed(texts, { purpose, organizationId, userId })",
-      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0033)",
+      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0033); TurbineH orchestration decides the next action (tool or reply) at every step and the open model writes only its arguments or the reply (ADR-0039)",
       "Toolkit { id, title, audience: public|staff, instructions, tools } from domain components, listed in src/lib/ai/toolkits.ts",
     ]
   outputs:
@@ -39,7 +39,7 @@ contract:
     ]
   limits:
     [
-      "decider unsafe threshold 0.5 and tool threshold 0.5 (code); 2 transport retries; one repair attempt for structured output; embeddings fixed at 1024 dimensions",
+      "decider unsafe threshold 0.5, tool threshold 0.5 and runAgent next-action threshold 0.5 (code; below it the model chooses among every tool); 2 transport retries; one repair attempt for structured output; embeddings fixed at 1024 dimensions",
       "runAgent: 6 steps (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages of state, confirmations expire after 30 min; public assistant: 1000 characters, 10 requests/min per IP, 60 turns per conversation",
     ]
 compat:

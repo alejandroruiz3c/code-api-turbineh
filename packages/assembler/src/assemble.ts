@@ -379,6 +379,19 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
   ];
 }
 
+/** Test titles with their key steps and assertions (form fields filled, expect lines), in file order. */
+export function testBlocks(src: string): { title: string; assertions: string[] }[] {
+  const starts = [...src.matchAll(/test\(\s*"([^"]{5,200})"/g)];
+  return starts.map((m, i) => {
+    const body = src.slice(m.index, starts[i + 1]?.index ?? src.length);
+    const assertions = body
+      .split("\n")
+      .filter((l) => /expect\(|getByLabel\(/.test(l))
+      .map((l) => l.trim().slice(0, 200));
+    return { title: m[1] as string, assertions };
+  });
+}
+
 /**
  * Coverage rules for the generated entities (ADR-0035): each generated spec proves create / edit / CSV export / CSV
  * import of its entity, so a criterion that names the entity and the action is proven by that test.
@@ -396,12 +409,17 @@ export function entityCoverage(outDir: string, entityNamesList: string[]): Cover
     const file = `tests/e2e/${n.slug}.spec.ts`;
     if (!existsSync(join(outDir, file))) return [];
     const src = readFileSync(join(outDir, file), "utf8");
-    const titles = [...src.matchAll(/test\(\s*"([^"]{5,200})"/g)].map((m) => m[1] as string);
+    const blocks = testBlocks(src);
     const entity = `\\b(${esc(n.labelSingular)}|${esc(n.labelPlural)})\\b`;
     return actions.flatMap(([re, verbs]) =>
-      titles
-        .filter((t) => re.test(t))
-        .map((t) => ({ test: `${file} › ${t}`, covers: [entity, verbs], from: "generated" })),
+      blocks
+        .filter((b) => re.test(b.title))
+        .map((b) => ({
+          test: `${file} › ${b.title}`,
+          covers: [entity, verbs],
+          from: "generated",
+          proof: b,
+        })),
     );
   });
 }
