@@ -41,7 +41,11 @@ const CASES: Case[] = [
   },
   {
     id: "p2-apps-web-only",
-    packages: { "": {}, "apps/web": { ...NEXT, ...DRIZZLE_PG, ...BA }, "packages/ui": { react: "19.2.0" } },
+    packages: {
+      "": {},
+      "apps/web": { ...NEXT, ...DRIZZLE_PG, ...BA },
+      "packages/ui": { react: "19.2.0" },
+    },
     expected: { app: "apps/web", database: "reuse", auth: "reuse" },
   },
   {
@@ -54,23 +58,40 @@ const CASES: Case[] = [
     packages: {
       "": {},
       "apps/site": { ...NEXT },
-      "apps/dashboard": { ...NEXT, "@prisma/client": "6.1.0", "next-auth": "4.24.11", pg: "8.16.0" },
+      "apps/dashboard": {
+        ...NEXT,
+        "@prisma/client": "6.1.0",
+        "next-auth": "4.24.11",
+        pg: "8.16.0",
+      },
     },
     expected: { app: "apps/dashboard", database: "own", auth: "adapter" },
   },
   {
     id: "p5-docs-and-web",
-    packages: { "": {}, "apps/docs": { ...NEXT, nextra: "4.2.0" }, "apps/web": { ...NEXT, ...DRIZZLE_PG } },
+    packages: {
+      "": {},
+      "apps/docs": { ...NEXT, nextra: "4.2.0" },
+      "apps/web": { ...NEXT, ...DRIZZLE_PG },
+    },
     expected: { app: "apps/web", database: "reuse", auth: "own" },
   },
   {
     id: "p6-api-and-web",
-    packages: { "": {}, "apps/api": { express: "5.1.0", ...DRIZZLE_PG }, "apps/web": { ...NEXT, ...BA } },
+    packages: {
+      "": {},
+      "apps/api": { express: "5.1.0", ...DRIZZLE_PG },
+      "apps/web": { ...NEXT, ...BA },
+    },
     expected: { app: "apps/web", database: "own", auth: "reuse" },
   },
   {
     id: "p7-blog-and-storefront",
-    packages: { "": {}, "apps/blog": { ...NEXT }, "apps/storefront": { ...NEXT, ...DRIZZLE_PG, ...BA } },
+    packages: {
+      "": {},
+      "apps/blog": { ...NEXT },
+      "apps/storefront": { ...NEXT, ...DRIZZLE_PG, ...BA },
+    },
     expected: { app: "apps/storefront", database: "reuse", auth: "reuse" },
   },
   {
@@ -106,7 +127,9 @@ const CASES: Case[] = [
   },
   {
     id: "d6-drizzle-neon",
-    packages: { "": { ...NEXT, "drizzle-orm": "0.45.0", "@neondatabase/serverless": "1.0.0", ...BA } },
+    packages: {
+      "": { ...NEXT, "drizzle-orm": "0.45.0", "@neondatabase/serverless": "1.0.0", ...BA },
+    },
     expected: { app: "", database: "reuse", auth: "reuse" },
   },
   // Authentication strategy.
@@ -222,7 +245,8 @@ async function deciderDecision(c: Case) {
         {
           reuse: "Reuse the project's existing Drizzle client on its PostgreSQL database.",
           own: "Add the capability's own small Drizzle module on the project's PostgreSQL DATABASE_URL (the project uses another library, or has no database layer yet).",
-          incompatible: "The project's database is not PostgreSQL: the capability cannot store its tables there.",
+          incompatible:
+            "The project's database is not PostgreSQL: the capability cannot store its tables there.",
         },
         { includeNone: false },
       ),
@@ -243,7 +267,11 @@ async function deciderDecision(c: Case) {
   };
   const only = Object.keys(c.packages).length === 1 ? (Object.keys(c.packages)[0] ?? "") : null;
   return {
-    decision: { app: only ?? (pick("app") === "root" ? "" : pick("app")), database: pick("database"), auth: pick("auth") },
+    decision: {
+      app: only ?? (pick("app") === "root" ? "" : pick("app")),
+      database: pick("database"),
+      auth: pick("auth"),
+    },
     latencyMs: d.meta.latencyMs,
     tokens: (d.meta.usage.input_tokens ?? 0) + (d.meta.usage.output_tokens ?? 0),
     backend: d.meta.backend,
@@ -268,7 +296,9 @@ const score = (get: (r: (typeof rows)[number]) => Record<string, string> | undef
       `${rows.filter((r) => get(r)?.[k] === r.expected[k]).length}/${rows.length}`,
     ]),
   );
-const decided = rows.map((r) => r.decider).filter((d): d is Exclude<typeof d, { error: string }> => !("error" in d));
+const decided = rows
+  .map((r) => r.decider)
+  .filter((d): d is Exclude<typeof d, { error: string }> => !("error" in d));
 const lat = decided.map((d) => d.latencyMs).sort((a, b) => a - b);
 const tokens = decided.reduce((s, d) => s + d.tokens, 0);
 const summary = {
@@ -292,7 +322,10 @@ const summary = {
 };
 const dir = join(import.meta.dirname, "runs");
 mkdirSync(dir, { recursive: true });
-writeFileSync(join(dir, `adaptation-${LABEL}.json`), `${JSON.stringify({ summary, rows }, null, 2)}\n`);
+writeFileSync(
+  join(dir, `adaptation-${LABEL}.json`),
+  `${JSON.stringify({ summary, rows }, null, 2)}\n`,
+);
 console.log(JSON.stringify(summary));
 for (const r of rows)
   for (const k of keys) {

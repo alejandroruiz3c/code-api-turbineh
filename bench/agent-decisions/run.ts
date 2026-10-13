@@ -77,6 +77,15 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
   for (let attempt = 0; ; attempt++) {
     const res = await realFetch(input, init);
     if (res.status === 429 && attempt < 6) {
+      // The daily quota does not come back within a run: stop instead of measuring errors.
+      const why = (await res
+        .clone()
+        .json()
+        .catch(() => ({}))) as { title?: string; detail?: string };
+      if (/quota/i.test(`${why.title ?? ""} ${why.detail ?? ""}`)) {
+        console.error("daily AI quota reached: the run is not valid");
+        process.exit(2);
+      }
       const wait = 4000 * (attempt + 1);
       if (m) m.waitMs += wait;
       await new Promise((r) => setTimeout(r, wait));
@@ -111,7 +120,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
 };
 
 async function main() {
-  let stop = () => undefined as void;
+  let stop: () => void = () => undefined;
   if (TARGET === "mock") {
     const mock = await startMockLlm([MOCK_SCRIPT]);
     process.env.TURBINEH_AI_URL = mock.url;
@@ -185,13 +194,19 @@ async function main() {
           let pending = false;
           let error: string | null = null;
           const m = current.getStore() as Meter;
-          for (const turn of c.turns) {
+          // When the script ends on a pending action, the person presses its confirm button once (a summary they
+          // asked for is on screen); both versions get the same extra turn.
+          for (let t = 0; t < c.turns.length + 1; t++) {
+            const extra = t === c.turns.length;
+            if (extra && !pending) break;
+            const turn = extra ? "Yes." : (c.turns[t] ?? "");
             const t0 = performance.now();
             const w0 = m.waitMs;
             try {
               // A confirmation turn presses the widget's confirm button when an action is pending.
               const confirm =
-                pending && /\b(yes|go ahead|confirm|book it|move it|cancel it)\b/i.test(turn)
+                pending &&
+                (extra || /\b(yes|go ahead|confirm|book it|move it|cancel it)\b/i.test(turn))
                   ? { confirm: true }
                   : {};
               const r = await agent.runAgent({

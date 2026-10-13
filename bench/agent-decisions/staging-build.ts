@@ -46,7 +46,7 @@ const created = (await res.json()) as { build_id?: string; title?: string };
 if (!created.build_id) throw new Error(`build not created: ${created.title ?? res.status}`);
 const id = created.build_id;
 console.log(JSON.stringify({ buildId: id }));
-let build: Record<string, unknown> = {};
+let build: Record<string, unknown>;
 for (;;) {
   build = (await (await fetch(`${API}/v1/builds/${id}`, { headers })).json()) as Record<
     string,
