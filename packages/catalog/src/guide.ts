@@ -90,9 +90,14 @@ export function guideErrors(componentDir: string, id: string): string[] {
     for (const t of g.guarantees ?? []) {
       const [path, title] = String(t?.test ?? "").split(" › ");
       const filePath = path?.trim() ?? "";
-      const shipped = ["files", "files-ai"]
-        .map((d) => join(componentDir, d, filePath))
-        .find((p) => existsSync(p));
+      // Shipped with the component (files/, files-ai/ or its contract test at the root) or, for components vendored
+      // in the recipe templates, "recipe template <recipe>/<path>".
+      const tpl = /^recipe template ([a-z0-9-]+)\/(.+)$/.exec(filePath);
+      const shipped = (
+        tpl
+          ? [join(componentDir, "../../recipes", tpl[1] ?? "", "template", tpl[2] ?? "")]
+          : ["files", "files-ai", "."].map((d) => join(componentDir, d, filePath))
+      ).find((p) => existsSync(p));
       if (!filePath || !shipped) {
         errors.push(
           `${name}: guarantee "${t?.claim}" points to ${filePath || "no test"}, not shipped with the component`,

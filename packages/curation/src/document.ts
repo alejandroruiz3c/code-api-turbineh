@@ -32,6 +32,8 @@ export interface ComponentFacts {
   symbols: string[];
   /** Import specifier → names importable from it (the package itself, the curated glue, native files). */
   importable: Record<string, string[]>;
+  /** Real signature and import specifier of each name (declaration line, or the import from the package). */
+  signatures: Record<string, { signature: string; where: string }>;
   /** Interface kind of each exported name, from its declaration. */
   kinds: Record<string, "export" | "route" | "component" | "hook" | "type">;
   env: string[];
@@ -312,6 +314,42 @@ export async function componentFacts(
     for (const e of ex) kinds[e.name] = e.kind;
   }
   const symbols = [...new Set(Object.values(importable).flat())];
+  const signatures: ComponentFacts["signatures"] = {};
+  const declSources: [string, string][] = [
+    ...vendored.files.map((f) => [f.spec, readFileSync(f.abs, "utf8")] as [string, string]),
+    ...(existsSync(glue)
+      ? [
+          [
+            `@/integrations/${(manifest.relations.provides[0] ?? id).replace(/\./g, "-")}`,
+            readFileSync(glue, "utf8"),
+          ] as [string, string],
+        ]
+      : []),
+    ...walk(join(dir, "files/src"))
+      .filter((x) => /\.(ts|tsx)$/.test(x))
+      .map(
+        (f) =>
+          [
+            `@/${relative(join(dir, "files/src"), f).replace(/\.(ts|tsx)$/, "")}`,
+            readFileSync(f, "utf8"),
+          ] as [string, string],
+      ),
+  ];
+  for (const [spec, src] of declSources) {
+    for (const name of importable[spec] ?? []) {
+      const m = new RegExp(
+        `export\\s+(?:default\\s+)?((?:async\\s+)?(?:function|const|class|interface|type)\\s+${name}\\b[^{=;]*)`,
+      ).exec(src);
+      signatures[name] = {
+        signature: (m?.[1] ?? name).replace(/\s+/g, " ").trim().slice(0, 240),
+        where: spec,
+      };
+    }
+  }
+  if (!pkg.name.startsWith("turbineh/")) {
+    for (const name of importable[pkg.name] ?? [])
+      signatures[name] ??= { signature: `import { ${name} } from "${pkg.name}"`, where: pkg.name };
+  }
   const env = [
     ...new Set([
       ...envOf(all),
@@ -329,6 +367,7 @@ export async function componentFacts(
     pkg,
     symbols,
     importable,
+    signatures,
     kinds,
     env,
     tests: [
@@ -350,24 +389,23 @@ export async function componentFacts(
 const S = z.string().max(300);
 /** What the open model drafts (narrative only; facts are never taken from it). */
 export const draftSchema = z.object({
+  title: S,
+  summary: z.string().max(600),
   use_cases: z.array(S).min(2).max(6),
   when_to_use: z.array(S).min(1).max(4),
   when_not_to_use: z
     .array(z.object({ instead: S, why: S }))
     .min(1)
     .max(4),
-  tradeoffs: z.array(S).min(1).max(4),
+  tradeoffs: z
+    .array(z.object({ choice: S, gain: S, cost: S }))
+    .min(1)
+    .max(4),
   interfaces: z
-    .array(
-      z.object({
-        name: S,
-        kind: z.enum(["export", "route", "component", "hook", "type", "cli"]),
-        about: S,
-      }),
-    )
+    .array(z.object({ name: S, about: S }))
     .min(1)
     .max(8),
-  extension_points: z.array(S).max(4),
+  extension_points: z.array(z.object({ what: S, where: S, how: S })).max(4),
   security: z.array(S).max(4),
   guarantees: z
     .array(z.object({ claim: S, test_title: S }))
@@ -376,6 +414,7 @@ export const draftSchema = z.object({
   limits: z.array(S).min(1).max(4),
   example: z.string().max(1200),
   keywords: z.array(z.string().max(40)).min(5).max(20),
+  synonyms: z.array(z.object({ term: S, also: z.array(S).max(5) })).max(5),
 });
 export type Draft = z.infer<typeof draftSchema>;
 
@@ -425,11 +464,12 @@ export function checkDraft(
   const symbols = new Set(f.symbols);
   const interfaces = d.interfaces.flatMap((i) => {
     const name = i.name.replace(/\(.*$/, "").trim();
-    if (!symbols.has(name)) {
+    const sig = f.signatures[name];
+    if (!symbols.has(name) || !sig) {
       dropped.push(`interface ${i.name} (not in the code)`);
       return [];
     }
-    return [{ name, kind: f.kinds[name] ?? "export", about: i.about.trim().slice(0, 400) }];
+    return [{ name, signature: sig.signature, where: sig.where }];
   });
   const guarantees = d.guarantees.flatMap((g) => {
     const t = f.tests.find((x) => x.title === g.test_title.trim());
@@ -437,7 +477,7 @@ export function checkDraft(
       dropped.push(`guarantee "${g.claim}" (no test titled "${g.test_title}")`);
       return [];
     }
-    return [{ claim: g.claim.slice(0, 400), test: { file: t.file, title: t.title } }];
+    return [{ claim: g.claim.slice(0, 400), test: `${t.file} › ${t.title}` }];
   });
   const whenNot = d.when_not_to_use.filter((w) => {
     const looksLikeId = /^[a-z0-9-]+\.[a-z0-9-]+\.[a-z0-9-]+$/.test(w.instead.trim());
@@ -456,58 +496,17 @@ export function checkDraft(
     `Effects: network ${m.effects?.network ? "yes" : "no"}, filesystem ${m.effects?.fs ? "yes" : "no"}, database ${m.effects?.db ? "yes" : "no"}${m.effects?.external_services?.length ? `; external services: ${m.effects.external_services.join(", ")}` : ""}.`,
     ...clean(d.security),
   ];
+  const synonyms = Object.fromEntries(
+    d.synonyms
+      .filter((x) => x.term.trim() && x.also.length)
+      .map((x) => [x.term.trim().toLowerCase(), clean(x.also, 60)]),
+  );
   const docs: ComponentDocs = {
     schema: DOCS_SCHEMA,
-    id: f.id,
-    does: m.capability.does,
-    ...(m.capability.does_not ? { does_not: m.capability.does_not } : {}),
-    use_cases: clean(d.use_cases),
-    when_to_use: clean(d.when_to_use),
-    when_not_to_use: whenNot.map((w) => ({
-      instead: w.instead.trim().slice(0, 120),
-      why: w.why.trim().slice(0, 400),
-    })),
-    tradeoffs: clean(d.tradeoffs),
-    inputs: [
-      ...(m.integration?.install
-        ? [
-            {
-              name: m.integration.install,
-              kind: "install" as const,
-              about: "Exact version, added by TurbineH.",
-            },
-          ]
-        : []),
-      ...f.env.map((e) => ({
-        name: e,
-        kind: "env" as const,
-        about: "Read by the component's code.",
-      })),
-    ],
-    interfaces,
-    extension_points: clean(d.extension_points),
-    dependencies: {
-      package: f.pkg.name,
-      version: f.pkg.version,
-      ...(m.compat?.runtime ? { runtime: m.compat.runtime } : {}),
-      peers: m.compat?.peer ?? {},
-      requires: m.relations.requires,
-      conflicts: m.relations.conflicts,
-    },
-    compatibility: [
-      `${m.compat?.runtime ?? "node"}${
-        Object.keys(m.compat?.peer ?? {}).length
-          ? `; peers: ${Object.entries(m.compat?.peer ?? {})
-              .map(([k, v]) => `${k}@${v}`)
-              .join(", ")}`
-          : ""
-      }.`,
-      "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm.",
-    ],
-    security,
-    guarantees,
-    limits: clean(d.limits),
-    example,
+    component: f.id,
+    title: d.title.trim() || m.capability.does,
+    summary:
+      `${m.capability.does.replace(/\.$/, "")}.${m.capability.does_not ? ` ${m.capability.does_not.replace(/\.$/, "")}.` : ""} ${d.summary.trim()}`.trim(),
     keywords: [
       ...new Set(
         [
@@ -521,28 +520,69 @@ export function checkDraft(
           .filter((k) => k.length >= 2 && k.length <= 40),
       ),
     ].slice(0, 30),
+    ...(Object.keys(synonyms).length ? { synonyms } : {}),
+    use_cases: clean(d.use_cases),
+    use_when: clean(d.when_to_use),
+    avoid_when: whenNot.map((w) =>
+      `${w.why.trim().replace(/\.$/, "")} — use ${w.instead.trim()}`.slice(0, 400),
+    ),
+    tradeoffs: d.tradeoffs
+      .map((t) => ({ choice: t.choice.trim(), gain: t.gain.trim(), cost: t.cost.trim() }))
+      .filter((t) => t.choice.length >= 3 && t.gain.length >= 3 && t.cost.length >= 3),
+    config: [
+      ...(m.integration?.install
+        ? [
+            {
+              name: "install",
+              description: `${m.integration.install} (exact version, added by TurbineH)`,
+            },
+          ]
+        : []),
+      ...f.env.map((e) => ({
+        name: e,
+        description: "Environment variable read by the component's code.",
+      })),
+    ],
+    interfaces,
+    extension_points: d.extension_points
+      .map((e) => ({ what: e.what.trim(), where: e.where.trim(), how: e.how.trim() }))
+      .filter((e) => e.what.length >= 3 && e.where && e.how.length >= 3),
+    compatibility: {
+      package: `${f.pkg.name}@${f.pkg.version}`,
+      ...(m.compat?.runtime ? { runtime: m.compat.runtime } : {}),
+      ...(Object.keys(m.compat?.peer ?? {}).length ? { peers: m.compat?.peer } : {}),
+      stack: "Verified with Next.js (App Router), TypeScript strict, pnpm",
+      ...(m.relations.requires.length ? { requires: m.relations.requires } : {}),
+      ...(m.relations.conflicts.length ? { conflicts: m.relations.conflicts } : {}),
+    },
+    security,
+    guarantees,
+    limits: clean(d.limits),
+    example,
     generated: {
       by: meta.by,
       at: meta.at,
       sections: [
+        "title",
+        "summary (after the manifest's does / does_not)",
+        "keywords (after package and capability ids)",
+        "synonyms",
         "use_cases",
-        "when_to_use",
-        "when_not_to_use",
+        "use_when",
+        "avoid_when",
         "tradeoffs",
-        "interfaces",
         "extension_points",
-        "security",
+        "security (after licence and effects)",
         "guarantees",
         "limits",
         "example",
-        "keywords",
       ],
       checked: [
-        "interfaces ⊂ code symbols",
-        "guarantees → exact test titles",
-        "alternatives ⊂ catalog",
-        "example uses component symbols",
-        "inputs, dependencies, compatibility, licence and effects from code/manifest",
+        "interfaces: names exist in the code; signatures copied from the declarations",
+        "guarantees: exact test titles in the component's tests",
+        "avoid_when alternatives exist in the catalog",
+        "example imports only what the component provides",
+        "config, compatibility, licence and effects come from the code and manifest",
       ],
     },
   };
@@ -646,8 +686,10 @@ export async function documentComponent(
         continue;
       }
       writeFileSync(
-        join(componentsDir, id, "docs.yaml"),
-        `# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by ${model.model} from the\n# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.\n${stringify(valid.data, { lineWidth: 110 })}`,
+        join(componentsDir, id, "guide.yaml"),
+        `# Component guide (turbineh.guide/v0.1). Generated by the intake documentation step: facts from the code, narrative
+# drafted by ${model.model} and checked by code (see generated). Hand edits welcome; keep every claim true.
+${stringify(valid.data, { lineWidth: 110 })}`,
       );
       return { ok: true, dropped };
     } catch (err) {
