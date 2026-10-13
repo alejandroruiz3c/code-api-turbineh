@@ -76,6 +76,9 @@ export default async function ActivityPage() {
                     Security fixed
                   </th>
                   <th scope="col" className="px-4 py-3 font-normal">
+                    Pull request
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-normal">
                     When
                   </th>
                 </tr>
@@ -98,6 +101,27 @@ export default async function ActivityPage() {
                       {i.checksTotal ? `${i.checksPassed}/${i.checksTotal}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-ice-2">{i.securityFixed}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {i.pullRequest?.url ? (
+                        <a
+                          href={i.pullRequest.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={i.pullRequest.verified ? "text-teal" : "text-amber"}
+                        >
+                          {i.pullRequest.repo} ↗{" "}
+                          {i.pullRequest.verified
+                            ? "verified"
+                            : i.pullRequest.running
+                              ? "verifying"
+                              : "draft"}
+                        </a>
+                      ) : i.pullRequest?.running ? (
+                        <span className="text-muted">{i.pullRequest.repo} · in progress</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted">
                       {i.createdAt.slice(0, 16).replace("T", " ")}
                     </td>

@@ -13,6 +13,7 @@ import {
   rewriteImports,
 } from "./adapt.js";
 import { github } from "./github.js";
+import { buildPlan } from "./plan.js";
 import { writeComponentPackage, type PackageInfo } from "./package.js";
 import { prBody } from "./pr-body.js";
 import {
@@ -413,5 +414,45 @@ describe("GitHub client", () => {
     await gh("GET", "/user").catch((e: Error) => expect(e.message).not.toContain(token));
     expect(seen[0]?.url).not.toContain(token);
     expect(seen[0]?.auth).toBe(`Bearer ${token}`);
+  });
+});
+
+describe("plan for a connected repository", () => {
+  it("carries the repository fit and plans files in the project's own folder", () => {
+    const a = analyse(monorepo);
+    const plan = buildPlan({
+      id: "p1",
+      need: "AI assistant for support",
+      slug: "ai-assistant",
+      stack: {
+        language: "typescript",
+        framework: "nextjs",
+        packageManager: "pnpm",
+        versions: {},
+        source: "repo",
+        adaptationPending: false,
+      },
+      useCase: null,
+      components: [
+        {
+          id: "ai.orchestrator.turbineh",
+          version: "0.1.0",
+          license: "Apache-2.0",
+          purl: "pkg:generic/turbineh/x@0.1.0",
+          capability: "ai.orchestration",
+          why: "AI",
+        },
+      ],
+      gaps: [],
+      decisions: [],
+      dependencies: [{ name: "zod", version: "4.6.5" }],
+      analysis: a,
+    });
+    expect(plan.repository?.namespace).toBe("apps/web/src/turbineh/ai-assistant");
+    expect(plan.repository?.decisions.map((d) => d.topic)).toEqual(
+      expect.arrayContaining(["placement", "imports", "database"]),
+    );
+    expect(plan.files[0]?.path.startsWith("apps/web/src/turbineh/ai-assistant/")).toBe(true);
+    expect(plan.compatible).toBe(true);
   });
 });

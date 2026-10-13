@@ -1,6 +1,6 @@
 "use client";
 import type { FlowState } from "@turbineh/shared";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AGENT_INSTRUCTIONS } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";

@@ -14,6 +14,7 @@ import {
   type CatalogEntry,
   type PackageInfo,
   type PlannedComponent,
+  type RepoAnalysis,
 } from "@turbineh/engine";
 import type { CheckResult, DetectedStack, Plan, ProjectPreferences } from "@turbineh/shared";
 import type { ArtifactStorage } from "@turbineh/storage";
@@ -26,6 +27,8 @@ export interface PlanRequest {
   /** The project's declared dependencies (from its package.json), so only new ones are planned. */
   projectDependencies?: Record<string, string>;
   preferences?: ProjectPreferences;
+  /** Analysis of the connected repository (PLAN §16 P5). */
+  analysis?: RepoAnalysis;
 }
 
 interface Manifest {
@@ -143,6 +146,7 @@ export function flowPlan(input: {
     envKeys: envKeysOf(env),
     entities: input.entities,
     ...(input.request.preferences ? { preferences: input.request.preferences } : {}),
+    ...(input.request.analysis ? { analysis: input.request.analysis } : {}),
   });
 }
 
@@ -225,6 +229,7 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
     ...(request.projectDependencies ? { projectDependencies: request.projectDependencies } : {}),
     envKeys: envKeysOf(env),
     ...(request.preferences ? { preferences: request.preferences } : {}),
+    ...(request.analysis ? { analysis: request.analysis } : {}),
   });
 }
 

@@ -1,4 +1,5 @@
 import type { FlowState } from "@turbineh/shared";
+import { latestRepoIntegrations } from "@turbineh/db";
 import { stateOfBuild } from "@/lib/states";
 import { db } from "./db";
 
@@ -18,6 +19,8 @@ export interface ActivityItem {
   securityFixed: number;
   alerts: number;
   deployed: boolean;
+  /** Latest repository integration (pull request) of the flow. */
+  pullRequest: { url: string | null; repo: string; verified: boolean; running: boolean } | null;
 }
 
 type Row = {
@@ -46,14 +49,17 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
      FROM builds WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
     [ownerId, limit],
   );
+  const prs = new Map((await latestRepoIntegrations(db, ownerId)).map((p) => [p.build_id, p]));
   return rows.map((r) => {
     const m = r.metrics ?? {};
     const deployed = Boolean(m.deployment);
+    const pr = prs.get(r.id);
+    const integrated = pr?.state === "integration_verified" || pr?.state === "integrated";
     return {
       id: r.id,
       need: r.prompt,
       useCase: r.recipe,
-      state: stateOfBuild(r.status, deployed),
+      state: integrated && !deployed ? (pr?.state as FlowState) : stateOfBuild(r.status, deployed),
       createdAt: new Date(r.created_at).toISOString(),
       seconds: r.status === "done" || r.status === "failed" ? r.seconds : null,
       reusedShare: m.reuse?.reusedShare ?? null,
@@ -64,6 +70,14 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
       securityFixed: m.handover?.fixedBeforeDelivery ?? 0,
       alerts: m.handover?.alerts ?? 0,
       deployed,
+      pullRequest: pr
+        ? {
+            url: pr.pr_url,
+            repo: pr.repo,
+            verified: pr.state === "integration_verified",
+            running: pr.status === "queued" || pr.status === "running",
+          }
+        : null,
     };
   });
 }

@@ -22,7 +22,16 @@ export function RepoIntegration({ planId, defaultRepo }: { planId: string; defau
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const returnTo = `/flows/${planId}?integrate=1`;
+  const returnTo = `/flows/${planId}?integrate=1#integrate`;
+
+  // Plans made from a connected repository integrate there by default.
+  useEffect(() => {
+    if (defaultRepo) return;
+    void productApi.flow(planId).then((r) => {
+      const fromPlan = r.ok ? r.data.repository?.repo : undefined;
+      if (fromPlan) setRepo((cur) => cur || fromPlan);
+    });
+  }, [planId, defaultRepo]);
 
   const poll = useCallback(async () => {
     const r = await productApi.integrations(planId);
