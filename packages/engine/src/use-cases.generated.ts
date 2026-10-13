@@ -214,7 +214,7 @@ export const USE_CASES: UseCase[] = [
   },
   {
     "id": "saas-crud",
-    "name": "Saas Crud",
+    "name": "SaaS CRUD",
     "description": "Multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens",
     "extends": null,
     "capabilities": [

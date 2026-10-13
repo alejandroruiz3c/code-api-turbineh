@@ -2,8 +2,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-const LINKS = [
+/** Main navigation; exported for its test. */
+export const LINKS = [
   { href: "/discover", label: "Discover" },
+  { href: "/catalog", label: "Catalogue" },
   { href: "/flows/new", label: "New flow" },
   { href: "/activity", label: "Activity" },
   { href: "/use", label: "How to use" },

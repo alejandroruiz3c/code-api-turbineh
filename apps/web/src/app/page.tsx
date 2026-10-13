@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PackageChecks } from "@/components/package-checks";
 import { StateBadge, Stat, pct, secs } from "@/components/ui";
 import { summarize, workspaceActivity } from "@/server/activity";
 import { getCaller } from "@/server/caller";
@@ -147,6 +148,8 @@ export default async function Home() {
           </>
         )}
       </section>
+
+      <PackageChecks />
     </main>
   );
 }

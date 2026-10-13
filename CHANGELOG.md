@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Product web: the home page ends with "Checks every package passes" — secrets, security rules, safe dependencies
+  (known vulnerabilities and licence policy), the AI Safety Pack and tests in the sealed sandbox, as the gate runs
+  them. /use is shorter: people and the coding-agents intro stay visible; Coding agents · CLI, MCP and API are
+  accessible disclosures, opened by click, keyboard or the URL hash (/use#mcp; /cli and /docs still land on #agents
+  and #api). The list of complete flows left /use for its own main-navigation item, Catalogue (/catalog, from the
+  engine's USE_CASES); Discover stays the search by need, and /catalog?q= still goes to it.
 - Recipe actor aliases (ADR-0049): recipes declare in `aliases.yaml › actors` who their tests act as, from their role
   model (storefront, corporate-site, landing-waitlist: owner = administrator/admin/staff; client-portal: owner =
   staff), and the request's role matrix adds the owner's label; both apply only to recipe and generated tests that name

@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { USE_CASES } from "@turbineh/engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import UsePage from "./page";
@@ -23,25 +22,40 @@ const CLI = join(
 );
 
 describe("/use page", () => {
-  it("renders the four sections with headings and landmarks", () => {
+  it("renders its sections with headings and landmarks", () => {
     expect(html).toContain("<main");
     expect(html).toContain('aria-label="On this page"');
     expect(html.match(/<h1/g)).toHaveLength(1);
-    for (const id of ["people", "agents", "api", "build"]) {
+    for (const id of ["people", "tools", "agents", "mcp", "api"]) {
       expect(html).toContain(`id="${id}"`);
       expect(html).toContain(`aria-labelledby="${id}-title"`);
     }
   });
 
+  it("shows people and the coding-agents intro; CLI, MCP and API are closed disclosures", () => {
+    const people = html.slice(html.indexOf('id="people"'), html.indexOf('id="tools"'));
+    expect(people).not.toContain("hidden");
+    expect(html.indexOf("any agent that runs commands")).toBeLessThan(html.indexOf('id="agents"'));
+    for (const id of ["agents", "mcp", "api"]) {
+      const button = new RegExp(
+        `<button[^>]*aria-expanded="false"[^>]*aria-controls="${id}-panel"`,
+      );
+      expect(html, id).toMatch(button);
+      expect(html, id).toMatch(new RegExp(`<div[^>]*id="${id}-panel"[^>]*hidden`));
+    }
+    // The table of contents opens them by hash (/use#mcp); /cli and /docs redirect to #agents and #api.
+    for (const id of ["agents", "mcp", "api"]) expect(html).toContain(`href="#${id}"`);
+  });
+
   it("labels every copy button", () => {
-    const buttons = html.match(/<button[^>]*>/g) ?? [];
+    const buttons = (html.match(/<button[^>]*>/g) ?? []).filter((b) => !/aria-expanded/.test(b));
     expect(buttons.length).toBeGreaterThan(5);
     for (const b of buttons) expect(b).toMatch(/aria-label="Copy [^"]+"/);
   });
 
-  it("lists every use case from the catalogue recipes (not hard-coded)", () => {
-    expect(USE_CASES.length).toBeGreaterThan(0);
-    for (const u of USE_CASES) expect(text).toContain(u.name);
+  it("leaves the use-case list to the Catalogue page and links to it", () => {
+    expect(html).not.toContain('id="build"');
+    expect(html).toContain('href="/catalog"');
   });
 
   it("never names the decider or model vendors, and never shows a token value", () => {
