@@ -196,6 +196,45 @@ export interface FlowResult {
     newLines: number;
   };
   errors: ProductError[];
+  /** The end state in plain words with its next actions (ADR-0051): the same text on the web, the API and the CLI. */
+  outcome?: FlowOutcome;
+}
+
+/** A one-click next step offered on a result (ADR-0051). */
+export interface FlowOutcomeAction {
+  id:
+    | "open_pull_request"
+    | "download_zip"
+    | "apply_cli"
+    | "try_example"
+    | "generate_again"
+    | "new_flow";
+  label: string; // e.g. "Open a pull request"
+  detail: string; // what happens when you choose it
+  command?: string; // CLI equivalent, e.g. "turbineh apply 470bc606-…"
+}
+
+/**
+ * What a flow ended with (or what it is doing), derived by code from the same row as `FlowState` (ADR-0051), so the
+ * state badge, the API (`outcome` next to `problem`) and the CLI never disagree.
+ */
+export interface FlowOutcome {
+  kind:
+    | "working"
+    | "planned"
+    | "package_verified"
+    | "package_unverified"
+    | "app_verified"
+    | "app_unverified"
+    | "integrated"
+    | "deployed"
+    | "failed";
+  state: FlowState;
+  title: string; // e.g. "Package ready (not verified yet: it is verified inside your project when you integrate it)"
+  meaning: string; // what it means for the person
+  verification: string; // what was checked, or why nothing was checked yet
+  actions: FlowOutcomeAction[];
+  left: string[]; // what is left to do, in order
 }
 
 /** Project preferences reused by the CLI and Claude Code (`.turbineh/project.json`). */

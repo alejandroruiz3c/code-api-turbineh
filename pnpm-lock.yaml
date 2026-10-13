@@ -136,6 +136,9 @@ importers:
       '@turbineh/compiler':
         specifier: workspace:*
         version: link:../../packages/compiler
+      '@turbineh/curation':
+        specifier: workspace:*
+        version: link:../../packages/curation
       '@turbineh/db':
         specifier: workspace:*
         version: link:../../packages/db

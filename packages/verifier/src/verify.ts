@@ -227,6 +227,30 @@ export function licenseBlocks(expression: string): boolean {
   }
 }
 
+/** Live progress of the gate (ADR-0051): each sandbox step and the security scans, as they start and finish. */
+export interface VerifyProgress {
+  name: string; // install, migrations, lint, typecheck, unit, build, e2e, scans
+  state: "start" | "done";
+  ok?: boolean;
+  ms?: number;
+  /** Tests that passed (unit, e2e), when the runner printed it. */
+  tests?: number;
+}
+
+/** `PROGRESS begin <step>` / `PROGRESS end <step> <exit> <ms> [passed]` (stderr of the sandbox) → progress. */
+export function parseProgress(line: string): VerifyProgress | null {
+  const m = /^PROGRESS (begin|end) (\w+)(?: (\d+) (\d+)(?: (\d+))?)?\s*$/.exec(line.trim());
+  if (!m?.[2]) return null;
+  if (m[1] === "begin") return { name: m[2], state: "start" };
+  return {
+    name: m[2],
+    state: "done",
+    ok: m[3] === "0",
+    ms: Number(m[4] ?? 0),
+    ...(m[5] ? { tests: Number(m[5]) } : {}),
+  };
+}
+
 /**
  * `STEP <name> <exit> <ms>` lines of the sandbox output → step results. A failing step's detail starts with its own
  * key lines (`FAILED_LINE <step> …`: test headers, error messages, file:line), then the output tail.
@@ -261,7 +285,17 @@ export function parseSteps(tail: string): StepResult[] {
  * `localDb`: no Postgres container and no DATABASE_URL for migrations and E2E — the package must bring its own
  * zero-setup database (`scripts/local-db.ts`), exactly as a coding agent without PostgreSQL runs it.
  */
-export async function verify(dir: string, opts: { localDb?: boolean } = {}): Promise<VerifyResult> {
+export async function verify(
+  dir: string,
+  opts: { localDb?: boolean; onStep?: (e: VerifyProgress) => void } = {},
+): Promise<VerifyResult> {
+  const progress = (e: VerifyProgress) => {
+    try {
+      opts.onStep?.(e);
+    } catch {
+      // progress reporting never changes a verification
+    }
+  };
   const lockHash = createHash("sha256")
     .update(readFileSync(join(dir, "pnpm-lock.yaml")))
     .digest("hex")
@@ -331,7 +365,19 @@ export async function verify(dir: string, opts: { localDb?: boolean } = {}): Pro
       "/mock/server.mjs",
     ]);
   }
+  progress({ name: "scans", state: "start" });
+  const scanStart = performance.now();
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
+  scans.then(
+    ([sec]) =>
+      progress({
+        name: "scans",
+        state: "done",
+        ok: sec.ok,
+        ms: Math.round(performance.now() - scanStart),
+      }),
+    () => undefined,
+  );
   // Awaited later: mark it handled now so a failure surfaces at the await instead of crashing the process.
   scans.catch(() => undefined);
   const appEnv: Record<string, string> = {
@@ -378,6 +424,11 @@ export async function verify(dir: string, opts: { localDb?: boolean } = {}): Pro
         VERIFY_SCRIPT,
       ],
       20 * 60_000,
+      false,
+      (line) => {
+        const p = parseProgress(line);
+        if (p) progress(p);
+      },
     );
   } finally {
     if (!opts.localDb) await run("docker", ["rm", "-f", dbHost]);
@@ -515,7 +566,7 @@ const VERIFY_SCRIPT = String.raw`
 set -u
 trap 'cat /tmp/licenses.txt 2>/dev/null' EXIT
 now() { date +%s%3N; }
-step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && { tail -c 1800 /tmp/$n.log; failed_lines $n; }; return $c; }
+step() { n=$1; shift; s=$(now); echo "PROGRESS begin $n" >&2; "$@" > /tmp/$n.log 2>&1; c=$?; d=$(( $(now) - s )); echo "STEP $n $c $d"; echo "PROGRESS end $n $c $d $(grep -oE '[0-9]+ passed' /tmp/$n.log | tail -1 | cut -d' ' -f1)" >&2; [ $c -ne 0 ] && { tail -c 1800 /tmp/$n.log; failed_lines $n; }; return $c; }
 failed_lines() { grep -E '^ +[0-9]+\) |^ *(Error|AssertionError|TypeError|ReferenceError)|^ *FAIL |❯ (tests|src)/|error TS[0-9]+|^ +[0-9]+:[0-9]+ +error ' /tmp/$1.log | head -12 | cut -c1-220 | sed "s/^/FAILED_LINE $1 /"; }
 only_required() { env $(for v in $ONLY_REQUIRED_UNSET; do printf -- '-u %s ' "$v"; done) "$@"; }
 if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then

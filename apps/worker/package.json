@@ -20,6 +20,7 @@
     "@turbineh/backup-coder": "workspace:*",
     "@turbineh/catalog": "workspace:*",
     "@turbineh/compiler": "workspace:*",
+    "@turbineh/curation": "workspace:*",
     "@turbineh/db": "workspace:*",
     "@turbineh/decider": "workspace:*",
     "@turbineh/deployer": "workspace:*",

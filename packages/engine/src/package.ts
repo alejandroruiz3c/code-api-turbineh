@@ -171,7 +171,9 @@ function readme(info: PackageInfo, entries: string[], env: string[], full: boole
   const stateLine =
     info.state === "verified"
       ? `**State: package generated and verified** (${ok}/${info.checks.length} checks in the TurbineH sandbox). Integrating it into your project and checking it there is the next step.`
-      : `**State: ${info.state}.** See docs/verification.md for what was checked.`;
+      : info.state === "generated" && info.checks.length === 0
+        ? "**State: package ready, not verified yet.** Each component was certified on its own; the package is verified inside your project when you integrate it (see docs/verification.md)."
+        : `**State: ${info.state}.** See docs/verification.md for what was checked.`;
   return `# ${info.name}
 
 ${productText(info.summary)}
@@ -265,8 +267,11 @@ ${entries.length ? entries.map((e) => `- \`${e}\``).join("\n") : "- Import the m
 
 ## 6 · Verify in your project
 
-Run \`turbineh verify\` (or the tests in \`tests/\` with your test runner). The package is verified in the TurbineH
-sandbox; this step proves it inside **your** project.
+Run \`turbineh verify\` (or the tests in \`tests/\` with your test runner). ${
+    info.state === "verified"
+      ? "The package is verified in the TurbineH sandbox; this step proves it inside **your** project."
+      : "The package is not verified yet: this step verifies it inside **your** project."
+  }
 
 ## Revert
 
@@ -309,7 +314,9 @@ function verificationDoc(info: PackageInfo, full: boolean): string {
 ${
   full
     ? "Verified in the TurbineH sandbox: an ephemeral container without internet and without secrets, real PostgreSQL for the end-to-end tests."
-    : "Each component was certified on its own: contract tests and strict type checking in a sandbox without network, licence and vulnerability checks."
+    : info.checks.length > 0
+      ? "The contract tests of the package's components ran together in the TurbineH sandbox (install without secrets, tests and strict type checking without network). Each component was also certified on its own: contract tests, strict types, licences and known vulnerabilities."
+      : "Each component was certified on its own: contract tests and strict type checking in a sandbox without network, licence and vulnerability checks. The package as a whole has not run in the sandbox yet: it is verified inside your project when you integrate it."
 }
 
 | Check | Result |
