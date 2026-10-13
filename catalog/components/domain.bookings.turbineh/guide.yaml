@@ -80,12 +80,12 @@ guarantees:
   - { claim: "DST-correct local times", test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)" }
   - { claim: "Database-level double-booking guard", test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)" }
   - { claim: "Only staff on ADMIN_EMAILS see appointments", test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments" }
-  - { claim: "Customers book a real free time on the public page and receive a cancel link", test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account and gets a confirmation email with a cancel link" }
-  - { claim: "The same time is never booked twice for one team member, even from a stale page", test: "tests/e2e/bookings.spec.ts › the same time can never be booked twice for the same team member" }
-  - { claim: "The cancel link honours the notice policy", test: "tests/e2e/bookings.spec.ts › the cancel link cancels the booking, and inside the notice period it is refused" }
-  - { claim: "Staff calendar per team member, day and week", test: "tests/e2e/bookings.spec.ts › staff see the day and week calendar per team member" }
-  - { claim: "Time off removes times from what customers are offered", test: "tests/e2e/bookings.spec.ts › staff block time off and those times are no longer offered" }
-  - { claim: "Staff moves and cancellations email the customer", test: "tests/e2e/bookings.spec.ts › staff move or cancel a booking and the customer is emailed" }
+  - { claim: "Customers book a real free time on the public page and receive a cancel link", test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent" }
+  - { claim: "The same time is never booked twice for one team member, even from a stale page", test: "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)" }
+  - { claim: "The cancel link honours the notice policy", test: "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused" }
+  - { claim: "Staff calendar per team member, day and week", test: "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)" }
+  - { claim: "Time off removes times from what customers are offered", test: "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them" }
+  - { claim: "Staff moves and cancellations email the customer", test: "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time" }
 limits:
   - "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)"
   - "No payments, reminders or external calendar sync"

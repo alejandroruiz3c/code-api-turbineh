@@ -66,7 +66,7 @@ test.describe.serial("waitlist mechanics", () => {
   const referrer = `referrer-${stamp}@example.com`;
   let referrerLink = "";
 
-  test("a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link", async ({
+  test("a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link", async ({
     browser,
   }) => {
     const r = await joinAndConfirm(browser, "Rita Referrer", referrer);
@@ -77,7 +77,7 @@ test.describe.serial("waitlist mechanics", () => {
     await r.close();
   });
 
-  test("every confirmed referral moves the referrer up the list by the configured number of places", async ({
+  test("a new user signs up through a referral link and confirms their email: the referrer's waitlist position increases by the configured number of places", async ({
     browser,
   }) => {
     test.skip(!params.referral.enabled || !params.showPosition, "no referral boost in this app");
@@ -114,7 +114,9 @@ test.describe.serial("waitlist mechanics", () => {
     await ctx.close();
   });
 
-  test("the owner sees the list, exports it as CSV and removes an entry", async ({ page }) => {
+  test("an authenticated owner can access the admin dashboard, sees the full list of waitlist entries, uses the export option to generate a CSV and deletes a selected entry", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/waitlist");
     await expect(page.getByTestId("signup-row").filter({ hasText: referrer })).toBeVisible();
     if (params.ownerCanExport) {

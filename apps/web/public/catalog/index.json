@@ -3163,7 +3163,7 @@
       "guarantees": [
         {
           "claim": "An invalid file imports nothing and reports line, column and reason",
-          "test": "tests/e2e/analytics-import.spec.ts › a CSV with an invalid row is rejected with a report of line, column and reason, and nothing is imported"
+          "test": "tests/e2e/analytics-import.spec.ts › a CSV upload with one invalid row: the entire file is rejected, nothing is imported, and the report provides the row number, field and reason for each error"
         },
         {
           "claim": "Valid files are imported whole and aggregated by period",
@@ -3175,7 +3175,7 @@
         },
         {
           "claim": "Every chart exports as CSV with the same filters",
-          "test": "tests/e2e/analytics-import.spec.ts › every chart exports its numbers as CSV with the same filters"
+          "test": "tests/e2e/analytics-import.spec.ts › every chart on the dashboard exports its data as a CSV file with the same filters"
         },
         {
           "claim": "Shop managers see and import only their shop",
@@ -7288,27 +7288,27 @@
         },
         {
           "claim": "Customers book a real free time on the public page and receive a cancel link",
-          "test": "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account and gets a confirmation email with a cancel link"
+          "test": "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
         },
         {
           "claim": "The same time is never booked twice for one team member, even from a stale page",
-          "test": "tests/e2e/bookings.spec.ts › the same time can never be booked twice for the same team member"
+          "test": "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
         },
         {
           "claim": "The cancel link honours the notice policy",
-          "test": "tests/e2e/bookings.spec.ts › the cancel link cancels the booking, and inside the notice period it is refused"
+          "test": "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
         },
         {
           "claim": "Staff calendar per team member, day and week",
-          "test": "tests/e2e/bookings.spec.ts › staff see the day and week calendar per team member"
+          "test": "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
         },
         {
           "claim": "Time off removes times from what customers are offered",
-          "test": "tests/e2e/bookings.spec.ts › staff block time off and those times are no longer offered"
+          "test": "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
         },
         {
           "claim": "Staff moves and cancellations email the customer",
-          "test": "tests/e2e/bookings.spec.ts › staff move or cancel a booking and the customer is emailed"
+          "test": "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
         }
       ],
       "limits": [
@@ -9777,15 +9777,15 @@
       "guarantees": [
         {
           "claim": "Signups count only after the emailed confirmation; confirmed people see their position and referral link",
-          "test": "tests/e2e/waitlist-mechanics.spec.ts › a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link"
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link"
         },
         {
           "claim": "Each confirmed referral moves the referrer up by the configured places",
-          "test": "tests/e2e/waitlist-mechanics.spec.ts › every confirmed referral moves the referrer up the list by the configured number of places"
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › a new user signs up through a referral link and confirms their email: the referrer's waitlist position increases by the configured number of places"
         },
         {
           "claim": "The owner exports the list as CSV and removes entries",
-          "test": "tests/e2e/waitlist-mechanics.spec.ts › the owner sees the list, exports it as CSV and removes an entry"
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › an authenticated owner can access the admin dashboard, sees the full list of waitlist entries, uses the export option to generate a CSV and deletes a selected entry"
         },
         {
           "claim": "Referral boosts never move anyone above first place",

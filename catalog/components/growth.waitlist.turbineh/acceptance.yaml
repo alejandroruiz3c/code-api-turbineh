@@ -1,9 +1,9 @@
 # Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
-- test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link"
+- test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link"
   covers: ["double opt-?in|confirm(ation)? (link|e-?mail)"]
-- test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link"
+- test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link"
   covers: ["position|place in (the )?(line|queue)|referral link"]
-- test: "tests/e2e/waitlist-mechanics.spec.ts › every confirmed referral moves the referrer up the list by the configured number of places"
+- test: "tests/e2e/waitlist-mechanics.spec.ts › a new user signs up through a referral link and confirms their email: the referrer's waitlist position increases by the configured number of places"
   covers: ["referr", "move|up|boost|position|place"]
-- test: "tests/e2e/waitlist-mechanics.spec.ts › the owner sees the list, exports it as CSV and removes an entry"
+- test: "tests/e2e/waitlist-mechanics.spec.ts › an authenticated owner can access the admin dashboard, sees the full list of waitlist entries, uses the export option to generate a CSV and deletes a selected entry"
   covers: ["owner|admin|staff", "export|csv|remov|delet"]

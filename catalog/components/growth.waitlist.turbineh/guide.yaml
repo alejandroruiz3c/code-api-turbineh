@@ -60,9 +60,9 @@ security:
   - "Link tokens are stored as SHA-256; confirming needs a POST from the link's page"
   - "Self-referrals are ignored; staff pages require a verified ADMIN_EMAILS account"
 guarantees:
-  - { claim: "Signups count only after the emailed confirmation; confirmed people see their position and referral link", test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor who joins is confirmed only after opening the emailed link (double opt-in), then sees their position and referral link" }
-  - { claim: "Each confirmed referral moves the referrer up by the configured places", test: "tests/e2e/waitlist-mechanics.spec.ts › every confirmed referral moves the referrer up the list by the configured number of places" }
-  - { claim: "The owner exports the list as CSV and removes entries", test: "tests/e2e/waitlist-mechanics.spec.ts › the owner sees the list, exports it as CSV and removes an entry" }
+  - { claim: "Signups count only after the emailed confirmation; confirmed people see their position and referral link", test: "tests/e2e/waitlist-mechanics.spec.ts › a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link" }
+  - { claim: "Each confirmed referral moves the referrer up by the configured places", test: "tests/e2e/waitlist-mechanics.spec.ts › a new user signs up through a referral link and confirms their email: the referrer's waitlist position increases by the configured number of places" }
+  - { claim: "The owner exports the list as CSV and removes entries", test: "tests/e2e/waitlist-mechanics.spec.ts › an authenticated owner can access the admin dashboard, sees the full list of waitlist entries, uses the export option to generate a CSV and deletes a selected entry" }
   - { claim: "Referral boosts never move anyone above first place", test: "tests/unit/waitlist.test.ts › every confirmed referral moves the referrer up by the boost, never above first place" }
 limits:
   - "Positions are computed per view over every confirmed signup"

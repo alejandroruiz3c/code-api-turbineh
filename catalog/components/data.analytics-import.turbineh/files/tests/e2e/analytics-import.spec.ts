@@ -74,7 +74,7 @@ const total = async (page: Page) =>
 test.describe.serial("analytics import", () => {
   const range = "from=2025-03-03&to=2025-03-16";
 
-  test("a CSV with an invalid row is rejected with a report of line, column and reason, and nothing is imported", async ({
+  test("a CSV upload with one invalid row: the entire file is rejected, nothing is imported, and the report provides the row number, field and reason for each error", async ({
     page,
   }) => {
     await page.goto(`/dashboard/reports?${range}`);
@@ -134,7 +134,9 @@ test.describe.serial("analytics import", () => {
     }
   });
 
-  test("every chart exports its numbers as CSV with the same filters", async ({ page }) => {
+  test("every chart on the dashboard exports its data as a CSV file with the same filters", async ({
+    page,
+  }) => {
     const series = await (
       await page.request.get(`/dashboard/reports/export?${range}&period=day&chart=series`)
     ).text();

@@ -82,7 +82,7 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
   let resourceName = "";
   let cancelLink = "";
 
-  test("a customer books a free time on the public page without an account and gets a confirmation email with a cancel link", async ({
+  test("a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent", async ({
     browser,
   }) => {
     const page = await anonymous(browser);
@@ -97,7 +97,9 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     await page.context().close();
   });
 
-  test("the same time can never be booked twice for the same team member", async ({ browser }) => {
+  test("a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)", async ({
+    browser,
+  }) => {
     const day = openDay(3, 1);
     const a = await anonymous(browser);
     await a.goto(`/book?${new URLSearchParams({ service: service.name, day })}`);
@@ -139,7 +141,7 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     for (const p of [a, b, c]) await p.context().close();
   });
 
-  test("the cancel link cancels the booking, and inside the notice period it is refused", async ({
+  test("a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused", async ({
     browser,
   }) => {
     const page = await anonymous(browser);
@@ -171,7 +173,9 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     await page.context().close();
   });
 
-  test("staff see the day and week calendar per team member", async ({ page }) => {
+  test("a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)", async ({
+    page,
+  }) => {
     const day = openDay(3, 1);
     await page.goto(`/dashboard/appointments/calendar?view=day&date=${day}`);
     const row = page.locator(`[data-testid="calendar-row"][data-resource="${resourceName}"]`);
@@ -185,7 +189,10 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     ).toBeVisible();
   });
 
-  test("staff block time off and those times are no longer offered", async ({ page, browser }) => {
+  test("a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them", async ({
+    page,
+    browser,
+  }) => {
     const day = openDay(3, 3);
     const hours = params.hours.filter((h) => h.weekday === weekdayOf(day));
     await page.goto("/dashboard/appointments/time-off");
@@ -208,7 +215,9 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     ).toBeVisible();
   });
 
-  test("staff move or cancel a booking and the customer is emailed", async ({ page }) => {
+  test("a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time", async ({
+    page,
+  }) => {
     const customer = `first-${stamp}@example.com`;
     await page.goto("/dashboard/appointments");
     const row = page.locator("tr").filter({ hasText: customer });

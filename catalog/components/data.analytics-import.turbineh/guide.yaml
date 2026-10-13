@@ -60,10 +60,10 @@ security:
   - "Column names come from validated params and reach SQL only as parameters"
   - "Files are bounded (5 MB, 50,000 rows) and rate-limited per person"
 guarantees:
-  - { claim: "An invalid file imports nothing and reports line, column and reason", test: "tests/e2e/analytics-import.spec.ts › a CSV with an invalid row is rejected with a report of line, column and reason, and nothing is imported" }
+  - { claim: "An invalid file imports nothing and reports line, column and reason", test: "tests/e2e/analytics-import.spec.ts › a CSV upload with one invalid row: the entire file is rejected, nothing is imported, and the report provides the row number, field and reason for each error" }
   - { claim: "Valid files are imported whole and aggregated by period", test: "tests/e2e/analytics-import.spec.ts › a valid CSV is imported whole and the dashboard shows totals by day, week and month" }
   - { claim: "Totals are compared with the previous period and between shops", test: "tests/e2e/analytics-import.spec.ts › the dashboard compares the period with the previous one and between values of each dimension" }
-  - { claim: "Every chart exports as CSV with the same filters", test: "tests/e2e/analytics-import.spec.ts › every chart exports its numbers as CSV with the same filters" }
+  - { claim: "Every chart exports as CSV with the same filters", test: "tests/e2e/analytics-import.spec.ts › every chart on the dashboard exports its data as a CSV file with the same filters" }
   - { claim: "Shop managers see and import only their shop", test: "tests/e2e/analytics-scopes.spec.ts › a shop manager sees only their own shop's figures and cannot import another shop's" }
   - { claim: "Validation is all-or-nothing with a report", test: "tests/unit/analytics-import.test.ts › rejects the whole file when any row is invalid, with the line, column and reason of each problem" }
 limits:
