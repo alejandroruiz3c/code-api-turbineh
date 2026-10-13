@@ -36,6 +36,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
+/** One published blog post (Markdown rendered safely). */
 export default async function Post({ params }: { params: Params }) {
   const p = await load((await params).slug);
   if (!p) notFound();

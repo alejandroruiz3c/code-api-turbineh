@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guideErrors } from "./guide.js";
+import { checkComponents, checkRecipes } from "./agent-ready.js";
 import { validateManifestFile } from "./validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -33,4 +34,13 @@ for (const dir of dirs) {
 }
 
 console.log(`\n${dirs.length - failed}/${dirs.length} manifests valid`);
-if (dirs.length === 0 || failed > 0) process.exit(1);
+
+// Agent-ready standard (ADR-0032): recipe templates and native component files.
+const issues = [...checkRecipes(join(root, "../recipes")), ...checkComponents(root)];
+for (const i of issues) console.log(`✗ [${i.rule}] ${i.where}\n    ${i.message}`);
+console.log(
+  issues.length === 0
+    ? "agent-ready: every recipe template and component passes"
+    : `agent-ready: ${issues.length} issue(s)`,
+);
+if (dirs.length === 0 || failed > 0 || issues.length > 0) process.exit(1);

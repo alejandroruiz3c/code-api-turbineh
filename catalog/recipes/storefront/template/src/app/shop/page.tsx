@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Catalogue with search over names and descriptions, prices in the chosen currency, pagination. */
 export default async function Shop({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const { page, offset, limit } = parsePage(params.page);

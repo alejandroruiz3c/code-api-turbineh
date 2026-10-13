@@ -42,6 +42,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 const available = (stock: number | null) => stock === null || stock > 0;
 
+/** Product page: image (upload or https URL), options, price, stock and add to cart; schema.org Product. */
 export default async function ProductPage({ params }: { params: Params }) {
   const p = await load((await params).slug);
   if (!p) notFound();

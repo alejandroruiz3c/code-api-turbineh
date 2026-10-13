@@ -25,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** Public home page: hero, services, steps, FAQ and call to action (copy in src/content/site.ts). */
 export default async function Home() {
   const site = await getSite();
   const latest = await db

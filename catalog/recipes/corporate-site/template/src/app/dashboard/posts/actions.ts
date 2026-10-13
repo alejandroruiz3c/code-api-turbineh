@@ -16,6 +16,7 @@ const postSchema = z.object({
   published: z.literal("on").optional(),
 });
 
+/** Blog post actions: save (create, edit, publish) and delete (staff only). */
 export async function savePost(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = formData.get("id") ? z.uuid().parse(formData.get("id")) : null;

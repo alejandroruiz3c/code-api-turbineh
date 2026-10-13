@@ -25,6 +25,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
+/** One dataset: KPIs with period comparison, time series and breakdown charts, filters and export. */
 export default async function DatasetPage({
   params,
   searchParams,

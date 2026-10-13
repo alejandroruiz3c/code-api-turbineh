@@ -9,6 +9,7 @@ import { markHandled } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Contact messages received from the site (staff only). */
 export default async function Messages({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const { page, offset, limit } = parsePage((await searchParams).page);

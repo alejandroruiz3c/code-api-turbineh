@@ -9,6 +9,7 @@ import { requireAdmin } from "@/server/admin";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Waitlist entries, paginated (staff only). */
 export default async function WaitlistAdmin({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const { page, offset, limit } = parsePage((await searchParams).page);

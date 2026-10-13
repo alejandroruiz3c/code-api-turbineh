@@ -8,6 +8,7 @@ import { chunks, documents } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { deleteDocument } from "./actions";
 
+/** Knowledge base: upload and remove the documents assistants answer from. */
 export default async function Knowledge() {
   const ctx = await requireMember();
   const rows = await db

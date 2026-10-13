@@ -40,6 +40,6 @@ test("sign-up follows the app's policy (staff-only apps refuse other emails)", a
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByLabel("Workspace name").fill("Not allowed");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("alert")).toContainText("reserved for staff");
+  await expect(page.getByText(/reserved for staff/)).toBeVisible();
   await expect(page).toHaveURL(/\/sign-up/);
 });

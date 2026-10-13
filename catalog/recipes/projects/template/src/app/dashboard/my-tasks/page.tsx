@@ -7,6 +7,7 @@ import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { byUrgency, isOverdue, isStatus, STATUS_LABEL } from "@/server/board";
 
+/** Tasks assigned to the signed-in user across projects. */
 export default async function MyTasks() {
   const ctx = await requireMember();
   const rows = await db

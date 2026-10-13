@@ -10,6 +10,7 @@ import { requireMember } from "@/server/authz";
 import { streak, totalsByDay } from "@/server/streaks";
 import { createTracker } from "./actions";
 
+/** The user's trackers: list, create and quick-log today. */
 export default async function Trackers() {
   const ctx = await requireMember();
   const today = new Date().toISOString().slice(0, 10);

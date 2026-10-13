@@ -14,6 +14,7 @@ import { createRequest } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Client requests: list (clients see their own, staff see all) and submit with file uploads. */
 export default async function RequestsPage({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireMember();
   const { page, offset, limit } = parsePage((await searchParams).page);

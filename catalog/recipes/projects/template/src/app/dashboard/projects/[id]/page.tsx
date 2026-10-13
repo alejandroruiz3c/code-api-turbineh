@@ -19,6 +19,7 @@ const PRIORITY_STYLE: Record<string, string> = {
   urgent: "bg-danger-soft text-danger",
 };
 
+/** One project's kanban board (drag tasks between columns). */
 export default async function Board({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;

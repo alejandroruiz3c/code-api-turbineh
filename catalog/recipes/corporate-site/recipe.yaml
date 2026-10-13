@@ -10,3 +10,16 @@ nav:
   - { label: Website texts, href: /dashboard/site }
   - { label: Blog posts, href: /dashboard/posts }
   - { label: Messages, href: /dashboard/messages }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Change site copy or add a section"
+      where: "src/content/site.ts, src/app/page.tsx"
+      how: "Copy is plain text; sections are server components using theme tokens."
+    - what: "Add a public page"
+      where: "src/app/<page>/page.tsx, src/components/site-shell.tsx (menu), src/app/sitemap.ts"
+      how: "Wrap it in SiteShell and list it in the sitemap."
+    - what: "Change where contact messages go"
+      where: "src/app/contact/actions.ts, ADMIN_EMAILS"
+      how: "Messages are stored and emailed to every staff email."

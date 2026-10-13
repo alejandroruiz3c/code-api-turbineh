@@ -8,6 +8,7 @@ import { agents } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { createAgent } from "./actions";
 
+/** AI assistants of the workspace: list and create (instructions, allowed tools). */
 export default async function Agents() {
   const ctx = await requireMember();
   const rows = await db

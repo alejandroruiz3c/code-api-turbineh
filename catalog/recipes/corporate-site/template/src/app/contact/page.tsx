@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
+/** Public contact page with the contact form. */
 export default async function Contact() {
   const site = await getSite();
   return (

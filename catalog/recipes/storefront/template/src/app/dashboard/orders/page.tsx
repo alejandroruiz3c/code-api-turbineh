@@ -12,6 +12,7 @@ import { setOrderStatus } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Orders with status (pending, paid, fulfilled, cancelled) and their summary (staff only). */
 export default async function Orders({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const { page, offset, limit } = parsePage((await searchParams).page);

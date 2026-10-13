@@ -9,6 +9,7 @@ import { dataPoints, datasets } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { createDataset } from "./actions";
 
+/** Datasets of the workspace: import from CSV or create, then open one to analyse it. */
 export default async function Analytics() {
   const ctx = await requireMember();
   const rows = await db

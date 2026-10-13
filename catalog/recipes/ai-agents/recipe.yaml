@@ -50,3 +50,16 @@ nav:
   - { label: AI processes, href: /dashboard/processes }
   - { label: AI usage, href: /dashboard/usage }
   - { label: AI audit, href: /dashboard/ai-audit }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a tool an assistant can use"
+      where: "src/server/tools.ts"
+      how: "Declare its schema and handler; irreversible tools need user confirmation. Every model call goes through src/lib/ai/orchestrator.ts."
+    - what: "Change how documents are split or searched"
+      where: "src/server/chunking.ts, src/server/knowledge.ts"
+      how: "Chunking and retrieval are deterministic; embeddings go through embed() of the orchestrator."
+    - what: "Add a batch AI process type"
+      where: "src/server/processes.ts, src/server/process-schema.ts"
+      how: "Define the output schema; orchestrate() validates it."

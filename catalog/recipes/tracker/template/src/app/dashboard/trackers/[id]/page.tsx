@@ -13,6 +13,7 @@ import { deleteTracker, logValue } from "../actions";
 
 const n = (v: number) => new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(v);
 
+/** One tracker: goal, streak, 30-day history and weekly totals. */
 export default async function TrackerPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;

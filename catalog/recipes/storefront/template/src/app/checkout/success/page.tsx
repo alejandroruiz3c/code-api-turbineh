@@ -4,6 +4,7 @@ import { ShopShell } from "@/components/shop-shell";
 
 export const metadata: Metadata = { title: "Thank you — __APP_NAME__", robots: { index: false } };
 
+/** Return page after Stripe Checkout (the order becomes paid only through the signed webhook). */
 export default function Success() {
   return (
     <ShopShell cartCount={0}>

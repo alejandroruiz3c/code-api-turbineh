@@ -9,6 +9,7 @@ import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { createProject } from "./actions";
 
+/** Projects of the workspace: list and create. */
 export default async function Projects() {
   const ctx = await requireMember();
   const rows = await db

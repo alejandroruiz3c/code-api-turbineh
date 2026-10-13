@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BRAND } from "@/brand";
 
+/** Public home page (sign in / create account). */
 export default function Home() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 py-24 text-center">

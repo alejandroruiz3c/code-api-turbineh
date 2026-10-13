@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services" },
 };
 
+/** Public services page. */
 export default async function Services() {
   const site = await getSite();
   return (

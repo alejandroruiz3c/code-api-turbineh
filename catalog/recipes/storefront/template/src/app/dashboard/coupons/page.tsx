@@ -11,6 +11,7 @@ import { requireAdmin } from "@/server/admin";
 import { enabledCurrencies } from "@/server/currency";
 import { deactivateCoupon, saveCoupon } from "./actions";
 
+/** Discount codes: create, see usage, deactivate (staff only). */
 export default async function Coupons() {
   await requireAdmin();
   const rows = await db.select().from(coupons).orderBy(desc(coupons.createdAt)).limit(200);

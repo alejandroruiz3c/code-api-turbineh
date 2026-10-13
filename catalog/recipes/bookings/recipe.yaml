@@ -9,3 +9,13 @@ nav:
   - { label: Bookings, href: /dashboard/bookings }
   - { label: Calendar, href: /dashboard/calendar }
   - { label: Availability, href: /dashboard/availability }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Change booking rules (duration, notice, conflicts)"
+      where: "src/server/bookings.ts, src/app/dashboard/bookings/actions.ts"
+      how: "Slots and conflicts are computed on the server; add a unit test for each rule."
+    - what: "Change opening hours"
+      where: "src/app/dashboard/availability/page.tsx"
+      how: "Weekly availability; bookings outside it are refused."

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
+/** Sign in with email and password; resumes the user's workspace. */
 export default function SignIn() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

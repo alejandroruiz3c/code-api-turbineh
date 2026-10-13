@@ -11,6 +11,7 @@ import { can, requireMember } from "@/server/authz";
 import { TOOL_LABELS } from "@/server/tools";
 import { deleteAgent, resolveAction, updateAgent } from "../actions";
 
+/** Chat with one assistant: messages, tool calls awaiting confirmation, settings. */
 export default async function AgentPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const id = z.uuid().safeParse((await params).id);

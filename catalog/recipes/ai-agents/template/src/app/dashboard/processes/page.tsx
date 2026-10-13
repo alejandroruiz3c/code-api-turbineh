@@ -15,6 +15,7 @@ const KIND_LABELS = {
   summarize: "Summarise",
 } as const;
 
+/** AI batch processes (classify, extract, summarise records): list and create. */
 export default async function Processes() {
   const ctx = await requireMember();
   const rows = await db

@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   openGraph: { title: "__APP_NAME__", description: SITE.hero_subtitle, type: "website" },
 };
 
+/** Public home page: hero, new products and FAQ (copy in src/content/site.ts). */
 export default async function Home() {
   const currency = await currentCurrency();
   const rows = await db

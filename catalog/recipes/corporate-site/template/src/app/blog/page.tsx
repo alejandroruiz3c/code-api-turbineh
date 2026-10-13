@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Public blog index (published posts). */
 export default async function Blog({ searchParams }: { searchParams: SearchParams }) {
   const site = await getSite();
   const { page, offset, limit } = parsePage((await searchParams).page);

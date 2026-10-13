@@ -13,6 +13,7 @@ import { requireAdmin } from "@/server/admin";
 import { enabledCurrencies } from "@/server/currency";
 import { removeShippingRate, removeTaxRate, saveShippingRate, saveTaxRate } from "./actions";
 
+/** Shipping options by country and currency, and tax rates (staff only). */
 export default async function ShippingAndTaxes() {
   await requireAdmin();
   const [rates, taxes] = await Promise.all([

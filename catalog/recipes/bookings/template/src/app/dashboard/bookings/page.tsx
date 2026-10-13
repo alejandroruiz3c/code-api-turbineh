@@ -13,6 +13,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const when = (d: Date) => `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
+/** Bookings list and the form to book a slot. */
 export default async function BookingsPage({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireMember();
   const { page, offset, limit } = parsePage((await searchParams).page);

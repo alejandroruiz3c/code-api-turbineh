@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/about" },
 };
 
+/** Public about page. */
 export default async function About() {
   const site = await getSite();
   return (

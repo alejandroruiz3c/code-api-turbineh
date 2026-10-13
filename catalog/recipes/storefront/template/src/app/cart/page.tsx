@@ -30,6 +30,7 @@ export const metadata: Metadata = { title: "Cart — __APP_NAME__", robots: { in
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Cart: quantities, shipping country, discount code and totals computed on the server, then Stripe Checkout. */
 export default async function Cart({ searchParams }: { searchParams: SearchParams }) {
   const id = await currentCartId();
   const currency = await currentCurrency();

@@ -7,6 +7,7 @@ import { manageBilling, upgrade } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Billing: the workspace plan (Free / Pro), upgrade through Stripe Checkout and the billing portal. */
 export default async function Billing({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireMember();
   const sp = await searchParams;

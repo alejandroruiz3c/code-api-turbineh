@@ -11,6 +11,7 @@ import { changeStatus, uploadFile } from "../actions";
 
 const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`;
 
+/** One request: details, files (safe downloads) and status updates by staff. */
 export default async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;

@@ -13,6 +13,7 @@ import { deletePost, savePost } from "./actions";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const area = "w-full rounded-md border border-field px-3 py-2 text-sm";
 
+/** Blog posts: write, edit, publish (staff only). */
 export default async function Posts({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const editId = (await searchParams).edit;

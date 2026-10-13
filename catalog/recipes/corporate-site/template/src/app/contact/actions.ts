@@ -18,6 +18,7 @@ const schema = z.object({
   website: z.string().max(0).optional(), // honeypot: humans leave it empty
 });
 
+/** Contact form: validated, rate-limited, stored and emailed to staff (ADMIN_EMAILS). */
 export type ContactState = { ok: boolean; message: string } | null;
 
 // Public by design (anyone can write to the company): IP rate limit, honeypot and Zod; no member to check.

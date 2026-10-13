@@ -14,6 +14,7 @@ import { addComment, deleteTask, updateTask } from "../actions";
 
 const field = "w-full rounded-md border border-field px-2 py-2 text-sm";
 
+/** One task: details, assignee, priority, due date and comments. */
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;

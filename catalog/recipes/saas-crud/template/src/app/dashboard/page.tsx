@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { entityNav } from "@/entities";
 import { requireMember } from "@/server/authz";
 
+/** Dashboard home: the signed-in user's role and sections. */
 export default async function Dashboard() {
   const { role } = await requireMember();
   return (

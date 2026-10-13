@@ -9,6 +9,7 @@ import { saveSite } from "./actions";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const area = "w-full rounded-md border border-field px-3 py-2 text-sm";
 
+/** Editable website texts (staff only). */
 export default async function SiteEditor({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const site = await getSite();

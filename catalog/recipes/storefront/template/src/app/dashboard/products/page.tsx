@@ -22,6 +22,7 @@ import {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Products admin: create/edit (image upload or https URL), options with SKU/stock, prices per currency. */
 export default async function Products({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const editId = (await searchParams).edit;

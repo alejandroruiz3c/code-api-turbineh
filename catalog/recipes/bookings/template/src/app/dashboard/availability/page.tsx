@@ -10,6 +10,7 @@ import { clock, WEEKDAYS } from "@/server/bookings";
 import { can, requireMember } from "@/server/authz";
 import { addWindow, removeWindow } from "./actions";
 
+/** Weekly availability (opening hours) that bookings must fall within. */
 export default async function AvailabilityPage() {
   const ctx = await requireMember();
   const manage = can(ctx.role, "update");

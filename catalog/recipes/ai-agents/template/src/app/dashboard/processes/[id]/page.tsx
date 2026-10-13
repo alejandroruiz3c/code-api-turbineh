@@ -10,6 +10,7 @@ import { processes, processItems } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { addItems, deleteProcess, runNow } from "../actions";
 
+/** One AI batch process: add items, run now, results per item, CSV export and delete. */
 export default async function ProcessPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const id = z.uuid().safeParse((await params).id);

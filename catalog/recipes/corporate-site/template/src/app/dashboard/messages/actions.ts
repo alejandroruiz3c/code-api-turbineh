@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
 import { requireAdmin } from "@/server/admin";
 
+/** Contact messages: mark handled (staff only). */
 export async function markHandled(formData: FormData): Promise<void> {
   await requireAdmin();
   await db
