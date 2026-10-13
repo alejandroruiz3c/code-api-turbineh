@@ -17,6 +17,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Agent brain comparison (`bench/agent-brain/`): the shipped runAgent through the production AI gateway against
+  Claude Opus 5.5 called directly without orchestrator, on the same 54 Flex Physio conversations, tools and
+  deterministic checks, run twice each. Ours 54/54 and 54/54 (Claude 51/54 with 3 network errors, then 54/54);
+  turn p50 3.30–3.51 s vs 4.18–4.28 s, p95 7.73–7.86 s vs 8.12–9.62 s; 2.07–2.11 vs 11.61–19.40 USD per 1,000
+  conversations. Results and the dedicated-vs-serverless decision note in `bench/agent-brain/RESULTS.md`.
+
 - Which app of a monorepo receives a capability is decided by the decider when the repository has several Next.js
   apps (ADR-0039 Amendment 1, owner decision): plans, the repository analysis and the worker's integration use
   `chooseAppPath`; the path heuristic stays as the fallback (one app, low confidence, no decider, errors, the CLI).
