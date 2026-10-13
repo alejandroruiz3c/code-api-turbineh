@@ -60,11 +60,11 @@ security:
   - Neutralises spreadsheet formula injection by prefixing suspicious characters with a single quote
 guarantees:
   - claim: Enforces byte and row count constraints
-    test: recipe template template/tests/unit/csv.test.ts › enforces limits
+    test: recipe template saas-crud/tests/unit/csv.test.ts › enforces limits
   - claim: Correctly handles quoted fields and CRLF line endings
-    test: recipe template template/tests/unit/csv.test.ts › round-trips quoted fields and CRLF
+    test: recipe template saas-crud/tests/unit/csv.test.ts › round-trips quoted fields and CRLF
   - claim: Prevents formula injection attacks
-    test: recipe template template/tests/unit/csv.test.ts › neutralises formula injection and quotes special
+    test: recipe template saas-crud/tests/unit/csv.test.ts › neutralises formula injection and quotes special
       characters
 limits:
   - maxBytes defaults to 1,000,000

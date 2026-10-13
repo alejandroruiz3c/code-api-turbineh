@@ -73,11 +73,11 @@ security:
   - Safe error messaging
 guarantees:
   - claim: Denies framing and sniffing via headers
-    test: recipe template template/tests/unit/security.test.ts › denies framing and sniffing
+    test: recipe template saas-crud/tests/unit/security.test.ts › denies framing and sniffing
   - claim: Sets a restrictive CSP
-    test: recipe template template/tests/unit/security.test.ts › sets a restrictive CSP
+    test: recipe template saas-crud/tests/unit/security.test.ts › sets a restrictive CSP
   - claim: Allows remote images only over https when opted in
-    test: recipe template template/tests/unit/security.test.ts › allows remote images only over https, and only
+    test: recipe template saas-crud/tests/unit/security.test.ts › allows remote images only over https, and only
       when the app opts in
   - claim: Enforces rate limits within the window
     test: recipe template saas-crud/tests/unit/csv.test.ts › enforces limits

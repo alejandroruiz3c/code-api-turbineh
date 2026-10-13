@@ -73,12 +73,12 @@ security:
   - Staff allow-list matches whole emails only and denies by default
 guarantees:
   - claim: Members can read and create but are restricted from updating or deleting.
-    test: recipe template template/tests/unit/authz.test.ts › lets members read and create but not update or delete
+    test: recipe template saas-crud/tests/unit/authz.test.ts › lets members read and create but not update or delete
   - claim: Staff access is restricted to verified allowlisted addresses.
     test: recipe template saas-crud/tests/unit/staff.test.ts › grants staff access only to a verified allowlisted
       address
   - claim: The staff allow-list denies by default and requires exact email matches.
-    test: recipe template template/tests/unit/authz.test.ts › staff allow-list denies by default and matches whole
+    test: recipe template saas-crud/tests/unit/authz.test.ts › staff allow-list denies by default and matches whole
       emails only
 limits:
   - Does not support fine-grained per-record permissions

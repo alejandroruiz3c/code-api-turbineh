@@ -58,9 +58,9 @@ security:
   - Neutralises formula injection and quotes special characters
 guarantees:
   - claim: defaults and bounds the page
-    test: recipe template template/tests/unit/pagination.test.ts › defaults and bounds the page
+    test: recipe template saas-crud/tests/unit/pagination.test.ts › defaults and bounds the page
   - claim: trims and bounds the search query
-    test: recipe template template/tests/unit/pagination.test.ts › trims and bounds the search query
+    test: recipe template saas-crud/tests/unit/pagination.test.ts › trims and bounds the search query
   - claim: enforces limits
     test: recipe template saas-crud/tests/unit/csv.test.ts › enforces limits
 limits:

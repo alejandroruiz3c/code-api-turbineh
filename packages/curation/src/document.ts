@@ -199,7 +199,10 @@ export function vendoredFiles(
         (m) => m[1] as string,
       );
       if (imports.some((i) => specs.has(i)) && !tests.some((x) => x.rel.endsWith(relative(t, f))))
-        tests.push({ abs: f, rel: `recipe template ${relative(join(t, ".."), f)}` });
+        tests.push({
+          abs: f,
+          rel: `recipe template ${relative(join(t, "../.."), join(t, ".."))}/${relative(t, f)}`,
+        });
     }
   }
   return { files, tests, base: files.some((f) => f.abs.includes(`/recipes/${BASE}/`)) };
@@ -442,6 +445,10 @@ export function draftPrompt(f: ComponentFacts): string {
     effects: f.manifest.effects ?? {},
     license: f.manifest.license.detected,
     import_from: f.importable,
+    // Routes the component adds (an example may show how to open or call them).
+    routes: Object.keys(f.importable)
+      .filter((k) => k.startsWith("@/app/"))
+      .map((k) => `/${k.slice("@/app/".length).split("/").slice(0, -1).join("/")}`),
     env: f.env,
     tests: f.tests.map((t) => t.title),
     alternatives: alternatives.slice(0, 12),
@@ -487,9 +494,11 @@ export function checkDraft(
     }
     return true;
   });
-  const exampleIssue = exampleProblem(d.example, f.importable);
-  const example = exampleIssue ? "" : d.example.trim().split("\n").slice(0, 30).join("\n");
-  if (exampleIssue) dropped.push(`example (${exampleIssue})`);
+  const fixedExample = repairImports(d.example, f.importable);
+  const exampleIssue = exampleProblem(fixedExample, f.importable);
+  const example = exampleIssue ? "" : fixedExample.trim().split("\n").slice(0, 30).join("\n");
+  if (exampleIssue)
+    dropped.push(`example (${exampleIssue}): ${JSON.stringify(d.example.slice(0, 160))}`);
   const m = f.manifest;
   const security = [
     `Licence ${m.license.detected}${m.security?.scanned_at ? `; ${m.security.findings?.length ?? 0} known advisories (OSV) on ${m.security.scanned_at}` : ""}.`,
@@ -589,13 +598,56 @@ export function checkDraft(
   return { docs, dropped };
 }
 
+/**
+ * Deterministic repair of an example's import specifiers: when every name of a named import exists in exactly one
+ * specifier the component provides, the import is rewritten to that specifier (the names are the code's; only the
+ * path the model guessed is corrected). Anything else is left for exampleProblem() to judge.
+ */
+export function repairImports(example: string, importable: Record<string, string[]>): string {
+  return example.replace(
+    /import\s+\{([^}]*)\}\s+from\s+["']([^"']+)["'];?/g,
+    (whole, names: string, from: string) => {
+      if (importable[from]) return whole;
+      const wanted = names
+        .split(",")
+        .map(
+          (n) =>
+            n
+              .trim()
+              .replace(/^type\s+/, "")
+              .split(/\s+as\s+/)[0]
+              ?.trim() ?? "",
+        )
+        .filter(Boolean);
+      const bySpec = new Map<string, string[]>();
+      for (const n of wanted) {
+        const specs = Object.entries(importable)
+          .filter(([, ns]) => ns.includes(n))
+          .map(([k]) => k);
+        if (specs.length !== 1) return whole;
+        bySpec.set(specs[0] as string, [...(bySpec.get(specs[0] as string) ?? []), n]);
+      }
+      return [...bySpec]
+        .map(([spec, ns]) => `import { ${ns.join(", ")} } from "${spec}";`)
+        .join("\n");
+    },
+  );
+}
+
 /** Why an example is not supported by the code (imports from unknown specifiers or of unknown names), or null. */
 export function exampleProblem(
   example: string,
   importable: Record<string, string[]>,
 ): string | null {
   const imports = [...example.matchAll(/import\s+([^;]*?)\s+from\s+["']([^"']+)["']/g)];
-  if (imports.length === 0) return "imports nothing from the component";
+  if (imports.length === 0) {
+    // Page components: an example may show the route the component adds (e.g. /dashboard/billing).
+    const routes = Object.keys(importable)
+      .filter((k) => k.startsWith("@/app/"))
+      .map((k) => `/${k.slice("@/app/".length).split("/").slice(0, -1).join("/")}`)
+      .filter((r) => r.length > 1);
+    return routes.some((r) => example.includes(r)) ? null : "imports nothing from the component";
+  }
   for (const m of imports) {
     const from = m[2] as string;
     // A package subpath ("@hookform/resolvers/zod") belongs to its package.

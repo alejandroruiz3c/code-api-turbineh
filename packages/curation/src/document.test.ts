@@ -2,7 +2,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { componentDocsSchema } from "@turbineh/catalog";
 import { describe, expect, it } from "vitest";
-import { checkDraft, componentFacts, exampleProblem, importsFrom, type Draft } from "./document.js";
+import {
+  checkDraft,
+  componentFacts,
+  exampleProblem,
+  importsFrom,
+  repairImports,
+  type Draft,
+} from "./document.js";
 
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
 
@@ -69,6 +76,21 @@ describe("documentation step (facts first, claims checked)", () => {
     );
     expect(exampleProblem("import x from 'lodash';", importable)).toMatch(/does not provide/);
     expect(exampleProblem("import pRetry from 'p-retry';", importable)).toBeNull();
+  });
+
+  it("corrects only the import path of names the component really exports", () => {
+    const importable = {
+      "@/lib/billing": ["stripePost", "billingEnv"],
+      "@/lib/billing-rules": ["hasPaidAccess"],
+    };
+    expect(
+      repairImports("import { stripePost, hasPaidAccess } from 'turbineh/payments';", importable),
+    ).toBe(
+      'import { stripePost } from "@/lib/billing";\nimport { hasPaidAccess } from "@/lib/billing-rules";',
+    );
+    expect(repairImports("import { invented } from 'x';", importable)).toBe(
+      "import { invented } from 'x';",
+    );
   });
 
   it("reads members of namespace imports", () => {

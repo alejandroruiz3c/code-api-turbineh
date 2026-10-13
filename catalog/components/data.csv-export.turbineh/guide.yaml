@@ -57,12 +57,12 @@ security:
     single quote.
 guarantees:
   - claim: Neutralises formula injection and quotes special characters
-    test: recipe template template/tests/unit/csv.test.ts › neutralises formula injection and quotes special
+    test: recipe template saas-crud/tests/unit/csv.test.ts › neutralises formula injection and quotes special
       characters
   - claim: Round-trips quoted fields and CRLF
-    test: recipe template template/tests/unit/csv.test.ts › round-trips quoted fields and CRLF
+    test: recipe template saas-crud/tests/unit/csv.test.ts › round-trips quoted fields and CRLF
   - claim: Enforces limits on file size and row count
-    test: recipe template template/tests/unit/csv.test.ts › enforces limits
+    test: recipe template saas-crud/tests/unit/csv.test.ts › enforces limits
 limits:
   - "maxBytes: 1,000,000"
   - "maxRows: 1,000"
