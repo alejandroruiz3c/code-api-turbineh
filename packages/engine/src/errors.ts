@@ -35,17 +35,18 @@ export const ERRORS = {
       "Wait a few seconds and check again.",
       `turbineh status ${id}`,
     ),
+  /** Legacy runs only: since ADR-0050 an unmatched need is built on the closest template, never refused. */
   outOfScope: (reason: string) =>
     productError(
-      "no_capability",
-      `No verified capability covers this need yet: ${reason}`,
-      "Describe the need differently or search the catalog with `turbineh search`.",
+      "no_template",
+      `No ready-made template matched this need, so this run stopped before building (${reason}).`,
+      "Start the flow again: TurbineH now builds it on the closest template and lists what is left with where to implement it.",
     ),
   generationFailed: (id: string, reason: string) =>
     productError(
       "generation_failed",
-      `The package could not be generated and verified: ${reason}`,
-      "Review the failed checks in the result, then generate again.",
+      `The app could not be generated and verified: ${reason}`,
+      "Generate again. If it fails the same way, start a new flow with more detail about the part that failed.",
       `turbineh apply --resume ${id}`,
     ),
   /** ADR-0037 §D1: the package is delivered, but the gate failed — never presented as verified. */

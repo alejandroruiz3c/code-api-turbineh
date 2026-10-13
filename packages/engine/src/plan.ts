@@ -9,6 +9,7 @@ import type {
 } from "@turbineh/shared";
 import { componentSummary, requirementsFor, summarizeUseCase } from "./search.js";
 import { repositoryFit, type RepoAnalysis } from "./repo-analysis.js";
+import { leftItems, planOutcome, standaloneFiles } from "./outcome.js";
 import { compatibility, dependencyDiff } from "./stack.js";
 import type { CatalogEntry, UseCase } from "./types.js";
 
@@ -48,6 +49,8 @@ export interface PlanInput {
   projectDependencies?: Record<string, string>;
   /** Parts of the need the plan does not cover (stated to the user, never hidden). */
   notCovered?: string[];
+  /** Plain-language names of capabilities (gaps are shown with them). */
+  labels?: (capability: string) => string;
   envKeys?: string[];
   entities?: string[];
   preferences?: ProjectPreferences;
@@ -127,11 +130,13 @@ export function buildPlan(input: PlanInput): Plan {
   const kind = input.useCase ? "use_case" : "component";
   const base = compatibility(input.stack, kind);
   const deps = dependencyDiff(input.dependencies, input.projectDependencies);
+  // The repository analysis states version conflicts in its own words: list each package once.
+  const repoConflicts = input.analysis ? [] : deps.conflicts;
   const compat = {
     ...base,
     // Version conflicts are listed and need approval, but the stack can still host the package.
     compatible: base.compatible,
-    incompatibilities: [...base.incompatibilities, ...deps.conflicts],
+    incompatibilities: [...base.incompatibilities, ...repoConflicts],
   };
   const caps = input.components.map((c) => c.capability);
   // One component can cover several capabilities: list it once with all of them.
@@ -173,7 +178,7 @@ export function buildPlan(input: PlanInput): Plan {
   const envCount = config.filter((r) => r.kind === "env").length;
   const policy = input.preferences?.changePolicy;
   const needsApproval = [
-    ...compat.incompatibilities.map((i) => `Incompatibility: ${i}`),
+    ...compat.incompatibilities.map((i) => `Before you continue: ${i}`),
     ...input.gaps.map(gapNotice),
     ...(policy && !policy.allowDependencyChanges && deps.added.length > 0
       ? [
@@ -202,7 +207,7 @@ export function buildPlan(input: PlanInput): Plan {
     : undefined;
   if (repository) {
     for (const c of repository.conflicts)
-      if (!compat.incompatibilities.includes(c)) needsApproval.push(`Adaptation: ${c}`);
+      if (!compat.incompatibilities.includes(c)) needsApproval.push(`In your repository: ${c}`);
     if (!repository.compatible) compat.compatible = false;
   }
   return {
@@ -221,11 +226,17 @@ export function buildPlan(input: PlanInput): Plan {
     incompatibilities: compat.incompatibilities,
     missing: [
       ...compat.missing,
-      ...input.gaps.map((g) => `Verified component for ${g}`),
+      ...input.gaps.map(
+        (g) =>
+          `${input.labels?.(g) ?? g}: no verified component yet — TurbineH writes it during generation and verifies it with the rest`,
+      ),
       ...(input.notCovered ?? []),
     ],
     decisions: input.decisions,
-    files: plannedFiles(input.slug, deps.added.length, envCount, repository?.namespace),
+    files:
+      input.stack.source === "declared" && kind === "use_case"
+        ? standaloneFiles(input.slug)
+        : plannedFiles(input.slug, deps.added.length, envCount, repository?.namespace),
     dependencies: deps.added,
     config,
     estimate: input.useCase
@@ -238,6 +249,12 @@ export function buildPlan(input: PlanInput): Plan {
       : { seconds: MEASURED.componentSeconds, costUsd: 0, tokens: 0, newLinesToMaintain: 0 },
     needsApproval,
     ...(repository ? { repository } : {}),
+    outcome: planOutcome(input.stack, kind),
+    left: leftItems({
+      gaps: input.gaps,
+      notCovered: input.notCovered ?? [],
+      ...(input.labels ? { label: input.labels } : {}),
+    }),
   };
 }
 

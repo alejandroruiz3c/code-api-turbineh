@@ -63,8 +63,37 @@ export interface DetectedStack {
   packageManager: string | null;
   versions: Record<string, string>;
   source: "repo" | "files" | "declared";
-  /** Only a declared stack: adapting to the concrete project stays pending (stated to the user). */
+  /**
+   * Kept for contract compatibility; always false since ADR-0050. A declared stack (no repository, no files) builds
+   * a new, complete app, so there is no existing project left to adapt — `Plan.outcome` says what the person gets.
+   */
   adaptationPending: boolean;
+}
+
+/** A one-click next step offered with a plan (web buttons, CLI hints, MCP). The first one is the recommended one. */
+export interface PlanAction {
+  id: "generate" | "build_nextjs_app" | "connect_repo" | "upload_files";
+  label: string; // button text, e.g. "Generate the complete app"
+  detail: string; // one sentence: what happens when you choose it
+}
+
+/**
+ * What the person gets from a plan, in plain words (ADR-0050): what happened, what it means for them and the next
+ * actions. Deterministic (stack + plan kind), never a model.
+ */
+export interface PlanOutcome {
+  kind: "complete_app" | "server_modules" | "separate_service" | "project_changes";
+  title: string; // e.g. "A complete Next.js app, built for you"
+  meaning: string; // what it means for the person
+  notes: string[]; // short facts worth knowing (versions used, what is not converted…)
+  actions: PlanAction[];
+}
+
+/** One part of the need that is still open after generation, and where it is implemented (ADR-0050). */
+export interface PlanLeftItem {
+  part: string; // e.g. "Export invoices to PDF"
+  why: string; // why it is still open
+  where: string; // where to implement it, e.g. "src/app/(app)/invoices — AGENTS.md › What is left"
 }
 
 export interface Decision {
@@ -129,6 +158,10 @@ export interface Plan {
    * (acceptance.yaml rules), never a model. Lets a coding agent start on the open ones while the package builds.
    */
   criteria?: PlanCriterion[];
+  /** What the person gets and the next actions (ADR-0050). */
+  outcome?: PlanOutcome;
+  /** What stays open after generation, each with where to implement it (ADR-0050). Never blocks generation. */
+  left?: PlanLeftItem[];
 }
 
 export interface PlanCriterion {

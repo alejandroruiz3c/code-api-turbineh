@@ -256,6 +256,16 @@ async function waitFor(
   }
 }
 
+/** The CLI command behind each one-click plan action (ADR-0050). */
+function actionHint(id: string, p: Plan): string {
+  const need = JSON.stringify(p.need.length > 60 ? `${p.need.slice(0, 57)}…` : p.need);
+  if (id === "generate") return dim(`  turbineh apply ${p.id}`);
+  if (id === "build_nextjs_app") return dim(`  turbineh plan ${need} --stack nextjs`);
+  if (id === "connect_repo") return dim("  turbineh connect github");
+  if (id === "upload_files") return dim(`  run turbineh plan ${need} inside your project`);
+  return "";
+}
+
 export function planLines(p: Plan): string[] {
   return [
     bold(
@@ -269,14 +279,31 @@ export function planLines(p: Plan): string[] {
             .map(([k, v]) => `${k} ${v}`)
             .join(", ")})`
         : ""
-    } · ${p.compatible ? green("compatible") : red("needs adaptation")}`,
-    ...p.incompatibilities.map((i) => `  ${red("✖")} ${i}`),
-    ...p.missing.map((m) => `  ${yellow("!")} ${m}`),
+    }${p.stack.source === "declared" ? " · new project" : ` · ${p.compatible ? green("compatible") : yellow("needs your decision")}`}`,
+    ...(p.outcome
+      ? [
+          "",
+          bold(p.outcome.title),
+          `  ${p.outcome.meaning}`,
+          ...p.outcome.notes.map((n) => `  ${dim(n)}`),
+          ...p.outcome.actions.map(
+            (a, i) => `  ${i === 0 ? green("→") : " "} ${a.label}${actionHint(a.id, p)}`,
+          ),
+        ]
+      : []),
+    ...p.incompatibilities.map((i) => `  ${yellow("!")} ${i}`),
+    ...(p.left?.length
+      ? [
+          "",
+          bold("What is left after generation (never blocks it):"),
+          ...p.left.map((l) => `  - ${l.part}${l.where ? dim(` — ${l.where}`) : ""}`),
+        ]
+      : p.missing.map((m) => `  ${yellow("!")} ${m}`)),
     "",
     bold(`Components (${p.components.length} verified):`),
     ...p.components.map((x) => `  - ${x.id}@${x.version} (${x.license}) — ${x.why}`),
     "",
-    bold("Changes in your project:"),
+    bold(p.stack.source === "declared" ? "What you receive:" : "Changes in your project:"),
     ...p.files.map((f) => `  ${f.action === "add" ? "+" : "~"} ${f.path}  ${dim(f.why)}`),
     ...(p.dependencies.length
       ? [

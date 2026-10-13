@@ -55,6 +55,7 @@ import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
+import { openCriteriaLeft } from "@turbineh/engine";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
@@ -251,8 +252,9 @@ export async function runBuild(
   }
   // Specs stored before palettes existed (approved plans) still get the colours stated in the prompt.
   if (spec.palette === undefined) spec.palette = extractPalette(prompt);
-  if (spec.recipe === "out_of_scope" && options.plan) {
-    // No complete use case fits: plan the certified components that cover the need (e.g. the AI orchestrator).
+  if (spec.recipe === "out_of_scope" && options.plan && options.plan.stack.source !== "declared") {
+    // An existing project (repository or files) and no complete use case fits: plan the certified components that
+    // cover the need (e.g. the AI orchestrator) to add to it.
     const plan = componentPlan(buildId, options.plan, join(deps.repoRoot, "catalog/components"));
     await deps.emit(buildId, "selecting", "done", {
       componentOnly: true,
@@ -265,13 +267,18 @@ export async function runBuild(
       metrics: { timings, plan, tokens: { compiler: compiled.usage } },
     };
   }
+  // Never block on an unknown use case (ADR-0050): build it on the closest template; what no template covers is
+  // listed as "what is left" with where to implement it. Real safety stops happen above (Abuse Guard) and in the gate.
+  let scope: { builtOn: string; reason: string } | null = null;
   if (spec.recipe === "out_of_scope") {
-    return {
-      buildId,
-      status: "failed",
-      reason: `out of scope for the beta: ${spec.out_of_scope_reason ?? ""} (closest recipe: ${spec.closest_recipe ?? "none"})`,
-      metrics: { timings },
+    scope = {
+      builtOn: spec.closest_recipe ?? "saas-crud",
+      reason: spec.out_of_scope_reason ?? "No ready-made template matches this need exactly.",
     };
+    spec.recipe = scope.builtOn as BuildSpec["recipe"];
+    spec.closest_recipe = null;
+    spec.out_of_scope_reason = null;
+    await deps.emit(buildId, "compiling", "scope", scope);
   }
   const recipesDir = join(deps.repoRoot, "catalog/recipes");
   // Families without their own recipe yet fall back to the multi-tenant CRUD base (recorded in metrics).
@@ -438,10 +445,12 @@ export async function runBuild(
       componentsDir: join(deps.repoRoot, "catalog/components"),
       entities: spec.entities.map((e) => e.name),
       labels: (cap) => CAPABILITY_LABELS[cap] ?? cap,
+      ...(scope ? { scope } : {}),
     });
     plan.criteria = planCriteria(spec.acceptance_criteria, recipesDir, recipeId, [
       ...Object.values(resolution.selected).map((c) => c.id),
     ]);
+    plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];
     return {
       buildId,
       status: "done",

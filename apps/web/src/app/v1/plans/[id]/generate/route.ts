@@ -7,7 +7,8 @@ import { ownedFlow, productProblem, requireCaller } from "@/server/product";
 
 /**
  * POST /v1/plans/{id}/generate — approve the plan and generate the package (assemble, integrate, verify in the
- * sandbox). Decisions that need a person must be acknowledged with `{"approve": true}`.
+ * sandbox). Decisions that need a person must be acknowledged with `{"approve": true}`. A generation that failed
+ * without delivering a package can be requested again here (it resumes from the same approved plan).
  */
 export async function POST(
   req: Request,
@@ -19,7 +20,9 @@ export async function POST(
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
   const plan = row.metrics.plan as Plan | undefined;
-  if (row.options.mode !== "plan" || row.status !== "done" || !plan) {
+  // "Generate again" (ADR-0050): a generation that failed without delivering a package resumes from the same plan.
+  const retry = row.options.mode === "generate" && row.status === "failed" && !row.artifact?.zipKey;
+  if (!plan || (!retry && (row.options.mode !== "plan" || row.status !== "done"))) {
     return productProblem(
       409,
       row.options.mode === "generate"

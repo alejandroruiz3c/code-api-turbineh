@@ -47,14 +47,14 @@ describe("stack detection", () => {
     expect(s.adaptationPending).toBe(false);
   });
 
-  it("marks a declared stack as pending adaptation and explains it", () => {
+  it("a declared stack is a new project: nothing left to adapt, never incompatible (ADR-0050)", () => {
     const s = detectStack({
-      stack: { language: "TypeScript", framework: "nextjs", versions: { next: "16" } },
+      stack: { language: "TypeScript", framework: "Next.js", versions: { next: "16" } },
     });
-    expect(s.adaptationPending).toBe(true);
-    expect(compatibility(s, "use_case").missing.join(" ")).toMatch(
-      /Adaptation to your concrete project is pending/,
-    );
+    // The wizard sends the display name "Next.js": it must be the main path, not "next.js detected".
+    expect(s).toMatchObject({ framework: "nextjs", source: "declared", adaptationPending: false });
+    const c = compatibility(s, "use_case");
+    expect(c).toEqual({ compatible: true, incompatibilities: [], missing: [] });
   });
 
   it("explains incompatibilities instead of failing", () => {
@@ -183,8 +183,8 @@ describe("plan", () => {
       "Adds 1 verified dependency",
     );
     expect(plan.compatible).toBe(true);
-    expect(plan.needsApproval.join(" ")).toMatch(/Incompatibility: next/);
-    expect(plan.incompatibilities.join(" ")).toMatch(/next: .*16\.3\.8.*15\.2\.0/);
+    expect(plan.needsApproval.join(" ")).toMatch(/Before you continue: next/);
+    expect(plan.incompatibilities.join(" ")).toMatch(/next: .*15\.2\.0.*16\.3\.8/);
     expect(plan.components).toHaveLength(1);
     expect(plan.components[0]?.why).toMatch(/security headers; required by the flow/);
     expect(plan.missing).toContain("The AI part of the need");

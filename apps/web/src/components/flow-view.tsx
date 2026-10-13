@@ -2,7 +2,8 @@
 import type { FlowState } from "@turbineh/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AGENT_INSTRUCTIONS } from "@/lib/product-api";
+import { currentRun, RUNNING_STATUSES } from "@/lib/flow-events";
+import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
 import { DeployForMe } from "./deploy-for-me";
 import { RepoIntegration } from "./repo-integration";
@@ -48,9 +49,21 @@ interface DeliveryFailure {
   fix: string;
 }
 
+/** What happened, why, what to do and the next action (ADR-0050, engine `explainFailure`). */
+interface FlowProblem {
+  code: string;
+  title: string;
+  why: string;
+  action: string;
+  resume?: string;
+  next: { label: string; kind: "generate_again" | "new_flow" | "open_package" | "wait" };
+}
+
 interface BuildResult {
   status: string;
+  prompt?: string;
   error: string | null;
+  problem?: FlowProblem | null;
   /** True only when every check passed (ADR-0037). */
   verified?: boolean | null;
   delivery?: {
@@ -114,10 +127,16 @@ const SECRETLESS_DEFAULTS = new Set(["NODE_ENV", "PORT"]);
 export function FlowView({ id }: { id: string }) {
   const [events, setEvents] = useState<BuildEvent[]>([]);
   const [result, setResult] = useState<BuildResult | null>(null);
+  // Bumped to follow the flow again while it is still working (or after "Generate again").
+  const [follow, setFollow] = useState(0);
 
   const loadResult = useCallback(async () => {
     const res = await fetch(`/v1/builds/${id}`);
-    if (res.ok) setResult((await res.json()) as BuildResult);
+    if (!res.ok) return;
+    const r = (await res.json()) as BuildResult;
+    setResult(r);
+    // Still working: never shown as finished — follow the live trace again.
+    if (RUNNING_STATUSES.has(r.status)) setTimeout(() => setFollow((n) => n + 1), 2000);
   }, [id]);
 
   useEffect(() => {
@@ -133,17 +152,22 @@ export function FlowView({ id }: { id: string }) {
       void loadResult();
     }) as EventListener);
     return () => es.close();
-  }, [id, loadResult]);
+  }, [id, loadResult, follow]);
 
-  const finished = events.find((e) => e.type === "finished");
+  // One row carries the plan run and then the generation run: show the latest run only.
+  const run = currentRun(events);
+  const finished =
+    result && RUNNING_STATUSES.has(result.status)
+      ? undefined
+      : run.find((e) => e.type === "finished");
   const phaseState = (match: string[]) => {
-    const evs = events.filter((e) => match.includes(e.phase));
+    const evs = run.filter((e) => match.includes(e.phase));
     if (evs.some((e) => e.type === "done")) return "done";
     if (evs.length > 0) return finished ? "done" : "running";
     return "pending";
   };
   const by = (phase: string, type = "done") =>
-    events.find((e) => e.phase === phase && e.type === type)?.data;
+    run.find((e) => e.phase === phase && e.type === type)?.data;
   const selecting = by("selecting") as
     | {
         decisions?: {
@@ -154,10 +178,11 @@ export function FlowView({ id }: { id: string }) {
         decider?: { questions?: number; latencyMs?: number };
       }
     | undefined;
-  const verifying = events.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)
-    ?.data as { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
+  const verifying = run.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)?.data as
+    { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
   const compiling = by("compiling") as
     { decisions?: { recipe?: { choice: string; confidence: number } } } | undefined;
+  const scope = by("compiling", "scope") as { builtOn?: string } | undefined;
 
   const state: FlowState = result
     ? result.status === "done"
@@ -192,19 +217,15 @@ export function FlowView({ id }: { id: string }) {
       {result?.artifact?.zip_url ? (
         <ResultScreen id={id} result={result} onReload={() => void loadResult()} />
       ) : null}
-      {result && !result.artifact?.zip_url ? (
-        <Panel title="What happened">
-          <p className="text-sm text-bad">
-            {result.error ??
-              (result.artifact?.report_only
-                ? "A security or policy check blocks delivery: only the report was delivered, never runnable code."
-                : "A check did not pass, so nothing was delivered.")}
-          </p>
-          <p className="mt-2 text-sm text-ice-2">
-            → Start the flow again with more detail about the rule that matters, or narrow it to one
-            capability. Everything checked so far is kept in the trace below.
-          </p>
-        </Panel>
+      {result && result.status === "failed" && !result.artifact?.zip_url ? (
+        <WhatHappened
+          id={id}
+          result={result}
+          onRetry={() => {
+            setResult(null);
+            setFollow((n) => n + 1);
+          }}
+        />
       ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
@@ -228,12 +249,20 @@ export function FlowView({ id }: { id: string }) {
         <div className="flex flex-col gap-6">
           {compiling?.decisions?.recipe ? (
             <Panel title="Intent understood">
-              <p className="text-sm">
-                <span className="text-cream">{compiling.decisions.recipe.choice}</span>{" "}
-                <span className="text-muted">
-                  · confidence {pct(compiling.decisions.recipe.confidence)}
-                </span>
-              </p>
+              {scope?.builtOn ? (
+                <p className="text-sm text-ice-2">
+                  No ready-made template matched your need exactly, so it is built on the closest
+                  one: <span className="text-cream">{scope.builtOn}</span>. What it does not cover
+                  is listed in AGENTS.md (&ldquo;What is left&rdquo;) with where to implement it.
+                </p>
+              ) : (
+                <p className="text-sm">
+                  <span className="text-cream">{compiling.decisions.recipe.choice}</span>{" "}
+                  <span className="text-muted">
+                    · confidence {pct(compiling.decisions.recipe.confidence)}
+                  </span>
+                </p>
+              )}
             </Panel>
           ) : null}
           {selecting?.decisions ? (
@@ -279,6 +308,79 @@ export function FlowView({ id }: { id: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * A flow that stopped without a package: what happened, why, what to do and one button for the next step
+ * (ADR-0050). The raw reason stays under "Details for support".
+ */
+function WhatHappened({
+  id,
+  result,
+  onRetry,
+}: {
+  id: string;
+  result: BuildResult;
+  onRetry: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const p = result.problem;
+  const title = p?.title ?? "The app could not be generated";
+  const why = p?.why ?? result.error ?? "A step failed without a reason we could show.";
+  const action = p?.action ?? "Start the flow again with the same description.";
+  const next = p?.next ?? { label: "Start the flow again", kind: "new_flow" as const };
+  const retry = next.kind === "generate_again";
+  const need = encodeURIComponent((result.prompt ?? "").slice(0, 2000));
+  async function generateAgain() {
+    setBusy(true);
+    setError(null);
+    const r = await productApi.generate(id);
+    setBusy(false);
+    if (r.ok) return onRetry();
+    setError(r.error ? `${r.error.message} → ${r.error.action}` : "It could not start.");
+  }
+  return (
+    <Panel title="What happened">
+      <div role="alert">
+        <p className="text-base font-semibold text-cream">{title}</p>
+        <p className="mt-2 text-sm text-ice-2">{why}</p>
+        <p className="mt-3 text-sm text-ice-2">
+          <span className="text-muted">What to do:</span> {action}
+        </p>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {retry ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void generateAgain()}
+            className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy disabled:opacity-50"
+          >
+            {busy ? "Starting…" : next.label}
+          </button>
+        ) : null}
+        <a
+          href={`/flows/new?need=${need}`}
+          className={
+            retry
+              ? "rounded-full border border-line px-5 py-2 text-sm text-ice-2 hover:border-teal"
+              : "rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy"
+          }
+        >
+          {retry ? "Start a new flow" : next.label}
+        </a>
+      </div>
+      {error ? <p className="mt-2 text-sm text-bad">{error}</p> : null}
+      {result.error ? (
+        <details className="mt-4 text-xs text-muted">
+          <summary className="cursor-pointer">Details for support</summary>
+          <p className="mt-1 font-mono">{result.error}</p>
+          {p?.resume ? <p className="mt-1 font-mono">{p.resume}</p> : null}
+        </details>
+      ) : null}
+    </Panel>
   );
 }
 

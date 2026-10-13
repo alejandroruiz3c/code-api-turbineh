@@ -96,6 +96,8 @@ export function flowPlan(input: {
   componentsDir: string;
   entities: string[];
   labels: (cap: string) => string;
+  /** No template matched the need exactly: it is built on the closest one (ADR-0050). */
+  scope?: { builtOn: string; reason: string };
 }): Plan {
   const useCase = USE_CASES.find((u) => u.id === input.recipeId) ?? null;
   const components: PlannedComponent[] = Object.entries(input.selected).map(([capability, c]) => ({
@@ -135,14 +137,20 @@ export function flowPlan(input: {
     ...(input.request.projectDependencies
       ? { projectDependencies: input.request.projectDependencies }
       : {}),
-    ...(INFERENCE.test(input.request.need) &&
-    !components.some((c) => c.id.startsWith("ai.orchestrator"))
-      ? {
-          notCovered: [
-            `The AI part of the need: this flow has no inference. Add it with \`turbineh plan "AI assistant for <task>"\` (TurbineH orchestration with its AI Safety Pack).`,
-          ],
-        }
-      : {}),
+    notCovered: [
+      ...(input.scope
+        ? [
+            `What is specific to your need beyond a ${useCase?.name ?? input.recipeId} app: no ready-made template matched it exactly, so it is built on the closest one`,
+          ]
+        : []),
+      ...(INFERENCE.test(input.request.need) &&
+      !components.some((c) => c.id.startsWith("ai.orchestrator"))
+        ? [
+            `The AI part of the need: this app has no AI built in. Add it afterwards with a new flow such as "AI assistant for <task>" (TurbineH orchestration with its AI Safety Pack)`,
+          ]
+        : []),
+    ],
+    labels: input.labels,
     envKeys: envKeysOf(env),
     entities: input.entities,
     ...(input.request.preferences ? { preferences: input.request.preferences } : {}),
