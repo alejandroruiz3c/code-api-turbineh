@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Recipe actor aliases (ADR-0048): recipes declare in `aliases.yaml › actors` who their tests act as, from their role
+  model (storefront, corporate-site, landing-waitlist: owner = administrator/admin/staff; client-portal: owner =
+  staff), and the request's role matrix adds the owner's label; both apply only to recipe and generated tests that name
+  the role (replacing the blanket "acting as"). The staging shop's two "administrator" criteria are now proven by owner
+  tests that assert them; precision stays 1.00.
+
 - Criteria aliases (ADR-0047): domain components declare in `aliases.yaml` which params hold this app's word for
   the generic words their tests use (bookings: customer → patient, staff member → physiotherapist, business → clinic,
   services; workflow: record → piece, status → stage). The assembler resolves them per app (`.turbineh/aliases.json`)
