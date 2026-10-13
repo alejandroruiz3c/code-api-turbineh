@@ -35,7 +35,11 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
 
 /** Local calendar parts of an instant in `timeZone`. */
 export function zonedParts(at: Date, timeZone: string) {
-  const p = Object.fromEntries(formatter(timeZone).formatToParts(at).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(
+    formatter(timeZone)
+      .formatToParts(at)
+      .map((x) => [x.type, x.value]),
+  );
   return {
     year: Number(p.year),
     month: Number(p.month),
@@ -101,7 +105,8 @@ export const minutesOf = (time: string): number => {
   return h * 60 + m;
 };
 
-export const timeOf = (minutes: number): string => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+export const timeOf = (minutes: number): string =>
+  `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 
 /** "Tuesday 2026-10-20 10:30" in the business time zone. */
 export function describeLocal(at: Date, timeZone: string): string {

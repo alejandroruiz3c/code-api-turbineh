@@ -8,8 +8,14 @@ import { TOOLKITS } from "./toolkits";
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
-  AI_PUBLIC_MAX_INPUT_CHARS: z.preprocess(empty, z.coerce.number().int().min(50).max(8000).default(1000)),
-  AI_PUBLIC_REQUESTS_PER_MINUTE: z.preprocess(empty, z.coerce.number().int().min(1).max(600).default(10)),
+  AI_PUBLIC_MAX_INPUT_CHARS: z.preprocess(
+    empty,
+    z.coerce.number().int().min(50).max(8000).default(1000),
+  ),
+  AI_PUBLIC_REQUESTS_PER_MINUTE: z.preprocess(
+    empty,
+    z.coerce.number().int().min(1).max(600).default(10),
+  ),
   AI_PUBLIC_TURNS_PER_CONVERSATION: z.preprocess(
     empty,
     z.coerce.number().int().min(1).max(500).default(60),
@@ -37,7 +43,11 @@ export function publicAssistant(all: readonly Toolkit[] = TOOLKITS): {
   return {
     enabled: kits.length > 0,
     title: kits[0]?.title ?? "Assistant",
-    greeting: kits.map((k) => k.greeting).filter(Boolean).join(" ") || "Hi! How can I help?",
+    greeting:
+      kits
+        .map((k) => k.greeting)
+        .filter(Boolean)
+        .join(" ") || "Hi! How can I help?",
     instructions: kits.map((k) => k.instructions).join("\n\n"),
     tools,
   };
@@ -46,6 +56,8 @@ export function publicAssistant(all: readonly Toolkit[] = TOOLKITS): {
 /** Client IP for rate limiting (first X-Forwarded-For hop set by the platform), or "local". */
 export function clientIp(headers: Headers): string {
   return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() || headers.get("x-real-ip") || "local"
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headers.get("x-real-ip") ||
+    "local"
   ).slice(0, 64);
 }

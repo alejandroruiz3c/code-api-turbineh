@@ -214,7 +214,11 @@ export async function runBuild(
       ...Object.fromEntries(domains.map((d) => [d.capability, d.component])),
     };
     await deps.emit(buildId, "compiling", "domains", {
-      domains: domains.map((d) => ({ id: d.id, component: d.component, assumptions: d.assumptions })),
+      domains: domains.map((d) => ({
+        id: d.id,
+        component: d.component,
+        assumptions: d.assumptions,
+      })),
     });
   }
 

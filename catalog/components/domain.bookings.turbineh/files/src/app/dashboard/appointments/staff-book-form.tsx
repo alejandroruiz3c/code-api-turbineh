@@ -23,7 +23,11 @@ export function StaffBookForm({ services }: { services: string[] }) {
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="sb-service">Service</Label>
-        <select id="sb-service" name="service" className="rounded-md border border-slate-300 p-2 text-sm">
+        <select
+          id="sb-service"
+          name="service"
+          className="rounded-md border border-slate-300 p-2 text-sm"
+        >
           {services.map((s) => (
             <option key={s}>{s}</option>
           ))}

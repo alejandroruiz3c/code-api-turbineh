@@ -1,3 +1,4 @@
+import { readGuides } from "@turbineh/catalog";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExternalComponent } from "@turbineh/integrator";
@@ -33,7 +34,7 @@ export function loadCatalog(componentsDir: string): CandidateCard[] {
         peer: m.compat.peer ?? {},
         conflicts: m.relations.conflicts,
         requires: m.relations.requires,
-        card: `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.`,
+        card: `${m.capability.does}. Provides: ${m.relations.provides.join(", ")}.${guideCard(join(componentsDir, m.id))}`,
       };
     });
 }
@@ -74,4 +75,11 @@ export function externalComponent(
     ...(m.integration?.types ? { typesPkg: m.integration.types } : {}),
     dir,
   };
+}
+
+/** Guide hints for the decider (ADR-0033): when to use / avoid the component and its search keywords. */
+function guideCard(dir: string): string {
+  const [g] = readGuides(dir).filter((x) => !x.part);
+  if (!g) return "";
+  return ` Use when: ${g.use_when.slice(0, 3).join("; ")}. Avoid when: ${g.avoid_when.slice(0, 3).join("; ")}. Keywords: ${g.keywords.slice(0, 20).join(", ")}.`;
 }

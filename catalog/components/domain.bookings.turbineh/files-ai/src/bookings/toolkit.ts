@@ -20,8 +20,14 @@ import { describeLocal } from "./time";
  * real data; create/move/cancel are irreversible: `prepare` checks the slot and the policy and describes exactly
  * what will happen, and the person confirms before `execute` runs.
  */
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe(`Local date YYYY-MM-DD (${cfg.timeZone})`);
-const time = z.string().regex(/^\d{2}:\d{2}$/).describe(`Local start time HH:MM (${cfg.timeZone})`);
+const day = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .describe(`Local date YYYY-MM-DD (${cfg.timeZone})`);
+const time = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .describe(`Local start time HH:MM (${cfg.timeZone})`);
 const email = z.email().max(320).describe(`The ${cfg.customer.singular}'s email address`);
 const reference = z
   .string()
@@ -115,7 +121,10 @@ const bookAppointment = defineTool({
   irreversible: true,
   prepare: (a, ctx) =>
     domain(async () => {
-      const slot = await checkSlot({ day: a.date, time: a.time, resource: a.resource, service: a.service, email: a.email }, ctx.now);
+      const slot = await checkSlot(
+        { day: a.date, time: a.time, resource: a.resource, service: a.service, email: a.email },
+        ctx.now,
+      );
       const price = priceLabel(slot.service);
       return {
         // The confirmed booking is exactly the one described (resource and service resolved now).
@@ -126,7 +135,15 @@ const bookAppointment = defineTool({
   execute: (a, ctx) =>
     domain(async () => {
       const b = await createAppointment(
-        { day: a.date, time: a.time, resource: a.resource, service: a.service, name: a.name, email: a.email, via: "assistant" },
+        {
+          day: a.date,
+          time: a.time,
+          resource: a.resource,
+          service: a.service,
+          name: a.name,
+          email: a.email,
+          via: "assistant",
+        },
         ctx.now,
       );
       return {
@@ -136,7 +153,8 @@ const bookAppointment = defineTool({
         resource: b.resource,
         service: b.service,
         price: b.price,
-        confirmationEmail: b.emailTransport === "log" ? "logged (no email provider configured)" : "sent",
+        confirmationEmail:
+          b.emailTransport === "log" ? "logged (no email provider configured)" : "sent",
         message: `Booked: ${b.service} with ${b.resource} on ${b.when}. Reference ${b.reference}. A confirmation email was sent to ${b.email}.`,
       };
     }),
@@ -144,7 +162,8 @@ const bookAppointment = defineTool({
 
 const findAppointments = defineTool({
   name: "find_appointments",
-  description: "Upcoming appointments booked with an email address (references are only in the confirmation email).",
+  description:
+    "Upcoming appointments booked with an email address (references are only in the confirmation email).",
   parameters: z.object({ email }).strict(),
   execute: (a, ctx) =>
     domain(async () => {
@@ -178,8 +197,16 @@ const rescheduleAppointment = defineTool({
     }),
   execute: (a, ctx) =>
     domain(async () => {
-      const m = await moveAppointment(a.reference, a.email, { day: a.date, time: a.time, resource: a.resource }, { now: ctx.now });
-      return { ...m, message: `Moved booking ${m.reference} to ${m.when} with ${m.resource}. We emailed the new details.` };
+      const m = await moveAppointment(
+        a.reference,
+        a.email,
+        { day: a.date, time: a.time, resource: a.resource },
+        { now: ctx.now },
+      );
+      return {
+        ...m,
+        message: `Moved booking ${m.reference} to ${m.when} with ${m.resource}. We emailed the new details.`,
+      };
     }),
 });
 
@@ -191,12 +218,17 @@ const cancelTool = defineTool({
   prepare: (a, ctx) =>
     domain(async () => {
       const own = await describeOwn(a.reference, a.email, { now: ctx.now, action: "cancel" });
-      return { summary: `Cancel booking ${own.reference}: ${own.service} with ${own.resource} on ${own.when}.` };
+      return {
+        summary: `Cancel booking ${own.reference}: ${own.service} with ${own.resource} on ${own.when}.`,
+      };
     }),
   execute: (a, ctx) =>
     domain(async () => {
       const c = await cancelAppointment(a.reference, a.email, { now: ctx.now });
-      return { ...c, message: `Cancelled booking ${c.reference} (${c.when}). We emailed a confirmation.` };
+      return {
+        ...c,
+        message: `Cancelled booking ${c.reference} (${c.when}). We emailed a confirmation.`,
+      };
     }),
 });
 
@@ -211,5 +243,12 @@ export const toolkit: Toolkit = {
     "To book you need the date, time, the person's full name and email (and optionally who they prefer). To move or cancel you need the booking reference and email.",
     "If something is not published (e.g. an answer marked 'Not published yet'), say so; never make it up. Do not give medical, legal or financial advice.",
   ].join("\n"),
-  tools: [businessInfo, checkAvailability, bookAppointment, findAppointments, rescheduleAppointment, cancelTool],
+  tools: [
+    businessInfo,
+    checkAvailability,
+    bookAppointment,
+    findAppointments,
+    rescheduleAppointment,
+    cancelTool,
+  ],
 };

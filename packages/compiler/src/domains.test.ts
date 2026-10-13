@@ -19,7 +19,11 @@ describe("domain detection (deterministic, ADR-0033)", () => {
     const p = r!.params;
     expect(p.business).toBe("Flex Physio");
     expect(p.timeZone).toBe("Europe/Madrid");
-    expect(p.resource).toMatchObject({ singular: "Physiotherapist", plural: "Physiotherapists", count: 3 });
+    expect(p.resource).toMatchObject({
+      singular: "Physiotherapist",
+      plural: "Physiotherapists",
+      count: 3,
+    });
     expect(p.customer.plural).toBe("patients");
     expect(p.hours).toEqual(
       [1, 2, 3, 4, 5].map((weekday) => ({ weekday, open: "09:00", close: "19:00" })),
@@ -40,7 +44,11 @@ describe("domain detection (deterministic, ADR-0033)", () => {
       "Booking app for Bella salon in Paris: 4 stylists (Ana, Luis, Marta and Sol), 30 minute appointments, " +
         "Tue-Sat 10:00-20:00, cancellations 2 days before.",
     );
-    expect(r!.params.resource).toMatchObject({ singular: "Stylist", count: 4, names: ["Ana", "Luis", "Marta", "Sol"] });
+    expect(r!.params.resource).toMatchObject({
+      singular: "Stylist",
+      count: 4,
+      names: ["Ana", "Luis", "Marta", "Sol"],
+    });
     expect(r!.params.timeZone).toBe("Europe/Paris");
     expect(r!.params.hours.map((h) => h.weekday)).toEqual([2, 3, 4, 5, 6]);
     expect(r!.params.policy.cancelNoticeHours).toBe(48);
@@ -51,7 +59,12 @@ describe("domain detection (deterministic, ADR-0033)", () => {
     expect(extractBookingParams("A CRM for sales teams with deals and contacts")).toBeNull();
     expect(detectDomains(CAPABILITY_B, "saas-crud")).toEqual([]);
     const [d] = detectDomains(CAPABILITY_B, "ai-agents");
-    expect(d).toMatchObject({ component: "domain.bookings.turbineh", paramsFile: "src/bookings/params.json" });
-    expect(d!.providedEntities).toEqual(expect.arrayContaining(["Booking", "Physiotherapist", "Patient"]));
+    expect(d).toMatchObject({
+      component: "domain.bookings.turbineh",
+      paramsFile: "src/bookings/params.json",
+    });
+    expect(d!.providedEntities).toEqual(
+      expect.arrayContaining(["Booking", "Physiotherapist", "Patient"]),
+    );
   });
 });

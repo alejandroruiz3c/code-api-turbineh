@@ -148,7 +148,12 @@ export function chatCompletion(
           type: "function",
           function: { name: rule.tool, arguments: JSON.stringify(args) },
         };
-        return reply({ role: "assistant", content: null, tool_calls: [toolCall] }, inTok, 10, model);
+        return reply(
+          { role: "assistant", content: null, tool_calls: [toolCall] },
+          inTok,
+          10,
+          model,
+        );
       }
     }
   }

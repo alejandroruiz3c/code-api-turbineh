@@ -232,7 +232,9 @@ export async function orchestrate<T = string>(
   } catch (err) {
     const blocked = err instanceof AiSafetyError;
     const status = blocked ? "blocked" : "error";
-    await recordUsage(req, usage, route, model, deciderName, status, started).catch(() => undefined);
+    await recordUsage(req, usage, route, model, deciderName, status, started).catch(
+      () => undefined,
+    );
     await audit({ ...req, route, decision: decision?.probabilities ?? null, flags, status }).catch(
       () => undefined,
     );
@@ -263,7 +265,9 @@ export async function embed(
     await recordUsage(req, usage, "embedding", model, "none", "ok", started);
     return vectors;
   } catch (err) {
-    await recordUsage(req, usage, "embedding", model, "none", "error", started).catch(() => undefined);
+    await recordUsage(req, usage, "embedding", model, "none", "error", started).catch(
+      () => undefined,
+    );
     if (err instanceof UserFacingError) throw err;
     console.error("[ai] embed failed", err instanceof Error ? err.name : "unknown");
     throw new UserFacingError("The assistant is not available right now. Please try again.");

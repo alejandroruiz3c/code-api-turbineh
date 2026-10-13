@@ -59,10 +59,23 @@ describe("domain components in an assembled app (ADR-0033)", () => {
       native("domain.bookings.turbineh", "domain.bookings"),
     ];
     const out = mkdtempSync(join(tmpdir(), "booking-app-"));
-    assemble({ buildId: "b1", recipesDir, recipe: "ai-agents", outDir: out, spec, selected, gaps: [], domains });
+    assemble({
+      buildId: "b1",
+      recipesDir,
+      recipe: "ai-agents",
+      outDir: out,
+      spec,
+      selected,
+      gaps: [],
+      domains,
+    });
 
     const params = JSON.parse(readFileSync(join(out, "src/bookings/params.json"), "utf8"));
-    expect(params).toMatchObject({ business: "Flex Physio", timeZone: "Europe/Madrid", slotMinutes: 45 });
+    expect(params).toMatchObject({
+      business: "Flex Physio",
+      timeZone: "Europe/Madrid",
+      slotMinutes: 45,
+    });
     // AI part of the component (files-ai) and the generated toolkit registry.
     expect(existsSync(join(out, "src/bookings/toolkit.ts"))).toBe(true);
     expect(existsSync(join(out, "tests/mock-llm/scripts/bookings.ts"))).toBe(true);
@@ -72,16 +85,34 @@ describe("domain components in an assembled app (ADR-0033)", () => {
     // The domain implements bookings, physiotherapists and patients: no generic CRUD duplicates them.
     expect(existsSync(join(out, "src/entities/bookings"))).toBe(false);
     expect(existsSync(join(out, "src/entities/physiotherapists"))).toBe(false);
-    expect(readFileSync(join(out, "src/entities/index.ts"), "utf8")).toContain("/dashboard/appointments");
+    expect(readFileSync(join(out, "src/entities/index.ts"), "utf8")).toContain(
+      "/dashboard/appointments",
+    );
+
+    // Component guides for coding agents.
+    expect(
+      readFileSync(join(out, "docs/components/domain.bookings.turbineh.md"), "utf8"),
+    ).toContain("## Extension points");
+    expect(
+      existsSync(join(out, "docs/components/ai.orchestrator.turbineh.tests-mock-llm.md")),
+    ).toBe(true);
 
     const acceptance = JSON.parse(readFileSync(join(out, ".turbineh/acceptance.json"), "utf8"));
-    expect(acceptance.map((a: { status: string }) => a.status)).toEqual(["covered", "covered", "open"]);
+    expect(acceptance.map((a: { status: string }) => a.status)).toEqual([
+      "covered",
+      "covered",
+      "open",
+    ]);
     expect(readFileSync(join(out, "README.md"), "utf8")).toContain("1 of 3 criteria are open");
     expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["met", "met", "open"]);
   });
 
   it("maps criteria to tests with code only", () => {
-    const rules = coverageRules({ recipesDir, recipe: "ai-agents", selected: [native("domain.bookings.turbineh", "domain.bookings")] });
+    const rules = coverageRules({
+      recipesDir,
+      recipe: "ai-agents",
+      selected: [native("domain.bookings.turbineh", "domain.bookings")],
+    });
     const [s] = acceptanceStatus(["Staff sign in to see and manage the bookings"], rules);
     expect(s?.tests.join(" ")).toContain("only staff on ADMIN_EMAILS");
   });

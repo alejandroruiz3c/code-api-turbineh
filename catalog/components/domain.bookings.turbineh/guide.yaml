@@ -1,0 +1,83 @@
+schema: turbineh.guide/v0.1
+component: domain.bookings.turbineh
+title: Booking domain (appointments, availability, policy) with an assistant toolkit
+summary: >-
+  Everything an appointment business needs behind its assistant or its staff: team members or rooms, services with
+  duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real
+  data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database,
+  confirmation emails recorded, and staff pages behind an ADMIN_EMAILS allow-list. Parameters come from the request.
+  In AI apps it exposes six tools to runAgent; create/move/cancel need the person's confirmation.
+keywords:
+  [booking, bookings, appointment, appointments, reservation, scheduling, availability, slots, calendar, opening hours,
+   business hours, time zone, dst, cancellation policy, notice period, double booking, clinic, salon, restaurant,
+   physiotherapy, dentist, barber, studio, receptionist]
+synonyms:
+  booking: [appointment, reservation, session, visit, slot, cita, reserva]
+  resource: [staff member, physiotherapist, therapist, stylist, doctor, room, table, court, chair]
+  customer: [patient, client, guest, diner, member, student]
+  cancellation policy: [notice period, minimum notice, cancel up to N hours before]
+use_cases:
+  - "AI booking assistant for a clinic, salon, studio or restaurant (public chat, no sign-in)"
+  - "Staff dashboard to see, book, cancel and manage the team and the assistant's answers"
+use_when:
+  - "People book time with a person or a room on fixed opening hours"
+  - "The request names hours, durations, a time zone, a team size or a cancellation rule"
+avoid_when:
+  - "Ticketed events with seat maps or capacity per slot (one booking per resource per time)"
+  - "Multi-business marketplaces (one business per app)"
+  - "Payments at booking time or external calendar sync are required (not included)"
+tradeoffs:
+  - { choice: "Start times on a grid (slotMinutes from each opening time)", gain: "Simple, predictable offers and a database-level overlap guard", cost: "No arbitrary start minutes" }
+  - { choice: "Changes need reference + email", gain: "Nobody changes someone else's booking by guessing an email", cost: "People keep the reference from the confirmation" }
+  - { choice: "Parameters in src/bookings/params.json", gain: "Deterministic, reviewable, editable", cost: "Changing hours is a code/config change (team and answers are editable in the dashboard)" }
+config:
+  - { name: ADMIN_EMAILS, default: "", description: "Comma-separated staff emails allowed to see and manage appointments (deny by default)" }
+  - { name: "src/bookings/params.json", default: "from the request", description: "business, timeZone, resource {singular, plural, count, names}, customer, services [{name, minutes, price, currency}], slotMinutes, hours [{weekday 1–7, open, close}], policy {cancelNoticeHours, bookingNoticeMinutes, horizonDays}, faq [{topic, answer|null}]" }
+interfaces:
+  - { name: availability, signature: "availability({ day, resource?, service?, now? }) → { day, timeZone, service, slots: [{ time, resource, start, end }] }", where: src/bookings/service.ts }
+  - { name: createAppointment, signature: "createAppointment({ day, time, resource?, service?, name, email, via }) → { reference, when, resource, service, price, emailTransport }", where: src/bookings/service.ts }
+  - { name: moveAppointment, signature: "moveAppointment(reference, email, { day, time, resource? }, { byStaff? })", where: src/bookings/service.ts }
+  - { name: cancelAppointment, signature: "cancelAppointment(reference, email, { byStaff? })", where: src/bookings/service.ts }
+  - { name: upcomingByEmail, signature: "upcomingByEmail(email) → [{ when, service, resource }] (no references)", where: src/bookings/service.ts }
+  - { name: toolkit, signature: "business_info, check_availability, book_appointment*, find_appointments, reschedule_appointment*, cancel_appointment* (* = confirmation)", where: src/bookings/toolkit.ts }
+  - { name: "Pure rules", signature: "dayStarts, freeSlots, assertBookableDay, canChange, cellsOf; zonedToUtc, localDay, localTime", where: src/bookings/availability.ts }
+  - { name: "Staff pages", signature: "/dashboard/appointments (list, book, cancel), /dashboard/appointments/settings (team, answers)", where: src/app/dashboard/appointments/page.tsx }
+extension_points:
+  - what: "Change hours, services, prices, time zone or policy"
+    where: "src/bookings/params.json"
+    how: "Edit the JSON; it is validated at start-up (BookingParams in src/bookings/config.ts) and the unit tests check it."
+  - what: "Add an assistant capability (e.g. waiting list, staff notes)"
+    where: "src/bookings/toolkit.ts"
+    how: "Add a function to service.ts that enforces the rule, then a defineTool() calling it; irreversible: true + prepare() if it changes data. Add a mock rule in tests/mock-llm/scripts/bookings.ts and an E2E case."
+  - what: "Different availability rule (breaks, holidays)"
+    where: "src/bookings/availability.ts"
+    how: "Filter dayStarts()/freeSlots(); everything (assistant, staff form) uses them, so one change applies everywhere."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [ai-agents]
+  requires: []
+  works_with: [ai.orchestrator.turbineh, email.transactional.turbineh]
+  notes: "The AI part (files-ai/: toolkit, mock script, assistant E2E) is installed only with ai.orchestrator.turbineh; the domain, staff pages and unit tests work without AI."
+security:
+  - "Staff pages and server actions require a signed-in member on ADMIN_EMAILS (deny by default)"
+  - "Moving or cancelling needs reference + email; email lookups never reveal references"
+  - "Double booking refused by a primary key on (resource, time cell) inside the same transaction as the booking"
+  - "Queries only through Drizzle; dates validated; errors to people are PolicyError messages only"
+guarantees:
+  - { claim: "Never books an invented or taken time", test: "tests/e2e/booking-assistant.spec.ts › never books an invented time" }
+  - { claim: "Books only after confirmation and records the confirmation email", test: "tests/e2e/booking-assistant.spec.ts › books only a real free time, after the person confirms, and logs the confirmation email" }
+  - { claim: "Reschedules with reference + email", test: "tests/e2e/booking-assistant.spec.ts › reschedules with reference + email after confirmation" }
+  - { claim: "Refuses cancellations inside the notice period", test: "tests/e2e/booking-assistant.spec.ts › refuses to cancel inside the notice period" }
+  - { claim: "DST-correct local times", test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)" }
+  - { claim: "Database-level double-booking guard", test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)" }
+  - { claim: "Only staff on ADMIN_EMAILS see appointments", test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments" }
+limits:
+  - "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)"
+  - "No payments, reminders or external calendar sync"
+  - "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
+example: |
+  import { availability, createAppointment } from "@/bookings/service";
+  const day = await availability({ day: "2026-11-02" });            // real free times
+  const first = day.slots[0];
+  if (first) await createAppointment({ day: "2026-11-02", time: first.time, name: "Ana García", email: "ana@example.com", via: "staff" });

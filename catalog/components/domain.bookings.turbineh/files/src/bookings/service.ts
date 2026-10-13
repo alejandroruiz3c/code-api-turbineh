@@ -31,7 +31,8 @@ type Service = BookingConfig["services"][number];
 type Resource = { id: string; name: string };
 
 const normEmail = (e: string) => e.trim().toLowerCase();
-const newReference = () => randomBytes(6).toString("base64url").replace(/[-_]/g, "X").slice(0, 8).toUpperCase();
+const newReference = () =>
+  randomBytes(6).toString("base64url").replace(/[-_]/g, "X").slice(0, 8).toUpperCase();
 const isUniqueViolation = (e: unknown): boolean =>
   typeof e === "object" &&
   e !== null &&
@@ -149,7 +150,12 @@ export async function availability(input: {
   service?: string;
   now?: Date;
   ignoreAppointmentId?: string;
-}): Promise<{ day: string; timeZone: string; service: Service; slots: (Slot & { resource: string })[] }> {
+}): Promise<{
+  day: string;
+  timeZone: string;
+  service: Service;
+  slots: (Slot & { resource: string })[];
+}> {
   const now = input.now ?? new Date();
   assertBookableDay(input.day, cfg, now);
   const service = await resolveService(input.service);

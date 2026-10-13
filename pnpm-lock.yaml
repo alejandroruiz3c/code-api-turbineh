@@ -211,6 +211,9 @@ importers:
 
   packages/assembler:
     dependencies:
+      '@turbineh/catalog':
+        specifier: workspace:*
+        version: link:../catalog
       '@turbineh/compiler':
         specifier: workspace:*
         version: link:../compiler

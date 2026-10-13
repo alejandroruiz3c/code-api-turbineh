@@ -49,7 +49,11 @@ export function modelEndpoint(cfg: AiConfig = aiConfig()): {
   kind: "gateway" | "openai-compatible";
 } {
   if (cfg.AI_BASE_URL)
-    return { baseUrl: cfg.AI_BASE_URL.replace(/\/$/, ""), key: cfg.AI_API_KEY, kind: "openai-compatible" };
+    return {
+      baseUrl: cfg.AI_BASE_URL.replace(/\/$/, ""),
+      key: cfg.AI_API_KEY,
+      kind: "openai-compatible",
+    };
   return {
     baseUrl: `${cfg.TURBINEH_AI_URL.replace(/\/$/, "")}/v1`,
     key: cfg.TURBINEH_AI_TOKEN,

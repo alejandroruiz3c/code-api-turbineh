@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
+import { guideMarkdown, readGuides } from "@turbineh/catalog";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
 import { applyRequestedCurrencies } from "./currencies.js";
@@ -150,6 +151,17 @@ export function assemble(input: AssembleInput): AssembleResult {
     writeFileSync(target, `${JSON.stringify(d.params, null, 2)}\n`);
   }
   if (aiApp) writeToolkits(outDir);
+  // Component guides (ADR-0033) → docs/components/<id>[.<part>].md: what each component does, how to extend it.
+  for (const id of new Set(input.selected.map((s) => s.component.id))) {
+    for (const g of readGuides(join(componentsDir, id))) {
+      if (g.part && !existsSync(join(outDir, g.part))) continue;
+      const name = g.part
+        ? `${id}.${g.part.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`
+        : id;
+      mkdirSync(join(outDir, "docs/components"), { recursive: true });
+      writeFileSync(join(outDir, "docs/components", `${name}.md`), guideMarkdown(g));
+    }
+  }
 
   const componentTables = existsSync(join(outDir, "src/db"))
     ? readdirSync(join(outDir, "src/db"))
@@ -255,7 +267,14 @@ logo, if any, is in \`public/brand/\` and referenced from \`src/brand.ts\`. Chan
 
 \`pnpm typecheck\` · \`pnpm lint\` · \`pnpm test\` · \`pnpm build\` · \`pnpm test:e2e\`
 
-${(input.domains ?? []).some((d) => d.assumptions?.length) ? `## Defaults used (the request did not say)\n\n${(input.domains ?? []).flatMap((d) => d.assumptions ?? []).map((a) => `- ${a}`).join("\n")}\n\n` : ""}${acceptanceSection(acceptanceStatus(spec.acceptance_criteria, coverageRules(input))).replace("## Acceptance criteria", "## Acceptance criteria ([ACCEPTANCE.md](ACCEPTANCE.md))")}`;
+${
+  (input.domains ?? []).some((d) => d.assumptions?.length)
+    ? `## Defaults used (the request did not say)\n\n${(input.domains ?? [])
+        .flatMap((d) => d.assumptions ?? [])
+        .map((a) => `- ${a}`)
+        .join("\n")}\n\n`
+    : ""
+}${acceptanceSection(acceptanceStatus(spec.acceptance_criteria, coverageRules(input))).replace("## Acceptance criteria", "## Acceptance criteria ([ACCEPTANCE.md](ACCEPTANCE.md))")}`;
   const components = `${MD}
 # Components
 
@@ -298,7 +317,9 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
 }
 
 /** Coverage rules of the recipe chain and of every native component in the app (acceptance.yaml files). */
-export function coverageRules(input: Pick<AssembleInput, "recipesDir" | "recipe" | "selected">): CoverageRule[] {
+export function coverageRules(
+  input: Pick<AssembleInput, "recipesDir" | "recipe" | "selected">,
+): CoverageRule[] {
   const componentsDir = join(input.recipesDir, "..", "components");
   return [
     ...recipeChain(input.recipesDir, input.recipe).flatMap((m) =>
@@ -316,7 +337,8 @@ export function writeToolkits(outDir: string): string[] {
   const domains = readdirSync(src)
     .filter((d) => /^[a-z][a-z0-9-]*$/.test(d) && existsSync(join(src, d, "toolkit.ts")))
     .sort();
-  const ident = (d: string) => `${d.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())}Toolkit`;
+  const ident = (d: string) =>
+    `${d.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())}Toolkit`;
   writeFileSync(
     join(src, "lib/ai/toolkits.ts"),
     [

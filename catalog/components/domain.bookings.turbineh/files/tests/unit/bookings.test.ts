@@ -26,9 +26,7 @@ const cfg = BookingParams.parse({
 describe("booking domain (component domain.bookings.turbineh)", () => {
   it("validates this app's parameters", () => {
     expect(BookingParams.safeParse(bookingConfig).success).toBe(true);
-    expect(
-      BookingParams.safeParse({ ...cfg, timeZone: "Mars/Olympus" }).success,
-    ).toBe(false);
+    expect(BookingParams.safeParse({ ...cfg, timeZone: "Mars/Olympus" }).success).toBe(false);
     expect(
       BookingParams.safeParse({ ...cfg, hours: [{ weekday: 1, open: "19:00", close: "09:00" }] })
         .success,
@@ -53,7 +51,19 @@ describe("booking domain (component domain.bookings.turbineh)", () => {
   it("offers every 45-minute start that ends by closing time, in local time", () => {
     const starts = dayStarts("2026-10-26", 45, cfg); // Monday after the DST change
     expect(starts.map((s) => s.time)).toEqual([
-      "09:00", "09:45", "10:30", "11:15", "12:00", "12:45", "13:30", "14:15", "15:00", "15:45", "16:30", "17:15", "18:00",
+      "09:00",
+      "09:45",
+      "10:30",
+      "11:15",
+      "12:00",
+      "12:45",
+      "13:30",
+      "14:15",
+      "15:00",
+      "15:45",
+      "16:30",
+      "17:15",
+      "18:00",
     ]);
     expect(starts[0]?.start.toISOString()).toBe("2026-10-26T08:00:00.000Z");
     expect(localTime(starts[0]!.start, "Europe/Madrid")).toBe("09:00");
@@ -63,9 +73,20 @@ describe("booking domain (component domain.bookings.turbineh)", () => {
   it("never offers taken, past or closed times", () => {
     const now = new Date("2026-10-26T09:30:00Z"); // 10:30 in Madrid
     const busy = [
-      { resourceId: "a", start: new Date("2026-10-26T11:00:00Z"), end: new Date("2026-10-26T11:45:00Z") },
+      {
+        resourceId: "a",
+        start: new Date("2026-10-26T11:00:00Z"),
+        end: new Date("2026-10-26T11:45:00Z"),
+      },
     ];
-    const slots = freeSlots({ day: "2026-10-26", minutes: 45, resourceIds: ["a", "b"], busy, cfg, now });
+    const slots = freeSlots({
+      day: "2026-10-26",
+      minutes: 45,
+      resourceIds: ["a", "b"],
+      busy,
+      cfg,
+      now,
+    });
     expect(slots.some((s) => s.time === "10:30")).toBe(false); // already started
     expect(slots.filter((s) => s.time === "12:00").map((s) => s.resourceId)).toEqual(["b"]);
     expect(slots.filter((s) => s.time === "12:45").map((s) => s.resourceId)).toEqual(["a", "b"]);

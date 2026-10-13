@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@turbineh/catalog": "workspace:*",
     "@turbineh/compiler": "workspace:*",
     "@turbineh/resolver": "workspace:*",
     "yaml": "2.9.1"

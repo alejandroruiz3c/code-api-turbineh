@@ -401,7 +401,10 @@ export async function runAgent(
       state.pending = null;
       if (answer === false) {
         steps.push({ tool: pending.tool, ok: true, executed: false });
-        return await finish("cancelled", "Okay, I have not done it. Anything else I can help with?");
+        return await finish(
+          "cancelled",
+          "Okay, I have not done it. Anything else I can help with?",
+        );
       }
       const tool = tools.get(pending.tool);
       if (answer === true && tool) {
@@ -506,7 +509,9 @@ export async function runAgent(
               };
             } catch (err) {
               const message =
-                err instanceof ToolError ? err.message : "That step failed. Please try again later.";
+                err instanceof ToolError
+                  ? err.message
+                  : "That step failed. Please try again later.";
               if (!(err instanceof ToolError))
                 console.error(
                   "[ai] tool check failed",

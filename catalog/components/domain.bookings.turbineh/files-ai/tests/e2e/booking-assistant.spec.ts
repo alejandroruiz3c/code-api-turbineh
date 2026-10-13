@@ -137,7 +137,14 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
       await pool.query(
         `insert into booking_appointments (reference, resource_id, service, customer_name, customer_email, starts_at, ends_at, created_via)
          values ($1, $2, $3, 'Late Patient', $4, $5, $6, 'staff')`,
-        [ref, rows[0]!.id, params.services[0]!.name, email, start, new Date(start.getTime() + 1_800_000)],
+        [
+          ref,
+          rows[0]!.id,
+          params.services[0]!.name,
+          email,
+          start,
+          new Date(start.getTime() + 1_800_000),
+        ],
       );
     } finally {
       await pool.end();

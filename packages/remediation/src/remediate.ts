@@ -171,7 +171,7 @@ export function aiRerouteGuidance(dir: string): string {
         'Chat/completion → `const r = await orchestrate({ organizationId, userId, purpose: "<short label>", task: "<what the app wants>", input: <user text or record>, schema?: <zod schema for structured output> })` and use `r.text` (or `r.output` with a schema). ' +
         'Embeddings → `await embed(texts, { organizationId, userId, purpose: "<label>" })` returning number[][]. Take organizationId/userId from the existing session helpers (require*). ' +
         "Tool calling / agents (the model calls functions over the app's data) → do not write a loop: define each function with " +
-        '`defineTool({ name, description, parameters: z.object({...}), irreversible?, prepare?, execute })` and call ' +
+        "`defineTool({ name, description, parameters: z.object({...}), irreversible?, prepare?, execute })` and call " +
         '`runAgent({ organizationId, userId, purpose, instructions, input, tools, state })` from "@/lib/ai/agent" (it validates arguments, asks the person to confirm irreversible tools, bounds steps and time, and returns `{ reply, status, pending, state }` to store). ' +
         "An OpenAI-compatible endpoint configured by environment variables is the orchestrator's AI_BASE_URL / AI_API_KEY / AI_MODEL: drop custom LLM_* variables. " +
         "Remove the direct SDK import, client construction, API keys and fetch calls to model endpoints. Keep the function signature and behaviour for callers."

@@ -103,7 +103,9 @@ export function finalizeAcceptance(outDir: string, gatePassed: boolean): Criteri
   if (!existsSync(file)) return [];
   const prev = JSON.parse(readFileSync(file, "utf8")) as CriterionStatus[];
   const next = prev.map((s) =>
-    s.tests.length === 0 ? s : { ...s, status: gatePassed ? ("met" as const) : ("covered" as const) },
+    s.tests.length === 0
+      ? s
+      : { ...s, status: gatePassed ? ("met" as const) : ("covered" as const) },
   );
   writeAcceptance(outDir, next);
   return next;

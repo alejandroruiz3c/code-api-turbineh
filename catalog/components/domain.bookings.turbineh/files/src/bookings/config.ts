@@ -95,7 +95,9 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 export function hoursText(cfg: BookingConfig = bookingConfig): string {
   return [1, 2, 3, 4, 5, 6, 7]
     .map((d) => {
-      const w = cfg.hours.filter((h) => h.weekday === d).sort((a, b) => a.open.localeCompare(b.open));
+      const w = cfg.hours
+        .filter((h) => h.weekday === d)
+        .sort((a, b) => a.open.localeCompare(b.open));
       return `${DAYS[d - 1]}: ${w.length ? w.map((h) => `${h.open}–${h.close}`).join(", ") : "closed"}`;
     })
     .join("; ");

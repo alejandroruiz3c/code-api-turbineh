@@ -50,7 +50,8 @@ export default async function BookingSettings() {
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">Answers the assistant may give</h2>
         <p className="text-sm text-slate-600">
-          Empty answers are reported as &quot;not published yet&quot;: the assistant never makes them up.
+          Empty answers are reported as &quot;not published yet&quot;: the assistant never makes
+          them up.
         </p>
         {faq.map((f) => (
           <form key={f.id} action={saveAnswer} className="flex flex-col gap-1">

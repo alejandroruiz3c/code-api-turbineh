@@ -47,13 +47,17 @@ export const bookingParamsSchema = z.object({
     .min(1)
     .max(20),
   slotMinutes: z.number().int().min(5).max(240),
-  hours: z.array(z.object({ weekday: z.number().int().min(1).max(7), open: hhmm, close: hhmm })).min(1),
+  hours: z
+    .array(z.object({ weekday: z.number().int().min(1).max(7), open: hhmm, close: hhmm }))
+    .min(1),
   policy: z.object({
     cancelNoticeHours: z.number().min(0).max(720),
     bookingNoticeMinutes: z.number().int().min(0).max(10_080),
     horizonDays: z.number().int().min(1).max(365),
   }),
-  faq: z.array(z.object({ topic: z.string().min(1).max(120), answer: z.string().max(1000).nullable() })).max(30),
+  faq: z
+    .array(z.object({ topic: z.string().min(1).max(120), answer: z.string().max(1000).nullable() }))
+    .max(30),
 });
 export type BookingParams = z.infer<typeof bookingParamsSchema>;
 
@@ -158,7 +162,7 @@ const isTimeZone = (tz: string) => {
   }
 };
 const pad = (n: number) => String(n).padStart(2, "0");
-const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+const cap = (s: string) => (s ? (s[0] ?? "").toUpperCase() + s.slice(1) : s);
 const singular = (w: string) =>
   /ies$/.test(w)
     ? w.replace(/ies$/, "y")
@@ -181,15 +185,21 @@ function clock(h: string, m: string | undefined, ampm: string | undefined): stri
 
 /** "Monday–Friday", "Mon, Wed and Fri", "Sat" → ISO weekdays. */
 function parseDays(phrase: string): number[] {
-  const tokens = phrase.toLowerCase().match(/(mon|tue|wed|thu|fri|sat|sun)[a-z]*|–|—|-|to|through|thru/g) ?? [];
+  const tokens =
+    phrase.toLowerCase().match(/(mon|tue|wed|thu|fri|sat|sun)[a-z]*|–|—|-|to|through|thru/g) ?? [];
   const out = new Set<number>();
   for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i]!;
+    const t = tokens[i] ?? "";
     const d = DAYS.indexOf(t.slice(0, 3));
     if (d < 0) continue;
     const next = tokens[i + 1];
     const after = tokens[i + 2];
-    if (next && /^(–|—|-|to|through|thru)$/.test(next) && after && DAYS.includes(after.slice(0, 3))) {
+    if (
+      next &&
+      /^(–|—|-|to|through|thru)$/.test(next) &&
+      after &&
+      DAYS.includes(after.slice(0, 3))
+    ) {
       const e = DAYS.indexOf(after.slice(0, 3));
       for (let k = d; ; k = (k + 1) % 7) {
         out.add(k + 1);
@@ -209,18 +219,21 @@ function parseHours(prompt: string): BookingParams["hours"] {
   );
   for (const m of prompt.matchAll(re)) {
     const days = parseDays(m[1] ?? "");
-    const open = clock(m[2]!, m[3], m[4]);
-    const close = clock(m[5]!, m[6], m[7] ?? m[4]);
+    const open = clock(m[2] ?? "", m[3], m[4]);
+    const close = clock(m[5] ?? "", m[6], m[7] ?? m[4]);
     if (!open || !close || open >= close) continue;
     for (const weekday of days) hours.push({ weekday, open, close });
   }
   // "weekdays 9–18", "every day 10:00-22:00"
-  const general = new RegExp(String.raw`\b(weekdays|every day|daily)\b[\s,:(]*(?:from\s+)?${TIME}\s*${DASH}\s*${TIME}`, "gi");
+  const general = new RegExp(
+    String.raw`\b(weekdays|every day|daily)\b[\s,:(]*(?:from\s+)?${TIME}\s*${DASH}\s*${TIME}`,
+    "gi",
+  );
   for (const m of prompt.matchAll(general)) {
-    const open = clock(m[2]!, m[3], m[4]);
-    const close = clock(m[5]!, m[6], m[7] ?? m[4]);
+    const open = clock(m[2] ?? "", m[3], m[4]);
+    const close = clock(m[5] ?? "", m[6], m[7] ?? m[4]);
     if (!open || !close || open >= close) continue;
-    const days = /weekdays/i.test(m[1]!) ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7];
+    const days = /weekdays/i.test(m[1] ?? "") ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7];
     for (const weekday of days)
       if (!hours.some((h) => h.weekday === weekday)) hours.push({ weekday, open, close });
   }
@@ -232,9 +245,14 @@ function parseMoney(text: string): { price: number; currency: string } | null {
     /(€|\$|£)\s*(\d+(?:[.,]\d{1,2})?)/.exec(text) ??
     /(\d+(?:[.,]\d{1,2})?)\s*(€|eur\b|euros?\b|\$|usd\b|dollars?\b|£|gbp\b|pounds?\b)/i.exec(text);
   if (!m) return null;
-  const [amount, sym] = /\d/.test(m[1]!) ? [m[1]!, m[2]!] : [m[2]!, m[1]!];
+  const [amount, sym] = /\d/.test(m[1] ?? "") ? [m[1] ?? "", m[2] ?? ""] : [m[2] ?? "", m[1] ?? ""];
   const s = sym.toLowerCase();
-  const currency = s.startsWith("€") || s.startsWith("eur") ? "EUR" : s === "$" || s.startsWith("usd") || s.startsWith("dollar") ? "USD" : "GBP";
+  const currency =
+    s.startsWith("€") || s.startsWith("eur")
+      ? "EUR"
+      : s === "$" || s.startsWith("usd") || s.startsWith("dollar")
+        ? "USD"
+        : "GBP";
   return { price: Number(amount.replace(",", ".")), currency };
 }
 
@@ -250,22 +268,31 @@ export function extractBookingParams(
   const business = (/[“"]([^”"]{2,60})[”"]/.exec(text)?.[1] ?? appName).trim();
 
   // Durations: "45-minute sessions", "30 min appointments", "1-hour classes".
-  const durations = [...text.matchAll(/\b(\d{1,3})\s*-?\s*(?:minutes?|mins?)\b(?:\s+([a-z]+))?/gi)].map((m) => ({
+  const durations = [
+    ...text.matchAll(/\b(\d{1,3})\s*-?\s*(?:minutes?|mins?)\b(?:\s+([a-z]+))?/gi),
+  ].map((m) => ({
     minutes: Number(m[1]),
     noun: m[2]?.toLowerCase(),
   }));
-  const hourly = /\b(one|1|an?)\s*-?\s*hour\s+(sessions?|appointments?|classes|slots?|visits?)/i.exec(text);
-  if (hourly) durations.push({ minutes: 60, noun: hourly[2]!.toLowerCase() });
+  const hourly =
+    /\b(one|1|an?)\s*-?\s*hour\s+(sessions?|appointments?|classes|slots?|visits?)/i.exec(text);
+  if (hourly) durations.push({ minutes: 60, noun: (hourly[2] ?? "").toLowerCase() });
   const minutes = durations.find((d) => d.minutes >= 5 && d.minutes <= 480)?.minutes ?? 30;
   if (!durations.length) assumptions.push("Appointment length not stated: 30 minutes.");
-  const sessionNoun = durations.find((d) => d.noun && /^(session|appointment|class|visit|slot|treatment|lesson|consultation)/.test(d.noun))?.noun;
+  const sessionNoun = durations.find(
+    (d) =>
+      d.noun &&
+      /^(session|appointment|class|visit|slot|treatment|lesson|consultation)/.test(d.noun),
+  )?.noun;
 
   // Team: "three physiotherapists", "4 stylists (Ana, Luis, Marta, Sol)".
   let resource: BookingParams["resource"] | null = null;
-  for (const m of text.matchAll(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+([a-z][a-z-]{2,30}s)\b(\s*\(([^)]{2,200})\))?/gi)) {
-    const plural = m[2]!.toLowerCase();
+  for (const m of text.matchAll(
+    /\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+([a-z][a-z-]{2,30}s)\b(\s*\(([^)]{2,200})\))?/gi,
+  )) {
+    const plural = (m[2] ?? "").toLowerCase();
     if (NOT_RESOURCES.has(plural)) continue;
-    const count = num(m[1]!);
+    const count = num(m[1] ?? "");
     if (!Number.isInteger(count) || count < 1 || count > 50) continue;
     const names = (m[4] ?? "")
       .split(/,|\band\b|&/)
@@ -280,7 +307,8 @@ export function extractBookingParams(
     assumptions.push("Team size not stated: one bookable person.");
   }
 
-  const customerNoun = CUSTOMER_NOUNS.find((n) => new RegExp(`\\b${n}\\b`, "i").test(text)) ?? "customers";
+  const customerNoun =
+    CUSTOMER_NOUNS.find((n) => new RegExp(`\\b${n}\\b`, "i").test(text)) ?? "customers";
   const customer = { singular: singular(customerNoun), plural: customerNoun };
 
   let hours = parseHours(text);
@@ -291,37 +319,49 @@ export function extractBookingParams(
 
   let timeZone =
     [...text.matchAll(/\b([A-Z][A-Za-z_]+\/[A-Z][A-Za-z_]+(?:\/[A-Z][A-Za-z_]+)?)\b/g)]
-      .map((m) => m[1]!)
+      .map((m) => m[1] ?? "")
       .find(isTimeZone) ?? null;
   if (!timeZone) {
     const city = Object.keys(CITY_ZONES).find((c) => new RegExp(`\\b${c}\\b`, "i").test(text));
-    timeZone = city ? CITY_ZONES[city]! : "UTC";
+    timeZone = city ? (CITY_ZONES[city] ?? "UTC") : "UTC";
     assumptions.push(
       city ? `Time zone inferred from "${city}": ${timeZone}.` : "Time zone not stated: UTC.",
     );
   }
 
   const notice =
-    /\b(?:not later than|no later than|at least|up to|until|minimum(?: of)?)\s+(\d{1,3})\s*(hours?|h|days?)\s+(?:before|in advance|ahead|notice)/i.exec(text) ??
-    /\b(\d{1,3})\s*-?\s*(hours?|h|days?)['’]?\s*(?:notice|before|in advance)/i.exec(text);
-  const cancelNoticeHours = notice ? Number(notice[1]) * (/^d/i.test(notice[2]!) ? 24 : 1) : 24;
+    /\b(?:not later than|no later than|at least|up to|until|minimum(?: of)?)\s+(\d{1,3})\s*(hours?|h|days?)\s+(?:before|in advance|ahead|notice)/i.exec(
+      text,
+    ) ?? /\b(\d{1,3})\s*-?\s*(hours?|h|days?)['’]?\s*(?:notice|before|in advance)/i.exec(text);
+  const cancelNoticeHours = notice
+    ? Number(notice[1]) * (/^d/i.test(notice[2] ?? "") ? 24 : 1)
+    : 24;
   if (!notice) assumptions.push("Change/cancellation notice not stated: 24 hours.");
 
   // Services and prices: "prices: first visit 60 €, follow-up 50 €".
   const services: BookingParams["services"] = [];
-  const priceSegment = /\bprices?\b\s*(?:are|is)?\s*[:(]?\s*([^);.\n]+(?:\.\d{1,2}[^);.\n]*)?)/i.exec(text)?.[1];
+  const priceSegment =
+    /\bprices?\b\s*(?:are|is)?\s*[:(]?\s*([^);.\n]+(?:\.\d{1,2}[^);.\n]*)?)/i.exec(text)?.[1];
   for (const part of (priceSegment ?? "").split(/,|\band\b/)) {
     const money = parseMoney(part);
     if (!money) continue;
     const name = part
-      .replace(/(€|\$|£)\s*\d+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?\s*(€|eur\b|euros?\b|\$|usd\b|dollars?\b|£|gbp\b|pounds?\b)/gi, "")
+      .replace(
+        /(€|\$|£)\s*\d+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?\s*(€|eur\b|euros?\b|\$|usd\b|dollars?\b|£|gbp\b|pounds?\b)/gi,
+        "",
+      )
       .replace(/^[\s:–-]+|[\s:–-]+$/g, "")
       .replace(/\s+/g, " ");
     if (name.length < 2 || name.length > 80) continue;
     services.push({ name: cap(name), minutes, price: money.price, currency: money.currency });
   }
   if (services.length === 0) {
-    services.push({ name: cap(sessionNoun ? singular(sessionNoun) : "Appointment"), minutes, price: null, currency: null });
+    services.push({
+      name: cap(sessionNoun ? singular(sessionNoun) : "Appointment"),
+      minutes,
+      price: null,
+      currency: null,
+    });
     assumptions.push("Prices not stated: none published.");
   }
 

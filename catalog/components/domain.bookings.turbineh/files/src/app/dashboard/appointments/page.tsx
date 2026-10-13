@@ -34,7 +34,19 @@ export default async function Appointments() {
       <p className="text-sm text-slate-600">
         {cfg.business} · {cfg.timeZone} · {hoursText()}
       </p>
-      <Table head={["When", cfg.resource.singular, "Service", "Name", "Email", "Status", "Reference", "Notification", ""]}>
+      <Table
+        head={[
+          "When",
+          cfg.resource.singular,
+          "Service",
+          "Name",
+          "Email",
+          "Status",
+          "Reference",
+          "Notification",
+          "",
+        ]}
+      >
         {rows.map((r) => (
           <tr key={r.id} data-reference={r.reference}>
             <td className="px-3 py-2">{r.when}</td>

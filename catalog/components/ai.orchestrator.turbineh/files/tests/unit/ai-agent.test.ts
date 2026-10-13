@@ -4,9 +4,8 @@ import { z } from "zod";
 // The agent loop is tested with injected I/O: no database, no network.
 vi.mock("@/db/client", () => ({ db: {} }));
 
-const { defineTool, readConfirmation, runAgent, ToolError, trimMessages } = await import(
-  "@/lib/ai/agent"
-);
+const { defineTool, readConfirmation, runAgent, ToolError, trimMessages } =
+  await import("@/lib/ai/agent");
 const { modelEndpoint, aiConfig } = await import("@/lib/ai/models");
 const { chatCompletion } = await import("../mock-llm/mock");
 const { AiSafetyError } = await import("@/lib/ai/guard");
@@ -119,10 +118,7 @@ describe("runAgent (tool-calling runtime)", () => {
   it("rejects invalid arguments and unknown tools, and stops at the step limit", async () => {
     const r = await runAgent(
       { ...base, input: "x", maxSteps: 2 },
-      io([
-        { toolCalls: [call("check", { day: "tomorrow" })] },
-        { toolCalls: [call("rm_rf", {})] },
-      ]),
+      io([{ toolCalls: [call("check", { day: "tomorrow" })] }, { toolCalls: [call("rm_rf", {})] }]),
     );
     expect(r.status).toBe("step_limit");
     expect(JSON.stringify(r.state.messages)).toContain("Invalid arguments");
@@ -160,7 +156,10 @@ describe("runAgent (tool-calling runtime)", () => {
     const keep = { ...process.env };
     process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1/";
     process.env.AI_MODEL = "local-model";
-    expect(modelEndpoint()).toMatchObject({ baseUrl: "http://127.0.0.1:4010/v1", kind: "openai-compatible" });
+    expect(modelEndpoint()).toMatchObject({
+      baseUrl: "http://127.0.0.1:4010/v1",
+      kind: "openai-compatible",
+    });
     expect(aiConfig().AI_STRUCTURER_MODEL).toBe("local-model");
     delete process.env.AI_BASE_URL;
     delete process.env.AI_MODEL;
@@ -172,7 +171,13 @@ describe("runAgent (tool-calling runtime)", () => {
 describe("scripted mock model (tests/mock-llm)", () => {
   const script = {
     id: "t",
-    rules: [{ tool: "check", when: /free on (\S+)/, args: (_t: string, m: RegExpExecArray) => ({ day: m[1] }) }],
+    rules: [
+      {
+        tool: "check",
+        when: /free on (\S+)/,
+        args: (_t: string, m: RegExpExecArray) => ({ day: m[1] }),
+      },
+    ],
   };
   it("turns matching requests into tool calls only when the tool is offered", () => {
     const withTool = chatCompletion(

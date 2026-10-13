@@ -83,7 +83,11 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
       className="flex w-full max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm"
     >
       <h2 className="font-semibold">{title}</h2>
-      <ol data-testid="assistant-log" aria-live="polite" className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
+      <ol
+        data-testid="assistant-log"
+        aria-live="polite"
+        className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm"
+      >
         {lines.map((l, i) => (
           <li
             key={i}

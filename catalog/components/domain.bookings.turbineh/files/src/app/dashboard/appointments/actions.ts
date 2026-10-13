@@ -59,7 +59,10 @@ export async function saveResource(formData: FormData): Promise<void> {
       .set({ name, active: formData.get("active") === "on" })
       .where(eq(bookingResources.id, z.uuid().parse(id)));
   } else {
-    const all = await db.select({ id: bookingResources.id }).from(bookingResources).orderBy(asc(bookingResources.sort));
+    const all = await db
+      .select({ id: bookingResources.id })
+      .from(bookingResources)
+      .orderBy(asc(bookingResources.sort));
     await db.insert(bookingResources).values({ name, sort: all.length });
   }
   revalidatePath("/dashboard/appointments/settings");
@@ -68,7 +71,11 @@ export async function saveResource(formData: FormData): Promise<void> {
 export async function saveAnswer(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = z.uuid().parse(formData.get("id"));
-  const answer = z.string().trim().max(1000).parse(formData.get("answer") ?? "");
+  const answer = z
+    .string()
+    .trim()
+    .max(1000)
+    .parse(formData.get("answer") ?? "");
   await db
     .update(bookingFaq)
     .set({ answer: answer || null, updatedAt: new Date() })
@@ -79,7 +86,14 @@ export async function saveAnswer(formData: FormData): Promise<void> {
 export async function addQuestion(formData: FormData): Promise<void> {
   await requireAdmin();
   const topic = z.string().trim().min(2).max(120).parse(formData.get("topic"));
-  const answer = z.string().trim().max(1000).parse(formData.get("answer") ?? "");
-  await db.insert(bookingFaq).values({ topic, answer: answer || null, sort: 1000 }).onConflictDoNothing();
+  const answer = z
+    .string()
+    .trim()
+    .max(1000)
+    .parse(formData.get("answer") ?? "");
+  await db
+    .insert(bookingFaq)
+    .values({ topic, answer: answer || null, sort: 1000 })
+    .onConflictDoNothing();
   revalidatePath("/dashboard/appointments/settings");
 }
