@@ -1,5 +1,5 @@
 /**
- * `pnpm --filter @turbineh/worker run verify:recipe <recipe> ["<prompt>"]` — assembles one recipe template with a
+ * `pnpm --filter @turbineh/worker run verify:recipe <recipe> ["<prompt>"] [--with <component,…>]` — assembles one recipe template with a
  * minimal spec (no models involved) and runs the full verification gate on it in the local sandbox. Used to check
  * catalogue templates before they ship; prints the gate steps and findings as JSON.
  */
@@ -12,7 +12,11 @@ import { assemble } from "@turbineh/assembler";
 import { extractPalette, type BuildSpec } from "@turbineh/compiler";
 import { gateFindings, verify } from "@turbineh/verifier";
 
-const [recipe = "saas-crud", prompt = ""] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const withAt = argv.indexOf("--with");
+// --with id1,id2: native catalog components (files/) vendored into the app, as a build that selected them would.
+const withIds = withAt >= 0 ? (argv.splice(withAt, 2)[1] ?? "").split(",").filter(Boolean) : [];
+const [recipe = "saas-crud", prompt = ""] = argv;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const outDir = join(mkdtempSync(join(tmpdir(), `recipe-${recipe}-`)), "app");
 const spec: BuildSpec = {
@@ -40,7 +44,11 @@ assemble({
   recipe,
   outDir,
   spec,
-  selected: [],
+  selected: withIds.map((id) => ({
+    capability: id.split(".").slice(0, 2).join("."),
+    component: { id, pkg: { name: `turbineh/${id}`, version: "1.0.0" } } as never,
+    why: { pBest: 1, covers: 1, risk: 0 },
+  })),
   gaps: [],
 });
 const git = (...args: string[]) =>

@@ -164,7 +164,7 @@ test.describe.serial("storefront", () => {
       );
     });
 
-    test("buys an option with card: shipping, tax, signed payment webhook, order paid, stock and cart updated", async ({
+    test("pays with Stripe Checkout: amounts computed on the server, the signed webhook marks the order paid, decrements stock, logs the confirmation email and empties the cart", async ({
       page,
       browser,
       request,

@@ -400,7 +400,8 @@ ${g.app.summary}
 Recipe \`${g.recipe.id}\`: ${g.recipe.description}. Build \`${g.buildId}\`. ${status}
 
 Read this file instead of the whole repository. The same facts are machine-readable in \`turbineh.json\`
-(\`npx turbineh left\` prints what is left).
+(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix;
+install: \`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
 
 ## What is left
 

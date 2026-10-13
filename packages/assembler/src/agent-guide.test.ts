@@ -68,7 +68,7 @@ describe("agent-ready package (S9/S10)", () => {
   it("after verification marks each criterion met (with its test) or open (with where to implement it)", () => {
     const dir = build();
     const title = (readFileSync(join(dir, "tests/e2e/shop.spec.ts"), "utf8").match(
-      /test\(\s*"(buys an option[^"]+)"/,
+      /test\(\s*"(pays with Stripe Checkout[^"]+)"/,
     ) ?? [])[1] as string;
     const guide = verifiedGuide(dir, {
       gate: {
