@@ -20,6 +20,7 @@ const config: NextConfig = {
   images: { unoptimized: true },
   transpilePackages: [
     "@turbineh/db",
+    "@turbineh/decider",
     "@turbineh/deployer",
     "@turbineh/engine",
     "@turbineh/shared",

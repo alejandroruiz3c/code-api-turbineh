@@ -1,0 +1,733 @@
+{
+  "summary": {
+    "label": "monorepo-app-decider",
+    "date": "2026-10-13T17:07:27.708Z",
+    "cases": 20,
+    "code": {
+      "accuracy": {
+        "app": "17/20",
+        "database": "18/20",
+        "auth": "17/20"
+      },
+      "latencyMsPerRepo": 0.208,
+      "costUsd": 0
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "errors": 0,
+      "accuracy": {
+        "app": "20/20",
+        "database": "13/20",
+        "auth": "17/20"
+      },
+      "latencyMsPerRepo": {
+        "p50": 117,
+        "max": 528
+      },
+      "tokens": 14462,
+      "costUsd": 0.00607
+    },
+    "shipped": {
+      "note": "chooseAppPath (decider for several apps, heuristic fallback) + code for database and auth",
+      "accuracy": {
+        "app": "20/20",
+        "database": "20/20",
+        "auth": "20/20"
+      },
+      "decidedBy": {
+        "decider": 4,
+        "code": 16
+      },
+      "latencyMsPerRepo": {
+        "p50": 0,
+        "max": 118,
+        "meanWhenAsked": 107
+      },
+      "tokens": 2015,
+      "costUsd": 0.00085
+    }
+  },
+  "rows": [
+    {
+      "id": "p1-root-app",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "codeMs": 1.0160419999999988,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 528,
+        "tokens": 670,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.27054199999997763
+      }
+    },
+    {
+      "id": "p2-apps-web-only",
+      "expected": {
+        "app": "apps/web",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "apps/web",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "codeMs": 0.297333999999978,
+      "decider": {
+        "decision": {
+          "app": "apps/web",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 117,
+        "tokens": 828,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/web",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.1442499999999427
+      }
+    },
+    {
+      "id": "p3-marketing-web-product-app",
+      "expected": {
+        "app": "apps/app",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "apps/web",
+        "database": "own",
+        "auth": "own"
+      },
+      "codeMs": 0.39141699999993307,
+      "decider": {
+        "decision": {
+          "app": "apps/app",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 122,
+        "tokens": 832,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/app",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "by": "decider",
+        "ms": 105.06733399999996
+      }
+    },
+    {
+      "id": "p4-site-and-dashboard",
+      "expected": {
+        "app": "apps/dashboard",
+        "database": "own",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "apps/site",
+        "database": "own",
+        "auth": "own"
+      },
+      "codeMs": 0.32820799999990413,
+      "decider": {
+        "decision": {
+          "app": "apps/dashboard",
+          "database": "own",
+          "auth": "adapter"
+        },
+        "latencyMs": 97,
+        "tokens": 831,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/dashboard",
+          "database": "own",
+          "auth": "adapter"
+        },
+        "by": "decider",
+        "ms": 118.49441700000011
+      }
+    },
+    {
+      "id": "p5-docs-and-web",
+      "expected": {
+        "app": "apps/web",
+        "database": "reuse",
+        "auth": "own"
+      },
+      "code": {
+        "app": "apps/web",
+        "database": "reuse",
+        "auth": "own"
+      },
+      "codeMs": 0.37400000000002365,
+      "decider": {
+        "decision": {
+          "app": "apps/web",
+          "database": "reuse",
+          "auth": "own"
+        },
+        "latencyMs": 102,
+        "tokens": 833,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/web",
+          "database": "reuse",
+          "auth": "own"
+        },
+        "by": "decider",
+        "ms": 105.78320899999994
+      }
+    },
+    {
+      "id": "p6-api-and-web",
+      "expected": {
+        "app": "apps/web",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "apps/web",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "codeMs": 0.09024999999996908,
+      "decider": {
+        "decision": {
+          "app": "apps/web",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 103,
+        "tokens": 828,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/web",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.030957999999827734
+      }
+    },
+    {
+      "id": "p7-blog-and-storefront",
+      "expected": {
+        "app": "apps/storefront",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "apps/blog",
+        "database": "own",
+        "auth": "own"
+      },
+      "codeMs": 0.06099999999992178,
+      "decider": {
+        "decision": {
+          "app": "apps/storefront",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 104,
+        "tokens": 847,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "apps/storefront",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "by": "decider",
+        "ms": 100.42654199999993
+      }
+    },
+    {
+      "id": "p8-root-next-with-packages",
+      "expected": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "codeMs": 0.16237499999988358,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 105,
+        "tokens": 768,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.10787499999992178
+      }
+    },
+    {
+      "id": "d1-prisma-postgres",
+      "expected": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "codeMs": 0.3335419999998521,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "latencyMs": 111,
+        "tokens": 669,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.05950000000007094
+      }
+    },
+    {
+      "id": "d2-drizzle-mysql",
+      "expected": {
+        "app": "",
+        "database": "incompatible",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "incompatible",
+        "auth": "reuse"
+      },
+      "codeMs": 0.11154199999987213,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 115,
+        "tokens": 671,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "incompatible",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.05758299999979499
+      }
+    },
+    {
+      "id": "d3-mongoose",
+      "expected": {
+        "app": "",
+        "database": "incompatible",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "incompatible",
+        "auth": "reuse"
+      },
+      "codeMs": 0.16545799999994415,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "latencyMs": 118,
+        "tokens": 662,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "incompatible",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.05283400000007532
+      }
+    },
+    {
+      "id": "d4-kysely-postgres",
+      "expected": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "codeMs": 0.13683300000002419,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 181,
+        "tokens": 668,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.05225000000018554
+      }
+    },
+    {
+      "id": "d5-no-database",
+      "expected": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "own",
+        "auth": "reuse"
+      },
+      "codeMs": 0.07658300000002782,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 101,
+        "tokens": 658,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.04425000000037471
+      }
+    },
+    {
+      "id": "d6-drizzle-neon",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "reuse"
+      },
+      "codeMs": 0.12845800000013696,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 144,
+        "tokens": 678,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "by": "code",
+        "ms": 0.08670799999981682
+      }
+    },
+    {
+      "id": "a1-next-auth",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "codeMs": 0.08179100000006656,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 139,
+        "tokens": 670,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "by": "code",
+        "ms": 0.056833000000096945
+      }
+    },
+    {
+      "id": "a2-clerk",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "codeMs": 0.10416600000007747,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "latencyMs": 131,
+        "tokens": 674,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "by": "code",
+        "ms": 0.06524999999965075
+      }
+    },
+    {
+      "id": "a3-supabase",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "codeMs": 0.11454100000037215,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 101,
+        "tokens": 674,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "by": "code",
+        "ms": 0.02904099999977916
+      }
+    },
+    {
+      "id": "a4-no-auth",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "own"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "own"
+      },
+      "codeMs": 0.03683299999966039,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "own"
+        },
+        "latencyMs": 168,
+        "tokens": 665,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "own"
+        },
+        "by": "code",
+        "ms": 0.06533300000000963
+      }
+    },
+    {
+      "id": "a5-lucia",
+      "expected": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "",
+        "database": "reuse",
+        "auth": "adapter"
+      },
+      "codeMs": 0.07970900000009351,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "latencyMs": 106,
+        "tokens": 670,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "adapter"
+        },
+        "by": "code",
+        "ms": 0.056291999999757536
+      }
+    },
+    {
+      "id": "a6-workos",
+      "expected": {
+        "app": "",
+        "database": "own",
+        "auth": "adapter"
+      },
+      "code": {
+        "app": "",
+        "database": "own",
+        "auth": "adapter"
+      },
+      "codeMs": 0.07345799999984592,
+      "decider": {
+        "decision": {
+          "app": "",
+          "database": "reuse",
+          "auth": "reuse"
+        },
+        "latencyMs": 234,
+        "tokens": 666,
+        "backend": "jev",
+        "model": "jev-1.13.0"
+      },
+      "shipped": {
+        "decision": {
+          "app": "",
+          "database": "own",
+          "auth": "adapter"
+        },
+        "by": "code",
+        "ms": 0.0652909999998883
+      }
+    }
+  ]
+}

@@ -129,6 +129,32 @@ single-action turns; the per-turn mean latency is within noise (+1 %). The chang
 - **Monorepo app choice** (§3): the decider is more accurate (20/20 vs 17/20) at ~0.1 s and ~$0.0003 per integration.
   Two options: keep code (rule applied here) and improve the heuristic (prefer the app that already has the database
   and sign-in the capability reuses), or accept the decider for this one decision when the repository has several apps.
+  **Decided: the decider (Amendment 1).**
 - PR #84 (not-verified packages): once a package can ship with a failing gate, a criterion's proving test must also
   have passed in that build.
 - The gateway has no open-decider fallback for generated apps (JEV only); runAgent falls back to the model choosing.
+
+## Amendment 1 (2026-10-13) · Monorepo app choice through the decider (owner decision)
+
+The owner accepted the option of §6: the decider chooses which app of a monorepo receives the capability, overriding
+the latency/cost rule of §1 for this one decision because it is more accurate and runs once per plan.
+
+- `chooseAppPath` (`packages/engine/src/app-choice.ts`): the person's choice wins; one Next.js app (or none) → code;
+  several Next.js apps → one Choice over the apps, each described by its dependencies, with the person's need as
+  state. The answer is used at confidence ≥ 0.5 (`APP_CHOICE_CONFIDENCE`, code); below it, on an unknown answer, on
+  any decider error or without a decider, the deterministic heuristic (`pickAppPath`) decides.
+- Where: `POST /v1/plans` and `GET /v1/repos/{owner}/{name}/analysis` (web; decider from the server's key, JEV
+  primary and open decider fallback when `OPEN_DECIDER_BASE_URL` is set), and the worker's integration when a plan did
+  not record the app. The CLI (`turbineh build` in a local project) has no decider and keeps the heuristic.
+- Database and authentication strategy stay in code (`analysisFindings`): they are compatibility and fixed policy.
+
+Measured on the same 20 labelled repositories (`bench/agent-decisions/adaptation.ts`, run
+`runs/adaptation-monorepo-app-decider.json`, decider `jev-1.13.0`):
+
+| What ships                                          | App   | Database | Auth  | Decider asked | Latency when asked | Cost (20 repos) |
+| --------------------------------------------------- | ----- | -------- | ----- | ------------- | ------------------ | --------------- |
+| Before: heuristic + code                            | 17/20 | 18/20    | 17/20 | 0             | —                  | 0               |
+| After: `chooseAppPath` (decider) + code for DB/auth | 20/20 | 20/20    | 20/20 | 4 of 20       | mean 107 ms        | $0.00085 [est.] |
+
+The decider is asked only for the 4 repositories with several Next.js apps (≈ 500 tokens each); the database and auth
+misses of the heuristic disappear because they were consequences of the wrong app.

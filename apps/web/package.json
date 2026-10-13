@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@turbineh/db": "workspace:*",
+    "@turbineh/decider": "workspace:*",
     "@turbineh/deployer": "workspace:*",
     "@turbineh/engine": "workspace:*",
     "@turbineh/shared": "workspace:*",

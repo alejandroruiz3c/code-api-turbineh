@@ -1,8 +1,8 @@
+import { chooseAppPath, type AppChoice, type AppChoiceDecider } from "./app-choice.js";
 import {
   analyseRepo,
   firstReadList,
   isReadable,
-  pickAppPath,
   secondReadList,
   type RepoAnalysis,
 } from "./repo-analysis.js";
@@ -219,13 +219,24 @@ export async function readFiles(
 export async function analyseGitHubRepo(
   gh: GitHub,
   fullName: string,
-  opts: { ref?: string; appPath?: string } = {},
-): Promise<{ analysis: RepoAnalysis; info: RepoInfo; files: Record<string, string> }> {
+  opts: { ref?: string; appPath?: string; decider?: AppChoiceDecider | null; need?: string } = {},
+): Promise<{
+  analysis: RepoAnalysis;
+  info: RepoInfo;
+  files: Record<string, string>;
+  appChoice: AppChoice;
+}> {
   const info = await repoInfo(gh, fullName);
   const ref = opts.ref ?? info.defaultBranch;
   const { paths, truncated } = await repoPaths(gh, fullName, ref);
   const first = await readFiles(gh, fullName, ref, firstReadList(paths));
-  const appPath = pickAppPath(first, opts.appPath);
+  // Several apps: the decider chooses (heuristic fallback); one app or the person's choice: code (ADR-0039).
+  const appChoice = await chooseAppPath(first, {
+    ...(opts.appPath !== undefined ? { preferred: opts.appPath } : {}),
+    ...(opts.decider ? { decider: opts.decider } : {}),
+    ...(opts.need ? { need: opts.need } : {}),
+  });
+  const appPath = appChoice.appPath;
   const second = await readFiles(gh, fullName, ref, secondReadList(paths, appPath, first));
   const files = { ...first, ...second };
   const analysis = analyseRepo({ repo: fullName, ref, paths, files, appPath });
@@ -233,5 +244,5 @@ export async function analyseGitHubRepo(
     analysis.conventions.push(
       "Very large repository: GitHub listed part of the file tree; the analysis may miss files.",
     );
-  return { analysis, info, files };
+  return { analysis, info, files, appChoice };
 }

@@ -25,6 +25,8 @@ import {
 import {
   adaptPackage,
   analyseRepo,
+  chooseAppPath,
+  type AppChoiceDecider,
   firstReadList,
   GENERATED_HEADER,
   github,
@@ -34,7 +36,6 @@ import {
   envDocs,
   mergePackageJson,
   settingKind,
-  pickAppPath,
   prBody,
   prTitle,
   repoInfo,
@@ -76,6 +77,8 @@ export interface IntegrationDeps {
   workerId: string;
   /** Adaptation model (strongest open coder first, ADR-0034); null when no model is configured. */
   coder: BackupCoder | null;
+  /** Which app of a monorepo, when the plan did not record one (ADR-0039); heuristic fallback. */
+  decider?: AppChoiceDecider | null;
   appUrl: string | null;
   log: Log;
 }
@@ -246,20 +249,26 @@ const reader = (dir: string) => (p: string) => {
   return readFileSync(f, "utf8");
 };
 
-function analyseLocal(
+async function analyseLocal(
   dir: string,
   paths: string[],
   repo: string,
   ref: string,
   appPath?: string,
-): RepoAnalysis {
+  decider?: AppChoiceDecider | null,
+): Promise<RepoAnalysis> {
   const read = reader(dir);
   const pick = (list: string[]) =>
     Object.fromEntries(
       list.map((p) => [p, read(p)]).filter((e): e is [string, string] => typeof e[1] === "string"),
     );
   const first = pick(firstReadList(paths));
-  const app = pickAppPath(first, appPath);
+  const app = (
+    await chooseAppPath(first, {
+      ...(appPath !== undefined ? { preferred: appPath } : {}),
+      ...(decider ? { decider } : {}),
+    })
+  ).appPath;
   const second = pick(secondReadList(paths, app, first));
   return analyseRepo({ repo, ref, paths, files: { ...first, ...second }, appPath: app });
 }
@@ -505,7 +514,14 @@ async function runJob(
   const original = join(work, "base");
   await download(gh, job.repo, baseSha, original);
   const clean = sanitizeProject(original);
-  const analysis = analyseLocal(original, clean.paths, job.repo, base, preferredApp);
+  const analysis = await analyseLocal(
+    original,
+    clean.paths,
+    job.repo,
+    base,
+    preferredApp,
+    deps.decider,
+  );
 
   // 2 · adapt the package to the project's conventions.
   await phase("adapting");

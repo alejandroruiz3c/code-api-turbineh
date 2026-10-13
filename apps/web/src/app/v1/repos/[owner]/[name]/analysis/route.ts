@@ -7,6 +7,7 @@ import {
 } from "@turbineh/engine";
 import { workspaceGitHub } from "@/server/github";
 import { productProblem, requireCaller } from "@/server/product";
+import { planDecider } from "@/server/plan-decider";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -37,6 +38,7 @@ export async function GET(
     const { analysis, info } = await analyseGitHubRepo(gh, fullName, {
       ...(ref ? { ref } : {}),
       ...(appPath !== undefined ? { appPath } : {}),
+      decider: planDecider(),
     });
     const general = analysisFindings(analysis, {
       kind: "component",

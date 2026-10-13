@@ -11,7 +11,14 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { choice, deciderFromEnv } from "@turbineh/decider";
-import { analyseRepo, analysisFindings, pickAppPath, type PackageNeeds } from "@turbineh/engine";
+import {
+  analyseRepo,
+  analysisFindings,
+  chooseAppPath,
+  pickAppPath,
+  type AppChoiceDecider,
+  type PackageNeeds,
+} from "@turbineh/engine";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
 
 const root = join(import.meta.dirname, "../..");
@@ -19,6 +26,9 @@ const LABEL = process.argv.includes("--label")
   ? (process.argv[process.argv.indexOf("--label") + 1] ?? "run")
   : "run";
 const DECIDER_PRICE = 0.42; // $/MTok [est.], as bench/frontiers/brain.ts
+/** The person's need as the plans API passes it to chooseAppPath. */
+const NEED_TEXT =
+  "An AI booking assistant for a physiotherapy clinic: patients chat to check availability, book, reschedule and cancel; staff sign in to manage the bookings.";
 
 type Deps = Record<string, string>;
 interface Case {
@@ -192,9 +202,9 @@ function repoOf(c: Case) {
 }
 
 /** The code path that runs today, mapped onto the three options. */
-function codeDecision(c: Case) {
+function codeDecision(c: Case, appPath?: string) {
   const { files, paths } = repoOf(c);
-  const app = pickAppPath(files);
+  const app = appPath ?? pickAppPath(files);
   const a = analyseRepo({ repo: c.id, ref: "main", paths, files, appPath: app });
   const f = analysisFindings(a, NEEDS);
   const db = f.decisions.find((d) => d.topic === "database")?.choice ?? "";
@@ -212,6 +222,28 @@ function codeDecision(c: Case) {
 
 loadLocalEnv(root);
 const decider = deciderFromEnv(readEnv());
+
+/**
+ * What ships (ADR-0039 amendment): the app from `chooseAppPath` (decider when there are several apps, heuristic
+ * fallback), database and auth from code on that app. Decider tokens are metered through a wrapper.
+ */
+let shippedTokens = 0;
+const metered: AppChoiceDecider = {
+  ask: (async (
+    state: Parameters<typeof decider.ask>[0],
+    questions: Parameters<typeof decider.ask>[1],
+  ) => {
+    const d = await decider.ask(state, questions);
+    shippedTokens += (d.meta.usage.input_tokens ?? 0) + (d.meta.usage.output_tokens ?? 0);
+    return d;
+  }) as AppChoiceDecider["ask"],
+};
+async function shippedDecision(c: Case) {
+  const t0 = performance.now();
+  const choice = await chooseAppPath(repoOf(c).files, { decider: metered, need: NEED_TEXT });
+  const ms = performance.now() - t0;
+  return { decision: codeDecision(c, choice.appPath), by: choice.by, ms };
+}
 
 async function deciderDecision(c: Case) {
   const apps = Object.entries(c.packages).map(([dir, deps]) => ({
@@ -285,7 +317,8 @@ for (const c of CASES) {
   const code = codeDecision(c);
   const codeMs = performance.now() - t0;
   const dec = await deciderDecision(c).catch((e: unknown) => ({ error: String(e).slice(0, 200) }));
-  rows.push({ id: c.id, expected: c.expected, code, codeMs, decider: dec });
+  const shipped = await shippedDecision(c);
+  rows.push({ id: c.id, expected: c.expected, code, codeMs, decider: dec, shipped });
 }
 
 const keys = ["app", "database", "auth"] as const;
@@ -320,6 +353,26 @@ const summary = {
     costUsd: Number(((tokens * DECIDER_PRICE) / 1e6).toFixed(5)),
   },
 };
+const shippedMs = rows.map((r) => r.shipped.ms).sort((a, b) => a - b);
+const asked = rows.filter((r) => r.shipped.by === "decider" || r.shipped.ms > 5);
+Object.assign(summary, {
+  shipped: {
+    note: "chooseAppPath (decider for several apps, heuristic fallback) + code for database and auth",
+    accuracy: score((r) => r.shipped.decision),
+    decidedBy: Object.fromEntries(
+      ["decider", "code"].map((b) => [b, rows.filter((r) => r.shipped.by === b).length]),
+    ),
+    latencyMsPerRepo: {
+      p50: Math.round(shippedMs[Math.floor(shippedMs.length / 2)] ?? 0),
+      max: Math.round(shippedMs[shippedMs.length - 1] ?? 0),
+      meanWhenAsked: Math.round(
+        asked.reduce((s2, r) => s2 + r.shipped.ms, 0) / Math.max(1, asked.length),
+      ),
+    },
+    tokens: shippedTokens,
+    costUsd: Number(((shippedTokens * DECIDER_PRICE) / 1e6).toFixed(5)),
+  },
+});
 const dir = join(import.meta.dirname, "runs");
 mkdirSync(dir, { recursive: true });
 writeFileSync(
