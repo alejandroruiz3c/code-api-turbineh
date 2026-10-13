@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Criteria recall (ADR-0045): recipe, domain-component and generated test titles state the subject, actor and outcome
+  they prove, assertion messages count as proof, and missing assertions were added (product detail page and delete,
+  order email content, Kanban status persisted, owner role at sign-up, list search, audit trail of an edit). The
+  matcher is not relaxed: on the 109 labelled pairs precision stays 1.00 and recall goes from 0.62 to 0.92;
+  `verify:spec` Fieldnote 0/11 → 9/11, Kilnwise 0/6 → 1/6, Pixelyard 1/7 → 2/7 met; storefront Frontiers spec 7/7.
+
 - Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists

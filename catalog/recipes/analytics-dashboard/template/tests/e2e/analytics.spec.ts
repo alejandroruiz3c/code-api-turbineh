@@ -4,7 +4,9 @@ const csv =
   "date,category,value\n2026-03-01,Online,100.50\n2026-03-02,Store,49.50\n2026-03-02,Online,50\nnot-a-date,Online,1\n";
 
 test.describe.serial("analytics", () => {
-  test("imports a CSV and shows exact KPIs and charts", async ({ page }) => {
+  test("the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts", async ({
+    page,
+  }) => {
     await page.goto("/dashboard/analytics");
     await page.getByLabel("Name").fill("Sales");
     await page.getByLabel("Unit").fill("EUR");
@@ -24,7 +26,10 @@ test.describe.serial("analytics", () => {
     await expect(page.getByLabel("Breakdown by category")).toContainText("Online");
   });
 
-  test("filters by category and exports CSV", async ({ page, request }) => {
+  test("the dashboard filters by category and exports the filtered data as a CSV file", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/dashboard/analytics");
     await page.getByRole("link", { name: "Sales", exact: true }).click();
     await page.locator("#f-from").fill("2026-03-01");

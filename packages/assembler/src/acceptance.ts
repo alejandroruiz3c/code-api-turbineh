@@ -60,10 +60,16 @@ export function testBlocks(src: string): { title: string; assertions: string[] }
   ];
   return starts.map((m, i) => {
     const body = src.slice(m.index, starts[i + 1]?.index ?? src.length);
-    const assertions = body
-      .split("\n")
-      .filter((l) => /expect\(|getByLabel\(/.test(l))
-      .map((l) => l.trim().slice(0, 200));
+    const lines = body.split("\n");
+    const assertions: string[] = [];
+    lines.forEach((l, j) => {
+      if (!/expect\(|getByLabel\(/.test(l)) return;
+      // The whole statement, when a formatter split it: its message ("…what this checks") is part of the proof.
+      let stmt = l.trim();
+      for (let k = j + 1; k < lines.length && k <= j + 8 && !/[;{]\s*$/.test(stmt); k++)
+        stmt += ` ${(lines[k] ?? "").trim()}`;
+      assertions.push(stmt.replace(/\s+/g, " ").slice(0, 300));
+    });
     return { title: m[2] as string, assertions };
   });
 }

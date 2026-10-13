@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe.serial("client requests", () => {
-  test("a request is submitted, a file is attached and downloaded, and the status is updated", async ({
+  test("the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status", async ({
     page,
   }) => {
     await page.goto("/dashboard/requests");

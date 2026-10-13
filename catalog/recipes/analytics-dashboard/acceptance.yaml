@@ -1,9 +1,9 @@
 # Acceptance criteria → tests for analytics-dashboard (plus saas-crud's). Every regex of a rule must match the criterion.
-- test: "tests/e2e/analytics.spec.ts › imports a CSV and shows exact KPIs and charts"
+- test: "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
   covers: ["import|upload|csv|enter (data|values)"]
-- test: "tests/e2e/analytics.spec.ts › imports a CSV and shows exact KPIs and charts"
+- test: "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
   covers: ["kpi|metric|chart|graph|total|dashboard|time series|breakdown"]
-- test: "tests/e2e/analytics.spec.ts › filters by category and exports CSV"
+- test: "tests/e2e/analytics.spec.ts › the dashboard filters by category and exports the filtered data as a CSV file"
   covers: ["filter|export|download|segment"]
 - test: "tests/unit/analytics.test.ts › computes the previous period of the same length"
   covers: ["previous period|period comparison|compar|versus|vs\\.?"]

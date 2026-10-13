@@ -1,31 +1,33 @@
 # Acceptance criteria → tests for the storefront (plus saas-crud's). Every regex of a rule must match the criterion.
-- test: "tests/e2e/shop.spec.ts › shoppers search the catalogue by product name: only matching products are listed"
+- test: "tests/e2e/shop.spec.ts › shoppers search the catalogue by product name: the list filters to only the matching products"
   covers: ["search|filter|find|look up", "product|catalog|item|list"]
 - test: "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
   covers: ["search|find|look up", "description"]
 - test: "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
   covers: ["\\bcart\\b|basket|\\bbag\\b", "add|quantit|subtotal|total|remove|change"]
-- test: "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
-  covers: ["product (page|detail)|open(s|ing)? a product|product's page"]
-- test: "tests/e2e/shop.spec.ts › pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged"
+- test: "tests/e2e/shop.spec.ts › a shopper clicks a product in the list and lands on that product's detail page with its price"
+  covers: ["product (page|detail)|open(s|ing)? a product|product's page|product's detail|clicks? (on )?a product"]
+- test: "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
   covers: ["stripe|checkout|\\bpay(s|ment|ing)?\\b|\\bpaid\\b", "webhook|paid|payment|order|amount|server|checkout"]
-- test: "tests/e2e/shop.spec.ts › pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged"
+- test: "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
   covers: ["^(?!.*\\b(admin|owner|staff)\\b).*\\b(stock|inventory)\\b", "decrement|reduc|decreas|paid|purchas|sold|order"]
-- test: "tests/e2e/shop.spec.ts › pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged"
+- test: "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
   covers: ["e-?mail|\\bmail\\b", "order|confirm|purchase|receipt|shopper|customer|buyer"]
-- test: "tests/e2e/shop.spec.ts › pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged"
+- test: "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
   covers: ["amount|price|total", "server|never trust|not trust|browser|client"]
 - test: "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
   covers: ["webhook", "sign|verif|forg|invalid|reject|authentic"]
-- test: "tests/e2e/shop.spec.ts › the admin updates a product's stock and the public catalogue reflects it at once"
+- test: "tests/e2e/shop.spec.ts › the owner (admin) updates a product's stock level and the public catalogue reflects it at once"
   covers: ["\\b(stock|inventory)\\b", "admin|owner|staff|manag", "updat|chang|edit|set|adjust|modif|reflect|manag"]
-- test: "tests/e2e/shop.spec.ts › the admin updates a product's stock and the public catalogue reflects it at once"
+- test: "tests/e2e/shop.spec.ts › the owner (admin) updates a product's stock level and the public catalogue reflects it at once"
   covers: ["\\b(stock|inventory|availability)\\b", "show|display|visible|see|shown|page|catalog"]
-- test: "tests/e2e/shop.spec.ts › the admin updates a product's price and the public catalogue shows it at once"
+- test: "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
   covers: ["\\bprices?\\b", "admin|owner|staff|manag", "updat|chang|edit|set|modif|reflect"]
+- test: "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+  covers: ["products?\\b", "admin|owner|staff|manag", "creat|add|edit|updat|chang|manag"]
 - test: "tests/e2e/shop.spec.ts › the admin creates a product with an image"
   covers: ["products?\\b", "admin|owner|staff|manag", "creat|add|manag|new|upload"]
-- test: "tests/e2e/shop.spec.ts › the admin sees every order with its payment status in the orders section"
+- test: "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
   covers: ["orders?\\b", "admin|owner|staff|manag", "see|view|list|manag|status|section|track"]
 - test: "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
   covers: ["image", "url|link|https|address"]

@@ -10,13 +10,13 @@ const PNG = Buffer.from(
 const ADMIN_STATE = "playwright/.auth/owner.json";
 
 /** Emails the app logged (no provider in tests): one JSON line per email, see src/lib/email.ts. */
-function outbox(): { to: string; subject: string }[] {
+function outbox(): { to: string; subject: string; text?: string }[] {
   const file = process.env.EMAIL_OUTBOX_FILE ?? "";
   if (!file || !existsSync(file)) return [];
   return readFileSync(file, "utf8")
     .split("\n")
     .filter(Boolean)
-    .map((l) => JSON.parse(l) as { to: string; subject: string });
+    .map((l) => JSON.parse(l) as { to: string; subject: string; text?: string });
 }
 
 /** Signs a webhook exactly like Stripe does (t=…,v1=HMAC-SHA256 of "t.body"). */
@@ -159,7 +159,7 @@ test.describe.serial("storefront", () => {
     await expect(page.getByRole("cell", { name: "US Standard" })).toBeVisible();
   });
 
-  test("the admin updates a product's price and the public catalogue shows it at once", async ({
+  test("the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once", async ({
     page,
   }) => {
     await page.goto("/dashboard/products");
@@ -167,6 +167,10 @@ test.describe.serial("storefront", () => {
     await page.getByLabel(/^Price/).fill("10.00");
     await page.getByLabel("Description").fill("A mug used to check price updates.");
     await page.getByRole("button", { name: "Create product" }).click();
+    const row = page.getByRole("row").filter({ hasText: "Price Test Mug" });
+    await expect(row, "the owner reads the new product in the products list").toContainText(
+      "Visible",
+    );
     await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
     // The list page has a create form with the same labels: wait for the edit page before filling.
     await expect(page.getByRole("button", { name: "Save product" })).toBeVisible();
@@ -176,9 +180,19 @@ test.describe.serial("storefront", () => {
     await expect(page).toHaveURL(/\/dashboard\/products$/);
     await page.goto("/shop/price-test-mug");
     await expect(page.getByTestId("price")).toContainText("12.50");
+
+    // Delete = hide: products with orders keep their history.
+    await page.goto("/dashboard/products");
+    await row.getByRole("button", { name: "Hide" }).click();
+    await expect(row, "the deleted product is hidden in the list").toContainText("Hidden");
+    await page.goto("/shop?q=mug");
+    await expect(
+      page.getByRole("link", { name: /Price Test Mug/ }),
+      "the deleted product is no longer in the public catalogue",
+    ).toHaveCount(0);
   });
 
-  test("the admin updates a product's stock and the public catalogue reflects it at once", async ({
+  test("the owner (admin) updates a product's stock level and the public catalogue reflects it at once", async ({
     page,
   }) => {
     await page.goto("/dashboard/products");
@@ -218,7 +232,7 @@ test.describe.serial("storefront", () => {
       );
     });
 
-    test("shoppers search the catalogue by product name: only matching products are listed", async ({
+    test("shoppers search the catalogue by product name: the list filters to only the matching products", async ({
       page,
     }) => {
       await page.goto("/shop");
@@ -230,6 +244,19 @@ test.describe.serial("storefront", () => {
       await page.getByRole("button", { name: "Search" }).click();
       await expect(page.getByRole("link", { name: /Linen Shirt/ }).first()).toBeVisible();
       await expect(page.getByRole("link", { name: /Cotton Tee/ })).toHaveCount(0);
+    });
+
+    test("a shopper clicks a product in the list and lands on that product's detail page with its price", async ({
+      page,
+    }) => {
+      await page.goto("/shop");
+      await page
+        .getByRole("link", { name: /Linen Shirt/ })
+        .first()
+        .click();
+      await expect(page).toHaveURL(/\/shop\/linen-shirt$/);
+      await expect(page.getByRole("heading", { name: "Linen Shirt", level: 1 })).toBeVisible();
+      await expect(page.getByTestId("price")).toContainText("49.90");
     });
 
     test("a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal", async ({
@@ -245,7 +272,7 @@ test.describe.serial("storefront", () => {
       await expect(page.getByTestId("cart-subtotal")).toContainText("149.70");
     });
 
-    test("pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged", async ({
+    test("a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email", async ({
       page,
       browser,
       request,
@@ -279,6 +306,9 @@ test.describe.serial("storefront", () => {
       await page.getByLabel(/Email for your receipt/).fill("buyer@example.com");
       await page.getByRole("button", { name: "Checkout" }).click();
       await page.waitForURL(/checkout\.stripe\.com\/c\/pay\/cs_test_/);
+      expect(page.url(), "the shopper is redirected to the Stripe Checkout session").toContain(
+        "cs_test_",
+      );
 
       const admin = await browser.newContext({ storageState: ADMIN_STATE });
       const adminPage = await admin.newPage();
@@ -286,7 +316,9 @@ test.describe.serial("storefront", () => {
       const row = adminPage.locator('tr[data-status="pending"]').first();
       const orderId = (await row.getAttribute("data-order-id")) ?? "";
       expect(orderId).toMatch(/^[0-9a-f-]{36}$/);
-      await expect(row).toContainText("126.70");
+      await expect(row, "the order amount matches the server-computed cart total").toContainText(
+        "126.70",
+      );
 
       const event = JSON.stringify({
         type: "checkout.session.completed",
@@ -312,12 +344,15 @@ test.describe.serial("storefront", () => {
       }
 
       await adminPage.goto("/dashboard/orders");
-      await expect(adminPage.locator(`tr[data-order-id="${orderId}"]`)).toHaveAttribute(
-        "data-status",
-        "paid",
-      );
+      await expect(
+        adminPage.locator(`tr[data-order-id="${orderId}"]`),
+        "the order status changes to paid",
+      ).toHaveAttribute("data-status", "paid");
       await adminPage.goto("/dashboard/products");
-      await expect(adminPage.getByTestId("stock-Linen Shirt")).toHaveText("3");
+      await expect(
+        adminPage.getByTestId("stock-Linen Shirt"),
+        "the product stock is decremented by the quantity ordered (5 - 2)",
+      ).toHaveText("3");
       // The option's own stock went down, not the product's.
       await adminPage.getByRole("link", { name: "Cotton Tee", exact: true }).click();
       await expect(adminPage.getByTestId("variant-stock-L")).toHaveValue("2");
@@ -325,11 +360,17 @@ test.describe.serial("storefront", () => {
       await admin.close();
 
       // The confirmation email went to the shopper exactly once (logged: no email provider in tests).
+      const confirmations = outbox().filter(
+        (m) => m.to === "buyer@example.com" && m.subject === "Your order is confirmed",
+      );
       expect(
-        outbox().filter(
-          (m) => m.to === "buyer@example.com" && m.subject === "Your order is confirmed",
-        ),
+        confirmations,
+        "the order confirmation email is sent once (recorded in the email log when no email provider is configured)",
       ).toHaveLength(1);
+      expect(
+        confirmations[0]?.text,
+        "the confirmation email contains the order details: items, quantities and total",
+      ).toMatch(/2 × Linen Shirt[\s\S]*Total: /);
 
       await page.goto("/cart");
       await expect(page.getByText("Your cart is empty")).toBeVisible();
@@ -456,7 +497,7 @@ test.describe.serial("storefront", () => {
     });
   });
 
-  test("the admin sees every order with its payment status in the orders section", async ({
+  test("the owner accesses the admin area and sees the list of all orders with their payment status", async ({
     page,
   }) => {
     await page.goto("/dashboard/orders");

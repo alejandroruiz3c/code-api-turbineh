@@ -471,14 +471,17 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
  */
 export function entityCoverage(outDir: string, entityNamesList: string[]): CoverageRule[] {
   const esc = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // The actor is "owner", or the request's name for that role: "manager (owner) creates a …".
+  const by = (rest: string) => new RegExp(`^(?:[a-z][\\w -]* \\(owner\\)|owner) ${rest}`);
   const actions: [RegExp, string][] = [
-    [/^owner creates a /, "creat|add|new|record|enter|log|submit|register"],
-    [/^owner edits a /, "edit|updat|chang|modif|correct"],
-    [/ export as CSV/, "export|download|csv"],
-    [/^owner exports the filtered /, "export|download|csv"],
-    [/^owner filters /, "filter|tag"],
-    [/^owner sorts /, "sort|order"],
-    [/^owner adds a /, "add|creat|post|comment|attach|new"],
+    [by("creates a "), "creat|add|new|record|enter|log|submit|register"],
+    [by("edits a "), "edit|updat|chang|modif|correct"],
+    [/export as CSV|in CSV format/, "export|download|csv"],
+    [by("exports the filtered "), "export|download|csv"],
+    [by("searches "), "search|find|look up|filter|export|download|csv"],
+    [by("filters "), "filter|tag"],
+    [by("sorts "), "sort|order"],
+    [by("adds a "), "add|creat|post|comment|attach|new"],
     [/ is recorded in its history /, "history|timeline|record|chang"],
     [/ cannot be changed or deleted/, "cannot|append|immutable|edit|delet"],
     [/ import from CSV/, "import|upload|csv"],
@@ -635,6 +638,8 @@ function planByKind(
     sort: fid.fidelity.constraints.sort,
     workflows,
     scope: scope ? { entity: pascal(scope.kind), label: scope.label } : null,
+    auditLog: Boolean(selected("audit-log")),
+    ownerLabel: storedMatrix(fid).roles.owner?.label,
   });
 }
 
