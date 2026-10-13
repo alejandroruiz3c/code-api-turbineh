@@ -27,11 +27,29 @@ export const aiSynthetic = (host: string) => ({
   TURBINEH_AI_TOKEN: "sandbox-synthetic-ai-token",
 });
 
+/**
+ * Only what every app documents as required (src/env.ts). Allow-lists such as ADMIN_EMAILS are deliberately absent:
+ * build and unit tests must pass without them and E2E sets its own (playwright.config.ts). BETTER_AUTH_URL is an
+ * ambient value on another host and port on purpose: E2E must ignore it and use the server it starts.
+ */
 export const SYNTHETIC_ENV = {
   BETTER_AUTH_SECRET: "sandbox-synthetic-secret-0123456789abcdef",
-  BETTER_AUTH_URL: "http://127.0.0.1:3000",
-  ADMIN_EMAILS: "admin-e2e@example.com",
+  BETTER_AUTH_URL: "http://localhost:3000",
 };
+
+/**
+ * Variables `src/env.ts` requires: declared in the schema without `.optional()` or `.default(` (NODE_ENV aside).
+ * Build and unit tests run with only these, so an app never needs an optional setting to build or test.
+ */
+export function requiredEnv(envTs: string): string[] {
+  const keys = [...envTs.matchAll(/^ {2}([A-Z][A-Z0-9_]*):/gm)];
+  return keys
+    .filter((k, i) => {
+      const chunk = envTs.slice(k.index, keys[i + 1]?.index ?? envTs.length);
+      return !/\.optional\(\)|\.default\(/.test(chunk) && k[1] !== "NODE_ENV";
+    })
+    .map((k) => k[1] as string);
+}
 
 export interface RunResult {
   code: number;

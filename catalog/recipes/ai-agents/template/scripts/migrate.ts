@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 // (process-local, never stored) let `pnpm db:migrate` run with nothing but DATABASE_URL.
 process.env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("hex");
 process.env.BETTER_AUTH_URL ||= "http://127.0.0.1:3000";
+process.env.TURBINEH_DB_MIGRATE = "1";
 
 const { getMigrations } = await import("better-auth/db/migration");
 const { drizzle } = await import("drizzle-orm/node-postgres");

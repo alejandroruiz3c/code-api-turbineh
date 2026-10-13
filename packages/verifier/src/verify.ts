@@ -14,6 +14,7 @@ import {
   STRIPE_MOCK_IMAGE,
   STRIPE_SYNTHETIC,
   SYNTHETIC_ENV,
+  requiredEnv,
   type RunResult,
 } from "./sandbox.js";
 
@@ -223,9 +224,15 @@ export function licenseBlocks(expression: string): boolean {
  *  - one container on a per-build `--internal` network (no internet) with an ephemeral Postgres started up front;
  *  - dependencies come pre-installed in a base image keyed by the lockfile hash (offline install as fallback);
  *  - strict typecheck, lint and unit tests run in parallel with the production build (no check removed);
- *  - read-only scans (secrets, static rules, advisories) run concurrently with the build.
+ *  - read-only scans (secrets, static rules, advisories) run concurrently with the build;
+ *  - build and unit tests see only the variables src/env.ts requires (ADR-0034): optional settings never block them.
+ * `localDb`: no Postgres container and no DATABASE_URL for migrations and E2E — the package must bring its own
+ * zero-setup database (`scripts/local-db.ts`), exactly as a coding agent without PostgreSQL runs it.
  */
-export async function verify(dir: string): Promise<VerifyResult> {
+export async function verify(
+  dir: string,
+  opts: { localDb?: boolean } = {},
+): Promise<VerifyResult> {
   const lockHash = createHash("sha256")
     .update(readFileSync(join(dir, "pnpm-lock.yaml")))
     .digest("hex")
@@ -236,7 +243,8 @@ export async function verify(dir: string): Promise<VerifyResult> {
     ensureBaseImage(dir, lockHash),
     run("docker", ["network", "create", "--internal", net]),
   ]);
-  await run("docker", [
+  if (!opts.localDb)
+    await run("docker", [
     "run",
     "-d",
     "--rm",
@@ -297,6 +305,22 @@ export async function verify(dir: string): Promise<VerifyResult> {
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
   // Awaited later: mark it handled now so a failure surfaces at the await instead of crashing the process.
   scans.catch(() => undefined);
+  const appEnv: Record<string, string> = {
+    ...SYNTHETIC_ENV,
+    // localDb: the documented local value (the build needs one); migrations and E2E run without it.
+    DATABASE_URL: opts.localDb
+      ? "postgres://postgres:postgres@127.0.0.1:54329/postgres"
+      : `postgres://app:app@${dbHost}:5432/app`,
+    ...(shop ? { ...STRIPE_SYNTHETIC, STRIPE_API_BASE: `http://${stripeHost}:12111` } : {}),
+    ...(aiApp ? aiSynthetic(aiHost) : {}),
+  };
+  const containerEnv: Record<string, string> = {
+    ...appEnv,
+    BASE_HASH: lockHash,
+    DB_HOST: opts.localDb ? "" : dbHost,
+    LOCAL_DB: opts.localDb ? "1" : "",
+    ONLY_REQUIRED_UNSET: onlyRequiredUnset(dir, appEnv),
+  };
   let main: RunResult;
   try {
     main = await run(
@@ -318,14 +342,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
         `${PNPM_STORE_VOLUME}:/pnpm-store`,
         "-v",
         `${dir}:/src`,
-        ...Object.entries({
-          ...SYNTHETIC_ENV,
-          DATABASE_URL: `postgres://app:app@${dbHost}:5432/app`,
-          BASE_HASH: lockHash,
-          DB_HOST: dbHost,
-          ...(shop ? { ...STRIPE_SYNTHETIC, STRIPE_API_BASE: `http://${stripeHost}:12111` } : {}),
-          ...(aiApp ? aiSynthetic(aiHost) : {}),
-        }).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
+        ...Object.entries(containerEnv).flatMap(([k, v]) => ["-e", `${k}=${v}`]),
         baseImage ?? SANDBOX_IMAGE,
         "sh",
         "-c",
@@ -334,7 +351,7 @@ export async function verify(dir: string): Promise<VerifyResult> {
       20 * 60_000,
     );
   } finally {
-    await run("docker", ["rm", "-f", dbHost]);
+    if (!opts.localDb) await run("docker", ["rm", "-f", dbHost]);
     if (shop) await run("docker", ["rm", "-f", stripeHost]);
     if (aiApp) await run("docker", ["rm", "-f", aiHost]);
     await run("docker", ["network", "rm", net]);
@@ -428,7 +445,11 @@ export async function quickCheck(dir: string): Promise<VerifyResult> {
       `${PNPM_STORE_VOLUME}:/pnpm-store`,
       "-v",
       `${dir}:/src:ro`,
-      ...Object.entries({ ...SYNTHETIC_ENV, BASE_HASH: lockHash }).flatMap(([k, v]) => [
+      ...Object.entries({
+        ...SYNTHETIC_ENV,
+        BASE_HASH: lockHash,
+        ONLY_REQUIRED_UNSET: onlyRequiredUnset(dir, SYNTHETIC_ENV),
+      }).flatMap(([k, v]) => [
         "-e",
         `${k}=${v}`,
       ]),
@@ -464,6 +485,7 @@ const QUICK_SCRIPT = String.raw`
 set -u
 now() { date +%s%3N; }
 step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && tail -c 2500 /tmp/$n.log; return $c; }
+only_required() { env $(for v in $ONLY_REQUIRED_UNSET; do printf -- '-u %s ' "$v"; done) "$@"; }
 if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then
   W=/opt/base; (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -)
 else
@@ -473,7 +495,7 @@ fi
 cd $W
 ( step lint pnpm -s lint > /tmp/out.lint ) &
 ( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
-( step unit pnpm -s test > /tmp/out.unit ) &
+( step unit only_required pnpm -s test > /tmp/out.unit ) &
 wait
 cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit
 grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit || exit 1
@@ -484,6 +506,7 @@ const VERIFY_SCRIPT = String.raw`
 set -u
 now() { date +%s%3N; }
 step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && tail -c 2500 /tmp/$n.log; return $c; }
+only_required() { env $(for v in $ONLY_REQUIRED_UNSET; do printf -- '-u %s ' "$v"; done) "$@"; }
 if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then
   W=/opt/base; s=$(now); (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -); echo "STEP install 0 $(( $(now) - s ))"
 else
@@ -496,13 +519,18 @@ step migrations pnpm -s db:generate || exit 1
 node -e "const fs=require('fs'),p=require('path');const r='node_modules/.pnpm';const re=/\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;let t=0;for(const d of fs.readdirSync(r)){const nm=p.join(r,d,'node_modules');if(!fs.existsSync(nm))continue;for(const a of fs.readdirSync(nm)){const ns=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];for(const n of ns){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));t++;const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';if(re.test(l))console.log('LICENSE_BAD '+j.name+'@'+j.version+' '+l)}catch{}}}}console.log('LICENSE_TOTAL '+t)" 2>/dev/null
 ( step lint pnpm -s lint > /tmp/out.lint ) &
 ( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
-( step unit pnpm -s test > /tmp/out.unit ) &
-( step build pnpm -s build > /tmp/out.build ) &
+( step unit only_required pnpm -s test > /tmp/out.unit ) &
+( step build only_required pnpm -s build > /tmp/out.build ) &
 wait
 cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit /tmp/out.build
 grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit && grep -q "STEP build 0" /tmp/out.build || exit 1
-for i in $(seq 1 40); do node -e "require('net').connect(5432,process.env.DB_HOST).on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" && break; sleep 0.5; done
-step e2e sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+if [ -n "$LOCAL_DB" ]; then
+  # Zero-setup database: exactly what a coding agent without PostgreSQL runs.
+  step e2e env -u DATABASE_URL sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+else
+  for i in $(seq 1 40); do node -e "require('net').connect(5432,process.env.DB_HOST).on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" && break; sleep 0.5; done
+  step e2e sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+fi
 # Screen previews for the result page (best effort: never changes the verification outcome).
 if [ -f playwright/.auth/owner.json ]; then
   mkdir -p /src/.turbineh-previews
@@ -535,6 +563,18 @@ JS
   timeout 90 node preview.mjs > /tmp/preview.log 2>&1 && echo "PREVIEWS ok" || echo "PREVIEWS skipped"
 fi
 `;
+
+/**
+ * Variables the verifier provides that the app does not require: unset for build and unit tests, so an optional
+ * setting the build still needs fails the gate instead of the coding agent's first `pnpm build`.
+ */
+export function onlyRequiredUnset(dir: string, provided: Record<string, string>): string {
+  const file = join(dir, "src/env.ts");
+  const required = new Set(existsSync(file) ? requiredEnv(readFileSync(file, "utf8")) : []);
+  return [...Object.keys(provided), "BASE_HASH", "DB_HOST", "LOCAL_DB"]
+    .filter((k) => !required.has(k))
+    .join(" ");
+}
 
 /** Base image with the recipe dependencies pre-installed, keyed by lockfile hash (built once, reused by every build). */
 async function ensureBaseImage(dir: string, lockHash: string): Promise<string | null> {

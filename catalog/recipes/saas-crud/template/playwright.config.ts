@@ -53,6 +53,7 @@ const mockServers = mocks.map((file, i) => {
     env: { PORT: String(mockPort), MOCK_PORT: String(mockPort) },
   };
 });
+const built = existsSync(".next/BUILD_ID");
 const secret = (prefix = "") => `${prefix}${randomBytes(24).toString("hex")}`;
 process.env.BETTER_AUTH_SECRET ||= secret();
 // A second staff address, unique per run, to prove staff access needs a verified email.
@@ -102,9 +103,10 @@ export default defineConfig({
   webServer: [
     ...mockServers,
     {
-      command: `pnpm start --port ${port}`,
+      // Builds first when there is no production build yet (zero setup); re-run `pnpm build` after code changes.
+      command: `${built ? "" : "pnpm build && "}pnpm start --port ${port}`,
       url: origin,
-      timeout: 120_000,
+      timeout: built ? 120_000 : 600_000,
       reuseExistingServer: false,
       // No real email provider in tests: emails go to the local outbox log.
       env: { ...process.env, RESEND_API_KEY: "" } as Record<string, string>,

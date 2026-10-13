@@ -29,7 +29,10 @@ afterEach(() => {
 
 describe("environment", () => {
   it("builds and runs with only the required variables; an empty staff allow-list denies everyone", async () => {
-    process.env = Object.fromEntries(requiredVars().map((n) => [n, sample(n)]));
+    process.env = {
+      ...Object.fromEntries(requiredVars().map((n) => [n, sample(n)])),
+      NODE_ENV: "test",
+    };
     vi.resetModules();
     const { env } = await import("@/env");
     expect(env.DATABASE_URL).toBeTruthy();

@@ -1,7 +1,9 @@
 /**
- * `pnpm --filter @turbineh/worker run verify:recipe <recipe> ["<prompt>"] [--with <component,…>]` — assembles one recipe template with a
- * minimal spec (no models involved) and runs the full verification gate on it in the local sandbox. Used to check
- * catalogue templates before they ship; prints the gate steps and findings as JSON.
+ * `pnpm --filter @turbineh/worker run verify:recipe <recipe> ["<prompt>"] [--with <component,…>] [--local-db]
+ * [--assemble-only]` — assembles one recipe template with a minimal spec (no models involved) and runs the full
+ * verification gate on it in the local sandbox. Used to check catalogue templates before they ship; prints the gate
+ * steps and findings as JSON. `--local-db`: no Postgres container and no DATABASE_URL for migrations and E2E (the
+ * package's zero-setup database must carry them). `--assemble-only`: print the assembled directory and stop.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -13,6 +15,13 @@ import { extractPalette, type BuildSpec } from "@turbineh/compiler";
 import { gateFindings, verify } from "@turbineh/verifier";
 
 const argv = process.argv.slice(2);
+const flag = (name: string) => {
+  const at = argv.indexOf(name);
+  if (at >= 0) argv.splice(at, 1);
+  return at >= 0;
+};
+const localDb = flag("--local-db");
+const assembleOnly = flag("--assemble-only");
 const withAt = argv.indexOf("--with");
 // --with id1,id2: native catalog components (files/) vendored into the app, as a build that selected them would.
 const withIds = withAt >= 0 ? (argv.splice(withAt, 2)[1] ?? "").split(",").filter(Boolean) : [];
@@ -55,6 +64,10 @@ assemble({
   })),
   gaps: [],
 });
+if (assembleOnly) {
+  console.log(outDir);
+  process.exit(0);
+}
 const git = (...args: string[]) =>
   execFileSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.com", ...args], {
     cwd: outDir,
@@ -63,12 +76,13 @@ const git = (...args: string[]) =>
 git("init", "-q", "-b", "main");
 git("add", "-A");
 git("commit", "-q", "-m", "recipe check");
-const r = await verify(outDir);
+const r = await verify(outDir, { localDb });
 console.log(
   JSON.stringify(
     {
       recipe,
       outDir,
+      localDb,
       ok: r.ok,
       steps: r.steps.map((s) => ({
         name: s.name,
