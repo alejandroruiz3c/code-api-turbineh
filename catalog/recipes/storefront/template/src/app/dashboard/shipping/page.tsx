@@ -9,7 +9,7 @@ import { shippingRates, taxRates } from "@/db/schema";
 import { env } from "@/env";
 import { countryName } from "@/lib/countries";
 import { formatPrice, formatRate } from "@/lib/shop";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 import { removeShippingRate, removeTaxRate, saveShippingRate, saveTaxRate } from "./actions";
 

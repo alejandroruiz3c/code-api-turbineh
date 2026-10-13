@@ -9,7 +9,7 @@ import { db } from "@/db/client";
 import { productPrices, products, productVariants } from "@/db/schema";
 import { env } from "@/env";
 import { formatPrice } from "@/lib/shop";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 import {
   deleteProduct,

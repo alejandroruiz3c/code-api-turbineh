@@ -15,14 +15,16 @@ const port = Number(process.env.PORT ?? 3000);
 const mocksDir = "tests/e2e/mocks";
 const mocks = existsSync(mocksDir)
   ? readdirSync(mocksDir)
-      .filter((f) => /^[A-Z][A-Z0-9_]*\.mjs$/.test(f))
+      .filter((f) => /^[A-Z][A-Z0-9_]*\.(mjs|ts)$/.test(f))
       .sort()
   : [];
 const mockServers = mocks.map((file, i) => {
   const mockPort = 12100 + i;
-  process.env[file.replace(/\.mjs$/, "")] = `http://127.0.0.1:${mockPort}`;
+  process.env[file.replace(/\.(mjs|ts)$/, "")] = `http://127.0.0.1:${mockPort}`;
   return {
-    command: `node ${mocksDir}/${file}`,
+    command: file.endsWith(".ts")
+      ? `pnpm exec tsx ${mocksDir}/${file}`
+      : `node ${mocksDir}/${file}`,
     url: `http://127.0.0.1:${mockPort}/health`,
     timeout: 30_000,
     reuseExistingServer: false,
@@ -52,6 +54,10 @@ if (process.env.STRIPE_API_BASE?.startsWith("http://127.0.0.1")) {
 }
 if (process.env.TURBINEH_AI_URL?.startsWith("http://127.0.0.1")) {
   process.env.TURBINEH_AI_TOKEN ||= secret();
+  // The same mock answers OpenAI-compatible calls (AI_BASE_URL) for agents that use them.
+  process.env.AI_BASE_URL = `${process.env.TURBINEH_AI_URL}/v1`;
+  process.env.AI_API_KEY ||= secret();
+  process.env.AI_MODEL ||= "mock-model";
 }
 // Recipe-specific test settings (tests/e2e/test-env.ts), e.g. a second shop currency.
 for (const [k, v] of Object.entries(TEST_ENV)) process.env[k] ||= v;

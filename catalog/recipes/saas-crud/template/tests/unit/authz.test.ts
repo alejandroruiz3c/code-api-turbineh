@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("@/env", () => ({ env: { ADMIN_EMAILS: "" } }));
 
 describe("role policy", () => {
   it("lets members read and create but not update or delete", async () => {

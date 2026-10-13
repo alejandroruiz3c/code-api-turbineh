@@ -16,7 +16,7 @@ export default async function Appointments() {
     return (
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Appointments</h1>
-        <p className="text-slate-600" role="status">
+        <p className="text-muted" role="status">
           Only staff can see appointments. Ask the owner to add your email to ADMIN_EMAILS.
         </p>
       </div>
@@ -31,7 +31,7 @@ export default async function Appointments() {
           Team and answers
         </Link>
       </div>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {cfg.business} · {cfg.timeZone} · {hoursText()}
       </p>
       <Table
@@ -61,7 +61,7 @@ export default async function Appointments() {
               {r.status === "confirmed" ? (
                 <form action={staffCancel}>
                   <input type="hidden" name="id" value={r.id} />
-                  <Button type="submit" className="bg-slate-700 px-2 py-1 text-xs">
+                  <Button type="submit" className="bg-muted px-2 py-1 text-xs">
                     Cancel
                   </Button>
                 </form>
@@ -70,7 +70,7 @@ export default async function Appointments() {
           </tr>
         ))}
       </Table>
-      {rows.length === 0 ? <p className="text-sm text-slate-600">No appointments yet.</p> : null}
+      {rows.length === 0 ? <p className="text-sm text-muted">No appointments yet.</p> : null}
       <h2 className="text-lg font-semibold">Book for someone</h2>
       <StaffBookForm services={cfg.services.map((s) => s.name)} />
     </div>

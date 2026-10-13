@@ -49,7 +49,7 @@ export default async function BookingSettings() {
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">Answers the assistant may give</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Empty answers are reported as &quot;not published yet&quot;: the assistant never makes
           them up.
         </p>
@@ -63,7 +63,7 @@ export default async function BookingSettings() {
               defaultValue={f.answer ?? ""}
               maxLength={1000}
               rows={2}
-              className="rounded-md border border-slate-300 p-2 text-sm"
+              className="rounded-md border border-field p-2 text-sm"
             />
             <div>
               <Button type="submit">Save answer</Button>
@@ -79,7 +79,7 @@ export default async function BookingSettings() {
             name="answer"
             maxLength={1000}
             rows={2}
-            className="rounded-md border border-slate-300 p-2 text-sm"
+            className="rounded-md border border-field p-2 text-sm"
           />
           <div>
             <Button type="submit">Add topic</Button>

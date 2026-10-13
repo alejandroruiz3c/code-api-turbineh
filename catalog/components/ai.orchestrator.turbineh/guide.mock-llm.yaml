@@ -25,7 +25,7 @@ config:
 interfaces:
   - { name: startMockLlm, signature: "startMockLlm(scripts: MockScript[], port?) → { server, url }", where: tests/mock-llm/mock.ts }
   - { name: MockScript, signature: "{ id, rules: [{ tool, when: RegExp, args(text, match) }], render?: { [tool]: (result, args) => string } }", where: tests/mock-llm/mock.ts }
-  - { name: "Playwright wiring", signature: "mockLlmWebServer, mockLlmEnv (AI_BASE_URL, AI_API_KEY, AI_MODEL, TURBINEH_AI_URL, TURBINEH_AI_TOKEN)", where: tests/mock-llm/playwright.ts }
+  - { name: "Playwright wiring", signature: "tests/e2e/mocks/TURBINEH_AI_URL.ts, started by playwright.config.ts (sets TURBINEH_AI_URL, AI_BASE_URL, AI_API_KEY, AI_MODEL, TURBINEH_AI_TOKEN)", where: tests/e2e/mocks/TURBINEH_AI_URL.ts }
 extension_points:
   - what: "Script a new domain"
     where: "tests/mock-llm/scripts/<domain>.ts"

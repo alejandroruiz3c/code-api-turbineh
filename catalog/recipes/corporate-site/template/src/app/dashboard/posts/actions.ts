@@ -7,7 +7,7 @@ import { db } from "@/db/client";
 import { posts } from "@/db/schema";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 const postSchema = z.object({
   title: z.string().trim().min(3).max(160),

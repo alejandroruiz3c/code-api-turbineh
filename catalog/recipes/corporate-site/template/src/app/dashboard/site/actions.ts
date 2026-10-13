@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db/client";
 import { siteSettings } from "@/db/schema";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { siteSchema } from "@/server/site";
 
 /** "Title | text" per line → items. */

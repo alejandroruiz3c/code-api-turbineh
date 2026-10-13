@@ -256,7 +256,9 @@ export async function verify(dir: string): Promise<VerifyResult> {
   // are exercised end to end without internet or real keys.
   const stripeHost = `${net}-stripe`;
   // Apps that ship their own mock (tests/e2e/mocks/<ENV>.mjs, started by playwright.config.ts) need no container.
-  const ships = (envVar: string) => existsSync(join(dir, `tests/e2e/mocks/${envVar}.mjs`));
+  const ships = (envVar: string) =>
+    existsSync(join(dir, `tests/e2e/mocks/${envVar}.mjs`)) ||
+    existsSync(join(dir, `tests/e2e/mocks/${envVar}.ts`));
   const shop =
     (existsSync(join(dir, "src/server/stripe.ts")) ||
       existsSync(join(dir, "src/lib/billing.ts"))) &&

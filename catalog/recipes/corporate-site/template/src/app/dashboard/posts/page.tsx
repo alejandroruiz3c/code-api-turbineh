@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { posts } from "@/db/schema";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { deletePost, savePost } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

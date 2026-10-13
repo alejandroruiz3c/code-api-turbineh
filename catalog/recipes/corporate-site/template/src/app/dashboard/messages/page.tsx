@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { markHandled } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

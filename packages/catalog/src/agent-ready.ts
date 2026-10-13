@@ -56,6 +56,11 @@ export function checkTree(
   const issues: AgentReadyIssue[] = [];
   const files = sources(dir);
   const existsInChain = (rel: string) => chainDirs.some((d) => existsSync(join(d, rel)));
+  // A mock may also serve related variables it names (e.g. the AI mock sets AI_BASE_URL next to TURBINEH_AI_URL).
+  const mockMentions = (env: string) =>
+    chainDirs.some((d) =>
+      walk(join(d, "tests/e2e/mocks")).some((f) => readFileSync(f, "utf8").includes(env)),
+    );
   for (const f of files) {
     const where = `${label}/${f.rel}`;
     if (/\.(tsx?|css)$/.test(f.rel) && !f.rel.includes("contract.test")) {
@@ -88,11 +93,15 @@ export function checkTree(
     if (/^src\/.*\.(ts|tsx)$/.test(f.rel) && /\bfetch\(/.test(f.text)) {
       for (const m of f.text.matchAll(SERVICE_ENV)) {
         const env = m[1] as string;
-        if (!existsInChain(`tests/e2e/mocks/${env}.mjs`))
+        if (
+          !existsInChain(`tests/e2e/mocks/${env}.mjs`) &&
+          !existsInChain(`tests/e2e/mocks/${env}.ts`) &&
+          !mockMentions(env)
+        )
           issues.push({
             where,
             rule: "service-without-mock",
-            message: `Calls an external service configured by ${env} but ships no tests/e2e/mocks/${env}.mjs (offline E2E).`,
+            message: `Calls an external service configured by ${env} but ships no tests/e2e/mocks/${env}.(mjs|ts) (offline E2E).`,
           });
       }
     }

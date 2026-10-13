@@ -13,7 +13,7 @@ export default function Home() {
         <img src={BRAND.logo} alt="" className="h-16 w-auto" />
       ) : null}
       <h1 className="text-4xl font-bold">__APP_NAME__</h1>
-      <p className="text-slate-600">__APP_SUMMARY__</p>
+      <p className="text-muted">__APP_SUMMARY__</p>
       {assistant.enabled ? (
         <AssistantWidget title={assistant.title} greeting={assistant.greeting} />
       ) : null}
@@ -21,14 +21,14 @@ export default function Home() {
         <Link
           className={
             assistant.enabled
-              ? "rounded-md border border-slate-300 px-4 py-2"
+              ? "rounded-md border border-field px-4 py-2"
               : "rounded-md bg-brand px-4 py-2 text-brand-contrast"
           }
           href="/sign-up"
         >
           {assistant.enabled ? "Staff sign-up" : "Get started"}
         </Link>
-        <Link className="rounded-md border border-slate-300 px-4 py-2" href="/sign-in">
+        <Link className="rounded-md border border-field px-4 py-2" href="/sign-in">
           {assistant.enabled ? "Staff sign-in" : "Sign in"}
         </Link>
       </div>

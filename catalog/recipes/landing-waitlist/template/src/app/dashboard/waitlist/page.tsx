@@ -5,7 +5,7 @@ import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { waitlistEntries } from "@/db/schema";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

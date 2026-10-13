@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 /** Contact messages: mark handled (staff only). */
 export async function markHandled(formData: FormData): Promise<void> {

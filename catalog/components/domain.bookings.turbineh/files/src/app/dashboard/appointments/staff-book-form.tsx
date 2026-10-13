@@ -26,7 +26,7 @@ export function StaffBookForm({ services }: { services: string[] }) {
         <select
           id="sb-service"
           name="service"
-          className="rounded-md border border-slate-300 p-2 text-sm"
+          className="rounded-md border border-field p-2 text-sm"
         >
           {services.map((s) => (
             <option key={s}>{s}</option>
@@ -50,12 +50,12 @@ export function StaffBookForm({ services }: { services: string[] }) {
           {pending ? "Booking…" : "Book"}
         </Button>
         {state.error ? (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {state.error}
           </p>
         ) : null}
         {state.done ? (
-          <p role="status" className="text-sm text-green-700">
+          <p role="status" className="text-sm text-success">
             {state.done}
           </p>
         ) : null}

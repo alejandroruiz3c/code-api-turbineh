@@ -8,7 +8,7 @@ import { productPrices, products, productVariants } from "@/db/schema";
 import { IMAGE_MAX_BYTES, IMAGE_URL_MAX, imageType, parseImageUrl, parsePrice } from "@/lib/shop";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 
 const base = z.object({

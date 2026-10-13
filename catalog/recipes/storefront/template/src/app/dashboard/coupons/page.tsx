@@ -7,7 +7,7 @@ import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { describeCoupon } from "@/lib/shop";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 import { deactivateCoupon, saveCoupon } from "./actions";
 

@@ -7,7 +7,7 @@ import { orderItems, orders } from "@/db/schema";
 import { countryName } from "@/lib/countries";
 import { formatPrice, orderSummary } from "@/lib/shop";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { setOrderStatus } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

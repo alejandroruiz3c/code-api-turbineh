@@ -6,7 +6,7 @@ import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { COUPON_CODE, normalizeCode, parsePrice, parseRatePercent } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 
 const text = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
