@@ -1134,7 +1134,8 @@ ${steps.join("\n")}
         ? `  await page.getByLabel("${label(f.name)}", { exact: true }).selectOption("${value}");`
         : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${value}");`;
   const fills = fields
-    .filter((f) => f.required || f === firstText)
+    // The field the edit test changes is filled too, even when optional, so the edit test finds the record.
+    .filter((f) => f.required || f === firstText || f === editable)
     .map((f) => fill(f, sample(f)))
     .join("\n");
   // Values unique to one test, so filters and sort orders are checked on records only that test created.

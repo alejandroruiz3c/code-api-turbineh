@@ -332,6 +332,16 @@ export function assemble(input: AssembleInput): AssembleResult {
           .filter((g) => !g.part)
           .flatMap((g) => g.extension_points ?? []),
       })),
+      todo: [
+        ...(fid?.patterns ?? [])
+          .filter((p) => p.status === "missing")
+          .map((p) => ({
+            what: `Domain pattern "${p.id}" from the request (${p.reason})`,
+            where: p.where.join(", "),
+            how: p.how,
+          })),
+        ...(kinds?.left ?? []),
+      ],
     }),
   );
 
