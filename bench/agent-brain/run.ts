@@ -83,7 +83,7 @@ interface Call {
 interface Meter {
   usage: Usage[];
   /**
-   * Gateway hedges (ADR-0043): the cancelled duplicate of each hedged call, counted at the answer's own tokens — an
+   * Gateway hedges (ADR-0046): the cancelled duplicate of each hedged call, counted at the answer's own tokens — an
    * upper bound [est.] of what the provider charges for a request cancelled part-way. Not billed to the app.
    */
   hedgeUsage: Usage[];

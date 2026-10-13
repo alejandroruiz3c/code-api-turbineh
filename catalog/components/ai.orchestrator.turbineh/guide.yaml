@@ -35,7 +35,7 @@ avoid_when:
 tradeoffs:
   - { choice: "Per-turn runtime with state returned to the app", gain: "Stateless servers, easy to store and audit", cost: "The app stores AgentState (sessions.ts does it for the public assistant)" }
   - { choice: "Confirmation decided by code (yes/no reading or a button)", gain: "A model can never trigger an irreversible action by itself", cost: "One extra turn before create/move/cancel/send" }
-  - { choice: "Reply to a confirmed action from a template (the tool's `message`, else the summary + reference), no decider or model call (ADR-0043)", gain: "The confirmation turn costs no model call and answers in tool time", cost: "The reply is the tool's text (return a person-facing `message` in the person's language); failures still go to the model" }
+  - { choice: "Reply to a confirmed action from a template (the tool's `message`, else the summary + reference), no decider or model call (ADR-0046)", gain: "The confirmation turn costs no model call and answers in tool time", cost: "The reply is the tool's text (return a person-facing `message` in the person's language); failures still go to the model" }
   - { choice: "One decision per turn (route + unsafe) instead of per step", gain: "Lower latency and cost", cost: "The route does not change inside a turn" }
   - { choice: "No SDK, plain fetch through models.ts", gain: "No vendor dependency, one audited transport", cost: "Only the OpenAI-compatible chat/embeddings shapes" }
 config:
@@ -46,8 +46,8 @@ config:
   - { name: AI_MODEL, default: "", description: "Model served by AI_BASE_URL; used by every route" }
   - { name: AI_ROUTES, default: "fast=…,balanced=…,frontier=…", description: "Open models per route (gateway names)" }
   - { name: AI_TIMEOUT_MS, default: "60000", description: "Per model call (whole budget, one retry included)" }
-  - { name: AI_ATTEMPT_TIMEOUT_MS, default: "15000", description: "Per attempt of a runAgent model call; a stuck attempt is retried once (ADR-0043)" }
-  - { name: AI_DECIDER_ATTEMPT_TIMEOUT_MS, default: "5000", description: "Per attempt of a decision; retried once, then the default route (ADR-0043)" }
+  - { name: AI_ATTEMPT_TIMEOUT_MS, default: "15000", description: "Per attempt of a runAgent model call; a stuck attempt is retried once (ADR-0046)" }
+  - { name: AI_DECIDER_ATTEMPT_TIMEOUT_MS, default: "5000", description: "Per attempt of a decision; retried once, then the default route (ADR-0046)" }
   - { name: AI_PUBLIC_MAX_INPUT_CHARS, default: "1000", description: "Public assistant message size" }
   - { name: AI_PUBLIC_REQUESTS_PER_MINUTE, default: "10", description: "Public assistant requests per IP per minute" }
   - { name: AI_PUBLIC_TURNS_PER_CONVERSATION, default: "60", description: "Public assistant turns per conversation" }

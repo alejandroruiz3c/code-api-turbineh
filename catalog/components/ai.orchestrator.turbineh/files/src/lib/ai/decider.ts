@@ -12,7 +12,7 @@ const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
   TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
   TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
-  /** One attempt of a decision (ms); a timed-out or failed attempt is retried once (ADR-0043). */
+  /** One attempt of a decision (ms); a timed-out or failed attempt is retried once (ADR-0046). */
   AI_DECIDER_ATTEMPT_TIMEOUT_MS: z.preprocess(
     empty,
     z.coerce.number().int().min(500).max(60_000).default(5000),

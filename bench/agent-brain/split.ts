@@ -1,6 +1,6 @@
 /**
- * Per-turn latency split of agent-brain runs (ADR-0043): confirmation turns (the person's explicit yes to a pending
- * action, answered from a template since ADR-0043) versus every other turn, so a speed-up of the confirmation turn is
+ * Per-turn latency split of agent-brain runs (ADR-0046): confirmation turns (the person's explicit yes to a pending
+ * action, answered from a template since ADR-0046) versus every other turn, so a speed-up of the confirmation turn is
  * not mistaken for a speed-up of the rest. Also per-call latency and the gateway's hedges.
  *
  *   pnpm --filter @turbineh/bench exec tsx agent-brain/split.ts label1 label2 …

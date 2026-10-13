@@ -36,7 +36,7 @@ const Env = z.object({
   ),
   /**
    * One attempt of a tool-calling model call (runAgent; short outputs), ms: a stuck request is abandoned and retried
-   * once instead of using the whole budget (ADR-0043). The TurbineH gateway hedges slow chat requests itself after
+   * once instead of using the whole budget (ADR-0046). The TurbineH gateway hedges slow chat requests itself after
    * ~4 s. Plain chat and embeddings (possibly long outputs) keep the whole budget per attempt.
    */
   AI_ATTEMPT_TIMEOUT_MS: z.preprocess(
@@ -147,7 +147,7 @@ export interface ModelReply {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Attempts per model call (ADR-0043): up to 3 for transient failures (network errors, rate limits, server errors), as
+ * Attempts per model call (ADR-0046): up to 3 for transient failures (network errors, rate limits, server errors), as
  * before; an attempt that hits its per-attempt timeout is retried once (a second stuck attempt ends the call).
  * Transient failures keep the retries they had; the per-attempt timeout is the new bound.
  */

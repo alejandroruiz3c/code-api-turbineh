@@ -39,7 +39,7 @@ contract:
     ]
   limits:
     [
-      "decider unsafe threshold 0.5, tool threshold 0.5 and runAgent next-action threshold 0.5 (code; below it the model chooses among every tool); one transport retry per model call and per decision, runAgent model attempts 15 s and decision attempts 5 s (ADR-0043); one repair attempt for structured output; embeddings fixed at 1024 dimensions",
+      "decider unsafe threshold 0.5, tool threshold 0.5 and runAgent next-action threshold 0.5 (code; below it the model chooses among every tool); one transport retry per model call and per decision, runAgent model attempts 15 s and decision attempts 5 s (ADR-0046); one repair attempt for structured output; embeddings fixed at 1024 dimensions",
       "runAgent: 6 steps (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages of state, confirmations expire after 30 min, a confirmed action that ran is answered from a template (tool `message`, else summary + reference) without a model call; public assistant: 1000 characters, 10 requests/min per IP, 60 turns per conversation",
     ]
 compat:

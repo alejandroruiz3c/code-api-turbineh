@@ -215,7 +215,7 @@ describe("TurbineH AI gateway", () => {
     expect(calls).toHaveLength(0);
   });
 
-  describe("hedged chat requests (ADR-0043)", () => {
+  describe("hedged chat requests (ADR-0046)", () => {
     /** Fake upstream: each call answers after its scripted delay (or status), unless it is aborted first. */
     function upstream(script: { ms: number; status?: number; tokens?: number }[]) {
       const seen: { model: string; aborted: () => boolean }[] = [];

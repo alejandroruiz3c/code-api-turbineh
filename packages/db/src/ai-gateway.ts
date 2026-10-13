@@ -133,7 +133,7 @@ export async function recordAiUsage(
     model: string;
     inputTokens: number;
     outputTokens: number;
-    /** Set when a hedge was fired for this request (ADR-0043); "hedge-won" counts a hedge win. */
+    /** Set when a hedge was fired for this request (ADR-0046); "hedge-won" counts a hedge win. */
     hedge?: "primary-won" | "hedge-won";
   },
 ): Promise<void> {
@@ -157,7 +157,7 @@ export async function recordAiUsage(
 }
 
 /**
- * Takes one hedge from the app's daily budget for a chat model (ADR-0043), atomically: allowed while today's hedges
+ * Takes one hedge from the app's daily budget for a chat model (ADR-0046), atomically: allowed while today's hedges
  * are below max(minPerDay, ratio × today's chat calls of that model). True when the hedge may be fired.
  */
 export async function reserveAiHedge(
@@ -242,7 +242,7 @@ export async function aiUsageByApp(db: pg.Pool): Promise<
     calls: number;
     inputTokens: number;
     outputTokens: number;
-    /** Hedged chat requests and how many hedges answered first (internal, ADR-0043). */
+    /** Hedged chat requests and how many hedges answered first (internal, ADR-0046). */
     hedges: number;
     hedgeWins: number;
   }[]
