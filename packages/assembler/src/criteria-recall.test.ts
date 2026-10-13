@@ -14,7 +14,7 @@ import { proofVerdict, type ProofAlias, type ProofCandidate } from "@turbineh/sh
 import { LABELLED_PAIRS as PROOF_PAIRS } from "@turbineh/shared/criterion-proof-pairs";
 import { describe, expect, it } from "vitest";
 import { testBlocks } from "./acceptance.js";
-import { aliasesFor, readAliasDeclaration, resolveAliases } from "./aliases.js";
+import { actorAliases, aliasesFor, readAliasDeclaration, resolveAliases } from "./aliases.js";
 
 /**
  * Recall without relaxing the matcher (ADR-0045): the same 109 labelled pairs (criterion, the test a rule cited, human
@@ -119,6 +119,10 @@ function flexPhysioAliases() {
   return r ? [r] : [];
 }
 const agentAliases = flexPhysioAliases();
+const shopActors = actorAliases([
+  join(catalog, "recipes/storefront"),
+  join(catalog, "recipes/saas-crud"),
+]);
 
 function score(current: boolean, aliases = false) {
   let tp = 0;
@@ -128,9 +132,14 @@ function score(current: boolean, aliases = false) {
     const now = current ? shipped.get(RENAMED[p.test.title] ?? p.test.title) : undefined;
     let test: ProofCandidate = now ?? p.test;
     const found: ProofAlias[] | undefined =
-      aliases && now && p.id.startsWith("rule-agent-")
-        ? aliasesFor(now.file, agentAliases)
-        : undefined;
+      !aliases || !now
+        ? undefined
+        : p.id.startsWith("rule-agent-")
+          ? aliasesFor(now.file, agentAliases)
+          : // ADR-0049: the storefront's declared actors, on the storefront runs' recipe tests.
+            p.id.startsWith("rule-shop-") && !now.file.includes("booking")
+            ? shopActors
+            : undefined;
     if (found) test = { ...test, aliases: found };
     const proven = proofVerdict(p.criterion, test).proven;
     if (proven && p.met) tp++;

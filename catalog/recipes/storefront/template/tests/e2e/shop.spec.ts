@@ -163,6 +163,10 @@ test.describe.serial("storefront", () => {
     page,
   }) => {
     await page.goto("/dashboard/products");
+    await expect(
+      page.getByRole("button", { name: "Create product" }),
+      "the signed-in owner is in the admin area (products)",
+    ).toBeVisible();
     await page.getByLabel("Name", { exact: true }).fill("Price Test Mug");
     await page.getByLabel(/^Price/).fill("10.00");
     await page.getByLabel("Description").fill("A mug used to check price updates.");
@@ -501,7 +505,10 @@ test.describe.serial("storefront", () => {
     page,
   }) => {
     await page.goto("/dashboard/orders");
-    await expect(page.locator('tr[data-status="paid"]').first()).toBeVisible();
+    await expect(
+      page.locator('tr[data-status="paid"]').first(),
+      "the signed-in owner sees the paid (completed) orders on the admin dashboard",
+    ).toBeVisible();
     await expect(page.locator('tr[data-status="pending"]').first()).toBeVisible();
     expect(await page.locator("tr[data-order-id]").count()).toBeGreaterThanOrEqual(3);
   });

@@ -118,3 +118,55 @@ export function aliasesFor(
   const found = list.filter((r) => r.tests.includes(file)).flatMap((r) => r.aliases);
   return found.length ? found : undefined;
 }
+
+/**
+ * Actor aliases of a recipe (ADR-0049): the words requests use for the role the recipe's own tests act as, declared
+ * by the recipe from its role model (`aliases.yaml` › `actors`, each with why it holds). Example: in the storefront the
+ * E2E owner is the shop's administrator (verified ADMIN_EMAILS staff, the only role with the admin area), so a
+ * criterion about "an administrator" is the owner's. Never inferred from free text.
+ */
+export interface ActorAlias {
+  term: string;
+  means: string[];
+  why: string;
+}
+
+export function readRecipeActors(recipeDir: string): ActorAlias[] {
+  const file = join(recipeDir, "aliases.yaml");
+  if (!existsSync(file)) return [];
+  const raw = parse(readFileSync(file, "utf8")) as { actors?: Partial<ActorAlias>[] } | null;
+  return (raw?.actors ?? []).map((a) => {
+    if (
+      typeof a.term !== "string" ||
+      !Array.isArray(a.means) ||
+      typeof a.why !== "string" ||
+      !a.why.trim()
+    )
+      throw new Error(`${file}: each actor needs term, means[] and why`);
+    return { term: a.term, means: a.means.map(String), why: a.why };
+  });
+}
+
+/**
+ * Actor aliases of this app: the recipe chain's declared ones plus the request's role matrix (ADR-0044) — the stored
+ * "owner" role named the way the request names it ("Manager"). Applied to the recipe's and the generated tests (not to
+ * components', which declare their own).
+ */
+export function actorAliases(
+  recipeDirs: string[],
+  matrixLabels: { owner?: string | undefined; admin?: string | undefined } = {},
+): ProofAlias[] {
+  const out = new Map<string, Set<string>>();
+  const add = (term: string, means: string[]) => {
+    const set = out.get(term) ?? new Set<string>();
+    for (const m of means) if (m.trim() && m.toLowerCase() !== term) set.add(m.toLowerCase());
+    out.set(term, set);
+  };
+  for (const d of recipeDirs)
+    for (const a of readRecipeActors(d)) add(a.term.toLowerCase(), a.means);
+  if (matrixLabels.owner) add("owner", [matrixLabels.owner]);
+  if (matrixLabels.admin) add("admin", [matrixLabels.admin]);
+  return [...out]
+    .filter(([, m]) => m.size > 0)
+    .map(([term, means]) => ({ term, means: [...means] }));
+}
