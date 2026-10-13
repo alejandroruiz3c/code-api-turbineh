@@ -48,7 +48,7 @@ const GENERIC = new Set(
     // Narrative and UI mechanics of Given/When/Then criteria (ADR-0043): how a person gets there, not what is checked.
     "click button press tap enter bar area section specific specifically particular certain relevant correspond " +
     "accordingly immediately proceed complet process receiv brows navigat initiat attempt already current initial " +
-    "reflect contain detail level statu databas redirect authenticat consol get gets got"
+    "reflect contain level statu databas redirect authenticat consol get gets got"
   ).split(" "),
 );
 
@@ -105,7 +105,7 @@ const SYNONYMS: Record<string, string> = {
   reserv: "book",
 };
 
-const SUFFIX = /(ment|ing|ed|es|s)$/;
+const SUFFIX = /(ment|ing|ed|es|(?<!s)s)$/;
 
 function stem(w: string): string {
   // "-ment"/"-ing" under another suffix too, so "payments" and "payment", "decremented" and "decrement",
@@ -173,8 +173,15 @@ export function proofVeto(criterion: string, test: ProofCandidate): string {
 export function proofVerdict(criterion: string, test: ProofCandidate): ProofVerdict {
   const veto = proofVeto(criterion, test);
   if (veto) return { proven: false, reason: veto };
+  const want = salientStems(criterion);
+  // A criterion that says almost nothing checkable ("products are shown") is proven by no test title.
+  if (want.size < 2)
+    return {
+      proven: false,
+      reason: "the criterion names too little to check (one subject, no outcome)",
+    };
   const have = salientStems([test.title, ...(test.assertions ?? [])].join("\n"));
-  const uncovered = [...salientStems(criterion)].filter((s) => !have.has(s));
+  const uncovered = [...want].filter((s) => !have.has(s));
   if (uncovered.length > 0)
     return { proven: false, reason: `not exercised by the test: ${uncovered.join(", ")}` };
   return { proven: true, reason: "" };

@@ -4,7 +4,9 @@ import { env } from "@/env";
 /**
  * Transactional email (component email.transactional.turbineh): Resend HTTP API when RESEND_API_KEY is set,
  * otherwise a local outbox log (development and sandboxed tests). Never logs message bodies; an action link (e.g. email
- * verification) is logged in log mode, because without a provider the log is the only way to deliver it.
+ * verification) is logged in log mode, because without a provider the log is the only way to deliver it. The test
+ * outbox file (EMAIL_OUTBOX_FILE, set only by playwright.config.ts for a test run) also keeps the text, so E2E tests
+ * can check what an email says; the console log never does.
  */
 export async function sendEmail(msg: {
   to: string;
@@ -22,7 +24,11 @@ export async function sendEmail(msg: {
     console.info("[email:outbox]", entry);
     // Test runs (playwright.config.ts) also record the outbox in a file so E2E tests can assert emails.
     const outbox = process.env.EMAIL_OUTBOX_FILE;
-    if (outbox) appendFileSync(outbox, `${entry}\n`);
+    if (outbox)
+      appendFileSync(
+        outbox,
+        `${JSON.stringify({ ...(JSON.parse(entry) as object), text: msg.text })}\n`,
+      );
     return { transport: "log", delivered: false };
   }
   const res = await fetch("https://api.resend.com/emails", {

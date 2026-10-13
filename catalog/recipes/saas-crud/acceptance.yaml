@@ -13,7 +13,7 @@
   covers:
     - "sign[- ]?out|log[- ]?out|returning|again"
     - "sign[- ]?in|log[- ]?in|resume|workspace"
-- test: "tests/e2e/auth.spec.ts › an allowlisted email gets staff access only after the address is verified"
+- test: "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
   covers:
     - "verif"
     - "e-?mail|address"
