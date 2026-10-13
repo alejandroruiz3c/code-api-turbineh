@@ -143,7 +143,11 @@ test.describe.serial("storefront", () => {
     await page.goto("/dashboard/products");
     await page.getByRole("link", { name: "Linen Shirt", exact: true }).click();
     await page.getByLabel("Product price in USD").fill("54.00");
-    await page.getByRole("button", { name: "Save prices" }).click();
+    // Wait for the server action itself: navigating away first would cancel it.
+    await Promise.all([
+      page.waitForResponse((r) => r.request().method() === "POST"),
+      page.getByRole("button", { name: "Save prices" }).click(),
+    ]);
     await expect(page.getByLabel("Product price in USD")).toHaveValue("54.00");
 
     await page.goto("/dashboard/shipping");
@@ -164,12 +168,45 @@ test.describe.serial("storefront", () => {
     await page.getByLabel("Description").fill("A mug used to check price updates.");
     await page.getByRole("button", { name: "Create product" }).click();
     await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
+    // The list page has a create form with the same labels: wait for the edit page before filling.
+    await expect(page.getByRole("button", { name: "Save product" })).toBeVisible();
     await page.getByLabel(/^Price/).fill("12.50");
     await page.getByRole("button", { name: "Save product" }).click();
     // The action redirects back to the list once saved.
     await expect(page).toHaveURL(/\/dashboard\/products$/);
     await page.goto("/shop/price-test-mug");
     await expect(page.getByTestId("price")).toContainText("12.50");
+  });
+
+  test("the admin updates a product's stock and the public catalogue reflects it at once", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name", { exact: true }).fill("Stock Test Grinder");
+    await page.getByLabel(/^Price/).fill("89.00");
+    await page.getByLabel("Description").fill("A hand grinder used to check stock updates.");
+    await page.getByLabel(/Stock/).fill("3");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await expect(page.getByRole("cell", { name: "Stock Test Grinder" })).toBeVisible();
+    await page.goto("/shop/stock-test-grinder");
+    await expect(page.getByTestId("stock")).toHaveText("3 in stock");
+
+    const setStock = async (stock: string) => {
+      await page.goto("/dashboard/products");
+      await page.getByRole("link", { name: "Stock Test Grinder", exact: true }).click();
+      // The list page has a create form with the same labels: wait for the edit page before filling.
+      await expect(page.getByRole("button", { name: "Save product" })).toBeVisible();
+      await page.getByLabel(/Stock/).fill(stock);
+      await page.getByRole("button", { name: "Save product" }).click();
+      await expect(page).toHaveURL(/\/dashboard\/products$/);
+      await page.goto("/shop/stock-test-grinder");
+    };
+    await setStock("0");
+    await expect(page.getByText("Out of stock")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add to cart" })).toHaveCount(0);
+    await setStock("7");
+    await expect(page.getByTestId("stock")).toHaveText("7 in stock");
+    await expect(page.getByRole("button", { name: "Add to cart" })).toBeVisible();
   });
 
   test.describe("shopper", () => {

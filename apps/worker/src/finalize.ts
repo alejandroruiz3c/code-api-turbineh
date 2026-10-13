@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   finalizeAcceptance,
+  readAcceptanceJson,
   verifiedGuide,
   writeReports,
   writeStartHere,
@@ -153,6 +154,40 @@ function evidenceOf(repoDir: string): string[] {
   out.add("Strict type checking and production build");
   out.add("Input validation with Zod schemas on every form and action");
   return [...out];
+}
+
+/**
+ * ADR-0035: a criterion is proven only by a test shipped in the package — the acceptance.yaml rules matched at assembly
+ * first (deterministic), then the report's mapping when it points at a test. Anything else (e.g. "strict type
+ * checking") is not a proof: the criterion stays open, with where to implement and prove it.
+ */
+export function provenOnlyByTests<
+  R extends {
+    criteria: { criterion: string; evidence: string; verified: boolean; confidence: number }[];
+  },
+>(repoDir: string, report: R, evidence: string[]): R {
+  const ruled = new Map(
+    readAcceptanceJson(repoDir).flatMap((a) => {
+      const proof = a.tests
+        .map((t) => {
+          const [file = "", title = ""] = t.split(" › ");
+          return `${file.startsWith("tests/e2e") ? "End-to-end test" : "Unit test"}: ${title}`;
+        })
+        .find((e) => evidence.includes(e));
+      return proof ? [[a.criterion, proof] as const] : [];
+    }),
+  );
+  const isTest = (e: string) => /^(End-to-end|Unit) test: /.test(e) && evidence.includes(e);
+  return {
+    ...report,
+    criteria: report.criteria.map((c) => {
+      const proof = ruled.get(c.criterion);
+      if (proof) return { ...c, evidence: proof, verified: true, confidence: 1 };
+      return c.verified && !isTest(c.evidence)
+        ? { ...c, evidence: "Not verified automatically", verified: false }
+        : c;
+    }),
+  };
 }
 
 /**
@@ -343,7 +378,11 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     improvement,
     finalVersion: input.scope === "improve",
   };
-  const report = await buildReport(facts, deps.decider, deps.writer);
+  const report = provenOnlyByTests(
+    input.repoDir,
+    await buildReport(facts, deps.decider, deps.writer),
+    facts.evidence,
+  );
   await deps.emit("reporting", "done", { report });
 
   const handover = {
@@ -357,8 +396,26 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     alerts: alerts.length,
     fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
   };
-  // Acceptance criteria → tests (ADR-0033): covered criteria become "met" only when the whole gate passed.
-  const acceptance = finalizeAcceptance(input.repoDir, result.ok);
+  // AGENTS.md + turbineh.json: the verified gate results and, per acceptance criterion, the passing test that proves
+  // it or where to implement and prove it — so a coding agent knows at once what is left. ACCEPTANCE.md is rewritten
+  // from the same result (ADR-0035); covered criteria become "met" only when the whole gate passed.
+  const guide = verifiedGuide(input.repoDir, {
+    gate: {
+      ok: result.ok,
+      verifiedAt: result.scannedAt,
+      environment: "TurbineH sandbox: no internet, ephemeral Postgres, service mocks",
+      steps: result.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
+      findings: gateFindings(result),
+    },
+    criteria: report.criteria,
+    gaps: facts.gaps,
+  });
+  const acceptance = guide
+    ? guide.criteria.map((c) => ({
+        criterion: c.text,
+        status: c.status === "unverified" ? ("covered" as const) : c.status,
+      }))
+    : finalizeAcceptance(input.repoDir, result.ok);
   const metrics = {
     ...input.metrics,
     acceptance: {
@@ -375,19 +432,6 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     report: { writer: report.writer },
   };
   writeStartHere(input.repoDir, handover);
-  // AGENTS.md + turbineh.json: the verified gate results and, per acceptance criterion, the passing test that proves
-  // it or where to implement it — so a coding agent knows at once what is left.
-  verifiedGuide(input.repoDir, {
-    gate: {
-      ok: result.ok,
-      verifiedAt: result.scannedAt,
-      environment: "TurbineH sandbox: no internet, ephemeral Postgres, service mocks",
-      steps: result.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
-      findings: gateFindings(result),
-    },
-    criteria: report.criteria,
-    gaps: facts.gaps,
-  });
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),

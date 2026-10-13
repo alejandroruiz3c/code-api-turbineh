@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -5,7 +6,28 @@ import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { TEST_ENV } from "./tests/e2e/test-env";
 
-const port = Number(process.env.PORT ?? 3000);
+/*
+ * The E2E run owns its URLs: a free port picked once (workers inherit it through E2E_PORT) and the app's origin on
+ * it. Ambient PORT, BETTER_AUTH_URL or APP_URL (a dev server, a shell profile, .env.local) are ignored, so auth origin
+ * checks and redirects always match the server Playwright starts.
+ */
+process.env.E2E_PORT ||= execFileSync(
+  process.execPath,
+  [
+    "-e",
+    "const s=require('net').createServer().listen(0,'127.0.0.1',()=>{process.stdout.write(String(s.address().port));s.close()})",
+  ],
+  { encoding: "utf8" },
+);
+const port = Number(process.env.E2E_PORT);
+const origin = `http://127.0.0.1:${port}`;
+process.env.BETTER_AUTH_URL = origin;
+process.env.APP_URL = origin;
+process.env.PORT = String(port);
+if (!process.env.DATABASE_URL)
+  throw new Error(
+    "DATABASE_URL is not set: run `pnpm test:e2e` (it starts a fresh local PostgreSQL, see scripts/local-db.ts).",
+  );
 
 /*
  * Offline, self-contained E2E (no internet, no real keys). Every external service the app calls has a local mock in
@@ -31,9 +53,9 @@ const mockServers = mocks.map((file, i) => {
     env: { PORT: String(mockPort), MOCK_PORT: String(mockPort) },
   };
 });
+const built = existsSync(".next/BUILD_ID");
 const secret = (prefix = "") => `${prefix}${randomBytes(24).toString("hex")}`;
 process.env.BETTER_AUTH_SECRET ||= secret();
-process.env.BETTER_AUTH_URL ||= `http://127.0.0.1:${port}`;
 // A second staff address, unique per run, to prove staff access needs a verified email.
 process.env.E2E_STAFF_EMAIL ||= `staff-${Date.now()}@example.com`;
 process.env.ADMIN_EMAILS = [
@@ -68,7 +90,7 @@ export default defineConfig({
   timeout: 60_000,
   retries: 0,
   workers: 1,
-  use: { baseURL: `http://127.0.0.1:${port}`, trace: "retain-on-failure" },
+  use: { baseURL: origin, trace: "retain-on-failure" },
   projects: [
     // Signs up one owner and stores the session, so feature tests do not hit the auth rate limiter.
     { name: "setup", testMatch: /.*\.setup\.ts/ },
@@ -81,9 +103,10 @@ export default defineConfig({
   webServer: [
     ...mockServers,
     {
-      command: `pnpm start --port ${port}`,
-      url: `http://127.0.0.1:${port}`,
-      timeout: 120_000,
+      // Builds first when there is no production build yet (zero setup); re-run `pnpm build` after code changes.
+      command: `${built ? "" : "pnpm build && "}pnpm start --port ${port}`,
+      url: origin,
+      timeout: built ? 120_000 : 600_000,
       reuseExistingServer: false,
       // No real email provider in tests: emails go to the local outbox log.
       env: { ...process.env, RESEND_API_KEY: "" } as Record<string, string>,

@@ -1,8 +1,6 @@
 # Acceptance criteria → tests (ADR-0033) for every app with the TurbineH orchestrator.
 - test: "tests/unit/ai-agent.test.ts › refuses prompt injection before any model call"
   covers: ["injection|jailbreak|manipulat"]
-- test: "tests/e2e/booking-assistant.spec.ts › rejects prompt injection and oversized messages"
-  covers: ["injection|abuse|input limit|rate limit|too long|oversiz"]
 - test: "tests/unit/ai-agent.test.ts › uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway"
   covers: ["openai|compatible endpoint|environment variable|\\bLLM\\b|language model|model endpoint"]
 - test: "tests/mock-llm (scripted model started by Playwright's webServer; every E2E test runs against it)"

@@ -11,6 +11,20 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Zero-friction packages (ADR-0035, from the Frontiers shop rerun R2–R5), for every recipe and enforced by
+  `catalog:validate`: **zero-setup local database** — `pnpm db:local`, and `db:migrate`, `dev` and `test:e2e` use a
+  local PostgreSQL when `DATABASE_URL` is unset (real PostgreSQL 17 binaries via `embedded-postgres`, PGlite with
+  pgvector for `ai-agents`, root or unsupported platforms), one line says so, E2E gets a fresh database and builds when
+  needed — no PostgreSQL, Docker or sudo; **build and unit tests with only the required env** — allow-lists such as
+  `ADMIN_EMAILS` are optional and deny by default, and the gate builds and tests with only what `src/env.ts` requires;
+  **E2E owns its URLs** — `playwright.config.ts` sets `BETTER_AUTH_URL`/`APP_URL`/port itself (free port), and the
+  gate runs with an ambient `BETTER_AUTH_URL` to prove it; **criteria proven by shipped tests** — every recipe ships
+  `acceptance.yaml`, generated entities add their own rules, a criterion is met only with an existing test and a passed
+  gate (never from non-test evidence), open ones say which files and which spec, and `ACCEPTANCE.md`, `AGENTS.md`,
+  `turbineh.json` and the report agree. Storefront shows stock on product pages, with an E2E proving that an admin
+  stock change reaches the catalogue. New checks: `local-db-missing`, `required-allow-list`,
+  `required-env-undocumented`, `e2e-ambient-url`, `acceptance-missing`, `acceptance-test-missing`.
+  `verify:recipe --local-db` / `--assemble-only`.
 - Component documentation standard for the whole catalogue (ADR-0032 §Documentation): every component has a
   `guide.yaml` (turbineh.guide/v0.1) — what it does, use cases, when to use it and not, trade-offs, configuration,
   interfaces with real signatures, extension points, compatibility, security, guarantees linked to tests, limits,

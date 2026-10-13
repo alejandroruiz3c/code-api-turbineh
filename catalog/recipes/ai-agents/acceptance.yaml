@@ -1,0 +1,13 @@
+# Acceptance criteria → tests for ai-agents (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/ai-agents.spec.ts › adds a document to the knowledge base"
+  covers: ["knowledge|document|\\bfiles?\\b|upload", "add|upload|import|store|index"]
+- test: "tests/e2e/ai-agents.spec.ts › creates an assistant that answers from the knowledge base"
+  covers: ["assistant|agent|chat|bot", "answer|respond|reply|question|knowledge|document|instruction|creat"]
+- test: "tests/e2e/ai-agents.spec.ts › refuses a prompt-injection attempt with a safe message"
+  covers: ["injection|jailbreak|manipulat|malicious prompt"]
+- test: "tests/e2e/ai-agents.spec.ts › classifies records in a batch process"
+  covers: ["batch|classif|extract|summari[sz]|bulk"]
+- test: "tests/e2e/ai-agents.spec.ts › shows AI usage and the audit trail"
+  covers: ["usage|audit|cost|tokens? (used|count)|log of"]
+- test: "tests/unit/ai-agents.test.ts › only knows registry tools; sending email is irreversible"
+  covers: ["\\btools?\\b|allowed actions"]

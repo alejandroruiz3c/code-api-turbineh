@@ -1,0 +1,9 @@
+# Acceptance criteria → tests for tracker (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
+  covers: ["habit|streak|check[- ]?in|daily"]
+- test: "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"
+  covers: ["goal|target|amount|quantit|\\blog(s|ging)?\\b|total"]
+- test: "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
+  covers: ["history|30[- ]day|past (days|month)|completion|weekly total|chart"]
+- test: "tests/unit/streaks.test.ts › counts the streak up to today, or up to yesterday when today is still open"
+  covers: ["streak"]

@@ -1890,7 +1890,7 @@
         },
         {
           "name": "ADMIN_EMAILS",
-          "description": "Environment variable read by the component's code."
+          "description": "Optional staff allow-list (comma-separated emails). Empty = nobody: deny by default; build and tests never need it."
         }
       ],
       "interfaces": [

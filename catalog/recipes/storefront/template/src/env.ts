@@ -8,8 +8,8 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("App <onboarding@resend.dev>"),
-  /** Comma-separated emails allowed to manage products and orders. */
-  ADMIN_EMAILS: z.string().min(3),
+  /** Comma-separated emails allowed to manage products and orders. Optional: empty = nobody (deny by default). */
+  ADMIN_EMAILS: z.string().default(""),
   /** Stripe secret key (sk_test_… or sk_live_…). Without it the shop works as a catalog. */
   STRIPE_SECRET_KEY: z
     .string()

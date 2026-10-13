@@ -8,8 +8,8 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("App <onboarding@resend.dev>"),
-  /** Comma-separated emails allowed to read the waitlist. */
-  ADMIN_EMAILS: z.string().min(3),
+  /** Comma-separated emails allowed to read the waitlist. Optional: empty = nobody (deny by default). */
+  ADMIN_EMAILS: z.string().default(""),
 });
 
 export const env = schema.parse(process.env);

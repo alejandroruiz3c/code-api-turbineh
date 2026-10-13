@@ -27,7 +27,13 @@ export interface AgentReadyIssue {
     | "secret-shaped-literal"
     | "next-dev-types"
     | "service-without-mock"
-    | "route-without-doc";
+    | "route-without-doc"
+    | "local-db-missing"
+    | "required-allow-list"
+    | "required-env-undocumented"
+    | "e2e-ambient-url"
+    | "acceptance-missing"
+    | "acceptance-test-missing";
   message: string;
 }
 
@@ -116,6 +122,132 @@ export function checkTree(
   return [...new Map(issues.map((i) => [`${i.where}|${i.rule}|${i.message}`, i])).values()];
 }
 
+/** Variables src/env.ts requires: declared without `.optional()` or `.default(` (NODE_ENV aside). */
+export function requiredEnvVars(envTs: string): string[] {
+  const keys = [...envTs.matchAll(/^ {2}([A-Z][A-Z0-9_]*):/gm)];
+  return keys
+    .filter((k, i) => {
+      const chunk = envTs.slice(k.index, keys[i + 1]?.index ?? envTs.length);
+      return !/\.optional\(\)|\.default\(/.test(chunk) && k[1] !== "NODE_ENV";
+    })
+    .map((k) => k[1] as string);
+}
+
+/** Allow-lists (staff emails, allowed domains…): optional at build time, deny by default at runtime. */
+const ALLOW_LIST = /(?:_EMAILS|_DOMAINS|ALLOWLIST|ALLOW_LIST|^ALLOWED_[A-Z_]+)$/;
+
+/** Dev dependencies that carry the zero-setup local database (pinned exactly). */
+export const LOCAL_DB_DEPENDENCIES = [
+  "embedded-postgres",
+  "@electric-sql/pglite",
+  "@electric-sql/pglite-pgvector",
+  "@electric-sql/pglite-socket",
+];
+
+/**
+ * Zero-friction package checks (ADR-0035) on the files the app will actually have: for each path, the first template
+ * in the chain (recipe, then what it extends) that ships it.
+ */
+export function checkPackage(label: string, chainDirs: string[]): AgentReadyIssue[] {
+  const issues: AgentReadyIssue[] = [];
+  const effective = (rel: string) => {
+    const dir = chainDirs.find((d) => existsSync(join(d, rel)));
+    return dir ? { where: `${label}/${rel}`, text: readFileSync(join(dir, rel), "utf8") } : null;
+  };
+  const pkg = effective("package.json");
+  if (pkg) {
+    const json = JSON.parse(pkg.text) as {
+      scripts?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const scripts = json.scripts ?? {};
+    const viaLocalDb = (name: string) => (scripts[name] ?? "").includes("scripts/local-db.ts");
+    const missing = [
+      ...(scripts["db:local"]?.includes("scripts/local-db.ts --serve") ? [] : ["db:local"]),
+      ...["db:migrate", "test:e2e", "dev"].filter((n) => !viaLocalDb(n)),
+      ...(effective("scripts/local-db.ts") ? [] : ["scripts/local-db.ts"]),
+      ...LOCAL_DB_DEPENDENCIES.filter(
+        (d) => !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(json.devDependencies?.[d] ?? ""),
+      ),
+    ];
+    if (missing.length)
+      issues.push({
+        where: pkg.where,
+        rule: "local-db-missing",
+        message: `Zero-setup database incomplete (${missing.join(", ")}): db:migrate, dev and test:e2e run through scripts/local-db.ts, \`pnpm db:local\` serves it, its engines are pinned dev dependencies.`,
+      });
+  }
+  const envTs = effective("src/env.ts");
+  if (envTs) {
+    const required = requiredEnvVars(envTs.text);
+    for (const name of required.filter((n) => ALLOW_LIST.test(n)))
+      issues.push({
+        where: envTs.where,
+        rule: "required-allow-list",
+        message: `${name} is required: allow-lists must be optional (\`.default("")\`) and deny by default at runtime, so build and tests need only the documented required env.`,
+      });
+    const example = effective(".env.example");
+    const documented = new Set(
+      [...(example?.text ?? "").matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]),
+    );
+    for (const name of required.filter((n) => !documented.has(n)))
+      issues.push({
+        where: envTs.where,
+        rule: "required-env-undocumented",
+        message: `${name} is required by src/env.ts but not documented in .env.example.`,
+      });
+  }
+  const pw = effective("playwright.config.ts");
+  if (
+    pw &&
+    (!/process\.env\.BETTER_AUTH_URL = /.test(pw.text) ||
+      /process\.env\.BETTER_AUTH_URL \|\|=|process\.env\.PORT \?\?/.test(pw.text))
+  )
+    issues.push({
+      where: pw.where,
+      rule: "e2e-ambient-url",
+      message:
+        "E2E must own its URLs: set process.env.BETTER_AUTH_URL (and the server port) unconditionally, ignoring ambient values.",
+    });
+  return issues;
+}
+
+/** Tests an acceptance.yaml points at ("<file> › <title>") must exist with that exact title in one of `dirs`. */
+export function checkAcceptance(file: string, where: string, dirs: string[]): AgentReadyIssue[] {
+  if (!existsSync(file)) return [];
+  const raw = parse(readFileSync(file, "utf8")) as unknown;
+  const rules = Array.isArray(raw) ? (raw as { test?: unknown; covers?: unknown }[]) : [];
+  const issues: AgentReadyIssue[] = [];
+  for (const r of rules) {
+    const test = typeof r.test === "string" ? r.test : "";
+    const covers = Array.isArray(r.covers) ? r.covers.map(String) : [];
+    const bad = covers.filter((c) => {
+      try {
+        new RegExp(c, "i");
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    const [path, title] = test.split(" › ");
+    const exists =
+      !title ||
+      dirs.some((d) => {
+        const p = join(d, path ?? "");
+        return existsSync(p) && readFileSync(p, "utf8").includes(`"${title}"`);
+      });
+    if (!test || covers.length === 0 || bad.length || !exists)
+      issues.push({
+        where,
+        rule: "acceptance-test-missing",
+        message: !exists
+          ? `"${test}" is not a test shipped in this template (file › exact title).`
+          : `Rule "${test}" needs a test and valid regexes in covers${bad.length ? ` (invalid: ${bad.join(", ")})` : ""}.`,
+      });
+  }
+  return issues;
+}
+
 interface RecipeYaml {
   id: string;
   extends: string | null;
@@ -173,6 +305,23 @@ export function checkRecipes(recipesDir: string): AgentReadyIssue[] {
       }
     }
     issues.push(...checkTree(`${label}/template`, join(recipesDir, id, "template"), chain));
+    issues.push(...checkPackage(`${label}/template`, chain));
+    // Acceptance criteria → tests (ADR-0035): every recipe chain proves its common criteria with shipped tests.
+    const ymls = chainOf(id).map((d) => join(d, "..", "acceptance.yaml"));
+    if (!ymls.some((f) => existsSync(f)))
+      issues.push({
+        where: `${label}/acceptance.yaml`,
+        rule: "acceptance-missing",
+        message:
+          "No acceptance.yaml in the recipe chain: map the criteria this recipe proves to its tests (file › title).",
+      });
+    issues.push(
+      ...checkAcceptance(
+        join(recipesDir, id, "acceptance.yaml"),
+        `${label}/acceptance.yaml`,
+        chain,
+      ),
+    );
   }
   return issues;
 }
@@ -182,5 +331,12 @@ export function checkComponents(componentsDir: string): AgentReadyIssue[] {
   if (!existsSync(componentsDir)) return [];
   return readdirSync(componentsDir)
     .filter((d) => existsSync(join(componentsDir, d, "files")))
-    .flatMap((d) => checkTree(`components/${d}/files`, join(componentsDir, d, "files")));
+    .flatMap((d) => [
+      ...checkTree(`components/${d}/files`, join(componentsDir, d, "files")),
+      ...checkAcceptance(
+        join(componentsDir, d, "acceptance.yaml"),
+        `components/${d}/acceptance.yaml`,
+        ["files", "files-ai"].map((f) => join(componentsDir, d, f)),
+      ),
+    ]);
 }

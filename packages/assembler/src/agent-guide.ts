@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { writeAcceptance, type CriterionStatus } from "./acceptance.js";
 
 /**
  * Agent-ready package (ADR-0032): every delivered package carries AGENTS.md (+ CLAUDE.md importing it) and the same
@@ -23,6 +24,8 @@ export interface GuideCriterion {
   test?: { file: string; title: string };
   /** For open criteria: the files where it most likely belongs. */
   where?: string[];
+  /** For open criteria: the spec file where its E2E test belongs. */
+  testFile?: string;
 }
 export interface GuideGateFinding {
   category: "security" | "policy" | "quality";
@@ -73,6 +76,7 @@ const SKIP_DIRS = new Set([
   "playwright",
   "test-results",
   "drizzle",
+  ".turbineh",
 ]);
 
 function walk(dir: string, root = dir): string[] {
@@ -244,6 +248,19 @@ export function whereFor(criterion: string, files: PackageGuide["files"]): strin
     .map((f) => f.path);
 }
 
+/** The E2E spec where a criterion's test belongs: the spec whose titles share the most words with it. */
+export function testFileFor(criterion: string, tests: PackageGuide["tests"]): string {
+  const want = new Set(words(criterion));
+  const specs = tests.filter((t) => t.kind === "e2e" && t.file.endsWith(".spec.ts"));
+  const best = specs
+    .map((t) => ({
+      file: t.file,
+      score: words(`${t.file} ${t.titles.join(" ")}`).filter((w) => want.has(w)).length,
+    }))
+    .sort((a, b) => b.score - a.score || a.file.localeCompare(b.file))[0];
+  return best && best.score > 0 ? best.file : "tests/e2e/app.spec.ts";
+}
+
 /** Extension points every recipe has; recipes add their own in recipe.yaml (`guide.extend`). */
 export const BASE_EXTEND: PackageGuide["extend"] = [
   {
@@ -283,6 +300,16 @@ export const BASE_EXTEND: PackageGuide["extend"] = [
     how: "Read its base URL from env; ship a local mock named after that env var (it starts automatically in E2E and must answer GET /health).",
   },
   {
+    what: "Use your own PostgreSQL instead of the local one",
+    where: "DATABASE_URL (.env.local), scripts/local-db.ts",
+    how: "Set DATABASE_URL and every command uses it; leave it unset (or the .env.example value) for the zero-setup local database. E2E always starts a fresh one when DATABASE_URL is unset.",
+  },
+  {
+    what: "Prove a new acceptance criterion",
+    where: "tests/e2e/<area>.spec.ts",
+    how: 'Add an E2E test whose title states the criterion; run `pnpm test:e2e <spec> -g "<title>"` (no database setup needed).',
+  },
+  {
     what: "Allow images or connections from another origin",
     where: "src/security/csp-sources.ts",
     how: "Add the source (https only); the CSP in src/security/headers.ts picks it up.",
@@ -310,18 +337,23 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
     },
     {
       change: "A page, server action or API route",
-      run: 'pnpm typecheck && pnpm build && pnpm exec playwright test <spec> -g "<test title>"',
-      note: `Specs: ${e2e.map((t) => t.file).join(", ") || "tests/e2e"}. E2E needs DATABASE_URL (Postgres) and \`pnpm db:migrate\`; mocks and test secrets start automatically.`,
+      run: 'pnpm typecheck && pnpm build && pnpm test:e2e <spec> -g "<test title>"',
+      note: `Specs: ${e2e.map((t) => t.file).join(", ") || "tests/e2e"}. Nothing to set up: without DATABASE_URL, \`pnpm test:e2e\` starts a fresh local PostgreSQL (scripts/local-db.ts), migrates it and owns its URLs and port; mocks and test secrets start automatically.`,
     },
     {
       change: "Database schema (src/db)",
       run: "pnpm db:generate && pnpm db:migrate && pnpm typecheck",
-      note: "Commit the new migration in drizzle/; then run the spec that touches the table.",
+      note: "Commit the new migration in drizzle/. Without DATABASE_URL, db:migrate uses the local database (no PostgreSQL to install); then run the spec that touches the table.",
+    },
+    {
+      change: "Need a database for dev or a SQL client",
+      run: "pnpm db:local",
+      note: "Zero setup: a persistent local PostgreSQL in .turbineh/local-db on the DATABASE_URL of .env.example; `pnpm dev` and `pnpm db:migrate` start it on their own when DATABASE_URL is not set.",
     },
     {
       change: "Environment variable",
       run: "pnpm typecheck",
-      note: "Declare it in src/env.ts (Zod) and .env.example; never commit values.",
+      note: "Declare it in src/env.ts (Zod) and .env.example; optional unless the app cannot start without it (build and tests run with only the required ones); never commit values.",
     },
     {
       change: "Before handing over (everything)",
@@ -335,11 +367,12 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
 export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
   const left: GuideLeft[] = [];
   for (const c of g.criteria.filter((x) => x.status === "open")) {
+    const spec = c.testFile ?? "tests/e2e/app.spec.ts";
     left.push({
       kind: "criterion",
       what: c.text,
-      where: c.where?.join(", ") || "src/app",
-      how: "Implement it there and add an E2E test whose title states the criterion (tests/e2e/).",
+      where: [...(c.where?.length ? c.where : ["src/app"]), spec].join(", "),
+      how: `Implement it in the files listed and prove it with an E2E test in ${spec} whose title states the criterion; nothing proves it yet.`,
     });
   }
   for (const gap of g.gaps) {
@@ -380,7 +413,7 @@ export function agentsMarkdown(g: PackageGuide): string {
         c.status === "met"
           ? `met — \`${c.test?.file}\` › "${esc(c.test?.title ?? "")}"`
           : c.status === "open"
-            ? `**open** — implement in ${c.where?.map((w) => `\`${w}\``).join(", ") || "src/app"}`
+            ? `**open** — implement in ${c.where?.map((w) => `\`${w}\``).join(", ") || "src/app"}; prove it in \`${c.testFile ?? "tests/e2e/app.spec.ts"}\``
             : c.test
               ? `implemented, not verified — \`${c.test.file}\` › "${esc(c.test.title)}"`
               : "not verified";
@@ -463,13 +496,25 @@ ${Object.entries(g.theme.tokens)
 
 Required: ${g.env.required.map((e) => `\`${e.name}\``).join(", ") || "none"}.
 Optional: ${g.env.optional.map((e) => `\`${e.name}\`${e.about ? ` (${esc(e.about)})` : ""}`).join(", ") || "none"}.
-Tests need only \`DATABASE_URL\` (Postgres): test secrets and service mocks (\`tests/e2e/mocks/\`) are generated and
-started by \`playwright.config.ts\`.
+Build and unit tests need only the required variables. Tests need nothing else: without \`DATABASE_URL\`,
+\`pnpm db:migrate\`, \`pnpm dev\` and \`pnpm test:e2e\` use a zero-setup local PostgreSQL (\`pnpm db:local\`,
+\`scripts/local-db.ts\`); E2E owns its URLs and port, and test secrets and service mocks (\`tests/e2e/mocks/\`) are
+generated and started by \`playwright.config.ts\`.
 
 ## Tests
 
 ${g.tests.map((t) => `- \`${t.file}\` (${t.kind}, ${t.titles.length})`).join("\n")}
 `;
+}
+
+export function readAcceptanceJson(outDir: string): CriterionStatus[] {
+  const file = join(outDir, ".turbineh/acceptance.json");
+  if (!existsSync(file)) return [];
+  try {
+    return JSON.parse(readFileSync(file, "utf8")) as CriterionStatus[];
+  } catch {
+    return [];
+  }
 }
 
 /** Writes turbineh.json, AGENTS.md and CLAUDE.md (an import of AGENTS.md for Claude Code). */
@@ -535,18 +580,44 @@ export function verifiedGuide(
   const files = fileMap(outDir);
   const tests = testsOf(outDir);
   const fileOf = (title: string) => tests.find((t) => t.titles.includes(title))?.file;
+  // Deterministic proofs first (acceptance.yaml rules matched at assembly, .turbineh/acceptance.json), then the
+  // report's mapping. Either way a criterion is met only with a test that exists in the package and a passed gate.
+  const shipped = (ref: string) => {
+    const [file = "", title = ""] = ref.split(" › ");
+    return tests.some((t) => t.file === file && t.titles.includes(title)) ? { file, title } : null;
+  };
+  const deterministic = readAcceptanceJson(outDir);
   const criteria: GuideCriterion[] = input.criteria.map((c) => {
+    const ruled = deterministic
+      .find((d) => d.criterion === c.criterion)
+      ?.tests.map(shipped)
+      .find((t) => t !== null);
     const title = c.evidence.replace(/^(End-to-end|Unit) test:\s*/, "");
     const file = fileOf(title);
-    if (c.verified && file) {
+    const test = ruled ?? (c.verified && file ? { file, title } : null);
+    if (test) {
       return {
         text: c.criterion,
         status: input.gate.ok ? ("met" as const) : ("unverified" as const),
-        test: { file, title },
+        test,
       };
     }
-    return { text: c.criterion, status: "open" as const, where: whereFor(c.criterion, files) };
+    return {
+      text: c.criterion,
+      status: "open" as const,
+      where: whereFor(c.criterion, files),
+      testFile: testFileFor(c.criterion, tests),
+    };
   });
+  // ACCEPTANCE.md and .turbineh/acceptance.json say exactly what AGENTS.md says.
+  writeAcceptance(
+    outDir,
+    criteria.map((c): CriterionStatus => ({
+      criterion: c.text,
+      status: c.status === "met" ? "met" : c.status === "open" ? "open" : "covered",
+      tests: c.test ? [`${c.test.file} › ${c.test.title}`] : [],
+    })),
+  );
   const gaps = input.gaps
     ? prev.gaps
         .filter((g) => input.gaps?.includes(g.capability))

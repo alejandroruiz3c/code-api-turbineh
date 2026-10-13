@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -37,6 +37,19 @@ describe("delivered package (turbineh.json)", () => {
     expect((r.data as { left: { kind: string; what: string }[] }).left).toEqual([
       expect.objectContaining({ kind: "setting", what: "TURBINEH_TEST_UNSET_VAR is not set" }),
     ]);
+  });
+
+  it("does not ask for DATABASE_URL when the package brings its zero-setup local database", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pkg-"));
+    writeFileSync(join(dir, "turbineh.json"), JSON.stringify(guide));
+    expect(
+      (left(dir, guide).data as { left: { what: string }[] }).left.map((l) => l.what),
+    ).toContain("DATABASE_URL is not set");
+    mkdirSync(join(dir, "scripts"));
+    writeFileSync(join(dir, "scripts/local-db.ts"), "export {};\n");
+    expect(
+      (left(dir, guide).data as { left: { what: string }[] }).left.map((l) => l.what),
+    ).not.toContain("DATABASE_URL is not set");
   });
 
   it("verify points each failure to file:line and the fix", () => {
