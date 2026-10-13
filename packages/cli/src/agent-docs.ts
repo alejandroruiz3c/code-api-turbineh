@@ -84,15 +84,15 @@ export const withCommand = (text: string, cmd: string) =>
 
 export const SKILL_PATH = join(".claude", "skills", "turbineh", "SKILL.md");
 
-/** Instruction file per agent: Claude Code reads CLAUDE.md; Codex and Cursor read AGENTS.md. */
+/**
+ * Instruction file per agent: Claude Code reads CLAUDE.md; Codex, Cursor and most other agents read AGENTS.md. With no
+ * agent named, an existing file is reused, otherwise the agent-neutral AGENTS.md is created.
+ */
 export function instructionFile(cwd: string, agent: AgentKind | null): string {
   if (agent === "claude") return "CLAUDE.md";
   if (agent) return "AGENTS.md";
-  return existsSync(join(cwd, "CLAUDE.md"))
-    ? "CLAUDE.md"
-    : existsSync(join(cwd, "AGENTS.md"))
-      ? "AGENTS.md"
-      : "CLAUDE.md";
+  if (existsSync(join(cwd, "AGENTS.md"))) return "AGENTS.md";
+  return existsSync(join(cwd, "CLAUDE.md")) ? "CLAUDE.md" : "AGENTS.md";
 }
 
 /** Inserts or refreshes the block (between its markers); an older unmarked TurbineH section is replaced too. */
