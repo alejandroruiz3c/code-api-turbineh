@@ -57,6 +57,6 @@ and the gate.
   kinds, roles, rules, scopes, constraints and patterns per spec); the generator understands `tags` and enum
   `options` fields and has (unused by default) settings, event-timeline and child-section options; offline summary
   `bench/frontiers/fidelity-2026-10-13.md`.
-- Left: wiring into the worker pipeline and the assembler (generate by kind, `src/server/permissions.ts` + authz
+- Wired by ADR-0043 (pipeline, assembler, criteria from shipped tests, `verify:spec`). Originally left: wiring into the worker pipeline and the assembler (generate by kind, `src/server/permissions.ts` + authz
   rewrite + per-spec unit tests, `src/lib/spec-constraints.ts`, pattern params), criteria → component E2E mapping
   filtered by shipped tests, decider measurement on a labelled ambiguous set, staging build with Brickline.
