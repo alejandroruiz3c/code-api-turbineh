@@ -14,6 +14,10 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh status [id]              flows, states, pending build and integrations
   turbineh left                     in a delivered package: what is left (open criteria with where, gate, settings)
   turbineh verify [integration]     fast checks with file:line and the fix
+  turbineh verify --full [--offline] [--skip-scripts]
+                                    before handing over: the gate's security and policy checks here, same pinned
+                                    versions (gitleaks, Semgrep rules, OSV, licences; Docker, else local binaries)
+                                    + typecheck, lint, unit; exit 1 on a blocking finding or a check not run
   turbineh init [--agent claude|codex|cursor]
                                     project file + instructions for the agent (+ Claude Code skill)
   turbineh mcp                      MCP server on stdio: claude mcp add turbineh -- turbineh mcp

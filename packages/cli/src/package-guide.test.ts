@@ -71,6 +71,23 @@ describe("delivered package (turbineh.json)", () => {
     expect(r.error?.action).toContain("pnpm typecheck");
   });
 
+  it("flags a secret-shaped literal in src/env.ts first, without any tool (learning round G4b)", () => {
+    const dir = pkg();
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "src/env.ts"),
+      'export const env = schema.parse({\n  BETTER_AUTH_SECRET: "build-placeholder-build-placeholder-0",\n  ...process.env,\n});\n',
+    );
+    const r = verifyPackage(dir, guide, () => ({ ok: true, detail: "" }));
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatchObject({
+      code: "check_failed_env-literals",
+      message: "env-literals failed at src/env.ts:2.",
+    });
+    expect(r.error?.action).toMatch(/crypto.randomUUID\(\)/);
+    expect(JSON.stringify(r)).not.toContain("build-placeholder-build");
+  });
+
   it("locates ESLint and Vitest failures", () => {
     expect(locate("/work/app/src/lib/shop.ts\n  3:10  error  'x' is unused")).toBe(
       "src/lib/shop.ts:3",

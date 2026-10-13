@@ -8,7 +8,8 @@ describe("plan criteria (known before generation, ADR-0036)", () => {
   it("marks criteria a shipped test will prove as covered and the rest as open", () => {
     const c = planCriteria(
       [
-        "Shoppers pay with Stripe Checkout; the signed webhook marks the order as paid",
+        // No actor named: a criterion naming "shoppers" needs a test that names them (proofVerdict, ADR-0043).
+        "Paying with Stripe Checkout, the signed webhook marks the order as paid",
         "Shoppers search the catalogue by product name",
         "The roaster's blog publishes weekly brewing guides",
       ],

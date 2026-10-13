@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { envLiteralFindings } from "@turbineh/verifier";
 import { bold, dim, green, red, yellow, type CommandResult } from "./output.js";
 
 /**
@@ -149,16 +150,27 @@ export function verifyPackage(
     }
   },
 ): CommandResult {
-  const checks = ["typecheck", "lint", "test"].map((name) => {
-    const r = run("pnpm", ["-s", name]);
-    return {
-      name,
-      ok: r.ok,
-      ...(r.ok
-        ? {}
-        : { where: locate(r.detail), error: firstError(r.detail).slice(0, 300), fix: FIX[name] }),
-    };
-  });
+  // Tool-free and first: a secret-shaped literal in src/env.ts (ADR-0040 G4b) blocks the gate.
+  const literals = envLiteralFindings(cwd);
+  const literal = literals.find((f) => f.blocking) ?? literals[0];
+  const envCheck = {
+    name: "env-literals",
+    ok: !literals.some((f) => f.blocking),
+    ...(literal ? { where: literal.where, error: literal.message, fix: literal.fix ?? "" } : {}),
+  };
+  const checks = [
+    envCheck,
+    ...["typecheck", "lint", "test"].map((name) => {
+      const r = run("pnpm", ["-s", name]);
+      return {
+        name,
+        ok: r.ok,
+        ...(r.ok
+          ? {}
+          : { where: locate(r.detail), error: firstError(r.detail).slice(0, 300), fix: FIX[name] }),
+      };
+    }),
+  ];
   const failed = checks.filter((c) => !c.ok);
   const ok = failed.length === 0;
   return {
@@ -167,21 +179,22 @@ export function verifyPackage(
     state: ok ? "verified_locally" : "checks_failed",
     data: {
       checks,
+      findings: literals,
       notRunHere:
-        "build, E2E and the security/licence scans: run `pnpm build && pnpm test:e2e` for a flow change (see AGENTS.md), the full TurbineH gate runs on delivery.",
+        "build, E2E and the security/licence scans: `turbineh verify --full` runs the gate's scans here (gitleaks, Semgrep rules, OSV, licences); run `pnpm build && pnpm test:e2e` for a flow change (see AGENTS.md).",
       gate: guide.gate,
     },
     lines: [
       bold(`Local checks of ${guide.app.name}`),
       ...checks.map((c) =>
         c.ok
-          ? `  ${green("✔")} ${c.name}`
+          ? `  ${green("✔")} ${c.name}${c.where ? ` ${yellow(`(not blocking: ${c.where} — ${c.error})`)}` : ""}`
           : `  ${red("✖")} ${c.name} at ${c.where ?? "(see output)"} — ${c.error}\n    ${dim(c.fix ?? "")}`,
       ),
     ],
     ...(ok
       ? {
-          next: "Typecheck, lint and unit tests pass. For page/flow changes run the one E2E spec (AGENTS.md).",
+          next: "Typecheck, lint and unit tests pass. For page/flow changes run the one E2E spec (AGENTS.md); before handing over: turbineh verify --full.",
         }
       : {
           error: {

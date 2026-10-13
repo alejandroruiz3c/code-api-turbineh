@@ -290,6 +290,9 @@ importers:
       '@turbineh/shared':
         specifier: workspace:*
         version: link:../shared
+      '@turbineh/verifier':
+        specifier: workspace:*
+        version: link:../verifier
       esbuild:
         specifier: 0.28.2
         version: 0.28.2

@@ -3,8 +3,6 @@
   covers: ["injection|jailbreak|manipulat"]
 - test: "tests/unit/ai-agent.test.ts › uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway"
   covers: ["openai|compatible endpoint|environment variable|\\bLLM\\b|language model|model endpoint"]
-- test: "tests/mock-llm (scripted model started by Playwright's webServer; every E2E test runs against it)"
-  covers: ["mock|no internet|offline|without internet"]
 - test: "tests/unit/ai-agent.test.ts › never executes an irreversible tool before an explicit confirmation"
   covers: ["confirm"]
 - test: "tests/unit/ai-agent.test.ts › runs read tools, then answers"
