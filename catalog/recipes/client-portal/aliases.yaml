@@ -1,0 +1,9 @@
+# Actor aliases (ADR-0048): who this recipe's tests act as, in the words requests use for that role. From the recipe's
+# role model only, never guessed. Applied to the recipe's and the generated tests of an app built on it.
+actors:
+  - term: owner
+    means: [staff]
+    why: >-
+      The portal's staff are the workspace owners and admins (src/server/portal.ts: seesAll and canMove allow "owner"
+      and "admin"; clients are members). The E2E owner is staff. "admin" is a separate workspace role here, so it is
+      not an alias of owner.

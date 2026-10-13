@@ -12,7 +12,13 @@ import { dirname, extname, join, relative } from "node:path";
 import { guideMarkdown, readGuides } from "@turbineh/catalog";
 import type { BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
-import { aliasesFor, componentAliases, writeAliases } from "./aliases.js";
+import {
+  actorAliases,
+  aliasesFor,
+  componentAliases,
+  writeAliases,
+  type ResolvedAliases,
+} from "./aliases.js";
 import { applyRequestedCurrencies } from "./currencies.js";
 import {
   entitiesToGenerate,
@@ -294,20 +300,33 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[f.path] ??= "generated";
   }
   recordOwners(outDir, owners);
-  writeAliases(
-    outDir,
-    componentAliases(
+  // Actor aliases (ADR-0048) for the recipe's and the generated tests: the recipe chain's role model and the
+  // request's role matrix; components' own aliases (ADR-0047) for their tests.
+  const actors: ResolvedAliases = {
+    component: `recipe ${input.recipe}`,
+    tests: Object.entries(owners)
+      .filter(([f, o]) => f.startsWith("tests/") && !o.startsWith("component:"))
+      .map(([f]) => f)
+      .sort(),
+    aliases: actorAliases(
+      recipeChain(input.recipesDir, input.recipe).map((m) => join(input.recipesDir, m.id)),
+      { owner: matrix?.roles.owner?.label, admin: matrix?.roles.admin?.label },
+    ),
+  };
+  writeAliases(outDir, [
+    ...componentAliases(
       join(input.recipesDir, "..", "components"),
       [...new Set(input.selected.map((s) => s.component.id))],
       outDir,
     ),
-  );
+    ...(actors.aliases.length ? [actors] : []),
+  ]);
   // Criterion → test: only tests shipped in this package, each checked against its title and assertions (ADR-0043, ADR-0044).
   writeAcceptance(
     outDir,
     acceptanceStatus(
       spec.acceptance_criteria,
-      actingAs(
+      withAliases(
         [
           ...coverageRules(input, outDir),
           ...entityCoverage(
@@ -316,7 +335,7 @@ export function assemble(input: AssembleInput): AssembleResult {
           ),
           ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
         ],
-        matrix?.roles.owner?.label ?? null,
+        [actors],
       ),
     ),
   );
@@ -593,19 +612,14 @@ export function writeStartHere(outDir: string, facts: HandoverFacts): void {
  * E2E tests run as the workspace owner, whose role the request names (Staff, Manager…): the proof check sees that
  * actor, so "a staff member…" criteria are not vetoed for a test the staff owner runs. Unit tests are unchanged.
  */
-function actingAs(rules: CoverageRule[], ownerLabel: string | null): CoverageRule[] {
-  if (!ownerLabel || ownerLabel.toLowerCase() === "owner") return rules;
-  return rules.map((r) =>
-    r.proof && r.test.startsWith("tests/e2e/")
-      ? {
-          ...r,
-          proof: {
-            ...r.proof,
-            assertions: [...(r.proof.assertions ?? []), `acting as ${ownerLabel.toLowerCase()}`],
-          },
-        }
-      : r,
-  );
+/** Adds the aliases that apply to each rule's test file (merged with the ones a rule already carries). */
+function withAliases(rules: CoverageRule[], resolved: ResolvedAliases[]): CoverageRule[] {
+  return rules.map((r) => {
+    const extra = aliasesFor(splitTestRef(r.test).file, resolved);
+    return extra && r.proof
+      ? { ...r, proof: { ...r.proof, aliases: [...(r.proof.aliases ?? []), ...extra] } }
+      : r;
+  });
 }
 
 /** README line of a generated entity, by kind. */

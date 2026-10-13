@@ -1,0 +1,8 @@
+# Actor aliases (ADR-0048): who this recipe's tests act as, in the words requests use for that role. From the recipe's
+# role model only, never guessed. Applied to the recipe's and the generated tests of an app built on it.
+actors:
+  - term: owner
+    means: [administrator, admin, staff]
+    why: >-
+      The E2E owner is the landing page's administrator: a verified ADMIN_EMAILS staff member (auth.spec.ts "the
+      verified owner has staff access"), and the waitlist dashboard is requireAdmin() = staff.
