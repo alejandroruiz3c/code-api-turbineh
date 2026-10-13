@@ -1,6 +1,6 @@
 /**
  * `pnpm catalog:document [<id>…] [--missing] [--all]` — the intake documentation step: documents components to the
- * standard (docs.yaml) with our open model, checking every claim against the code. Default: components whose docs
+ * standard (guide.yaml) with our open model, checking every claim against the code. Default: components whose docs
  * are missing or incomplete.
  */
 import { readdirSync } from "node:fs";

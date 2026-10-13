@@ -46,7 +46,7 @@ console.log(
     : `agent-ready: ${issues.length} issue(s)`,
 );
 
-// Documentation standard (ADR-0032): every component is documented (docs.yaml). Missing or incomplete docs are not a
+// Documentation standard (ADR-0032): every component is documented (guide.yaml). Missing or incomplete docs are not a
 // rejection: the intake documentation step writes them (pnpm catalog:document).
 const undocumented = dirs.flatMap((d) =>
   docsIssues(join(root, d.name), d.name).map((m) => `${d.name}: ${m}`),

@@ -73,7 +73,10 @@ keywords and synonyms.
 - **Used in three places.** `turbineh search` and `/v1/capabilities` (keywords, use cases, when to use and not,
   trade-offs, tested guarantees), the agent-readable index `/catalog/index.json` + `/catalog/llms.txt`
   (`pnpm catalog:index`, checked for freshness by `catalog:validate`), and apps (`docs/components/*.md`).
-- **Decider.** A compact card (what it does, two use cases, provides) is available to selection behind
-  `DECIDER_DOC_CARDS=1`. On the selection bench (19 labelled multi-candidate cases, `bench:selection`) the manifest
-  one-liners scored 17/19 and the best documentation card 16/19 at the same latency, so production keeps the
-  one-liners until a bench run shows a gain; longer cards with limits or "avoid when" scored lower (they read as risk).
+- **Decider.** Selection reads a compact card built from the guide: what it does, two use cases, what it provides
+  (`DECIDER_CARDS=compact`, the default). Measured on the selection bench (`bench:selection`, 19 labelled
+  multi-candidate cases, decider JEV, `bench/results/2026-10-13-selection-final-*.json`) with every component
+  documented: one-liner 17/19 (mean latency 128 ms), compact 17/19 (110 ms, higher confidence when correct: 0.954 vs
+  0.944), the ADR-0033 guide card with "avoid when" and 20 keywords 16/19 (144 ms). Cards with limits or "avoid when"
+  score lower because the risk question reads them as risk; they stay in the guide, search and the index. Earlier
+  runs (before the guides were rewritten and checked) scored the documentation cards 15–16/19; the bench decides.

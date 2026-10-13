@@ -184,7 +184,7 @@ export function searchCapabilities(
         { text: c.provides.join(" ").replace(/[.-]/g, " "), weight: 2 },
         { text: c.does, weight: 1 },
         { text: c.id.replace(/[.-]/g, " "), weight: 1 },
-        // Documentation (docs.yaml): keywords and synonyms, use cases and when to use it.
+        // Documentation (guide.yaml): keywords and synonyms, use cases and when to use it.
         { text: (c.docs?.keywords ?? []).join(" ").replace(/[.-]/g, " "), weight: 3 },
         { text: [...(c.docs?.useCases ?? []), ...(c.docs?.useWhen ?? [])].join(" "), weight: 1 },
       ]),

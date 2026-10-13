@@ -17,7 +17,7 @@ interface Manifest {
 }
 
 /** Measured default (see ADR-0032 §Documentation). */
-export const DEFAULT_CARDS: CardMode = "guide";
+export const DEFAULT_CARDS: CardMode = "compact";
 
 export type CardMode = "oneliner" | "guide" | "compact";
 

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { guideErrors, readGuides, type ComponentGuide } from "./guide.js";
+import { guideErrors, readGuides } from "./guide.js";
 
 /**
  * Component documentation standard (ADR-0032 §Documentation, format of ADR-0033): every component has a `guide.yaml`

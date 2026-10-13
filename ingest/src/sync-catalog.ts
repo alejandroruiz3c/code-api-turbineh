@@ -28,7 +28,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../catalog/com
 const manifests = readdirSync(root, { withFileTypes: true })
   .filter((d) => d.isDirectory())
   .map((d) => parse(readFileSync(join(root, d.name, "component.yaml"), "utf8")) as Manifest);
-// Documentation (docs.yaml) travels with the manifest: search, /v1/capabilities and the decider card use it.
+// Documentation (guide.yaml) travels with the manifest: search, /v1/capabilities and the decider card use it.
 for (const m of manifests) {
   const docs = readDocs(join(root, m.id));
   if (docs) (m as Manifest & { docs?: unknown }).docs = docs;

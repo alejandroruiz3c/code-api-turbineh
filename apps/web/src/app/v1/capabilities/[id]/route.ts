@@ -61,7 +61,7 @@ export async function GET(
     quality: m.quality ?? null,
     security: m.security ?? null,
     evidence: (m.evidence ?? []).map((e) => ({ claim: productText(e.claim), origin: e.origin })),
-    // Full documentation (docs.yaml): interfaces, inputs, guarantees linked to tests, limits, example.
+    // Full documentation (guide.yaml): interfaces, inputs, guarantees linked to tests, limits, example.
     docs: m.docs ?? null,
   });
 }

@@ -5,7 +5,7 @@ import { readDocs } from "./docs.js";
 
 /**
  * Agent-readable catalogue index (ADR-0032 §Documentation): `/catalog/index.json` (schema turbineh.catalog-index/v1)
- * and `/catalog/llms.txt`, generated from the manifests and docs.yaml by `pnpm catalog:index` and served by the web
+ * and `/catalog/llms.txt`, generated from the manifests and guide.yaml by `pnpm catalog:index` and served by the web
  * app. Deterministic (sorted, no timestamps) so `pnpm catalog:validate` can check it is up to date.
  */
 export const INDEX_SCHEMA = "turbineh.catalog-index/v1";

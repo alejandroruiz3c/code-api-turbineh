@@ -20,7 +20,7 @@ export interface CatalogEntry {
   purl: string;
   does: string;
   useCases?: string[];
-  /** Compact component documentation (docs.yaml, ADR-0032): when to use it, keywords, tested guarantees. */
+  /** Compact component documentation (guide.yaml, ADR-0032): when to use it, keywords, tested guarantees. */
   docs?: CatalogDocs | null;
 }
 
@@ -35,7 +35,7 @@ export interface CatalogDocs {
   example: string;
 }
 
-/** docs.yaml (snake_case, stored in the manifest as `docs`) → the compact form the product uses. */
+/** guide.yaml (snake_case, stored in the manifest as `docs`) → the compact form the product uses. */
 export function catalogDocs(raw: unknown): CatalogDocs | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as Record<string, unknown>;
