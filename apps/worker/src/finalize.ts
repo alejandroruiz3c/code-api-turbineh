@@ -1,7 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { writeReports, writeStartHere, type HandoverFacts } from "@turbineh/assembler";
+import {
+  finalizeAcceptance,
+  writeReports,
+  writeStartHere,
+  type HandoverFacts,
+} from "@turbineh/assembler";
 import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
@@ -85,6 +90,8 @@ export interface FinalizeResult {
   handover: HandoverFacts;
   /** Integrated components whose optional glue helper was removed (library and contract test kept). */
   glueRemoved: string[];
+  /** Acceptance criteria → tests after the gate (ADR-0033). */
+  acceptance: { met: number; covered: number; open: string[] };
   /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
   swappedOut: string[];
 }
@@ -349,8 +356,15 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     alerts: alerts.length,
     fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
   };
+  // Acceptance criteria → tests (ADR-0033): covered criteria become "met" only when the whole gate passed.
+  const acceptance = finalizeAcceptance(input.repoDir, result.ok);
   const metrics = {
     ...input.metrics,
+    acceptance: {
+      met: acceptance.filter((a) => a.status === "met").length,
+      covered: acceptance.filter((a) => a.status === "covered").length,
+      open: acceptance.filter((a) => a.status === "open").map((a) => a.criterion),
+    },
     corrections,
     swappedOut,
     glueRemoved,
@@ -392,6 +406,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     corrections,
     swappedOut,
     glueRemoved,
+    acceptance: metrics.acceptance,
   };
 }
 

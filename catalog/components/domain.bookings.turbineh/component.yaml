@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: domain.bookings.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.bookings.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite."
+  does_not: "Does not take payments, sync external calendars or send reminders; one business per app"
+  use_cases: [ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Parameters (name, team, services, prices, hours, time zone, notice, questions) come from the request, deterministically",
+      "No dependency beyond the recipe's stack",
+    ]
+  cons: ["Start times on a fixed grid (slotMinutes) from each opening time"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/bookings/params.json (BookingParams, validated at start-up)",
+      "availability({ day, resource?, service? }); createAppointment({ day, time, resource?, service?, name, email, via }); moveAppointment(reference, email, to); cancelAppointment(reference, email); emailUpcomingAppointments(email)",
+    ]
+  outputs:
+    [
+      "free slots per resource; appointments with reference; booking_notifications rows; toolkit (business_info, check_availability, book_appointment, find_appointments, reschedule_appointment, cancel_appointment)",
+    ]
+  errors: ["PolicyError (safe to show): closed day, past, beyond the horizon, time not free, notice period, unknown reference/email"]
+  limits: ["horizon and notice from params; up to 60 slots per answer; 10 upcoming bookings per email"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code when the request is about appointments/bookings (compiler domain detector) for recipe ai-agents. files/: src/bookings/{config,params.json,time,availability,service}.ts, src/db/component-bookings.ts, src/app/dashboard/appointments/**, tests/unit/bookings.test.ts. files-ai/ (only with ai.orchestrator.turbineh): src/bookings/toolkit.ts, tests/mock-llm/scripts/bookings.ts, tests/e2e/booking-assistant.spec.ts. The assembler writes params.json from the request."
+  config: [ADMIN_EMAILS]
+  migrations: true
+quality:
+  tests:
+    {
+      command: "unit tests (DST conversions, slot grid, policy, cell locks) + E2E through the public assistant against the scripted mock model (book → confirm → email recorded, reschedule, invented time refused, cancel inside the notice refused, staff allow-list)",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: staff pages and actions behind ADMIN_EMAILS (deny by default); changes need reference + email; references never listed by email lookups; database-level double-booking guard; queries through Drizzle only."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "A Capability B booking assistant build passes the full verification gate with the booking E2E suite"
+    origin: tested
+    ref: "bench/results/2026-10-13-agent-runtime-bookings.md"
+relations:
+  # The AI part (files-ai/) is copied only when ai.orchestrator.turbineh is in the app.
+  requires: []
+  provides: [domain.bookings]
+  conflicts: []
+  tested_with: [recipe.ai-agents]

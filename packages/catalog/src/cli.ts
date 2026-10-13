@@ -2,6 +2,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { guideErrors } from "./guide.js";
 import { validateManifestFile } from "./validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -21,6 +22,8 @@ for (const dir of dirs) {
     const { readFileSync } = await import("node:fs");
     const id = (parse(readFileSync(file, "utf8")) as { id: string }).id;
     if (id !== basename(dir.name)) res.errors.push(`directory "${dir.name}" must equal id "${id}"`);
+    // Optional component guides (ADR-0033): complete, and every guarantee linked to a shipped test.
+    res.errors.push(...guideErrors(join(root, dir.name), id));
     res.ok = res.errors.length === 0;
   }
   if (!res.ok) failed++;

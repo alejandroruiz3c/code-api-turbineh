@@ -63,6 +63,9 @@ describe("direct model calls are rerouted, not blocked (ADR-0029)", () => {
     mkdirSync(join(withAi, "src/lib/ai"), { recursive: true });
     writeFileSync(join(withAi, "src/lib/ai/orchestrator.ts"), "export {};\n");
     expect(aiRerouteGuidance(withAi)).toContain('from "@/lib/ai/orchestrator"');
+    // A hand-written tool loop (e.g. an OpenAI-compatible booking client) is rerouted to runAgent.
+    expect(aiRerouteGuidance(withAi)).toContain("runAgent(");
+    expect(aiRerouteGuidance(withAi)).toContain("AI_BASE_URL");
     expect(aiRerouteGuidance(mkdtempSync(join(tmpdir(), "no-ai-")))).toContain("throw new Error");
   });
 

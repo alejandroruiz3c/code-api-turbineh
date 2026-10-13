@@ -12,4 +12,12 @@ describe("role policy", () => {
     expect(can("member", "delete")).toBe(false);
     expect(can("admin", "delete")).toBe(true);
   });
+
+  it("staff allow-list denies by default and matches whole emails only", async () => {
+    const { isAdminEmail } = await import("@/server/authz");
+    expect(isAdminEmail("ana@example.com", "")).toBe(false);
+    expect(isAdminEmail("Ana@Example.com", "bob@example.com, ana@example.com")).toBe(true);
+    expect(isAdminEmail("eve@example.com.evil.io", "eve@example.com")).toBe(false);
+    expect(isAdminEmail("", ",")).toBe(false);
+  });
 });
