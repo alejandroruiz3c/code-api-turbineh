@@ -10,14 +10,18 @@
  *   TURBINEH_AI_TOKEN=… pnpm --filter @turbineh/bench exec tsx agent-brain/run.ts --brain turbineh \
  *     [--token-file /private/file] \
  *     [--gateway https://software.turbineh.com/v1/ai] [--ref worktree|origin/main] [--env AI_ROUTES=…]… \
- *     [--limit 54] [--parallel 3] [--label name]
+ *     [--limit 54] [--parallel 3] [--label name] [--on-quota "<command that rewrites the token file>"]
  *   pnpm --filter @turbineh/bench exec tsx agent-brain/run.ts --brain claude [--env-file ../.env.local]
  *
  * Secrets are read from the environment (or the env file for the Anthropic key) and never printed or stored.
  * Latency is wall time per turn as the person sees it; back-off after a 429 of the bench's own rate limit is excluded
  * (and counted). Every HTTP call is metered per conversation, so tokens and cost do not depend on the code version.
+ * Staging apps have a 200,000-token daily quota (less than one run): with --on-quota the bench runs that command
+ * (which must write a fresh app token to --token-file, e.g. by rotating the build's token) and continues; the
+ * quota is a staging limit, not part of what is measured.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -100,6 +104,28 @@ const newMeter = (): Meter => ({
 const FIRED = new Set(["primary-won", "hedge-won"]);
 const current = new AsyncLocalStorage<Meter>();
 const realFetch = globalThis.fetch;
+const ON_QUOTA = arg("--on-quota", "");
+let rotating: Promise<void> | null = null;
+/** Replaces a spent staging app token (never printed): runs --on-quota once, then rereads the token file. */
+function rotateToken(): Promise<void> {
+  rotating ??= (async () => {
+    execSync(ON_QUOTA, { stdio: "ignore" });
+    process.env.TURBINEH_AI_TOKEN = readFileSync(arg("--token-file", ""), "utf8").trim();
+    console.error("app token rotated (staging daily quota)");
+  })().finally(() => {
+    rotating = null;
+  });
+  return rotating;
+}
+/** The request with the current app token (after a rotation). */
+function withToken(init: RequestInit | undefined): RequestInit | undefined {
+  const h = init?.headers as Record<string, string> | undefined;
+  if (!h?.Authorization?.startsWith("Bearer tbh_ai_")) return init;
+  return {
+    ...init,
+    headers: { ...h, Authorization: `Bearer ${process.env.TURBINEH_AI_TOKEN ?? ""}` },
+  };
+}
 globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const m = current.getStore();
@@ -111,14 +137,53 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
   }
   for (let attempt = 0; ; attempt++) {
     const t0 = performance.now();
-    const res = await realFetch(input, init);
+    if (rotating) {
+      // Waiting for a token rotation (a staging limit) is excluded from latency, like rate-limit back-off.
+      const w = performance.now();
+      await rotating;
+      if (m) m.waitMs += performance.now() - w;
+    }
+    const sentWith = process.env.TURBINEH_AI_TOKEN;
+    let res: Response;
+    try {
+      res = await realFetch(input, ON_QUOTA ? withToken(init) : init);
+    } catch (err) {
+      // Network failures and timeouts are metered too (status 0), then rethrown to the code under test.
+      m?.calls.push({
+        kind: url.endsWith("/systemone")
+          ? "decider"
+          : url.includes("anthropic.com")
+            ? "claude"
+            : "chat",
+        model,
+        ms: Math.round(performance.now() - t0),
+        status: 0,
+      });
+      throw err;
+    }
     const ms = performance.now() - t0;
+    // A request that left with a token rotated meanwhile is replayed with the new one.
+    if (
+      ON_QUOTA &&
+      res.status === 401 &&
+      sentWith !== process.env.TURBINEH_AI_TOKEN &&
+      attempt < 8
+    ) {
+      if (m) m.waitMs += ms;
+      continue;
+    }
     if (res.status === 429 && attempt < 8) {
       const why = (await res
         .clone()
         .json()
         .catch(() => ({}))) as { title?: string; detail?: string; error?: { type?: string } };
       if (/quota/i.test(`${why.title ?? ""} ${why.detail ?? ""}`)) {
+        if (ON_QUOTA) {
+          const w = performance.now();
+          if (sentWith === process.env.TURBINEH_AI_TOKEN) await rotateToken();
+          if (m) m.waitMs += performance.now() - w + ms;
+          continue;
+        }
         console.error("daily AI quota reached: the run is not valid");
         process.exit(2);
       }
