@@ -26,18 +26,22 @@ describe("deterministic criteria → test mapping", () => {
         evidence,
       ),
     ).toBeNull();
+  });
+
+  it("ignores Given/When/Then mechanics (browsing, search bar, admin area) but not what is checked (ADR-0043)", () => {
+    // Labelled met in the proof fixtures (s-search-name, s-admin-price): the title exercises every checked word.
     expect(
       lexicalEvidence(
         "Given a user is browsing the catalogue, when they enter a product name in the search bar, then the displayed list must only contain products matching that name.",
         evidence,
       ),
-    ).toBeNull();
+    ).toBe(evidence[0]);
     expect(
       lexicalEvidence(
         "Given an authenticated admin user is in the admin area, when they update a product's price, then the change must be reflected in the public catalogue immediately.",
         evidence,
       ),
-    ).toBeNull();
+    ).toBe(evidence[3]);
   });
 
   it("maps a criterion the test title states completely", () => {
