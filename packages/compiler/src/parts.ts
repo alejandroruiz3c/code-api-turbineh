@@ -270,8 +270,7 @@ export const PARTS = {
   },
   entities: {
     schema: entitiesPart,
-    instruction:
-      `List the data entities (PascalCase) and their fields (camelCase). Only what the prompt needs. No user/auth tables: auth is provided. ${NON_FUNCTIONAL_INSTRUCTION}`,
+    instruction: `List the data entities (PascalCase) and their fields (camelCase). Only what the prompt needs. No user/auth tables: auth is provided. ${NON_FUNCTIONAL_INSTRUCTION}`,
   },
   pages: {
     schema: pagesPart,

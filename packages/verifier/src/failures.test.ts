@@ -29,7 +29,7 @@ STEP e2e 1 43357
 FAILED_LINE e2e   1) [chromium] › tests/e2e/booking-assistant.spec.ts:174:7 › booking assistant › the staff pages refuse a signed-in non-staff person ─
 FAILED_LINE e2e     Error: expect(page).toHaveURL(expected) failed`;
 
-describe("gate failures (deterministic, ADR-0036)", () => {
+describe("gate failures (deterministic, ADR-0037)", () => {
   it("reads the failing E2E test, file:line and error from the Playwright output", () => {
     const v = result(E2E_TAIL);
     expect(v.steps.map((s) => `${s.name}:${s.ok}`)).toEqual([

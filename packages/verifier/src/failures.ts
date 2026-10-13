@@ -1,7 +1,7 @@
 import { failureLocation, type StepName, type VerifyResult } from "./verify.js";
 
 /**
- * One failing check, read deterministically from the gate output (ADR-0036): the step, the failing test (title and
+ * One failing check, read deterministically from the gate output (ADR-0037): the step, the failing test (title and
  * file:line) when the step runs tests, and the first error line. Never decided by a model.
  */
 export interface GateFailure {
@@ -20,7 +20,9 @@ const FILE = String.raw`((?:tests|src|scripts)\/[\w./[\]@-]+\.[cm]?[jt]sx?)`;
 
 /** Playwright: "  1) [chromium] › tests/e2e/a.spec.ts:174:7 › Suite › title ───" (also the end-of-run summary). */
 const PLAYWRIGHT = new RegExp(
-  String.raw`^\s*(?:\d+\)\s+)?(?:\[[^\]]+\]\s+›\s+)?` + FILE + String.raw`:(\d+):\d+\s+›\s+(.+?)\s*[─-]*\s*$`,
+  String.raw`^\s*(?:\d+\)\s+)?(?:\[[^\]]+\]\s+›\s+)?` +
+    FILE +
+    String.raw`:(\d+):\d+\s+›\s+(.+?)\s*[─-]*\s*$`,
 );
 /** Vitest: " FAIL  tests/unit/a.test.ts > Suite > title" + " ❯ tests/unit/a.test.ts:12:5". */
 const VITEST_FAIL = new RegExp(String.raw`^\s*FAIL\s+` + FILE + String.raw`\s+>\s+(.+?)\s*$`);
@@ -77,7 +79,9 @@ export function gateFailures(v: VerifyResult): GateFailure[] {
     });
     if (found.length === 0) {
       const where = failureLocation(s.detail.replace(ANSI, ""));
-      const [file = null, line = null] = where ? [where.split(":")[0] ?? null, where.split(":")[1]] : [];
+      const [file = null, line = null] = where
+        ? [where.split(":")[0] ?? null, where.split(":")[1]]
+        : [];
       found.push({
         step: s.name,
         test: null,

@@ -32,6 +32,7 @@ import {
   type CoverageRule,
 } from "./acceptance.js";
 import { initialGuide, writeAgentGuide } from "./agent-guide.js";
+import { ownersOf, recordOwners } from "./ownership.js";
 
 export interface SelectedComponent {
   capability: string;
@@ -95,7 +96,15 @@ function walk(dir: string): string[] {
 export function assemble(input: AssembleInput): AssembleResult {
   const { spec, outDir } = input;
   mkdirSync(outDir, { recursive: true });
-  const recipe = mergedRecipe(materializeRecipe(input.recipesDir, input.recipe, outDir));
+  const chain = materializeRecipe(input.recipesDir, input.recipe, outDir);
+  const recipe = mergedRecipe(chain);
+  // File ownership (ADR-0037 §D2): later layers win, exactly like the copies.
+  const owners: Record<string, string> = {};
+  for (const meta of chain)
+    Object.assign(
+      owners,
+      ownersOf(join(input.recipesDir, meta.id, "template"), `recipe:${meta.id}`),
+    );
 
   const placeholders: Record<string, string> = {
     __APP_SLUG__: spec.slug,
@@ -125,6 +134,12 @@ export function assemble(input: AssembleInput): AssembleResult {
       recursive: true,
       filter: (src) => !src.endsWith(".env.example.append") && !src.endsWith("nav.json"),
     });
+    Object.assign(
+      owners,
+      ownersOf(files, `component:${s.component.id}`, (f) =>
+        [".env.example.append", "nav.json"].includes(f),
+      ),
+    );
     const navFile = join(files, "nav.json");
     if (existsSync(navFile)) {
       componentNav.push(
@@ -140,8 +155,10 @@ export function assemble(input: AssembleInput): AssembleResult {
   const aiApp = existsSync(join(outDir, "src/lib/ai/agent.ts"));
   for (const s of input.selected) {
     const filesAi = join(componentsDir, s.component.id, "files-ai");
-    if (aiApp && s.component.pkg.name.startsWith("turbineh/") && existsSync(filesAi))
+    if (aiApp && s.component.pkg.name.startsWith("turbineh/") && existsSync(filesAi)) {
       cpSync(filesAi, outDir, { recursive: true });
+      Object.assign(owners, ownersOf(filesAi, `component:${s.component.id}`));
+    }
   }
   // Domain parameters from the request (deterministic), e.g. src/bookings/params.json.
   for (const d of input.domains ?? []) {
@@ -149,6 +166,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     const target = join(outDir, d.paramsFile);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `${JSON.stringify(d.params, null, 2)}\n`);
+    owners[d.paramsFile] = `component:${d.component}`;
   }
   if (aiApp) writeToolkits(outDir);
   // Component guides (ADR-0033) → docs/components/<id>[.<part>].md: what each component does, how to extend it.
@@ -160,6 +178,7 @@ export function assemble(input: AssembleInput): AssembleResult {
         : id;
       mkdirSync(join(outDir, "docs/components"), { recursive: true });
       writeFileSync(join(outDir, "docs/components", `${name}.md`), guideMarkdown(g));
+      owners[`docs/components/${name}.md`] = `component:${id}`;
     }
   }
 
@@ -185,8 +204,13 @@ export function assemble(input: AssembleInput): AssembleResult {
     csvExport: chosen.has("data.csv-export"),
     csvImport: chosen.has("data.csv-import"),
   };
+  const entityFiles = entities.map((e) => ({
+    name: e.name,
+    files: generateEntity(e, features, entities),
+  }));
+  for (const e of entityFiles) for (const f of e.files) owners[f.path] = `entity:${e.name}`;
   const generated: GeneratedFile[] = [
-    ...entities.flatMap((e) => generateEntity(e, features, entities)),
+    ...entityFiles.flatMap((e) => e.files),
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
       componentTables,
@@ -204,7 +228,9 @@ export function assemble(input: AssembleInput): AssembleResult {
     const p = join(outDir, f.path);
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, f.content);
+    owners[f.path] ??= "generated";
   }
+  recordOwners(outDir, owners);
   writeAcceptance(
     outDir,
     acceptanceStatus(spec.acceptance_criteria, [

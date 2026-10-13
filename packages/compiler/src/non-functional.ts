@@ -1,7 +1,7 @@
 import type { BuildSpec } from "./build-spec.js";
 
 /**
- * Non-functional requirements are never data entities (ADR-0036 §D3). "Rate limits", "input limits", "prompt-injection
+ * Non-functional requirements are never data entities (ADR-0037 §D3). "Rate limits", "input limits", "prompt-injection
  * protection", "timeouts", "logging"… describe how the app behaves, not records people create and edit. A small model
  * sometimes turns them into entities (Frontiers rerun: `RateLimitTracker` with CRUD pages and E2E), which ships an
  * editable table nobody needs and an extra E2E suite that can fail the gate. The entities prompt says so, and this
@@ -127,7 +127,9 @@ export function separateNonFunctional(spec: BuildSpec): {
   if (requirements.length === 0 && pages.length === spec.pages.length)
     return { spec, requirements };
   // A removed entity may be referenced by another one ("rateLimitTrackerId"): such a field is dropped as well.
-  const refs = new Set(requirements.map((r) => r.source.charAt(0).toLowerCase() + r.source.slice(1)));
+  const refs = new Set(
+    requirements.map((r) => r.source.charAt(0).toLowerCase() + r.source.slice(1)),
+  );
   const cleaned = entities.map((e) => ({
     ...e,
     fields: e.fields.filter((f) => !refs.has(f.name.replace(/Ids?$/, ""))),

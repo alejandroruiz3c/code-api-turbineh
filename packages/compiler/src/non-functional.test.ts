@@ -48,7 +48,7 @@ function spec(
   });
 }
 
-describe("non-functional requirements are not entities (ADR-0036 §D3)", () => {
+describe("non-functional requirements are not entities (ADR-0037 §D3)", () => {
   it("splits PascalCase names into words", () => {
     expect(nameWords("RateLimitTracker")).toEqual(["rate", "limit", "tracker"]);
     expect(nameWords("APIRequestLog")).toEqual(["api", "request", "log"]);
@@ -56,7 +56,9 @@ describe("non-functional requirements are not entities (ADR-0036 §D3)", () => {
   });
 
   it("the entities prompt tells the model, in every build", () => {
-    expect(PARTS.entities.instruction).toMatch(/Never list non-functional requirements as entities/);
+    expect(PARTS.entities.instruction).toMatch(
+      /Never list non-functional requirements as entities/,
+    );
     expect(PARTS.entities.instruction).toMatch(/rate limits/);
   });
 
@@ -121,7 +123,10 @@ describe("non-functional requirements are not entities (ADR-0036 §D3)", () => {
   it.each([
     ["saas-crud (Fieldnote)", ["Note", "Tag", "Interview", "Customer"]],
     ["client-portal (Ledgerline)", ["Client", "DocumentRequest", "Document", "Message"]],
-    ["corporate-site (Altamira)", ["Project", "Position", "ContactRequest", "TeamMember", "Sector"]],
+    [
+      "corporate-site (Altamira)",
+      ["Project", "Position", "ContactRequest", "TeamMember", "Sector"],
+    ],
     ["landing-waitlist (Orbit Notes)", ["WaitlistEntry", "Referral"]],
     ["bookings (Sala Nueve)", ["Service", "Stylist", "Booking", "TimeOff"]],
     ["projects (Brickline)", ["Project", "Phase", "Task", "Comment", "Attachment"]],
@@ -140,7 +145,11 @@ describe("non-functional requirements are not entities (ADR-0036 §D3)", () => {
     // saas-crud: "Every change is recorded in an audit log visible to owners" → logging capability, not CRUD
     ["saas-crud", ["Note", "Tag", "AuditLog"], ["Note", "Tag"]],
     // landing-waitlist: abuse protection on the public form
-    ["landing-waitlist", ["WaitlistEntry", "Referral", "SignupThrottle"], ["WaitlistEntry", "Referral"]],
+    [
+      "landing-waitlist",
+      ["WaitlistEntry", "Referral", "SignupThrottle"],
+      ["WaitlistEntry", "Referral"],
+    ],
   ] as const)("%s: removes non-functional entities only", (recipe, all, kept) => {
     const r = separateNonFunctional(
       spec(

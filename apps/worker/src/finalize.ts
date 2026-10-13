@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   finalizeAcceptance,
   readAcceptanceJson,
+  recordOwners,
   verifiedGuide,
   writeReports,
   writeStartHere,
@@ -31,14 +32,24 @@ import {
   type WriterConfig,
 } from "@turbineh/reporter";
 import {
+  attributeFailures,
+  culpritsOf,
   backupPatch,
   failureLog,
   patchOnce,
   qualityFailed,
   type CorrectionStep,
+  type FailureAttribution,
   type ModelCfg,
+  type SwapPart,
 } from "@turbineh/integrator";
-import { gateFindings, quickCheck, verify, type VerifyResult } from "@turbineh/verifier";
+import {
+  gateFailures,
+  gateFindings,
+  quickCheck,
+  verify,
+  type VerifyResult,
+} from "@turbineh/verifier";
 
 export interface FinalizeDeps {
   decider: Decider;
@@ -65,16 +76,16 @@ export interface FinalizeInput {
   metrics: Record<string, unknown>;
   /**
    * Swap target: the commit before external integrations and Backup Coder fills. If directed corrections cannot make
-   * the build green, the extras are removed (their capabilities are reported as gaps) and everything is verified again.
+   * the build green, only the parts the failure is attributed to (ADR-0037 §D2) are removed (their capabilities are
+   * reported as gaps) and everything is verified again. Nothing unrelated to the failure is ever removed.
    */
   swap?: {
     toCommit: string;
-    capabilities: string[];
     /**
-     * Optional files per capability (glue, Backup Coder module + test, T3 business rules + tests), removable one by
-     * one before a full swap. Removing restores the file as it was at `toCommit` (a rules stub) or deletes it.
+     * Removable parts per capability (glue, Backup Coder module + test, T3 business rules + tests, integrated library
+     * contract test). Removing restores each file as it was at `toCommit` (a rules stub) or deletes it.
      */
-    parts: { capability: string; kind: "glue" | "backup" | "rules"; files: string[] }[];
+    parts: SwapPart[];
   };
 }
 
@@ -96,6 +107,8 @@ export interface FinalizeResult {
   acceptance: { met: number; covered: number; open: string[] };
   /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
   swappedOut: string[];
+  /** Failure → owner → implicated parts, for every swap decision (ADR-0037 §D2). */
+  attribution: { round: number; failures: FailureAttribution[]; removed: string[] }[];
 }
 
 /** A file as it was at `commit` when it existed there (e.g. the business-rules stub), otherwise removed. */
@@ -209,8 +222,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
 
   // WP10 corrector (PLAN §4: correcting ↺ max 3) → swap → Backup Coder (T4). Full verification after every step.
   const corrections: CorrectionStep[] = [];
-  let swappedOut: string[] = [];
-  let glueRemoved: string[] = [];
+  const swappedOut: string[] = [];
+  const glueRemoved: string[] = [];
+  const attribution: FinalizeResult["attribution"] = [];
   // False while `result` comes from a quick check; every exit from the correction phase is a full verification.
   let full = true;
   const reverify = async (data: Record<string, unknown>) => {
@@ -235,49 +249,64 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       }
       await reverify({ afterCorrection: attempt });
     }
-    // Granular swap first: drop only the optional files named in the failing log (a glue helper is optional — the
-    // library and its contract test stay; a Backup Coder fill becomes a reported gap again).
+    // Swap (ADR-0037 §D2): each failure is attributed to the owner of the failing test file and of the files it
+    // imports (.turbineh/owners.json). Only parts implicated by that evidence are removed — a glue helper is optional
+    // (the library stays), a Backup Coder fill or an integrated library becomes a reported gap again. A failure in a
+    // recipe or catalog component (e.g. a domain component's E2E) implicates no part: nothing is removed.
     const remaining = [...(input.swap?.parts ?? [])];
-    while (qualityFailed(result) && remaining.length > 0) {
-      const log = failureLog(result);
-      let culprits = remaining.filter((p) => p.files.some((f) => log.includes(f)));
-      // Business rules change behaviour (an E2E test can fail without naming them): they go before a full swap.
-      if (culprits.length === 0) culprits = remaining.filter((p) => p.kind === "rules");
+    for (let round = 1; qualityFailed(result) && remaining.length > 0; round++) {
+      const failures = attributeFailures(
+        input.repoDir,
+        gateFailures(result),
+        remaining,
+        failureLog(result),
+      );
+      const culprits = culpritsOf(remaining, failures);
+      attribution.push({ round, failures, removed: culprits.map((c) => c.capability) });
+      await deps.emit("correcting", "attribution", {
+        round,
+        failures: failures.map((f) => ({
+          step: f.step,
+          test: f.test,
+          where: f.file ? `${f.file}${f.line ? `:${f.line}` : ""}` : null,
+          owner: f.owner,
+          implicated: f.implicated,
+        })),
+      });
       if (culprits.length === 0) break;
       for (const c of culprits) remaining.splice(remaining.indexOf(c), 1);
-      {
-        for (const p of culprits) {
-          for (const f of p.files)
-            restoreOrRemove(input.repoDir, input.swap?.toCommit ?? "HEAD", f);
-        }
-        execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
-        execFileSync(
-          "git",
-          [
-            "-c",
-            "user.name=CODE-API-TURBINEH",
-            "-c",
-            "user.email=builds@turbineh.com",
-            "commit",
-            "-q",
-            "-m",
-            `fix: remove ${culprits.length} optional generated part(s) that could not be made green`,
-          ],
-          { cwd: input.repoDir },
-        );
-        glueRemoved.push(...culprits.filter((p) => p.kind === "glue").map((p) => p.capability));
-        swappedOut.push(...culprits.filter((p) => p.kind !== "glue").map((p) => p.capability));
-        await deps.emit("correcting", "swap", { removed: culprits });
-        await reverify({ afterSwap: "partial" });
+      const toCommit = input.swap?.toCommit ?? "HEAD";
+      for (const p of culprits)
+        for (const f of p.files) restoreOrRemove(input.repoDir, toCommit, f);
+      // Dependencies changed only through integrated libraries: an install failure restores the assembled ones.
+      if (
+        failures.some((f) => f.step === "install") &&
+        culprits.some((c) => c.kind === "integration")
+      ) {
+        for (const f of ["package.json", "pnpm-lock.yaml"])
+          restoreOrRemove(input.repoDir, toCommit, f);
       }
-    }
-    if (qualityFailed(result) && input.swap && input.swap.capabilities.length > 0) {
-      execFileSync("git", ["reset", "-q", "--hard", input.swap.toCommit], { cwd: input.repoDir });
-      execFileSync("git", ["clean", "-qfd"], { cwd: input.repoDir });
-      swappedOut = input.swap.capabilities;
-      glueRemoved = [];
-      await deps.emit("correcting", "swap", { removed: swappedOut });
-      await reverify({ afterSwap: true });
+      execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
+      execFileSync(
+        "git",
+        [
+          "-c",
+          "user.name=CODE-API-TURBINEH",
+          "-c",
+          "user.email=builds@turbineh.com",
+          "commit",
+          "-q",
+          "-m",
+          `fix: remove ${culprits.length} generated part(s) the failing check is attributed to`,
+        ],
+        { cwd: input.repoDir },
+      );
+      glueRemoved.push(...culprits.filter((p) => p.kind === "glue").map((p) => p.capability));
+      swappedOut.push(
+        ...new Set(culprits.filter((p) => p.kind !== "glue").map((p) => p.capability)),
+      );
+      await deps.emit("correcting", "swap", { removed: culprits });
+      await reverify({ afterSwap: round });
     }
     if (qualityFailed(result)) {
       await deps.emit("correcting", "start", { trigger: "T4" });
@@ -426,11 +455,30 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     corrections,
     swappedOut,
     glueRemoved,
+    attribution,
     alerts,
     remediation,
     improvement,
     report: { writer: report.writer },
   };
+  // Post-assembly parts that stayed are recorded as owners too (the package's map of who owns what).
+  const kept = (input.swap?.parts ?? []).filter(
+    (p) =>
+      !swappedOut.includes(p.capability) &&
+      !(p.kind === "glue" && glueRemoved.includes(p.capability)),
+  );
+  if (kept.length > 0) {
+    recordOwners(
+      input.repoDir,
+      Object.fromEntries(
+        kept.flatMap((p) =>
+          p.files
+            .filter((f) => existsSync(join(input.repoDir, f)))
+            .map((f) => [f, `${p.kind}:${p.capability}`]),
+        ),
+      ),
+    );
+  }
   writeStartHere(input.repoDir, handover);
   writeReports(
     input.repoDir,
@@ -464,6 +512,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     corrections,
     swappedOut,
     glueRemoved,
+    attribution,
     acceptance: metrics.acceptance,
   };
 }

@@ -209,7 +209,7 @@ export async function runBuild(
   if (!compiled.ok || !compiled.spec) {
     return { buildId, status: "failed", reason: "BuildSpec invalid (T5)", metrics: { timings } };
   }
-  // Non-functional requirements are capabilities, never entities (ADR-0036 §D3): also for specs stored before the rule.
+  // Non-functional requirements are capabilities, never entities (ADR-0037 §D3): also for specs stored before the rule.
   const separated = separateNonFunctional(compiled.spec);
   const spec = separated.spec;
   const nonFunctional = [...(compiled.nonFunctional ?? []), ...separated.requirements];
@@ -675,15 +675,18 @@ export async function runBuild(
       metrics: { ...metrics, timings },
       swap: {
         toCommit: assembledCommit,
-        capabilities: [
-          ...integratedCaps,
-          ...filledCaps,
-          ...rules.map((r) => rulesCapability(slugOf(r.module))),
-        ],
         parts: [
           ...integrations.flatMap((i) =>
             i.glue ? [{ capability: i.capability, kind: "glue" as const, files: [i.glue] }] : [],
           ),
+          // Integrated libraries (ADR-0037 §D2): implicated only when a failing file imports them or their contract
+          // test fails; removing one drops its contract test and glue (the pinned dependency stays unused).
+          ...integrations.map((i) => ({
+            capability: i.capability,
+            kind: "integration" as const,
+            files: i.contractTest ? [i.contractTest] : [],
+            package: resolution.selected[i.capability]?.pkg.name ?? i.component,
+          })),
           ...filled.map((f) => ({
             capability: f.capability,
             kind: "backup" as const,
@@ -693,6 +696,7 @@ export async function runBuild(
             capability: rulesCapability(slugOf(r.module)),
             kind: "rules" as const,
             files: [r.module, r.test, r.fixtures, ...(r.relatedModule ? [r.relatedModule] : [])],
+            entity: r.entity,
           })),
         ],
       },
@@ -723,6 +727,8 @@ export async function runBuild(
     corrections: fin.corrections,
     swappedOut: fin.swappedOut,
     glueRemoved: fin.glueRemoved,
+    // Failure → owner → implicated parts, per swap round (ADR-0037 §D2).
+    attribution: fin.attribution,
     acceptance: fin.acceptance,
     // What is in the delivered repository after corrections and swaps.
     components: usedComponents
@@ -754,7 +760,7 @@ export async function runBuild(
         .filter((capability) => !capability.startsWith("rules."))
         .map((capability) => ({
           capability,
-          trigger: "removed after failed corrections (T4)",
+          trigger: "removed: a failing check was attributed to it (T4)",
         })),
     ],
   };
