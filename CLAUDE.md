@@ -48,6 +48,7 @@ pnpm smoke:decider        # JEV + open decider (requiere .env.local y services/o
 pnpm smoke:compiler       # 5 prompts → BuildSpec
 pnpm smoke:backup-coder   # primario + secundario responden
 pnpm bench          # ejecuta bench/prompts contra el pipeline y el baseline
+pnpm --filter @turbineh/cli run build   # CLI turbineh en un solo archivo (dist/ y apps/web/public/cli/)
 ```
 
 ## Definition of Done de cualquier WP
