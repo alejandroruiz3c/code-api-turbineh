@@ -76,6 +76,8 @@ export interface GlueRequest {
   mustMatch: string;
   fallback: string;
   fallbackWhy: string;
+  /** Dependencies only the fallback needs (added to package.json only if the fallback is used). */
+  fallbackDependencies: { name: string; version: string; dev: boolean }[];
 }
 
 export interface Adaptation {
@@ -286,7 +288,10 @@ export function adaptPackage(input: AdaptInput): Adaptation {
       if (target.has(c) || skipped.includes(c)) return c;
     return null;
   };
-  const extra = new Map<string, { content: string; why: string; step: StepKey }>();
+  const extra = new Map<
+    string,
+    { content: string; why: string; step: StepKey; deferDeps?: boolean }
+  >();
   const unresolved = new Set<string>();
   const bare = new Map<string, Set<string>>();
   const dbTables = [...files.keys()].filter(
@@ -366,11 +371,21 @@ export const db = drizzle(pool, { schema });
           fallback: ownDbClient,
           fallbackWhy:
             "Own Drizzle client on DATABASE_URL (your client's export could not be adapted)",
+          fallbackDependencies: (
+            [
+              ["drizzle-orm", false],
+              ["pg", false],
+              ["@types/pg", true],
+            ] as const
+          )
+            .filter(([n]) => input.versions[n])
+            .map(([n, dev]) => ({ name: n, version: input.versions[n] ?? "", dev })),
         });
         extra.set(dest, {
           content: ownDbClient,
           why: "Database client of the capability",
           step: "glue",
+          deferDeps: true,
         });
         ensureFoundation("@/db/schema", dest);
       } else {
@@ -445,13 +460,14 @@ export const db = drizzle(pool, { schema });
   // Foundation and glue files can themselves import packages.
   for (const [dest, f] of extra) {
     if (out.has(dest)) continue;
-    for (const s of importsOf(f.content))
-      if (NODE_BUILTIN.test(s)) usesNode = true;
-      else if (!s.startsWith(".") && !s.startsWith("@/")) {
-        const n = pkgName(s);
-        if (!bare.has(n)) bare.set(n, new Set());
-        bare.get(n)?.add(dest);
-      }
+    if (!f.deferDeps)
+      for (const s of importsOf(f.content))
+        if (NODE_BUILTIN.test(s)) usesNode = true;
+        else if (!s.startsWith(".") && !s.startsWith("@/")) {
+          const n = pkgName(s);
+          if (!bare.has(n)) bare.set(n, new Set());
+          bare.get(n)?.add(dest);
+        }
     out.set(dest, { path: dest, content: f.content, action: "add", why: f.why, step: f.step });
   }
   for (const u of unresolved)

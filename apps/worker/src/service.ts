@@ -29,6 +29,7 @@ import {
   heartbeat,
   putCachedSelection,
   requeueStale,
+  requeueStaleRepoIntegrations,
   type BuildRow,
 } from "@turbineh/db";
 import { deciderFromEnv } from "@turbineh/decider";
@@ -37,7 +38,8 @@ import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
 import { buildCost } from "./cost.js";
 import { processDeployment } from "./deploy-job.js";
 import { processDelivery } from "./delivery.js";
-import { modelSlotsFromEnv } from "./models.js";
+import { adaptationCoderFromEnv, modelSlotsFromEnv } from "./models.js";
+import { processRepoIntegration } from "./repo-integration.js";
 import {
   improveBuild,
   runBuild,
@@ -388,6 +390,30 @@ if (tokenKey) {
         })
         .finally(() => busyJobs--);
       if (!worked) await new Promise((r) => setTimeout(r, 1000));
+    }
+  })();
+  // Repository integrations (PLAN §16 P5): analyse → adapt → commit → draft PR → verify in the sandbox.
+  const integrationDeps = {
+    db,
+    storage,
+    tokenKey,
+    repoRoot,
+    workerId,
+    coder: adaptationCoderFromEnv(env),
+    appUrl: process.env.PRODUCT_APP_URL ?? null,
+    log,
+  };
+  setInterval(() => void requeueStaleRepoIntegrations(db).catch(() => undefined), 5 * 60_000);
+  void (async () => {
+    while (!stopping) {
+      busyJobs++;
+      const worked = await processRepoIntegration(integrationDeps)
+        .catch((err: unknown) => {
+          log.error("integration loop failed", { error: String(err).slice(0, 300) });
+          return false;
+        })
+        .finally(() => busyJobs--);
+      if (!worked) await new Promise((r) => setTimeout(r, 2000));
     }
   })();
   // "Deploy for me": own loop (minutes per job, mostly waiting on the client's Vercel build).
