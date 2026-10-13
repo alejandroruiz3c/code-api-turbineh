@@ -8,7 +8,7 @@ import type {
   Requirement,
 } from "@turbineh/shared";
 import { componentSummary, requirementsFor, summarizeUseCase } from "./search.js";
-import { compatibility } from "./stack.js";
+import { compatibility, dependencyDiff } from "./stack.js";
 import type { CatalogEntry, UseCase } from "./types.js";
 
 /**
@@ -43,6 +43,10 @@ export interface PlanInput {
   gaps: string[];
   decisions: Decision[];
   dependencies: { name: string; version: string }[];
+  /** The project's own dependencies (from its package.json), when known: only new ones are planned. */
+  projectDependencies?: Record<string, string>;
+  /** Parts of the need the plan does not cover (stated to the user, never hidden). */
+  notCovered?: string[];
   envKeys?: string[];
   entities?: string[];
   preferences?: ProjectPreferences;
@@ -103,10 +107,24 @@ export function plannedFiles(slug: string, deps: number, env: number): FileChang
 
 export function buildPlan(input: PlanInput): Plan {
   const kind = input.useCase ? "use_case" : "component";
-  const compat = compatibility(input.stack, kind);
+  const base = compatibility(input.stack, kind);
+  const deps = dependencyDiff(input.dependencies, input.projectDependencies);
+  const compat = {
+    ...base,
+    compatible: base.compatible && deps.conflicts.length === 0,
+    incompatibilities: [...base.incompatibilities, ...deps.conflicts],
+  };
   const caps = input.components.map((c) => c.capability);
+  // One component can cover several capabilities: list it once with all of them.
+  const components = new Map<string, PlannedComponent>();
+  for (const c of input.components) {
+    const seen = components.get(c.id);
+    if (!seen) components.set(c.id, { ...c });
+    else if (!seen.why.includes(c.why))
+      seen.why = `${seen.why}; ${c.why.charAt(0).toLowerCase()}${c.why.slice(1)}`;
+  }
   const capability: CapabilitySummary = input.useCase
-    ? summarizeUseCase(input.useCase, input.components.length)
+    ? summarizeUseCase(input.useCase, components.size)
     : {
         ...componentSummary({
           id: input.slug,
@@ -118,7 +136,7 @@ export function buildPlan(input: PlanInput): Plan {
           does: input.need,
         }),
         name: input.slug,
-        components: input.components.length,
+        components: components.size,
       };
   const config: Requirement[] = [
     ...(input.useCase
@@ -140,9 +158,9 @@ export function buildPlan(input: PlanInput): Plan {
     ...input.gaps.map(
       (g) => `No verified component covers ${g}: TurbineH writes it and verifies it with the rest.`,
     ),
-    ...(policy && !policy.allowDependencyChanges && input.dependencies.length > 0
+    ...(policy && !policy.allowDependencyChanges && deps.added.length > 0
       ? [
-          `Adds ${input.dependencies.length} dependencies, but this project's policy does not allow new dependencies.`,
+          `Adds ${deps.added.length} dependencies, but this project's policy does not allow new dependencies.`,
         ]
       : []),
     ...(policy && !policy.allowNewEnv && envCount > 0
@@ -151,14 +169,14 @@ export function buildPlan(input: PlanInput): Plan {
         ]
       : []),
   ];
-  const external = input.components.filter((c) => !native(c.purl)).length;
+  const external = [...components.values()].filter((c) => !native(c.purl)).length;
   return {
     id: input.id,
     need: input.need,
     state: "planned",
     stack: input.stack,
     capability,
-    components: input.components.map(({ id, version, license, why }) => ({
+    components: [...components.values()].map(({ id, version, license, why }) => ({
       id,
       version,
       license,
@@ -166,10 +184,14 @@ export function buildPlan(input: PlanInput): Plan {
     })),
     compatible: compat.compatible,
     incompatibilities: compat.incompatibilities,
-    missing: [...compat.missing, ...input.gaps.map((g) => `Verified component for ${g}`)],
+    missing: [
+      ...compat.missing,
+      ...input.gaps.map((g) => `Verified component for ${g}`),
+      ...(input.notCovered ?? []),
+    ],
     decisions: input.decisions,
-    files: plannedFiles(input.slug, input.dependencies.length, envCount),
-    dependencies: input.dependencies,
+    files: plannedFiles(input.slug, deps.added.length, envCount),
+    dependencies: deps.added,
     config,
     estimate: input.useCase
       ? {

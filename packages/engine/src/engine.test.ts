@@ -14,6 +14,7 @@ import {
   flowState,
   PACKAGE_LAYOUT,
   productText,
+  projectDependencies,
   readZip,
   searchCapabilities,
   USE_CASES,
@@ -145,6 +146,45 @@ describe("plan", () => {
     expect(plan.needsApproval.join(" ")).toMatch(/ui.map/);
     expect(plan.needsApproval.join(" ")).toMatch(/policy does not allow new dependencies/);
     expect(plan.estimate.tokens).toBeGreaterThan(0);
+  });
+
+  it("plans only new dependencies, flags major conflicts and lists each component once", () => {
+    const stack = detectStack({ files: { "package.json": nextPkg, "tsconfig.json": "{}" } });
+    const pack = {
+      id: "security.pack.turbineh",
+      version: "0.1.0",
+      license: "Apache-2.0",
+      purl: "pkg:generic/turbineh/security-pack@0.1.0",
+    };
+    const plan = buildPlan({
+      id: "pl_2",
+      need: "Bookings for a physio clinic",
+      slug: "physio",
+      stack,
+      useCase: USE_CASES.find((u) => u.id === "bookings") ?? null,
+      components: [
+        { ...pack, capability: "security.headers", why: "Best verified fit for security headers" },
+        { ...pack, capability: "security.rate-limit", why: "Required by the flow for rate limits" },
+      ],
+      gaps: [],
+      decisions: [],
+      dependencies: [
+        { name: "next", version: "16.3.8" },
+        { name: "react", version: "19.3.0" },
+        { name: "zod", version: "4.6.5" },
+      ],
+      projectDependencies: projectDependencies({ "package.json": nextPkg }),
+      notCovered: ["The AI part of the need"],
+    });
+    expect(plan.dependencies).toEqual([{ name: "zod", version: "4.6.5" }]);
+    expect(plan.files.find((f) => f.path === "package.json")?.why).toBe(
+      "Adds 1 verified dependency",
+    );
+    expect(plan.compatible).toBe(false);
+    expect(plan.incompatibilities.join(" ")).toMatch(/next: .*16\.3\.8.*15\.2\.0/);
+    expect(plan.components).toHaveLength(1);
+    expect(plan.components[0]?.why).toMatch(/security headers; required by the flow/);
+    expect(plan.missing).toContain("The AI part of the need");
   });
 });
 

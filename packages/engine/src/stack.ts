@@ -140,6 +140,45 @@ export function detectStack(env: EnvironmentInput): DetectedStack {
   return { language, framework, packageManager, versions, source, adaptationPending: false };
 }
 
+/** The project's declared npm dependencies (name → cleaned version), to plan only what is really new. */
+export function projectDependencies(files: Record<string, string>): Record<string, string> {
+  try {
+    const pkg = JSON.parse(files["package.json"] ?? "{}") as PackageJson;
+    const out: Record<string, string> = {};
+    for (const [name, range] of Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }))
+      out[name] = cleanVersion(range) ?? range;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Splits the package's dependencies into new ones (added by apply) and the ones the project already has; a different
+ * major version is an incompatibility (apply keeps the project's version).
+ */
+export function dependencyDiff(
+  deps: { name: string; version: string }[],
+  project: Record<string, string> | undefined,
+): { added: { name: string; version: string }[]; conflicts: string[] } {
+  if (!project) return { added: deps, conflicts: [] };
+  const added: { name: string; version: string }[] = [];
+  const conflicts: string[] = [];
+  for (const d of deps) {
+    const have = project[d.name];
+    if (have === undefined) added.push(d);
+    else if (
+      Number.isFinite(major(have)) &&
+      Number.isFinite(major(d.version)) &&
+      major(have) !== major(d.version)
+    )
+      conflicts.push(
+        `${d.name}: the package is verified with ${d.version}, the project has ${have} (kept). Check the integration with \`turbineh verify\` or align the version.`,
+      );
+  }
+  return { added, conflicts };
+}
+
 /** What TurbineH flows are built and verified on (the recipes' template stack). */
 export const TARGET_STACK = {
   language: "typescript",

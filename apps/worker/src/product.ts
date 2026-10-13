@@ -22,6 +22,8 @@ import { parse } from "yaml";
 export interface PlanRequest {
   need: string;
   stack: DetectedStack;
+  /** The project's declared dependencies (from its package.json), so only new ones are planned. */
+  projectDependencies?: Record<string, string>;
   preferences?: ProjectPreferences;
 }
 
@@ -126,6 +128,17 @@ export function flowPlan(input: {
       .map((d) => decisionFromSelection({ ...d, label: input.labels(d.capability) }))
       .filter((d): d is NonNullable<typeof d> => d !== null),
     dependencies: deps,
+    ...(input.request.projectDependencies
+      ? { projectDependencies: input.request.projectDependencies }
+      : {}),
+    ...(INFERENCE.test(input.request.need) &&
+    !components.some((c) => c.id.startsWith("ai.orchestrator"))
+      ? {
+          notCovered: [
+            `The AI part of the need: this flow has no inference. Add it with \`turbineh plan "AI assistant for <task>"\` (TurbineH orchestration with its AI Safety Pack).`,
+          ],
+        }
+      : {}),
     envKeys: envKeysOf(env),
     entities: input.entities,
     ...(input.request.preferences ? { preferences: input.request.preferences } : {}),
@@ -207,6 +220,7 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
       confidence: 1,
     })),
     dependencies: deps,
+    ...(request.projectDependencies ? { projectDependencies: request.projectDependencies } : {}),
     envKeys: envKeysOf(env),
     ...(request.preferences ? { preferences: request.preferences } : {}),
   });

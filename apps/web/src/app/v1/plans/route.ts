@@ -1,5 +1,11 @@
 import { buildsLastDay, buildsLastDayFromIp, costToday, enqueueBuild } from "@turbineh/db";
-import { detectStack, ERRORS, MANIFEST_FILES, productError } from "@turbineh/engine";
+import {
+  detectStack,
+  ERRORS,
+  MANIFEST_FILES,
+  productError,
+  projectDependencies,
+} from "@turbineh/engine";
 import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
@@ -115,7 +121,12 @@ export async function POST(req: Request): Promise<Response> {
     ...(ipHash ? { clientIpHash: ipHash } : {}),
     options: {
       mode: "plan",
-      plan: { need, stack, ...(preferences ? { preferences } : {}) },
+      plan: {
+        need,
+        stack,
+        ...(files["package.json"] ? { projectDependencies: projectDependencies(files) } : {}),
+        ...(preferences ? { preferences } : {}),
+      },
       ...(environment.repo ? { repo: environment.repo } : {}),
     },
   });
