@@ -11,7 +11,8 @@ import {
   listResources,
   moveAppointment,
   PolicyError,
-  upcomingByEmail,
+  emailUpcomingAppointments,
+  LOOKUP_REPLY,
 } from "./service";
 import { describeLocal } from "./time";
 
@@ -163,17 +164,12 @@ const bookAppointment = defineTool({
 const findAppointments = defineTool({
   name: "find_appointments",
   description:
-    "Upcoming appointments booked with an email address (references are only in the confirmation email).",
+    "Send the person their upcoming appointments (with booking references) to their email address. The list is never shown in the chat: anyone can type an email, only its owner reads the inbox.",
   parameters: z.object({ email }).strict(),
   execute: (a, ctx) =>
     domain(async () => {
-      const list = await upcomingByEmail(a.email, ctx.now);
-      return {
-        appointments: list,
-        message: list.length
-          ? `Upcoming: ${list.map((x) => `${x.service} with ${x.resource} on ${x.when}`).join("; ")}.`
-          : "No upcoming appointments for that email.",
-      };
+      await emailUpcomingAppointments(a.email, ctx.now);
+      return { message: LOOKUP_REPLY };
     }),
 });
 

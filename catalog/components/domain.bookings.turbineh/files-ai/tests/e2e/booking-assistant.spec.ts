@@ -107,12 +107,17 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     expect(done).toContain(`Moved booking ${reference}`);
   });
 
-  test("finds upcoming bookings by email", async ({ page }) => {
+  test("finds bookings by email without revealing them in the chat", async ({ page }) => {
     test.skip(!reference, "needs the booking from the previous tests");
     await page.goto("/");
     const reply = await say(page, `Show my appointments for ${email}`);
-    expect(reply).toContain("Upcoming:");
-    expect(reply).not.toContain(reference); // references are only in the confirmation email
+    expect(reply).toContain("we have just emailed the list");
+    expect(reply).not.toContain(reference);
+    expect(reply).not.toMatch(/\b\d{1,2}:\d{2}\b/); // no appointment times in the chat
+    // Same answer for an address with no bookings: the chat cannot tell whether someone has an appointment.
+    await page.goto("/");
+    const other = await say(page, "Show my appointments for nobody-here@example.test");
+    expect(other).toContain("we have just emailed the list");
   });
 
   test("never books an invented time", async ({ page }) => {

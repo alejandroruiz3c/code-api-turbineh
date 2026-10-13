@@ -22,7 +22,7 @@ contract:
   inputs:
     [
       "src/bookings/params.json (BookingParams, validated at start-up)",
-      "availability({ day, resource?, service? }); createAppointment({ day, time, resource?, service?, name, email, via }); moveAppointment(reference, email, to); cancelAppointment(reference, email); upcomingByEmail(email)",
+      "availability({ day, resource?, service? }); createAppointment({ day, time, resource?, service?, name, email, via }); moveAppointment(reference, email, to); cancelAppointment(reference, email); emailUpcomingAppointments(email)",
     ]
   outputs:
     [

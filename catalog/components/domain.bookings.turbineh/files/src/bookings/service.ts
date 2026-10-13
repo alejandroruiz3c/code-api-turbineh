@@ -222,7 +222,7 @@ export async function checkSlot(
 
 async function notify(
   appointmentId: string,
-  kind: "confirmation" | "change" | "cancellation",
+  kind: "confirmation" | "change" | "cancellation" | "lookup",
   to: string,
   subject: string,
   text: string,
@@ -437,9 +437,23 @@ export async function moveAppointment(
 }
 
 /** Upcoming appointments of an email address; references are not revealed (they are in the confirmation email). */
-export async function upcomingByEmail(email: string, now = new Date()) {
+/** Same reply whether or not the email has bookings: the chat never reveals someone else's appointments. */
+export const LOOKUP_REPLY =
+  "If there are upcoming appointments booked with that email address, we have just emailed the list (with booking references) to it.";
+/** One lookup email per address per window, so the assistant cannot be used to flood someone's inbox. */
+export const LOOKUP_COOLDOWN_MS = 10 * 60_000;
+
+/**
+ * "Find my bookings by email" for anonymous chat users: the upcoming appointments (with references) are emailed to
+ * that address — only its owner reads them. Returns whether an email went out (for logs/tests, never shown to the
+ * person).
+ */
+export async function emailUpcomingAppointments(email: string, now = new Date()): Promise<boolean> {
+  const to = normEmail(email);
   const rows = await db
     .select({
+      id: bookingAppointments.id,
+      reference: bookingAppointments.reference,
       start: bookingAppointments.startsAt,
       service: bookingAppointments.service,
       resource: bookingResources.name,
@@ -448,14 +462,44 @@ export async function upcomingByEmail(email: string, now = new Date()) {
     .innerJoin(bookingResources, eq(bookingResources.id, bookingAppointments.resourceId))
     .where(
       and(
-        eq(bookingAppointments.customerEmail, normEmail(email)),
+        eq(bookingAppointments.customerEmail, to),
         eq(bookingAppointments.status, "confirmed"),
         gte(bookingAppointments.startsAt, now),
       ),
     )
     .orderBy(asc(bookingAppointments.startsAt))
     .limit(10);
-  return rows.map((r) => ({ when: when(r.start), service: r.service, resource: r.resource }));
+  const first = rows[0];
+  if (!first) return false;
+  const [recent] = await db
+    .select({ id: bookingNotifications.id })
+    .from(bookingNotifications)
+    .where(
+      and(
+        eq(bookingNotifications.recipient, to),
+        eq(bookingNotifications.kind, "lookup"),
+        gt(bookingNotifications.createdAt, new Date(now.getTime() - LOOKUP_COOLDOWN_MS)),
+      ),
+    )
+    .limit(1);
+  if (recent) return false;
+  await notify(
+    first.id,
+    "lookup",
+    to,
+    `Your upcoming appointments at ${cfg.business}`,
+    [
+      `Your upcoming appointments at ${cfg.business}:`,
+      "",
+      ...rows.map(
+        (r) => `- ${r.service} with ${r.resource} on ${when(r.start)} · reference ${r.reference}`,
+      ),
+      "",
+      `To move or cancel one, give the assistant its reference and this email address (up to ${cfg.policy.cancelNoticeHours} hours before).`,
+      "If you did not ask for this, you can ignore this email.",
+    ].join("\n"),
+  );
+  return true;
 }
 
 export async function faqEntries() {

@@ -38,7 +38,7 @@ interfaces:
   - { name: createAppointment, signature: "createAppointment({ day, time, resource?, service?, name, email, via }) → { reference, when, resource, service, price, emailTransport }", where: src/bookings/service.ts }
   - { name: moveAppointment, signature: "moveAppointment(reference, email, { day, time, resource? }, { byStaff? })", where: src/bookings/service.ts }
   - { name: cancelAppointment, signature: "cancelAppointment(reference, email, { byStaff? })", where: src/bookings/service.ts }
-  - { name: upcomingByEmail, signature: "upcomingByEmail(email) → [{ when, service, resource }] (no references)", where: src/bookings/service.ts }
+  - { name: emailUpcomingAppointments, signature: "emailUpcomingAppointments(email) → boolean — emails the upcoming list with references to that address (10-min cooldown); the chat always gets the same reply", where: src/bookings/service.ts }
   - { name: toolkit, signature: "business_info, check_availability, book_appointment*, find_appointments, reschedule_appointment*, cancel_appointment* (* = confirmation)", where: src/bookings/toolkit.ts }
   - { name: "Pure rules", signature: "dayStarts, freeSlots, assertBookableDay, canChange, cellsOf; zonedToUtc, localDay, localTime", where: src/bookings/availability.ts }
   - { name: "Staff pages", signature: "/dashboard/appointments (list, book, cancel), /dashboard/appointments/settings (team, answers)", where: src/app/dashboard/appointments/page.tsx }
