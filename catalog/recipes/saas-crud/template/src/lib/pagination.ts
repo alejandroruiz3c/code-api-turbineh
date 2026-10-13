@@ -1,5 +1,7 @@
-/** Offset pagination for server-rendered lists (component data.pagination.turbineh). */
-export const PAGE_SIZE = 20;
+import { SPEC_CONSTRAINTS } from "@/lib/spec-constraints";
+
+/** Offset pagination for server-rendered lists (component data.pagination.turbineh); page size from the request. */
+export const PAGE_SIZE: number = SPEC_CONSTRAINTS.pageSize;
 
 export function parsePage(value: string | string[] | undefined): {
   page: number;

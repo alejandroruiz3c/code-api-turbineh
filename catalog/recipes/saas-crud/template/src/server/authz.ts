@@ -3,15 +3,19 @@ import { redirect } from "next/navigation";
 import type { z } from "zod";
 import { auth } from "@/lib/auth";
 import { isStaff, isStaffEmail } from "@/lib/staff";
-import { can as policyCan, toRole, type Action, type Role } from "@/server/role-policy";
+import { allows, type Permission } from "@/server/permissions";
+import { toRole, type Action, type Role } from "@/server/role-policy";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 
-export type { Action, Role };
+export type { Action, Permission, Role };
 
-/** Role policy (Security Pack), defined in src/server/role-policy.ts (roles from the request when they were given). */
-export function can(role: Role, action: Action): boolean {
-  return policyCan(role, action);
+/**
+ * Role policy (Security Pack): the role matrix in src/server/permissions.ts (roles and rules from the request when it
+ * stated them; per-resource rules such as "only managers create projects" when `resource` is given).
+ */
+export function can(role: Role, action: Permission, resource?: string): boolean {
+  return allows(role, action, resource);
 }
 
 /**

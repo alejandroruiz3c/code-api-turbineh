@@ -84,9 +84,8 @@ security:
   - Allows remote images only over https when opted in
   - Neutralises formula injection and quotes special characters
 guarantees:
-  - claim: Members can read and create but not update or delete
-    test: recipe template saas-crud/tests/unit/authz.test.ts › lets members read and create but not update or
-      delete
+  - claim: Each role can do exactly what the role matrix lists (template default - members read and create, not update or delete)
+    test: "recipe template saas-crud/tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
   - claim: Staff access is granted only to verified allowlisted addresses
     test: recipe template saas-crud/tests/unit/staff.test.ts › grants staff access only to a verified allowlisted
       address

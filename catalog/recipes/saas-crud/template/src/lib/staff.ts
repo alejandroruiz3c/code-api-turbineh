@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { SIGN_UP_POLICY } from "@/lib/sign-up-policy";
+import { emailDomainAllowed, SIGN_UP_EMAIL_DOMAINS } from "@/server/permissions";
 
 /** Staff allowlist (ADMIN_EMAILS, comma-separated). Empty = nobody: deny by default. */
 export function staffEmails(raw: string = env.ADMIN_EMAILS): string[] {
@@ -24,11 +25,16 @@ export function isStaff(
   return user.emailVerified === true && isStaffEmail(user.email, raw);
 }
 
-/** Whether `email` may create an account under this app's sign-up policy (src/lib/sign-up-policy.ts). */
+/**
+ * Whether `email` may create an account under this app's sign-up policy (src/lib/sign-up-policy.ts) and the email
+ * domains the request allows (SIGN_UP_EMAIL_DOMAINS in src/server/permissions.ts). Staff (ADMIN_EMAILS) always may.
+ */
 export function maySignUp(
   email: string,
   policy: "open" | "staff" = SIGN_UP_POLICY,
   raw: string = env.ADMIN_EMAILS,
+  domains: readonly string[] = SIGN_UP_EMAIL_DOMAINS,
 ): boolean {
-  return policy === "open" || isStaffEmail(email, raw);
+  if (isStaffEmail(email, raw)) return true;
+  return policy === "open" && emailDomainAllowed(email, domains);
 }

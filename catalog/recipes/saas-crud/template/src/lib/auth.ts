@@ -5,7 +5,9 @@ import { organization } from "better-auth/plugins";
 import { pool } from "@/db/client";
 import { env } from "@/env";
 import { sendEmail } from "@/lib/email";
+import { SIGN_UP_POLICY } from "@/lib/sign-up-policy";
 import { maySignUp } from "@/lib/staff";
+import { SIGN_UP_EMAIL_DOMAINS } from "@/server/permissions";
 
 /** Authentication and organizations: catalog component auth.session.better-auth (+ organization plugin). */
 export const auth = betterAuth({
@@ -36,7 +38,10 @@ export const auth = betterAuth({
         before: async (user) => {
           if (!maySignUp(user.email)) {
             throw new APIError("FORBIDDEN", {
-              message: "Sign-up is reserved for staff. Ask the owner to add your email.",
+              message:
+                SIGN_UP_POLICY === "open" && SIGN_UP_EMAIL_DOMAINS.length > 0
+                  ? `Sign-up is limited to ${SIGN_UP_EMAIL_DOMAINS.map((d) => `@${d}`).join(", ")} emails.`
+                  : "Sign-up is reserved for staff. Ask the owner to add your email.",
             });
           }
           return { data: user };
