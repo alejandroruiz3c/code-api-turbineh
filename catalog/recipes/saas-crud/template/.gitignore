@@ -12,3 +12,5 @@ playwright/.auth/
 .turbineh-previews/
 # Data of the zero-setup local database (pnpm db:local)
 .turbineh/local-db/
+# Private uploads stored on local disk (storage.private-uploads.turbineh, outside public/)
+.data/

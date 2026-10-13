@@ -1,0 +1,104 @@
+schema: turbineh.guide/v0.1
+component: storage.private-uploads.turbineh
+title: Private file uploads with limits from the request, S3 or local disk, and per-record downloads
+summary: >-
+  Lets members upload files to a record (a client's document request, a task, a project) or to the workspace, with the
+  size limit, accepted types and files per record of the request. Types are recognised by content, so an HTML page
+  renamed to .pdf is refused. Bytes are stored outside the public directory: on local disk in development and tests, or
+  in any S3-compatible bucket in production (AWS S3, Cloudflare R2, MinIO…) through SigV4-signed requests, with an
+  offline mock for E2E. The only way to read a file is an authorised download route that checks the workspace and the
+  record's scope, so a client downloads only their company's files and staff see all. It can email staff when a client
+  uploads. It does not resize images, scan for viruses or issue public links.
+keywords:
+  [upload, file upload, attachments, documents, private files, s3, r2, minio, object storage, signed requests, sigv4,
+   download, file size limit, file types, pdf, jpg, png, client documents, per-record access, secure download]
+synonyms:
+  upload: [attach, attachment, send a document, file]
+  private: [secure, not public, access-controlled, signed]
+  s3: [object storage, bucket, r2, minio, spaces]
+use_cases:
+  - "Clients upload PDF/JPG/PNG documents up to 10 MB, downloadable only by that client and the firm's staff"
+  - "Tasks with file attachments seen only by the members of the task's project"
+  - "Loose private files of a team workspace, stored in an S3 bucket in production"
+use_when:
+  - "The request says files are private, per client, per project, or only for staff"
+  - "The request limits file size or types (\"PDF/JPG/PNG up to 10 MB\")"
+  - "The app will run on serverless hosting and needs object storage"
+avoid_when:
+  - "Public images of a site or shop (use public assets or the shop's image URLs)"
+  - "Very large media (video) that should go straight to the bucket from the browser"
+tradeoffs:
+  - { choice: "Files pass through the app (no pre-signed URLs)", gain: "One authorisation path for every read; the bucket stays private and keys never reach the browser", cost: "Upload size is bounded by the server-action body limit and the host's request limit" }
+  - { choice: "SigV4 by hand instead of an AWS SDK", gain: "No dependency, works with every S3-compatible store, verified offline", cost: "Single-request PUT only (no multipart upload above the size limit)" }
+  - { choice: "Type by content (magic bytes)", gain: "Renamed or disguised files are refused", cost: "Only the listed formats; others need a signature in sniff.ts" }
+config:
+  - { name: "src/uploads/params.json", default: "10 MB, PDF/PNG/JPG, 20 files per record, no staff email", description: "Limits and types from the request (validated at start-up); maxBytes also sets the server-action body limit (src/server/body-limit.ts)" }
+  - { name: "UPLOADS_DIR", default: ".data/uploads", description: "Local-disk driver directory; refused when inside public/" }
+  - { name: "S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY", description: "Selects the S3 driver (private bucket); credentials only from the environment" }
+  - { name: "S3_BASE_URL, S3_REGION", default: "AWS endpoint of S3_REGION (us-east-1)", description: "Endpoint of an S3-compatible store (path-style requests)" }
+  - { name: "STORAGE_DRIVER", default: "s3 when S3_BUCKET is set, else local", description: "Forces local or s3" }
+interfaces:
+  - { name: saveUpload, signature: "saveUpload(actor, file: File, { subjectType, subjectId?, scopeId? }) → Promise<id> — throws UserFacingError when refused", where: src/uploads/service.ts }
+  - { name: readUpload, signature: "readUpload(actor, id) → { row, bytes } — only when the actor may see the file's scope", where: src/uploads/service.ts }
+  - { name: listUploads, signature: "listUploads(actor, { subjectType?, subjectId? }, limit = 200) → Upload[]", where: src/uploads/service.ts }
+  - { name: deleteUpload, signature: "deleteUpload(actor, id) → uploader or a role that may delete", where: src/uploads/service.ts }
+  - { name: Attachments, signature: "<Attachments ctx subjectType subjectId? back /> — list, download links and upload form for one record", where: src/components/uploads/attachments.tsx }
+  - { name: resolveSubject, signature: "resolveSubject(actor, subjectType, subjectId, requestedScope) → { scopeId } — the record's scope, read on the server", where: src/uploads/subjects.ts }
+  - { name: "Storage", signature: "storage() → { put(key, bytes, type), get(key), delete(key) }; localDriver(dir); s3Driver({ baseUrl, bucket, region, accessKeyId, secretAccessKey })", where: src/uploads/storage.ts }
+  - { name: "Download route", signature: "GET /dashboard/files/<id>/download → attachment, nosniff, no-store; 404 when not allowed", where: "src/app/dashboard/files/[id]/download/route.ts" }
+extension_points:
+  - what: "Attach files to another kind of record (task, project, order…)"
+    where: "src/uploads/subjects.ts, the record's page"
+    how: "Add a case to resolveSubject that loads the record with the caller's access check and returns its scopeId; render `<Attachments ctx={ctx} subjectType=\"task\" subjectId={task.id} back={path} />` on its page."
+  - what: "Accept another file type or change the limits"
+    where: "src/uploads/params.json, src/uploads/sniff.ts"
+    how: "Edit maxBytes/types in params (the body limit follows); a new format needs its magic bytes in detect() and a unit test."
+  - what: "Store files elsewhere (another S3-compatible store)"
+    where: "S3_BASE_URL, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY"
+    how: "Set them in the hosting environment; the bucket stays private (no public ACL). The E2E suite proves the driver against tests/e2e/mocks/S3_BASE_URL.mjs."
+  - what: "Tell someone else when a file is uploaded"
+    where: "src/uploads/service.ts (notifyStaff)"
+    how: "notifyOnUpload in params emails members who see every scope; change the recipients there (emails are logged without a provider)."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 (server actions), drizzle-orm with PostgreSQL, zod 4"
+  recipes: [client-portal, projects, internal-tool, saas-crud]
+  requires: []
+  works_with: [domain.membership-access.turbineh, domain.workflow.turbineh, domain.audit-log.turbineh]
+  notes: "Per-record scopes come from src/server/record-access.ts (domain.membership-access.turbineh); without it every member of the workspace sees its files."
+security:
+  - "Types are recognised by content (magic bytes); HTML, SVG and scripts are never accepted, whatever their name"
+  - "Size is checked before the file is read and again after; the server-action body limit follows the param"
+  - "Storage keys are generated by the app (workspace id + UUID); path traversal is refused by the local driver"
+  - "Files are never under public/ and the bucket is private: every read goes through the download route, which re-checks workspace and record scope"
+  - "Downloads are attachments with X-Content-Type-Options: nosniff and Cache-Control: private, no-store"
+  - "S3 credentials come only from the environment; requests are SigV4-signed"
+guarantees:
+  - { claim: "Uploads and downloads round-trip byte for byte", test: "tests/e2e/uploads.spec.ts › a member uploads an allowed file and downloads exactly the same bytes" }
+  - { claim: "Files over the size limit or of another type are refused", test: "tests/e2e/uploads.spec.ts › a file larger than the size limit, or whose content is not an allowed type, is refused" }
+  - { claim: "Files are stored privately (private bucket, never under public/)", test: "tests/e2e/uploads.spec.ts › files are stored privately: never under public/, never readable without the app" }
+  - { claim: "Anonymous visitors and other workspaces cannot download a file", test: "tests/e2e/uploads.spec.ts › only people who may see a file can download it: not anonymous visitors, not other workspaces" }
+  - { claim: "Types are recognised by content, whatever the file name", test: "tests/unit/uploads.test.ts › accepts only the configured types, recognised by content whatever the file name" }
+  - { claim: "Local storage stays outside public/ and refuses escaping keys", test: "tests/unit/uploads.test.ts › stores files on local disk outside public/ and refuses keys that try to escape it" }
+  - { claim: "S3 requests are signed with SigV4", test: "tests/unit/uploads.test.ts › signs S3 requests with SigV4 (canonical request, scope, signed headers)" }
+  - { claim: "A member restricted to a scope (a client) downloads only that scope's files", test: "tests/e2e/uploads-scopes.spec.ts › a client downloads only their own company's files, never another company's" }
+  - { claim: "Staff see every scope's files and are emailed when a client uploads", test: "tests/e2e/uploads-scopes.spec.ts › staff see every client's files and are emailed when a client uploads" }
+limits:
+  - "One request per file (no multipart upload); size bounded by the server-action body limit and the host"
+  - "No image processing or virus scanning"
+  - "Local-disk storage is for one server; serverless hosts need the S3 driver"
+example: |
+  import { Attachments } from "@/components/uploads/attachments";
+  const ctx = await requireMember();
+  // On a record page (the record's scope is read on the server by src/uploads/subjects.ts):
+  <Attachments ctx={ctx} subjectType="workflow:request" subjectId={item.id} back={`/dashboard/workflow/request/${item.id}`} />
+params:
+  file: src/uploads/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "maxBytes", default: "10485760 (10 MB)", description: "Largest accepted file in bytes" }
+    - { name: "types", default: "[\"pdf\", \"png\", \"jpg\"]", description: "Accepted types (pdf, png, jpg, webp, gif, txt, csv, docx, xlsx), recognised by content" }
+    - { name: "maxFilesPerRecord", default: "20", description: "Files one record may hold" }
+    - { name: "notifyOnUpload", default: "false", description: "Email staff (roles that see every scope) when a client uploads; logged without an email provider" }
+  example: |
+    { "maxBytes": 10485760, "types": ["pdf", "jpg", "png"], "maxFilesPerRecord": 20, "notifyOnUpload": true }

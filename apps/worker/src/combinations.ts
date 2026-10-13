@@ -140,6 +140,86 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
       },
     },
   },
+  {
+    // Ledgerline (learning round, client-portal): staff/client roles, a client sees only their company, private
+    // uploads (PDF/JPG/PNG up to 10 MB) downloadable by that client and staff, document requests pending → received →
+    // approved with due dates, staff emailed when a client uploads.
+    recipe: "client-portal",
+    with: [
+      "domain.membership-access.turbineh",
+      "storage.private-uploads.turbineh",
+      "domain.workflow.turbineh",
+    ],
+    prompt:
+      'Build a client portal for "Ledgerline", a small accounting firm. Visual identity: deep green `#0B3D2E`, cream ' +
+      "background `#F7F3EA`, gold highlights `#C9A227`. Staff create client accounts and invite each client by email; a " +
+      "client only ever sees their own company. Clients upload documents (PDF/JPG/PNG up to 10 MB, stored privately, " +
+      "downloadable only by that client and staff), see a list of document requests with due dates and statuses " +
+      "(pending, received, approved), and exchange messages with the firm per request. Staff see all clients, change " +
+      "statuses and get an email when a client uploads (log it when no email provider is configured).",
+    params: {
+      "domain.membership-access.turbineh": {
+        roles: [
+          {
+            key: "owner",
+            label: "Owner",
+            can: [
+              "read",
+              "create",
+              "update",
+              "delete",
+              "manage_members",
+              "view_audit",
+              "see_all_scopes",
+            ],
+          },
+          {
+            key: "staff",
+            label: "Staff",
+            can: ["read", "create", "update", "delete", "manage_members", "see_all_scopes"],
+          },
+          { key: "client", label: "Client", can: ["read", "create"] },
+        ],
+        defaultRole: "client",
+        inviteRoles: ["staff", "client"],
+        invitationDays: 7,
+        scope: { kind: "company", label: "Company", plural: "Companies" },
+      },
+      "storage.private-uploads.turbineh": {
+        maxBytes: 10 * 1024 * 1024,
+        types: ["pdf", "jpg", "png"],
+        maxFilesPerRecord: 20,
+        notifyOnUpload: true,
+      },
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "request",
+            label: "Document request",
+            plural: "Document requests",
+            initial: "pending",
+            dueDate: true,
+            createRoles: ["owner", "staff"],
+            states: [
+              { key: "pending", label: "Pending", limitHours: null, final: false },
+              { key: "received", label: "Received", limitHours: 72, final: false },
+              { key: "approved", label: "Approved", limitHours: null, final: true },
+            ],
+            transitions: [
+              {
+                from: ["pending"],
+                to: "received",
+                label: "Mark received",
+                roles: ["owner", "staff"],
+              },
+              { from: ["received"], to: "approved", label: "Approve", roles: ["owner", "staff"] },
+              { from: ["received"], to: "pending", label: "Ask again", roles: ["owner", "staff"] },
+            ],
+          },
+        ],
+      },
+    },
+  },
 ];
 
 /** Every recipe alone, every recipe a domain component's probe selects it for, and COMPONENT_COMBINATIONS. */

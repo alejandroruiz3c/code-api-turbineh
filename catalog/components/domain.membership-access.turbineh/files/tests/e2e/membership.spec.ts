@@ -38,7 +38,7 @@ async function invitationLink(page: Page, email: string): Promise<string> {
 
 async function inviteFromMembersPage(page: Page, email: string, scope?: string) {
   await page.goto("/dashboard/members");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Role", { exact: true }).selectOption(invitee.key);
   if (scope && params.scope)
     await page.getByLabel(params.scope.label, { exact: true }).selectOption({ label: scope });

@@ -1,0 +1,6 @@
+{
+  "maxBytes": 10485760,
+  "types": ["pdf", "png", "jpg"],
+  "maxFilesPerRecord": 20,
+  "notifyOnUpload": false
+}
