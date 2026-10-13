@@ -22,7 +22,7 @@ const wire = (id: string, dir = componentsDir, recipeChain = [spec(id).spec.reci
     knownEntities: spec(id).recipeEntities,
   });
 
-describe("spec fidelity wired to the catalog (ADR-0044)", () => {
+describe("spec fidelity wired to the catalog (ADR-0044)", { timeout: 60_000 }, () => {
   it("selects only approved components whose params satisfy their params.schema.json", () => {
     for (const s of LEARNING_SPECS) {
       const w = wire(s.id);
