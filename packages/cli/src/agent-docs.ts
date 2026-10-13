@@ -24,6 +24,7 @@ dashboards, client portals, CRUD SaaS, landing pages). Before writing one of the
 - In the result, \`criteria.items\` not \`met\` and \`left[]\` are the only work left (each with \`where\`);
   \`settings.missing\` go in \`.env.local\`. \`gate.ok\` = lint, types, unit, build, E2E already passed: don't re-run all.
 - Later: \`turbineh left --json\` (what is left), \`turbineh verify --json\` (checks with file:line and fix).
+  Before handing over: \`turbineh verify --full --json\` (the gate's security and policy checks, here).
 - Exit: 0 green · 3 ask the user, then \`--approve\` · 4 timeout → \`turbineh resume <id> --json\` · 5 failed · 6 gate
   not green · 7 local conflict (message names the files).
 ${END}
@@ -49,7 +50,8 @@ allowed-tools: Bash(turbineh *)
    \`where\` (files) — start there. \`settings.missing\` → \`.env.local\` (\`.env.example\` documents them).
    \`gate.ok: true\` means lint, typecheck, unit, build and E2E already passed: re-run only what your change touches.
 4. After your changes: \`turbineh verify --json\` (failures with file:line and the fix); \`turbineh left --json\` re-reads
-   what is left.
+   what is left. Before handing over: \`turbineh verify --full --json\` — the TurbineH gate's security and policy
+   checks (secrets, Semgrep rules, OSV, licences; same pinned versions) with file:line and the fix; exit 1 = fix first.
 
 Exit codes: 0 green · 2 usage · 3 a decision for the user (re-run with \`--approve\` once they agree) · 4 still
 running → \`turbineh resume <id> --json\` (also after an interrupted call) · 5 generation failed (rephrase the spec) ·

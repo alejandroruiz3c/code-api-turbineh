@@ -1,10 +1,6 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { specFidelitySync } from "@turbineh/compiler";
 import { LEARNING_SPECS } from "@turbineh/compiler/learning-specs";
 import { describe, expect, it } from "vitest";
-import { acceptanceStatus, shippedRules } from "./acceptance.js";
 import { generateByKind } from "./kinds.js";
 
 const fixture = (id: string) => {
@@ -13,7 +9,7 @@ const fixture = (id: string) => {
   return { s, ...specFidelitySync(s.prompt, s.spec, { knownEntities: s.recipeEntities }) };
 };
 
-describe("generation by entity kind (ADR-0043)", () => {
+describe("generation by entity kind (ADR-0044)", () => {
   it("Kilnwise without a workflow component: piece CRUD with a stage timeline, limits as a settings page", () => {
     const { spec, fidelity } = fixture("tracker");
     const plan = generateByKind({
@@ -84,37 +80,5 @@ describe("generation by entity kind (ADR-0043)", () => {
         ?.content ?? "";
     expect(edit).toContain("<MessageSection parentId={row.id} />");
     expect(edit).toContain("canSeeScope(ctx, row.companyId");
-  });
-});
-
-describe("criteria are proved only by tests shipped in the package", () => {
-  it("drops rules whose test file or title is absent, and vetoes tests that do not act as the criterion's role", () => {
-    const dir = mkdtempSync(join(tmpdir(), "shipped-"));
-    mkdirSync(join(dir, "tests/unit"), { recursive: true });
-    writeFileSync(
-      join(dir, "tests/unit/bookings.test.ts"),
-      'it("allows changes only with enough notice (24 h)", () => {\n  expect(ok).toBe(true);\n});\n',
-    );
-    const rules = shippedRules(dir, [
-      // files-ai test of domain.bookings in an app without the assistant: not shipped.
-      {
-        test: "tests/e2e/booking-assistant.spec.ts › refuses to cancel inside the notice period",
-        covers: ["cancel"],
-      },
-      { test: "tests/unit/bookings.test.ts › a title that is not in the file", covers: ["notice"] },
-      {
-        test: "tests/unit/bookings.test.ts › allows changes only with enough notice (24 h)",
-        covers: ["notice|before"],
-      },
-    ]);
-    expect(rules.map((r) => r.test)).toEqual([
-      "tests/unit/bookings.test.ts › allows changes only with enough notice (24 h)",
-    ]);
-    const [ok, vetoed] = acceptanceStatus(
-      ["Changes need 24 hours notice.", "A manager changes a booking with notice."],
-      rules,
-    );
-    expect(ok?.status).toBe("covered");
-    expect(vetoed?.status).toBe("open");
   });
 });

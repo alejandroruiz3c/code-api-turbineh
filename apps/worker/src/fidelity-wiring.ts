@@ -1,5 +1,5 @@
 /**
- * Spec fidelity in the build (ADR-0043): models the request (entity kinds, roles and rules, constraints, domain
+ * Spec fidelity in the build (ADR-0044): models the request (entity kinds, roles and rules, constraints, domain
  * patterns), selects by code the catalog component of each pattern with params validated against its
  * params.schema.json, and returns what the assembler needs. Shared by the pipeline and `verify:spec`.
  */

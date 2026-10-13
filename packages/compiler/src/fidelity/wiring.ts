@@ -7,7 +7,7 @@ import { ACTIONS, type Action, type OrgRole, type PermissionMatrix } from "./per
 import { nameWords, plural, singular } from "./text.js";
 
 /**
- * Wiring of the spec-fidelity output into a build (ADR-0043), by code: which stored role keys the app uses, the role
+ * Wiring of the spec-fidelity output into a build (ADR-0044), by code: which stored role keys the app uses, the role
  * matrix the app's `can()` reads, the parameters of each domain component (shaped to its params.schema.json and
  * validated against it) and where an agent implements a pattern no catalog component provides yet.
  */

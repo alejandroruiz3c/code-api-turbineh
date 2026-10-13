@@ -105,6 +105,7 @@ describe("turbineh mcp", () => {
       ["apply", "build", "left", "plan", "resume", "search", "status", "verify"].sort(),
     );
     expect(tools.find((t) => t.name === "build")?.inputSchema.properties).toHaveProperty("spec");
+    expect(tools.find((t) => t.name === "verify")?.inputSchema.properties).toHaveProperty("full");
   });
 
   it("returns exactly the CLI --json result (search over the API, left on a delivered package)", async () => {

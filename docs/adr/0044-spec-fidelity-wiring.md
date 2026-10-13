@@ -1,4 +1,4 @@
-# ADR-0043 · Spec fidelity wired into builds: generation by kind, role matrix, constraints, pattern components
+# ADR-0044 · Spec fidelity wired into builds: generation by kind, role matrix, constraints, pattern components
 
 - Status: accepted
 - Date: 2026-10-13
@@ -40,12 +40,12 @@
    currency, uploads, notice, opening hours, statuses, sort, schedules, email domains, numbers and page size, with the
    defaults used listed; pagination reads its page size, timelines format in its time zone, status lists become enum
    options, sort orders the list default. Unit test per app.
-6. **Criteria.** Rules count only when their test file **and title** exist in the assembled package (fixes
-   `domain.bookings` rules pointing at `files-ai` tests in non-AI apps; base rules whose test a component replaced).
-   Hand-written rules get the shipped test's title and assertions as proof: refusal/actor veto (`proofVeto`), or the
-   full `proofVerdict` when the test skips itself on a condition or a missing pattern touches the criterion. Generated
-   tests keep the full check. E2E tests act as the workspace owner, whose label is the request's top role. Unsure =
-   open; `proofVerdict` and the report's mapping are unchanged.
+6. **Criteria.** On top of ADR-0043 (G3: every rule carries the shipped test's title and assertions, rules whose test
+   file or title is not in the package are dropped — which also fixes `domain.bookings` rules pointing at `files-ai`
+   tests in non-AI apps — and `proofVerdict` decides): the generated permission tests, the sign-up-domain E2E and the
+   new generated E2E (filtered export, tag filter, sort, child sections, history) are coverage rules with their proof;
+   E2E tests act as the workspace owner, whose label is the request's top role (Staff, Manager…), so the actor check
+   sees that role. Unsure = open.
 7. **`verify:spec <fixture>`** (apps/worker): compiles a learning spec offline (fixtures + deterministic paths, no
    model), assembles before (no fidelity) and after, runs the gate (`--quick` or full) and prints entities/pages,
    roles, patterns and criteria met/open. `--without <component>` exercises the generic fallbacks.
@@ -53,8 +53,7 @@
 ## Consequences
 
 - Fieldnote, Kilnwise and Pixelyard assemble with only their business pages and pass the full gate (results in the
-  PR). Precision went up and some true matches became open (e.g. an assistant test that never names the "patient");
-  better test titles in components recover them.
+  PR).
 - Not done: approval gating of a status field without the workflow component; mounting child sections on recipe
   pages; decider measurement on an ambiguous set; per-stage limits from a settings entity into workflow `limitHours`.
-- Numbering: parallel branches also add ADRs; renumber at merge if 0043 is taken.
+- Numbering: parallel branches also add ADRs; renumber at merge if 0044 is taken.

@@ -27,8 +27,10 @@ import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
 import {
   acceptanceStatus,
+  attachProofs,
   readCoverage,
-  shippedRules,
+  sourceIn,
+  testBlocks,
   writeAcceptance,
   type CoverageRule,
 } from "./acceptance.js";
@@ -36,7 +38,6 @@ import {
   fidelityCoverage,
   fidelityFiles,
   storedMatrix,
-  strictCriteria,
   type FidelityAssembly,
 } from "./fidelity.js";
 import { generateByKind, type KindPlan } from "./kinds.js";
@@ -74,7 +75,7 @@ export interface AssembleInput {
     assumptions?: string[];
   }[];
   /**
-   * Spec fidelity (ADR-0042, wired by ADR-0043): entity kinds, the role matrix, constraints and every detected domain
+   * Spec fidelity (ADR-0042, wired by ADR-0044): entity kinds, the role matrix, constraints and every detected domain
    * pattern (selected or missing). Absent = the generic CRUD generation of before.
    */
   fidelity?: FidelityAssembly;
@@ -291,24 +292,22 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[f.path] ??= "generated";
   }
   recordOwners(outDir, owners);
-  // Criterion → test: only tests shipped in this package (ADR-0043), each checked against its title and assertions.
+  // Criterion → test: only tests shipped in this package, each checked against its title and assertions (ADR-0043, ADR-0044).
   writeAcceptance(
     outDir,
     acceptanceStatus(
       spec.acceptance_criteria,
       actingAs(
-        shippedRules(outDir, [
-          ...coverageRules(input),
+        [
+          ...coverageRules(input, outDir),
           ...entityCoverage(
             outDir,
             entities.map((e) => e.name),
           ),
           ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
-        ]),
+        ],
         matrix?.roles.owner?.label ?? null,
       ),
-      null,
-      strictCriteria(fid),
     ),
   );
   if (fid && matrix && kinds) writeFidelityReport(outDir, fid, matrix, kinds);
@@ -466,19 +465,6 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
   ];
 }
 
-/** Test titles with their key steps and assertions (form fields filled, expect lines), in file order. */
-export function testBlocks(src: string): { title: string; assertions: string[] }[] {
-  const starts = [...src.matchAll(/test\(\s*"([^"]{5,200})"/g)];
-  return starts.map((m, i) => {
-    const body = src.slice(m.index, starts[i + 1]?.index ?? src.length);
-    const assertions = body
-      .split("\n")
-      .filter((l) => /expect\(|getByLabel\(/.test(l))
-      .map((l) => l.trim().slice(0, 200));
-    return { title: m[1] as string, assertions };
-  });
-}
-
 /**
  * Coverage rules for the generated entities (ADR-0035): each generated spec proves create / edit / CSV export / CSV
  * import of its entity, so a criterion that names the entity and the action is proven by that test.
@@ -517,19 +503,36 @@ export function entityCoverage(outDir: string, entityNamesList: string[]): Cover
   });
 }
 
-/** Coverage rules of the recipe chain and of every native component in the app (acceptance.yaml files). */
+/**
+ * Coverage rules of the recipe chain and of every native component in the app (acceptance.yaml files), each with the
+ * proof of the test it names (title and key assertions as shipped). With `outDir` (assembly) the tests are read from
+ * the assembled package, so a rule whose test is not in the package is dropped; without it (planning, before
+ * assembly) from the catalog sources the package will be made of.
+ */
 export function coverageRules(
   input: Pick<AssembleInput, "recipesDir" | "recipe" | "selected">,
+  outDir?: string,
 ): CoverageRule[] {
   const componentsDir = join(input.recipesDir, "..", "components");
-  return [
-    ...recipeChain(input.recipesDir, input.recipe).flatMap((m) =>
+  const chain = recipeChain(input.recipesDir, input.recipe);
+  const components = [...new Set(input.selected.map((s) => s.component.id))];
+  const rules = [
+    ...chain.flatMap((m) =>
       readCoverage(join(input.recipesDir, m.id, "acceptance.yaml"), `recipe ${m.id}`),
     ),
-    ...[...new Set(input.selected.map((s) => s.component.id))].flatMap((id) =>
-      readCoverage(join(componentsDir, id, "acceptance.yaml"), id),
-    ),
+    ...components.flatMap((id) => readCoverage(join(componentsDir, id, "acceptance.yaml"), id)),
   ];
+  const source = outDir
+    ? sourceIn(outDir)
+    : sourceIn(
+        // Overlays win: the most specific recipe first, then the components' files.
+        ...[...chain].reverse().map((m) => join(input.recipesDir, m.id, "template")),
+        ...components.flatMap((id) => [
+          join(componentsDir, id, "files"),
+          join(componentsDir, id, "files-ai"),
+        ]),
+      );
+  return attachProofs(rules, source);
 }
 
 /** src/lib/ai/toolkits.ts: every installed domain toolkit (src/<domain>/toolkit.ts exporting `toolkit`). */

@@ -130,12 +130,18 @@ export const TOOLS: Tool[] = [
   {
     name: "verify",
     description:
-      "Fast local checks (typecheck, lint, unit tests) with file:line and the fix; for an integration, also dependencies and settings.",
-    inputSchema: obj({ integration: { type: "string" } }),
+      "Fast local checks (typecheck, lint, unit tests) with file:line and the fix; for an integration, also dependencies and settings. full: true runs the TurbineH gate's security and policy checks here too (gitleaks, Semgrep rules, OSV, licences; same pinned versions) — call it before handing over.",
+    inputSchema: obj({
+      integration: { type: "string" },
+      full: {
+        type: "boolean",
+        description: "The gate's security and policy checks (before handing over).",
+      },
+    }),
     map: (a) => ({
       cmd: "verify",
       args: str(a.integration) ? [str(a.integration) as string] : [],
-      flags: {},
+      flags: a.full === true ? { full: true } : {},
     }),
   },
 ];

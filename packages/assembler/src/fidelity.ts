@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   appRoleMatrix,
-  criterionTouches,
   type AppRoleMatrix,
   type Constraints,
   type Fidelity,
@@ -13,7 +12,7 @@ import type { CoverageRule } from "./acceptance.js";
 import { GENERATED, type GeneratedFile } from "./entities.js";
 
 /**
- * The request's roles, rules and constraints as app code (ADR-0043): `src/server/permissions.ts` (the role matrix every
+ * The request's roles, rules and constraints as app code (ADR-0044): `src/server/permissions.ts` (the role matrix every
  * `can()` reads, per-resource rules and the sign-up email-domain rule), `src/lib/spec-constraints.ts` (time zone,
  * currency, limits, statuses, sort, page size…) and the tests that prove them in this app. Deterministic.
  */
@@ -56,7 +55,7 @@ export function permissionsFile(f: Fidelity, m: AppRoleMatrix): string {
   return `${GENERATED}
 ${m.ownKeys ? `import { can as roleCan, type Action } from "@/server/role-policy";\n` : ""}
 /**
- * Role matrix from the request (ADR-0043): what each workspace role may do, per action and per resource, and who may
+ * Role matrix from the request (ADR-0044): what each workspace role may do, per action and per resource, and who may
  * sign up. ${m.ownKeys ? "Roles are the request's own keys (domain.membership-access stores them): read, create, update, delete, manage_members, view_audit and see_all_scopes come from src/membership/params.json through src/server/role-policy.ts; approve, export and configure from this matrix." : "Stored roles are owner, admin and member; their labels and rights are the request's roles."}
  * Everything calls \`can()\` from src/server/authz.ts, which asks \`allows()\` here.
 ${[...rules, ...assumptions].join("\n") || " *  - (the request states no rules: template policy)"}
@@ -306,7 +305,7 @@ export function specConstraintsFile(c: Constraints): string {
   const assumptions = [...c.assumptions, ...(c.pageSize ? [] : ["Page size not stated: 20."])];
   return `${GENERATED}
 /**
- * Constraints stated in the request (ADR-0043): time zone, currency, limits, notice, opening hours, statuses, sort
+ * Constraints stated in the request (ADR-0044): time zone, currency, limits, notice, opening hours, statuses, sort
  * order and page size, extracted by code. Anything the request did not say is a documented default (ASSUMPTIONS).
  * Lists, forms, validation and components read these values instead of hard-coding them.
  */
@@ -452,13 +451,4 @@ export function fidelityCoverage(outDir: string, unit: UnitTest[]): CoverageRule
       });
   }
   return rules;
-}
-
-/** Criteria a missing pattern touches: a hand-written rule alone cannot mark them met (precision first). */
-export function strictCriteria(a: FidelityAssembly | undefined): (criterion: string) => boolean {
-  if (!a) return () => false;
-  const missing = a.fidelity.patterns.filter((p) =>
-    a.patterns.some((w) => w.id === p.id && w.status === "missing"),
-  );
-  return (criterion) => missing.some((p) => criterionTouches(criterion, p));
 }

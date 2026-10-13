@@ -1,7 +1,7 @@
 import { can as roleCan, ROLE_LABEL, ROLES, type Action } from "@/server/role-policy";
 
 /**
- * Role matrix (ADR-0043): what each workspace role may do, per action and optionally per resource, plus the sign-up
+ * Role matrix (ADR-0044): what each workspace role may do, per action and optionally per resource, plus the sign-up
  * email-domain rule. Base behaviour: the role policy in src/server/role-policy.ts decides (template owner/admin/member,
  * or the request's roles when domain.membership-access replaced it); approving and changing settings need "update",
  * exporting needs "read". TurbineH replaces this file with the request's matrix (who approves, who exports, per-resource

@@ -17,7 +17,7 @@ import {
 import { camel, entityNames, label, snake, words } from "./naming.js";
 
 /**
- * Generation by entity kind (ADR-0042 §1, wired by ADR-0043): business entities get CRUD (or their status is a
+ * Generation by entity kind (ADR-0042 §1, wired by ADR-0044): business entities get CRUD (or their status is a
  * workflow of domain.workflow), configuration gets a settings page, events become an append-only timeline on their
  * parent, child lists and joins are managed on the parent's page, logs get a table and a writer but no UI, and tag
  * entities are already a `tags` field of their parent. Deterministic.
@@ -137,7 +137,7 @@ ${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
 const appendOnlySql = (
   table: string,
   about: string,
-) => `-- ${about}: the database refuses to change or delete a row, whatever the code does (ADR-0043). Applied by
+) => `-- ${about}: the database refuses to change or delete a row, whatever the code does (ADR-0044). Applied by
 -- scripts/migrate.ts after the tables exist; idempotent.
 CREATE OR REPLACE FUNCTION turbineh_append_only() RETURNS trigger AS $$
 BEGIN

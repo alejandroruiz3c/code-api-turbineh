@@ -83,5 +83,8 @@ describe("/use page", () => {
       "turbineh mcp",
     ])
       expect(seen, must).toContain(must);
+    // The local gate for agents (ADR-0040 G4c) is documented and is a real CLI flag.
+    expect(text).toContain("turbineh verify --full --json");
+    expect(help).toContain("turbineh verify --full");
   });
 });

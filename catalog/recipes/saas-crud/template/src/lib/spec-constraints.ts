@@ -1,5 +1,5 @@
 /**
- * Constraints stated in the request (ADR-0043): time zone, currency, limits, notice, opening hours, statuses, sort
+ * Constraints stated in the request (ADR-0044): time zone, currency, limits, notice, opening hours, statuses, sort
  * order and page size. Base values are the documented defaults; TurbineH replaces this file with what the request
  * says (anything it does not say keeps the default and is listed in `ASSUMPTIONS`). Lists, forms, validation and
  * components read these values instead of hard-coding them.

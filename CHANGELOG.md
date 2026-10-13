@@ -6,7 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- Spec fidelity wired into builds (ADR-0043): the pipeline models every request (decider only for unsure entity
+- Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists
   and joins as a section of the parent page, logs as a table and writer without UI, memberships and tags with no page.
@@ -17,13 +17,25 @@ action, resource?)`, `src/lib/spec-constraints.ts` (time zone, currency, limits,
   `params.schema.json` (new components are picked up automatically); missing ones are listed in AGENTS.md with where
   and how. List filters are shared with a CSV export that honours them and the `export` permission.
 - `verify:spec <fixture>`: offline build of a learning-round spec (no model), before/after summary and the gate.
-- Criterion → test mapping uses only tests shipped in the assembled package (file and title must exist; fixes
-  `domain.bookings` rules pointing at `files-ai` tests in apps without the assistant); hand-written rules are checked
-  against the shipped test's title and assertions (refusal and actor veto; full proof for conditional tests and for
-  criteria a missing pattern touches). The base `authz.test.ts` checks the role matrix generically.
+- E2E proofs act as the workspace owner under the request's label (Staff, Manager…); the base `authz.test.ts`
+  checks the role matrix generically (ADR-0044).
+- `turbineh verify --full` (ADR-0043, learning round G4c): the gate's security and policy checks locally with the
+  gate's pinned versions — gitleaks 8.30.1 (git history and the files the next commit adds, redacted), the TurbineH
+  Semgrep rules on Semgrep 1.178.0 (embedded in the CLI), OSV (package name@version only) and the licence policy — plus
+  typecheck, lint and unit tests. Docker first, pinned local binaries otherwise; a check that cannot run is reported as
+  not run and fails. Each finding has file:line, the rule, a security / policy / quality label and the fix; `--json`
+  uses the gate findings' shape (which now carry `fix` too). The default `turbineh verify` flags secret-shaped literals
+  in `src/env.ts`. AGENTS.md "Before handing over", the agent instructions, the MCP `verify` tool (`full`) and /use
+  name it.
 - Spec fidelity in the compiler (ADR-0042): entity kinds (business, relationship, event, configuration, log) by code with decider fallback only for unsure entities, roles and permission rules from the request mapped onto workspace roles, constraints (time zone, uploads, notice, hours, prices, statuses, sort, schedules, email domains) and domain-pattern detection with catalog-gated component selection. Regression tests over the 9 learning-round specs; offline summary in `bench/frontiers/fidelity-2026-10-13.md`. The generator supports `tags` fields with a tag filter and enum options from stated status lists.
 
 ### Security
+
+- Criteria honesty (ADR-0043, learning round G3): hand-written `acceptance.yaml` rules now carry the shipped test's
+  title and key assertions and match only when `proofVerdict` accepts them and the test exists in the package (re-checked
+  at verification). The bookings test "the owner books a slot and sees it in the calendar" no longer proves seven
+  unrelated criteria. 71 labelled pairs from hand-written rules: precision 1.00, recall 0.48 (109 pairs overall:
+  precision 1.00, recall 0.63).
 
 - Public and pre-membership server actions (ADR-0040): the base template ships `publicAction(name, { rateLimit,
 schema }, handler)` (per-IP rate limit + Zod before anything runs) and `requireSession()` (signed in, not a member

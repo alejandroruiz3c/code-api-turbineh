@@ -80,6 +80,8 @@ describe("agent-ready package (S9/S10)", () => {
     expect(ext(/^Add a setting or secret/)?.how).toMatch(/no secret-shaped literal/);
     const handover = guide.rerun.find((r) => r.change.startsWith("Before handing over"));
     expect(handover?.note).toContain("publicAction()");
+    // G4c: the local gate first (same security and policy checks and versions as the TurbineH gate).
+    expect(handover?.run).toMatch(/^turbineh verify --full && pnpm build && pnpm test:e2e$/);
     const md = readFileSync(join(dir, "AGENTS.md"), "utf8");
     expect(md).toContain("| Add a public action");
     // The helpers the guide names exist in the package.

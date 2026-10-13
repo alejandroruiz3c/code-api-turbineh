@@ -44,8 +44,8 @@ const spec: BuildSpec = {
   pages: [{ path: "/", purpose: "Chat with the assistant", auth_required: false }],
   capabilities: ["ai.orchestrator"],
   acceptance_criteria: [
-    "Patients can book a session through the chat and receive a confirmation email",
-    "Cancellations later than 24 hours before the session are refused",
+    "People book a free time after confirming it and get a confirmation email",
+    "Cancellations inside the notice period are refused",
     "The clinic exports invoices to its accounting software",
   ],
 };
@@ -98,17 +98,16 @@ describe("domain components in an assembled app (ADR-0033)", () => {
     ).toBe(true);
 
     const acceptance = JSON.parse(readFileSync(join(out, ".turbineh/acceptance.json"), "utf8"));
-    // Precision first (ADR-0043): the assistant test never acts as a "patient", so the booking criterion stays open.
     expect(acceptance.map((a: { status: string }) => a.status)).toEqual([
-      "open",
+      "covered",
       "covered",
       "open",
     ]);
-    expect(readFileSync(join(out, "ACCEPTANCE.md"), "utf8")).toContain("2 of 3 criteria are open");
+    expect(readFileSync(join(out, "ACCEPTANCE.md"), "utf8")).toContain("1 of 3 criteria are open");
     expect(readFileSync(join(out, "README.md"), "utf8")).toContain(
       "[ACCEPTANCE.md](ACCEPTANCE.md)",
     );
-    expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["open", "met", "open"]);
+    expect(finalizeAcceptance(out, true).map((a) => a.status)).toEqual(["met", "met", "open"]);
   });
 
   it("maps criteria to tests with code only", () => {
@@ -117,7 +116,28 @@ describe("domain components in an assembled app (ADR-0033)", () => {
       recipe: "ai-agents",
       selected: [native("domain.bookings.turbineh", "domain.bookings")],
     });
-    const [s] = acceptanceStatus(["Staff sign in to see and manage the bookings"], rules);
+    const [s] = acceptanceStatus(["Only staff see the appointments"], rules);
     expect(s?.tests.join(" ")).toContain("only staff on ADMIN_EMAILS");
+  });
+
+  it("a hand-written rule proves only what its shipped test exercises (ADR-0043)", () => {
+    const rules = coverageRules({
+      recipesDir,
+      recipe: "ai-agents",
+      selected: [native("domain.bookings.turbineh", "domain.bookings")],
+    });
+    // Every rule carries its test's title and key assertions, read from the component's files.
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) expect(r.proof?.title, r.test).toBe(r.test.split(" › ")[1]);
+    const statuses = acceptanceStatus(
+      [
+        // The rule's regexes match (staff, manage) but the test checks neither signing in nor managing bookings.
+        "Staff sign in to see and manage the bookings",
+        // The test acts as an anonymous person, not as a patient.
+        "Patients can book a session through the chat and receive a confirmation email",
+      ],
+      rules,
+    );
+    expect(statuses.map((s) => s.status)).toEqual(["open", "open"]);
   });
 });

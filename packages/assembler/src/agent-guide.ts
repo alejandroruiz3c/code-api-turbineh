@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { writeAcceptance, type CriterionStatus } from "./acceptance.js";
+import { proofVerdict } from "@turbineh/shared";
+import { splitTestRef, testBlocks, writeAcceptance, type CriterionStatus } from "./acceptance.js";
 
 /**
  * Agent-ready package (ADR-0032): every delivered package carries AGENTS.md (+ CLAUDE.md importing it) and the same
@@ -88,7 +89,7 @@ export interface PackageGuide {
   tests: { file: string; kind: "e2e" | "unit"; titles: string[] }[];
   rerun: { change: string; run: string; note: string }[];
   /**
-   * Spec fidelity (ADR-0043): parts of the request no catalog component implements yet (domain patterns) and wiring
+   * Spec fidelity (ADR-0044): parts of the request no catalog component implements yet (domain patterns) and wiring
    * the generator could not do, each with where and how. Their criteria stay open until a test proves them.
    */
   todo?: { what: string; where: string; how: string }[];
@@ -401,8 +402,8 @@ export function rerunGuide(tests: PackageGuide["tests"]): PackageGuide["rerun"] 
     },
     {
       change: "Before handing over (everything)",
-      run: "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e",
-      note: "Same steps as the TurbineH gate (which also runs gitleaks, Semgrep rules, OSV and the licence policy). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
+      run: "turbineh verify --full && pnpm build && pnpm test:e2e",
+      note: "`turbineh verify --full` runs the TurbineH gate's security and policy checks here with the same pinned versions (gitleaks, Semgrep rules, OSV, licence policy; Docker, else local binaries) plus lint, typecheck and unit tests, each finding with file:line and the fix; exit 1 on a blocking one. Without the CLI: pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e (the gate still runs the scans). Server actions: requireMember()/requireAdmin(), requireSession() or publicAction() (src/server/authz.ts); no secret-shaped literal anywhere.",
     },
   ];
 }
@@ -490,7 +491,8 @@ ${g.app.summary}
 Recipe \`${g.recipe.id}\`: ${g.recipe.description}. Build \`${g.buildId}\`. ${status}
 
 Read this file instead of the whole repository. The same facts are machine-readable in \`turbineh.json\`
-(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix;
+(TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix,
+before handing over \`turbineh verify --full\` runs the gate's security and policy checks here;
 install: \`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
 
 ## What is left
@@ -652,15 +654,25 @@ export function verifiedGuide(
   const fileOf = (title: string) => tests.find((t) => t.titles.includes(title))?.file;
   // Deterministic proofs first (acceptance.yaml rules matched at assembly, .turbineh/acceptance.json), then the
   // report's mapping. Either way a criterion is met only with a test that exists in the package and a passed gate.
-  const shipped = (ref: string) => {
-    const [file = "", title = ""] = ref.split(" › ");
-    return tests.some((t) => t.file === file && t.titles.includes(title)) ? { file, title } : null;
+  // A rule's test is re-read as shipped now (a correction may have changed it) and must still pass proofVerdict.
+  const blocks = new Map<string, ReturnType<typeof testBlocks>>();
+  const blocksOf = (file: string) => {
+    if (!blocks.has(file)) {
+      const p = join(outDir, file);
+      blocks.set(file, existsSync(p) ? testBlocks(readFileSync(p, "utf8")) : []);
+    }
+    return blocks.get(file) ?? [];
+  };
+  const proves = (criterion: string, ref: string) => {
+    const { file, title } = splitTestRef(ref);
+    const block = blocksOf(file).find((b) => b.title === title);
+    return block && proofVerdict(criterion, block).proven ? { file, title } : null;
   };
   const deterministic = readAcceptanceJson(outDir);
   const criteria: GuideCriterion[] = input.criteria.map((c) => {
     const ruled = deterministic
       .find((d) => d.criterion === c.criterion)
-      ?.tests.map(shipped)
+      ?.tests.map((ref) => proves(c.criterion, ref))
       .find((t) => t !== null);
     const title = c.evidence.replace(/^(End-to-end|Unit) test:\s*/, "");
     const file = fileOf(title);
