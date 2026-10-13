@@ -49,6 +49,7 @@ pnpm smoke:compiler       # 5 prompts → BuildSpec
 pnpm smoke:backup-coder   # primario + secundario responden
 pnpm bench          # ejecuta bench/prompts contra el pipeline y el baseline
 pnpm --filter @turbineh/cli run build   # CLI turbineh en un solo archivo (dist/ y apps/web/public/cli/)
+TURBINEH_E2E_GITHUB=1 pnpm --filter @turbineh/worker exec vitest run src/repo-integration.e2e.test.ts   # integración real en un repo GitHub desechable (GITHUB_TOKEN, Docker, Postgres local)
 ```
 
 ## Definition of Done de cualquier WP
