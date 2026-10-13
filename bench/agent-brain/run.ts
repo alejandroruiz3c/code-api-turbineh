@@ -137,6 +137,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
   } catch {
     model = "";
   }
+  let replayed = false;
   for (let attempt = 0; ; attempt++) {
     const t0 = performance.now();
     if (rotating) {
@@ -144,11 +145,15 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
       const w = performance.now();
       await rotating;
       if (m) m.waitMs += performance.now() - w;
+      replayed = true;
     }
     const sentWith = process.env.TURBINEH_AI_TOKEN;
     let res: Response;
     try {
-      res = await realFetch(input, ON_QUOTA ? withToken(init) : init);
+      const req = ON_QUOTA ? withToken(init) : init;
+      // A replay after the bench's own back-off (its shared rate limit or a token rotation, excluded from latency)
+      // must not run on the caller's timer: that time is not part of the call as the app would see it.
+      res = await realFetch(input, replayed ? { ...req, signal: null } : req);
     } catch (err) {
       // Network failures and timeouts are metered too (status 0), then rethrown to the code under test.
       m?.calls.push({
@@ -172,6 +177,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
       attempt < 8
     ) {
       if (m) m.waitMs += ms;
+      replayed = true;
       continue;
     }
     if (res.status === 429 && attempt < 8) {
@@ -184,6 +190,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
           const w = performance.now();
           if (sentWith === process.env.TURBINEH_AI_TOKEN) await rotateToken();
           if (m) m.waitMs += performance.now() - w + ms;
+          replayed = true;
           continue;
         }
         console.error("daily AI quota reached: the run is not valid");
@@ -195,6 +202,7 @@ globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => 
         m.waitMs += wait + ms;
       }
       await new Promise((r) => setTimeout(r, wait));
+      replayed = true;
       continue;
     }
     if (m) {

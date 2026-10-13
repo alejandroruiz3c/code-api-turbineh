@@ -149,8 +149,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /**
  * Attempts per model call (ADR-0043): up to 3 for transient failures (network errors, rate limits, server errors), as
  * before; an attempt that hits its per-attempt timeout is retried once (a second stuck attempt ends the call).
- * Measured: with a single retry for every failure, a ~2.5 s network blip between the app and the gateway failed 2 of
- * 54 conversations on staging.
+ * Transient failures keep the retries they had; the per-attempt timeout is the new bound.
  */
 export const MODEL_ATTEMPTS = 3;
 export const MODEL_TIMEOUT_ATTEMPTS = 2;

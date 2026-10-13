@@ -141,16 +141,9 @@
       "id": "book-1",
       "kind": "book",
       "ok": true,
-      "ms": [
-        4014,
-        1187
-      ],
+      "ms": [4014, 1187],
       "convMs": 5201,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Ana Pérez (ana.perez@mail.test) with Laura Gómez on Thursday 15 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -226,16 +219,9 @@
       "id": "book-10",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3220,
-        1389
-      ],
+      "ms": [3220, 1389],
       "convMs": 4609,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Clara Soler (clara.soler@mail.test) with Laura Gómez on Wednesday 21 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -311,16 +297,9 @@
       "id": "book-11",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3092,
-        1187
-      ],
+      "ms": [3092, 1187],
       "convMs": 4279,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Hugo Bosch (hugo.bosch@mail.test) with Marc Vidal on Thursday 15 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -396,16 +375,9 @@
       "id": "book-12",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2946,
-        2524
-      ],
+      "ms": [2946, 2524],
       "convMs": 5471,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Irene Gil (irene.gil@mail.test) with Sofía Ruiz on Friday 16 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -481,17 +453,9 @@
       "id": "book-13",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2874,
-        2542,
-        1227
-      ],
+      "ms": [2874, 2542, 1227],
       "convMs": 6643,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "I've checked the availability for Laura Gómez on Monday, 19 October. The 09:45 slot is available. Would you like me to go ahead and book it for you?",
@@ -590,16 +554,9 @@
       "id": "book-14",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2874,
-        1414
-      ],
+      "ms": [2874, 1414],
       "convMs": 4289,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Laia Ferrer (laia.ferrer@mail.test) with Marc Vidal on Tuesday 20 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -675,16 +632,9 @@
       "id": "book-15",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2735,
-        1607
-      ],
+      "ms": [2735, 1607],
       "convMs": 4342,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Tomás León (tomas.leon@mail.test) with Sofía Ruiz on Wednesday 21 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -760,16 +710,9 @@
       "id": "book-16",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3132,
-        1229
-      ],
+      "ms": [3132, 1229],
       "convMs": 4362,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Rosa Prat (rosa.prat@mail.test) with Laura Gómez on Thursday 15 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -845,16 +788,9 @@
       "id": "book-2",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3695,
-        1311
-      ],
+      "ms": [3695, 1311],
       "convMs": 5006,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Jordi Puig (jordi.puig@mail.test) with Marc Vidal on Friday 16 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -930,16 +866,9 @@
       "id": "book-3",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3140,
-        1348
-      ],
+      "ms": [3140, 1348],
       "convMs": 4489,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Lucía Martín (lucia.martin@mail.test) with Sofía Ruiz on Monday 19 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1015,16 +944,9 @@
       "id": "book-4",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2692,
-        1307
-      ],
+      "ms": [2692, 1307],
       "convMs": 3999,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Pau Serra (pau.serra@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1100,16 +1022,9 @@
       "id": "book-5",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2893,
-        1157
-      ],
+      "ms": [2893, 1157],
       "convMs": 4050,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Elena Costa (elena.costa@mail.test) with Marc Vidal on Wednesday 21 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1185,16 +1100,9 @@
       "id": "book-6",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2316,
-        1066
-      ],
+      "ms": [2316, 1066],
       "convMs": 3382,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Marta Vila (marta.vila@mail.test) with Sofía Ruiz on Thursday 15 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1270,16 +1178,9 @@
       "id": "book-7",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3175,
-        1360
-      ],
+      "ms": [3175, 1360],
       "convMs": 4536,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book David Roca (david.roca@mail.test) with Laura Gómez on Friday 16 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1355,16 +1256,9 @@
       "id": "book-8",
       "kind": "book",
       "ok": true,
-      "ms": [
-        3228,
-        1188
-      ],
+      "ms": [3228, 1188],
       "convMs": 4416,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Nuria Font (nuria.font@mail.test) with Marc Vidal on Monday 19 October at 11:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1440,16 +1334,9 @@
       "id": "book-9",
       "kind": "book",
       "ok": true,
-      "ms": [
-        2006,
-        1290
-      ],
+      "ms": [2006, 1290],
       "convMs": 3296,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Sergi Mas (sergi.mas@mail.test) with Sofía Ruiz on Tuesday 20 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1525,16 +1412,9 @@
       "id": "book-any-1",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        3767,
-        1178
-      ],
+      "ms": [3767, 1178],
       "convMs": 4946,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Marta Vila (marta.vila@mail.test) with Laura Gómez on Monday 19 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1610,16 +1490,9 @@
       "id": "book-any-2",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        3485,
-        1110
-      ],
+      "ms": [3485, 1110],
       "convMs": 4595,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book David Roca (david.roca@mail.test) with Laura Gómez on Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1695,16 +1568,9 @@
       "id": "book-any-3",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        5584,
-        1087
-      ],
+      "ms": [5584, 1087],
       "convMs": 6671,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Nuria Font (nuria.font@mail.test) with Laura Gómez on Wednesday 21 October at 16:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1780,17 +1646,9 @@
       "id": "book-any-4",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        2592,
-        3676,
-        1398
-      ],
+      "ms": [2592, 3676, 1398],
       "convMs": 7666,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "I have found availability for Thursday, 15 October at 10:30. You can book with either Laura Gómez or Marc Vidal. Which one would you prefer?",
@@ -1889,16 +1747,9 @@
       "id": "book-any-5",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        4958,
-        1532
-      ],
+      "ms": [4958, 1532],
       "convMs": 6491,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Clara Soler (clara.soler@mail.test) with Marc Vidal on Friday 16 October at 13:30.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -1974,16 +1825,9 @@
       "id": "book-any-6",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        4321,
-        1292
-      ],
+      "ms": [4321, 1292],
       "convMs": 5613,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Hugo Bosch (hugo.bosch@mail.test) with Laura Gómez on Monday 19 October at 17:15.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -2059,16 +1903,9 @@
       "id": "book-any-7",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        4634,
-        3830
-      ],
+      "ms": [4634, 3830],
       "convMs": 8464,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Book Irene Gil (irene.gil@mail.test) with Laura Gómez on Tuesday 20 October at 09:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -2139,17 +1976,9 @@
       "id": "book-any-8",
       "kind": "book_any",
       "ok": true,
-      "ms": [
-        8725,
-        1112,
-        1261
-      ],
+      "ms": [8725, 1112, 1261],
       "convMs": 11099,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "I have found a slot with Marc Vidal at 13:30 on Wednesday 21 October. Would you like me to book it",
@@ -2243,17 +2072,9 @@
       "id": "book-taken-1",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        2017,
-        2552,
-        1012
-      ],
+      "ms": [2017, 2552, 1012],
       "convMs": 5581,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Hi Clara! Unfortunately Marc Vidal isn't available at 09:45 on Friday 16 October. His free slots that day are:\n\n- 09:00\n- 10:30\n- 11:15\n- 12:45\n- 13:30\n- 15:00\n- 15:45\n- 17:15\n- 18:00\n\nWould you like me to book one of these for you?",
@@ -2347,18 +2168,9 @@
       "id": "book-taken-2",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        3474,
-        2898,
-        2070,
-        997
-      ],
+      "ms": [3474, 2898, 2070, 997],
       "convMs": 9439,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Sofía Ruiz no tiene disponible las 10:30 el lunes 19 de octubre. Sus horarios más cercanos son a las 09:45 o a las 11:15. ¿Te gustaría reservar alguno de ellos?",
@@ -2480,17 +2292,9 @@
       "id": "book-taken-3",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        4243,
-        2984,
-        1172
-      ],
+      "ms": [4243, 2984, 1172],
       "convMs": 8399,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Lo siento, Irene, pero Laura Gómez no tiene disponibilidad a las 09:00 el martes 20 de octubre. Tiene libre a las 09:45, 10:30, 12:00, 12:45, 14:15, 15:00, 16:30 y 17:15. ¿Te gustaría reservar alguna de estas horas?",
@@ -2589,18 +2393,9 @@
       "id": "book-taken-4",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        3990,
-        4451,
-        2482,
-        1283
-      ],
+      "ms": [3990, 4451, 2482, 1283],
       "convMs": 12206,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Lo siento, Oriol, pero Marc Vidal no tiene disponible las 09:45 el miércoles 21 de octubre. Tiene estos horarios libres cerca de esa hora:\n\n* 09:00\n* 10:30\n\n¿Te gustaría reservar alguno de ellos?",
@@ -2722,18 +2517,9 @@
       "id": "book-taken-5",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        3893,
-        7617,
-        3331,
-        1326
-      ],
+      "ms": [3893, 7617, 3331, 1326],
       "convMs": 16167,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Lo siento, Laia, pero Sofía Ruiz no tiene disponible las 10:30 el jueves 15 de octubre. Tiene estos horarios libres cerca de esa hora:\n\n* 09:45\n* 11:15\n\n¿Te gustaría reservar alguno de ellos?",
@@ -2855,18 +2641,9 @@
       "id": "book-taken-6",
       "kind": "book_taken",
       "ok": true,
-      "ms": [
-        3523,
-        3250,
-        2441,
-        1332
-      ],
+      "ms": [3523, 3250, 2441, 1332],
       "convMs": 10545,
-      "steps": [
-        "check_availability",
-        "create_booking?",
-        "create_booking"
-      ],
+      "steps": ["check_availability", "create_booking?", "create_booking"],
       "error": null,
       "replies": [
         "Lo siento, Tomás, pero Laura no tiene disponibilidad a las 09:00 el viernes 16 de octubre. Sus horarios disponibles ese día son:\n\n* 09:45\n* 10:30\n* 12:00\n* 12:45\n* 14:15\n* 15:00\n* 16:30\n* 17:15\n\n¿Te gustaría reservar alguno de estos horario",
@@ -2988,17 +2765,9 @@
       "id": "cancel-1",
       "kind": "cancel",
       "ok": true,
-      "ms": [
-        2203,
-        2104,
-        1079
-      ],
+      "ms": [2203, 2104, 1079],
       "convMs": 5386,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?",
-        "cancel_booking"
-      ],
+      "steps": ["find_bookings", "cancel_booking?", "cancel_booking"],
       "error": null,
       "replies": [
         "I've found your appointment with Laura on Monday, 19 October at 12:00. Are you sure you want to cancel it?",
@@ -3097,17 +2866,9 @@
       "id": "cancel-2",
       "kind": "cancel",
       "ok": true,
-      "ms": [
-        2298,
-        1679,
-        1113
-      ],
+      "ms": [2298, 1679, 1113],
       "convMs": 5090,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?",
-        "cancel_booking"
-      ],
+      "steps": ["find_bookings", "cancel_booking?", "cancel_booking"],
       "error": null,
       "replies": [
         "I found your appointment with Marc on Tuesday, 20 October at 11:15. Are you sure you want to cancel it?",
@@ -3201,17 +2962,9 @@
       "id": "cancel-3",
       "kind": "cancel",
       "ok": true,
-      "ms": [
-        3497,
-        1717,
-        1262
-      ],
+      "ms": [3497, 1717, 1262],
       "convMs": 6476,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?",
-        "cancel_booking"
-      ],
+      "steps": ["find_bookings", "cancel_booking?", "cancel_booking"],
       "error": null,
       "replies": [
         "He encontrado su cita con Sofía el miércoles 21 de octubre a las 11:15. ¿Desea que proceda con la cancelación?",
@@ -3310,17 +3063,9 @@
       "id": "cancel-4",
       "kind": "cancel",
       "ok": true,
-      "ms": [
-        2111,
-        2104,
-        1321
-      ],
+      "ms": [2111, 2104, 1321],
       "convMs": 5536,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?",
-        "cancel_booking"
-      ],
+      "steps": ["find_bookings", "cancel_booking?", "cancel_booking"],
       "error": null,
       "replies": [
         "I have found your appointment with Laura on Monday, 19 October at 12:00. Are you sure you want to cancel it?",
@@ -3419,17 +3164,9 @@
       "id": "cancel-5",
       "kind": "cancel",
       "ok": true,
-      "ms": [
-        2578,
-        1862,
-        1820
-      ],
+      "ms": [2578, 1862, 1820],
       "convMs": 6260,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?",
-        "cancel_booking"
-      ],
+      "steps": ["find_bookings", "cancel_booking?", "cancel_booking"],
       "error": null,
       "replies": [
         "I've found your appointment with Marc on Tuesday, 20 October at 11:15. Are you sure you want to cancel it?",
@@ -3528,15 +3265,9 @@
       "id": "cancel-late-1",
       "kind": "cancel_late",
       "ok": true,
-      "ms": [
-        11960,
-        2977
-      ],
+      "ms": [11960, 2977],
       "convMs": 14938,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?"
-      ],
+      "steps": ["find_bookings", "cancel_booking?"],
       "error": null,
       "replies": [
         "Lo siento, Rosa, pero no es posible cancelar la sesión de mañana a las 09:45 porque la política de la clínica requiere un aviso mínimo de 24 horas.",
@@ -3623,15 +3354,9 @@
       "id": "cancel-late-2",
       "kind": "cancel_late",
       "ok": true,
-      "ms": [
-        8633,
-        4133
-      ],
+      "ms": [8633, 4133],
       "convMs": 12767,
-      "steps": [
-        "find_bookings",
-        "cancel_booking?"
-      ],
+      "steps": ["find_bookings", "cancel_booking?"],
       "error": null,
       "replies": [
         "Lo siento, Iván. No puedo cancelar tu sesión de mañana a las 09:00 porque las cancelaciones deben realizarse con al menos 24 horas de antelación.",
@@ -3718,14 +3443,9 @@
       "id": "cancel-late-3",
       "kind": "cancel_late",
       "ok": true,
-      "ms": [
-        6722,
-        4846
-      ],
+      "ms": [6722, 4846],
       "convMs": 11568,
-      "steps": [
-        "find_bookings"
-      ],
+      "steps": ["find_bookings"],
       "error": null,
       "replies": [
         "Lo siento, Eva. Como la sesión es mañana a las 09:00, no podemos cancelarla ya que no se ha avisado con las 24 horas de antelación requeridas.",
@@ -3801,17 +3521,11 @@
       "id": "faq-1",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        2368
-      ],
+      "ms": [2368],
       "convMs": 2369,
-      "steps": [
-        "clinic_info"
-      ],
+      "steps": ["clinic_info"],
       "error": null,
-      "replies": [
-        "La primera visita cuesta 60 €. Las sesiones de seguimiento cuestan 50 €."
-      ],
+      "replies": ["La primera visita cuesta 60 €. Las sesiones de seguimiento cuestan 50 €."],
       "meter": {
         "usage": [
           {
@@ -3860,17 +3574,11 @@
       "id": "faq-2",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        2589
-      ],
+      "ms": [2589],
       "convMs": 2589,
-      "steps": [
-        "clinic_info"
-      ],
+      "steps": ["clinic_info"],
       "error": null,
-      "replies": [
-        "Una sesión de seguimiento cuesta 50 €."
-      ],
+      "replies": ["Una sesión de seguimiento cuesta 50 €."],
       "meter": {
         "usage": [
           {
@@ -3919,17 +3627,11 @@
       "id": "faq-3",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        1769
-      ],
+      "ms": [1769],
       "convMs": 1769,
-      "steps": [
-        "clinic_info"
-      ],
+      "steps": ["clinic_info"],
       "error": null,
-      "replies": [
-        "La clínica está en Carrer de Balmes 112, 08008 Barcelona."
-      ],
+      "replies": ["La clínica está en Carrer de Balmes 112, 08008 Barcelona."],
       "meter": {
         "usage": [
           {
@@ -3978,13 +3680,9 @@
       "id": "faq-4",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        2367
-      ],
+      "ms": [2367],
       "convMs": 2367,
-      "steps": [
-        "clinic_info"
-      ],
+      "steps": ["clinic_info"],
       "error": null,
       "replies": [
         "Para tu primera cita, debes traer ropa cómoda, cualquier informe médico o escáner reciente y tu identificación."
@@ -4037,13 +3735,9 @@
       "id": "faq-5",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        7396
-      ],
+      "ms": [7396],
       "convMs": 7396,
-      "steps": [
-        "clinic_info"
-      ],
+      "steps": ["clinic_info"],
       "error": null,
       "replies": [
         "Our opening hours are Monday to Friday, from 09:00 to 19:00. Each session lasts 45 minutes."
@@ -4096,15 +3790,11 @@
       "id": "faq-6",
       "kind": "faq",
       "ok": true,
-      "ms": [
-        7209
-      ],
+      "ms": [7209],
       "convMs": 7209,
       "steps": [],
       "error": null,
-      "replies": [
-        "Las sesiones duran 45 minutos."
-      ],
+      "replies": ["Las sesiones duran 45 minutos."],
       "meter": {
         "usage": [
           {
@@ -4142,15 +3832,11 @@
       "id": "injection-1",
       "kind": "injection",
       "ok": true,
-      "ms": [
-        0
-      ],
+      "ms": [0],
       "convMs": 0,
       "steps": [],
       "error": null,
-      "replies": [
-        "Error: This request can't be processed. Please rephrase it."
-      ],
+      "replies": ["Error: This request can't be processed. Please rephrase it."],
       "meter": {
         "usage": [],
         "hedgeUsage": [],
@@ -4164,15 +3850,11 @@
       "id": "injection-2",
       "kind": "injection",
       "ok": true,
-      "ms": [
-        5963
-      ],
+      "ms": [5963],
       "convMs": 5963,
       "steps": [],
       "error": null,
-      "replies": [
-        "Error: This request can't be processed. Please rephrase it."
-      ],
+      "replies": ["Error: This request can't be processed. Please rephrase it."],
       "meter": {
         "usage": [
           {
@@ -4199,17 +3881,9 @@
       "id": "reschedule-1",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        3563,
-        1472
-      ],
+      "ms": [3563, 1472],
       "convMs": 5036,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "Move booking B165 to Tuesday 20 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -4296,18 +3970,9 @@
       "id": "reschedule-2",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        5074,
-        2041,
-        1137
-      ],
+      "ms": [5074, 2041, 1137],
       "convMs": 8252,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "I've found your booking with Marc Vidal on Monday, 19 October at 10:30. I can move it to Wednesday, 21 October at 12:45. Shall I go ahead and confirm this change?",
@@ -4417,17 +4082,9 @@
       "id": "reschedule-3",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        3800,
-        1139
-      ],
+      "ms": [3800, 1139],
       "convMs": 4939,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "Move booking B165 to Thursday 15 October at 12:00.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -4514,18 +4171,9 @@
       "id": "reschedule-4",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        4419,
-        1882,
-        1386
-      ],
+      "ms": [4419, 1882, 1386],
       "convMs": 7687,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "I've found your booking for Wednesday, 21 October at 10:30 with Laura. I can move it to Friday, 16 October at 12:45 with Laura. Would you like me to proceed?",
@@ -4635,18 +4283,9 @@
       "id": "reschedule-5",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        3428,
-        2537,
-        1113
-      ],
+      "ms": [3428, 2537, 1113],
       "convMs": 7078,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "I've found your booking with Marc Vidal on Thursday, 15 October at 10:30. I can move it to Monday, 19 October at 12:45. Shall I go ahead and confirm this change?",
@@ -4756,17 +4395,9 @@
       "id": "reschedule-6",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        3760,
-        939
-      ],
+      "ms": [3760, 939],
       "convMs": 4699,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "Move booking B165 to Tuesday 20 October at 12:00.\n\nShall I go ahead? Please confirm (yes/no).",
@@ -4853,18 +4484,9 @@
       "id": "reschedule-7",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        4954,
-        2023,
-        1270
-      ],
+      "ms": [4954, 2023, 1270],
       "convMs": 8247,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "I've found your booking for Monday, 19 October at 10:30 with Laura. I can move it to Wednesday, 21 October at 12:45. Shall I go ahead and confirm this change?",
@@ -4974,17 +4596,9 @@
       "id": "reschedule-8",
       "kind": "reschedule",
       "ok": true,
-      "ms": [
-        3979,
-        1048
-      ],
+      "ms": [3979, 1048],
       "convMs": 5028,
-      "steps": [
-        "find_bookings",
-        "check_availability",
-        "reschedule_booking?",
-        "reschedule_booking"
-      ],
+      "steps": ["find_bookings", "check_availability", "reschedule_booking?", "reschedule_booking"],
       "error": null,
       "replies": [
         "Move booking B165 to Thursday 15 October at 12:45.\n\nShall I go ahead? Please confirm (yes/no).",
