@@ -163,6 +163,35 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
     },
   },
   {
+    // Altamira (learning round, corporate-site): projects portfolio with filters by sector and a page per project,
+    // careers with open positions, team; SEO metadata, sitemap, Open Graph images.
+    recipe: "corporate-site",
+    with: ["site.public-pages.turbineh"],
+    prompt:
+      'Build the website of "Altamira Engineering", a structural engineering firm. Visual identity: charcoal ' +
+      "`#222831`, white, signal orange `#FF6B1A` for buttons, serif headings. Pages: home with hero and key figures, " +
+      "services (four services, each with its own page), projects portfolio with filters by sector and a page per " +
+      "project, team, careers with open positions, and contact with a form (name, email, company, message, consent) " +
+      "that is stored, rate-limited, protected against spam and emailed to the firm. Staff sign in to edit projects " +
+      "and positions and read contact requests. Good SEO: metadata, sitemap, robots, Open Graph images.",
+    params: {
+      "site.public-pages.turbineh": {
+        pages: [
+          { entity: "Project", path: "/projects", detail: true, filters: ["sector"] },
+          {
+            entity: "JobPosition",
+            path: "/careers",
+            detail: true,
+            filters: ["location"],
+            title: "Careers",
+          },
+          { entity: "TeamMember", path: "/team", detail: false, filters: [], title: "Team" },
+        ],
+        seo: true,
+      },
+    },
+  },
+  {
     // Brickline (learning round, projects): tasks with statuses on a kanban board with drag and drop, file attachments,
     // overdue tasks emailed every morning (logged without an email provider).
     recipe: "projects",

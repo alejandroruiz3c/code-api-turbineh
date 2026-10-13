@@ -12170,6 +12170,185 @@
       "details": "https://software.turbineh.com/v1/capabilities/seo.structured-data.schema-dts"
     },
     {
+      "id": "site.public-pages.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "site",
+      "package": "pkg:generic/turbineh/site.public-pages.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "site.public-pages"
+      ],
+      "does": "Public collections of a website from the request — portfolio projects, open positions, team members, services: a list per collection with filters by its fields (sector, location…), a page per entry with SEO metadata (title, description, canonical URL, Open Graph, JSON-LD) and a generated Open Graph image in the brand colours, published entries in the sitemap; staff add, edit, publish and delete entries; drafts are never shown.",
+      "doesNot": "Does not provide a page builder, rich-text editor, image uploads or multiple languages",
+      "title": "Public collection pages with filters, a page per entry, SEO metadata and Open Graph images",
+      "summary": "Adds the public collections a company website asks for — a projects portfolio filtered by sector with a page per project, careers with open positions, the team — from the request. Visitors see published entries only, filter the list by the collection's fields and open a page per entry with title, description, canonical URL, Open Graph tags, JSON-LD and a generated Open Graph image in the brand colours; published pages are listed in the sitemap. Staff add, edit, publish and delete entries in the dashboard. It is not a page builder: entries share one simple shape and text is shown as plain paragraphs.",
+      "useCases": [
+        "A structural engineering firm's projects portfolio with filters by sector and a page per project",
+        "Careers with open positions, each with its own page and JobPosting data",
+        "A team page edited by staff"
+      ],
+      "useWhen": [
+        "The request lists public sections made of records (projects, positions, team, services)",
+        "It asks for a page per record, filters, SEO, a sitemap or Open Graph images"
+      ],
+      "avoidWhen": [
+        "Free-form marketing pages (edit the recipe's pages)",
+        "A blog with posts and RSS (the corporate-site recipe has one)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "One generic entry shape for every collection",
+          "gain": "Any collection from the request works with no generated code",
+          "cost": "Collection-specific fields beyond the filter fields need code"
+        },
+        {
+          "choice": "Top-level dynamic route /<collection>",
+          "gain": "Paths straight from the request (/projects, /careers)",
+          "cost": "A collection path cannot reuse a path the app already has (static routes win)"
+        },
+        {
+          "choice": "Open Graph images by next/og",
+          "gain": "A share image per page in the brand colours, no dependency",
+          "cost": "Title-only design"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/site-pages/params.json",
+          "default": "projects (sector) and careers (location)",
+          "description": "Collections from the request: entity, path, page per entry, filters; seo"
+        },
+        {
+          "name": "ADMIN_EMAILS",
+          "description": "Staff who edit the public pages (deny by default)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Public pages",
+          "signature": "/<path> (published list, filters as query parameters); /<path>/<slug> (page, metadata, JSON-LD); /<path>/<slug>/opengraph-image (PNG)",
+          "where": "src/app/[collection]/page.tsx"
+        },
+        {
+          "name": "Staff pages",
+          "signature": "/dashboard/site-pages, /dashboard/site-pages/<collection>, /dashboard/site-pages/<collection>/<id>",
+          "where": "src/app/dashboard/site-pages/page.tsx"
+        },
+        {
+          "name": "Service",
+          "signature": "publishedEntries(collection, filters) → { rows, options }; publishedEntry(collection, slug); sitemapEntries(); saveEntry(collection, input, id?); deleteEntry(collection, id)",
+          "where": "src/site-pages/service.ts"
+        },
+        {
+          "name": "Config",
+          "signature": "collections: { key, entity, path, detail, filters: { key, label }[], label, plural }[]; collectionOf(key)",
+          "where": "src/site-pages/config.ts"
+        },
+        {
+          "name": "SitePagesFrame",
+          "signature": "<SitePagesFrame>{children}</SitePagesFrame> — the layout of the public pages",
+          "where": "src/components/site-pages/frame.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a public collection or a filter",
+          "where": "src/site-pages/params.json",
+          "how": "Add { entity, path, detail, filters } (validated at start-up); staff fill it in at /dashboard/site-pages."
+        },
+        {
+          "what": "Use the site's own layout and navigation",
+          "where": "src/components/site-pages/frame.tsx, the site's nav, src/app/sitemap.ts",
+          "how": "Wrap children in the site shell, list `collections` in the menu and add `await sitemapEntries()` to the sitemap (done for corporate-site)."
+        },
+        {
+          "what": "Show a collection-specific field (budget, salary range)",
+          "where": "src/app/[collection]/[slug]/page.tsx, src/components/site-pages/entry-form.tsx",
+          "how": "Add it as a filter field in params (stored in attributes) or add a column to site_entries and the form; then `pnpm db:generate`."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (metadata API, next/og), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "corporate-site",
+          "landing-waitlist",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [],
+        "notes": "On corporate-site the pages use its SiteShell, appear in its menu and in its sitemap (files-recipe/corporate-site)."
+      },
+      "security": [
+        "Visitors only ever read published entries; drafts and unknown collections are 404",
+        "Staff writes require a verified ADMIN_EMAILS account (requireAdmin)",
+        "Entry text is rendered as text; JSON-LD escapes '<'; image URLs must be http(s)"
+      ],
+      "guarantees": [
+        {
+          "claim": "Staff publish entries; visitors browse and filter the list",
+          "test": "tests/e2e/public-pages.spec.ts › staff publish entries and visitors browse the list, filtered by its field"
+        },
+        {
+          "claim": "Every entry has a page with SEO metadata and an Open Graph image",
+          "test": "tests/e2e/public-pages.spec.ts › each entry has its own page with title, description, canonical URL and an Open Graph image"
+        },
+        {
+          "claim": "Drafts never show and the sitemap lists only published pages",
+          "test": "tests/e2e/public-pages.spec.ts › drafts are never shown to visitors, and the sitemap lists only published pages"
+        },
+        {
+          "claim": "Only real filter fields from the request become filters",
+          "test": "tests/unit/site-pages.test.ts › names collections from the entity and keeps only real filter fields from the request"
+        }
+      ],
+      "limits": [
+        "One entry shape; no rich text, image uploads or translations",
+        "500 entries listed per collection"
+      ],
+      "example": "// src/site-pages/params.json — \"projects portfolio with filters by sector and a page per project\"\n{ \"pages\": [{ \"entity\": \"Project\", \"path\": \"/projects\", \"detail\": true, \"filters\": [\"sector\"] }], \"seo\": true }\n",
+      "keywords": [
+        "portfolio",
+        "projects",
+        "case studies",
+        "careers",
+        "jobs",
+        "open positions",
+        "team",
+        "public pages",
+        "page per project",
+        "filters",
+        "seo",
+        "metadata",
+        "open graph",
+        "og image",
+        "sitemap",
+        "json-ld",
+        "company website"
+      ],
+      "synonyms": {
+        "portfolio": [
+          "projects",
+          "case studies",
+          "our work",
+          "references"
+        ],
+        "careers": [
+          "jobs",
+          "open positions",
+          "vacancies",
+          "join us"
+        ],
+        "open graph image": [
+          "og image",
+          "social preview",
+          "share image"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/site.public-pages.turbineh"
+    },
+    {
       "id": "storage.objects.aws-s3",
       "version": "0.1.0",
       "status": "approved",
