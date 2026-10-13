@@ -186,6 +186,8 @@ const fieldType = z.enum([
   "enum",
   "file",
   "reference",
+  // Added by code, never proposed by the model (ADR-0040): a multi-value tag field with a filter.
+  "tags",
 ]);
 
 export const buildSpecSchema = z
@@ -213,6 +215,8 @@ export const buildSpecSchema = z
                 name: z.string().regex(/^[a-z][a-zA-Z0-9]*$/),
                 type: fieldType,
                 required: z.boolean(),
+                // Allowed values of an enum field, from a list the request states (ADR-0040; set by code).
+                options: z.array(z.string().min(1).max(40)).min(2).max(30).optional(),
               }),
             )
             .min(1)
