@@ -46,7 +46,8 @@ const INSTALL = `export TURBINEH_TOKEN=…   # the token from your invitation: k
 curl -fsSL ${SITE}/install.sh | sh`;
 
 const INIT = `cd your-project
-turbineh init --agent claude    # or: --agent codex · --agent cursor`;
+turbineh init --agent claude    # or: --agent codex · --agent cursor
+turbineh init --yes             # any other agent: writes AGENTS.md`;
 
 const BUILD = `turbineh build @spec.md --json          # or: turbineh build "<what to build>" --json
 turbineh build @spec.md --json --timeout 30   # stop waiting after 30 minutes (default 20)
@@ -357,8 +358,10 @@ export default function UsePage() {
             </li>
             <li>
               An instructions block (when to use TurbineH, the one command, exit codes) in{" "}
-              <Code>CLAUDE.md</Code> for Claude Code, <Code>AGENTS.md</Code> for Codex and Cursor;
-              re-running refreshes it in place.
+              <Code>CLAUDE.md</Code> for Claude Code and in <Code>AGENTS.md</Code> for Codex,
+              Cursor and any other agent. Without <Code>--agent</Code>, <Code>--yes</Code> writes it
+              to the instructions file the project already has, or creates <Code>AGENTS.md</Code>;
+              plain <Code>turbineh init</Code> only shows the block. Re-running refreshes it in place.
             </li>
             <li>
               Claude Code also gets the project skill <Code>.claude/skills/turbineh/SKILL.md</Code>.
