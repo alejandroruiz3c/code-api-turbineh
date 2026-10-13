@@ -166,6 +166,8 @@ rules:
     pattern-either:
       - pattern-regex: (from\s+|import\s*\(\s*|require\s*\(\s*)["'](openai|@anthropic-ai/[\w.-]+|@ai-sdk/[\w.-]+|ai|@google/generative-ai|@google/genai|@mistralai/[\w.-]+|cohere-ai|groq-sdk|ollama|@huggingface/inference|replicate|together-ai|langchain|@langchain/[\w.-]+|llamaindex|@typesafe-ai/sdk)(/[\w./-]*)?["']
       - pattern-regex: (?i)["'`][^"'`\n]*(/chat/completions|/v1/completions|/v1/embeddings|/v1/systemone|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.mistral\.ai|api\.groq\.com|api\.together\.xyz|api\.scaleway\.ai|api\.typesafe\.ai)
+      # Hand-written OpenAI-compatible clients: fetch(`${BASE_URL}/chat/completions`) and similar (ADR-0033).
+      - pattern-regex: (?i)fetch\s*\(\s*`[^`]*/(chat/completions|completions|embeddings)`
 
   - id: turbineh.ai-sdk-dependency
     languages: [generic]
