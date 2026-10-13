@@ -1,6 +1,6 @@
 # ADR-0040 · Closing the coding agent's loop: blessed public and pre-membership actions, no secret-shaped defaults
 
-- Status: accepted (G4a and G4b); G4c (local gate) and G3 (criteria re-check) pending — see "Not done yet"
+- Status: accepted (G4a and G4b); G4c and G3 done in ADR-0043
 - Date: 2026-10-13
 - Context: learning round of 2026-10-13 (`bench/frontiers/ANALYSIS.md` §12 on `wip/frontiers-bench`, root cause G4).
   Three of the four gate FAILs were `turbineh.server-action-without-authz` on legitimate actions the agents wrote —
@@ -32,7 +32,7 @@
    or secret"; recipe guides (bookings, client-portal, landing-waitlist, corporate-site) point to the helpers;
    "Before handing over" reminds the three kinds of action and the no-literal rule.
 
-## Not done yet (next steps)
+## Not done yet (next steps) — done in ADR-0043 (`turbineh verify --full`, hand-written rules through `proofVerdict`)
 
 - **G4c** `turbineh verify --full`: run gitleaks 8.30.1 (`ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0…`,
   `--report-path -`, redacted), Semgrep 1.178.0 (the gate's pinned image, rules embedded in the CLI bundle), OSV

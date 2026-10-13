@@ -6,9 +6,24 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- `turbineh verify --full` (ADR-0043, learning round G4c): the gate's security and policy checks locally with the
+  gate's pinned versions — gitleaks 8.30.1 (git history and the files the next commit adds, redacted), the TurbineH
+  Semgrep rules on Semgrep 1.178.0 (embedded in the CLI), OSV (package name@version only) and the licence policy — plus
+  typecheck, lint and unit tests. Docker first, pinned local binaries otherwise; a check that cannot run is reported as
+  not run and fails. Each finding has file:line, the rule, a security / policy / quality label and the fix; `--json`
+  uses the gate findings' shape (which now carry `fix` too). The default `turbineh verify` flags secret-shaped literals
+  in `src/env.ts`. AGENTS.md "Before handing over", the agent instructions, the MCP `verify` tool (`full`) and /use
+  name it.
+
 - Spec fidelity in the compiler (ADR-0042): entity kinds (business, relationship, event, configuration, log) by code with decider fallback only for unsure entities, roles and permission rules from the request mapped onto workspace roles, constraints (time zone, uploads, notice, hours, prices, statuses, sort, schedules, email domains) and domain-pattern detection with catalog-gated component selection. Regression tests over the 9 learning-round specs; offline summary in `bench/frontiers/fidelity-2026-10-13.md`. The generator supports `tags` fields with a tag filter and enum options from stated status lists.
 
 ### Security
+
+- Criteria honesty (ADR-0043, learning round G3): hand-written `acceptance.yaml` rules now carry the shipped test's
+  title and key assertions and match only when `proofVerdict` accepts them and the test exists in the package (re-checked
+  at verification). The bookings test "the owner books a slot and sees it in the calendar" no longer proves seven
+  unrelated criteria. 71 labelled pairs from hand-written rules: precision 1.00, recall 0.48 (109 pairs overall:
+  precision 1.00, recall 0.63).
 
 - Public and pre-membership server actions (ADR-0040): the base template ships `publicAction(name, { rateLimit,
 schema }, handler)` (per-IP rate limit + Zod before anything runs) and `requireSession()` (signed in, not a member
