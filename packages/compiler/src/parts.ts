@@ -14,7 +14,8 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
   "landing-waitlist":
     "Marketing landing page with a signup or waitlist form, confirmation email and a small admin view",
   "internal-tool": "Internal back-office tool with data tables, filters, CSV import and export",
-  bookings: "Booking or appointment app with availability, calendar slots and notifications",
+  bookings:
+    "Booking or appointment app operated through screens: availability, calendar slots and notifications (no AI assistant; an AI agent that books for users is ai-agents)",
   "client-portal":
     "Portal where external clients upload files and follow the status of their requests",
   "corporate-site":
@@ -28,7 +29,7 @@ export const RECIPE_DESCRIPTIONS: Record<(typeof RECIPES)[number] | "out_of_scop
   tracker:
     "Personal tracker app: habits, health, fitness, money or any daily quantity with goals, streaks and history",
   "ai-agents":
-    "AI assistants and AI processing for a team: assistants or agents with instructions and allowed tools, chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), AI usage and audit; every AI call goes through the TurbineH orchestrator",
+    "AI assistants and AI processing for a team: assistants or agents with instructions and allowed tools, chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), AI usage and audit; also AI agents specialised in a domain (bookings and appointments, support, sales, intake) that talk with users in natural language and act with tools over the app's records; every AI call goes through the TurbineH orchestrator",
   out_of_scope:
     "Anything else: not a web app, mobile/desktop/game, training or hosting AI models, autonomous agents acting without human confirmation on payments or external accounts, scraping, or a different product family",
 };
