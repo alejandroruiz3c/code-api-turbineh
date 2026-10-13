@@ -130,6 +130,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Agent instructions (AGENTS.md block, Claude Code skill, /use): run `turbineh build` in the foreground with a long timeout instead of in the background — in the Frontiers shop rerun the agent polled with blind sleeps and waited ~130 s after the result was ready.
 - `/catalog/index.json` and `/catalog/llms.txt` accept the invitation token as `Authorization: Bearer` (ADR-0038);
   API callers without it get a 401 problem instead of a redirect to the access page.
 
