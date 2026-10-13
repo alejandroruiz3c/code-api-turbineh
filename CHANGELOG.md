@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Spec fidelity wired into builds (ADR-0043): the pipeline models every request (decider only for unsure entity
+  kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
+  configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists
+  and joins as a section of the parent page, logs as a table and writer without UI, memberships and tags with no page.
+  Generated `src/server/permissions.ts` (role matrix, per-resource rules, sign-up email domains) behind `can(role,
+action, resource?)`, `src/lib/spec-constraints.ts` (time zone, currency, limits, statuses, sort, page size), unit
+  tests per app (`tests/unit/permissions.test.ts`, `spec-constraints.test.ts`) and a sign-up-domain E2E. Domain
+  patterns select approved catalog components by capability with params validated against their
+  `params.schema.json` (new components are picked up automatically); missing ones are listed in AGENTS.md with where
+  and how. List filters are shared with a CSV export that honours them and the `export` permission.
+- `verify:spec <fixture>`: offline build of a learning-round spec (no model), before/after summary and the gate.
+- Criterion → test mapping uses only tests shipped in the assembled package (file and title must exist; fixes
+  `domain.bookings` rules pointing at `files-ai` tests in apps without the assistant); hand-written rules are checked
+  against the shipped test's title and assertions (refusal and actor veto; full proof for conditional tests and for
+  criteria a missing pattern touches). The base `authz.test.ts` checks the role matrix generically.
 - Spec fidelity in the compiler (ADR-0042): entity kinds (business, relationship, event, configuration, log) by code with decider fallback only for unsure entities, roles and permission rules from the request mapped onto workspace roles, constraints (time zone, uploads, notice, hours, prices, statuses, sort, schedules, email domains) and domain-pattern detection with catalog-gated component selection. Regression tests over the 9 learning-round specs; offline summary in `bench/frontiers/fidelity-2026-10-13.md`. The generator supports `tags` fields with a tag filter and enum options from stated status lists.
 
 ### Security
