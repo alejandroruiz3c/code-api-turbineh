@@ -41,7 +41,9 @@ interfaces:
   - { name: emailUpcomingAppointments, signature: "emailUpcomingAppointments(email) → boolean — emails the upcoming list with references to that address (10-min cooldown); the chat always gets the same reply", where: src/bookings/service.ts }
   - { name: toolkit, signature: "business_info, check_availability, book_appointment*, find_appointments, reschedule_appointment*, cancel_appointment* (* = confirmation)", where: src/bookings/toolkit.ts }
   - { name: "Pure rules", signature: "dayStarts, freeSlots, assertBookableDay, canChange, cellsOf; zonedToUtc, localDay, localTime", where: src/bookings/availability.ts }
-  - { name: "Staff pages", signature: "/dashboard/appointments (list, book, cancel), /dashboard/appointments/settings (team, answers)", where: src/app/dashboard/appointments/page.tsx }
+  - { name: "Staff pages", signature: "/dashboard/appointments (list, book, cancel), /[id] (move, cancel), /calendar (day/week per team member), /time-off, /settings (team, answers)", where: src/app/dashboard/appointments/page.tsx }
+  - { name: "Public pages", signature: "/book (service, team member or any, free times, name/email/phone; publicAction bookSlot), /book/cancel/[token] (cancel link, notice policy)", where: src/app/book/page.tsx }
+  - { name: "Management", signature: "cancelByToken(token); appointmentByCancelToken(token); staffMove(id, { day, time, resource? }); addTimeOff({ resourceId, day, from, to, reason?, by }); removeTimeOff(id); calendar(fromDay, days, resourceId?)", where: src/bookings/manage.ts }
 extension_points:
   - what: "Change hours, services, prices, time zone or policy"
     where: "src/bookings/params.json"
@@ -49,13 +51,19 @@ extension_points:
   - what: "Add an assistant capability (e.g. waiting list, staff notes)"
     where: "src/bookings/toolkit.ts"
     how: "Add a function to service.ts that enforces the rule, then a defineTool() calling it; irreversible: true + prepare() if it changes data. Add a mock rule in tests/mock-llm/scripts/bookings.ts and an E2E case."
+  - what: "Change the public booking page or what the customer enters"
+    where: "src/app/book/page.tsx, src/app/book/actions.ts (publicAction bookSlot)"
+    how: "Keep it a publicAction (rate limit + Zod schema first); createAppointment re-checks the time against real availability."
+  - what: "Change the cancel link or its notice rule"
+    where: "src/bookings/manage.ts (cancelByToken), src/bookings/params.json (policy.cancelNoticeHours)"
+    how: "The token is single-use per booking and stored hashed; the notice rule is canChange() in availability.ts."
   - what: "Different availability rule (breaks, holidays)"
     where: "src/bookings/availability.ts"
     how: "Filter dayStarts()/freeSlots(); everything (assistant, staff form) uses them, so one change applies everywhere."
 compatibility:
   runtime: "node >= 20"
   framework: "next ^16, drizzle-orm with PostgreSQL, zod 4"
-  recipes: [ai-agents]
+  recipes: [ai-agents, bookings]
   requires: []
   works_with: [ai.orchestrator.turbineh, email.transactional.turbineh]
   notes: "The AI part (files-ai/: toolkit, mock script, assistant E2E) is installed only with ai.orchestrator.turbineh; the domain, staff pages and unit tests work without AI."
@@ -72,12 +80,40 @@ guarantees:
   - { claim: "DST-correct local times", test: "tests/unit/bookings.test.ts › converts local times to instants across DST (Europe/Madrid)" }
   - { claim: "Database-level double-booking guard", test: "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)" }
   - { claim: "Only staff on ADMIN_EMAILS see appointments", test: "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments" }
+  - { claim: "Customers book a real free time on the public page and receive a cancel link", test: "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent" }
+  - { claim: "The same time is never booked twice for one team member, even from a stale page", test: "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)" }
+  - { claim: "The cancel link honours the notice policy", test: "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused" }
+  - { claim: "Staff calendar per team member, day and week", test: "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)" }
+  - { claim: "Time off removes times from what customers are offered", test: "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them" }
+  - { claim: "Staff moves and cancellations email the customer", test: "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time" }
+  - { claim: "Times outside the opening hours are never offered or booked", test: "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused" }
 limits:
   - "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)"
   - "No payments, reminders or external calendar sync"
+  - "Time off is checked when times are offered and booked; a booking racing a time-off change in the same instant is not locked out"
   - "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
 example: |
   import { availability, createAppointment } from "@/bookings/service";
   const day = await availability({ day: "2026-11-02" });            // real free times
   const first = day.slots[0];
   if (first) await createAppointment({ day: "2026-11-02", time: first.time, name: "Ana García", email: "ana@example.com", via: "staff" });
+params:
+  file: src/bookings/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "business", description: "Business name shown on pages and in emails" }
+    - { name: "timeZone", default: "UTC", description: "IANA time zone of the opening hours (DST handled)" }
+    - { name: "resource { singular, plural, count, names[] }", default: "one Staff member", description: "Who is booked (stylists, physiotherapists, rooms) and how many" }
+    - { name: "customer { singular, plural }", default: "customer", description: "How customers are called" }
+    - { name: "services[] { name, minutes, price, currency }", description: "Services with their own duration and price (null = not published)" }
+    - { name: "slotMinutes", description: "Grid of start times (GCD of the durations)" }
+    - { name: "hours[] { weekday 1–7, open, close }", default: "Monday–Friday 09:00–17:00", description: "Opening windows, local time" }
+    - { name: "policy { cancelNoticeHours, bookingNoticeMinutes, horizonDays }", default: "24 h, 0, 60 days", description: "Customers cancel or move up to cancelNoticeHours before; staff always can" }
+    - { name: "faq[] { topic, answer|null }", default: "[]", description: "Questions the assistant answers; null answers are never invented" }
+    - { name: "businessKind", default: "null", description: "What the business is in the request's word (clinic, salon); used by criteria aliases" }
+    - { name: "askPhone", default: "false", description: "The public booking page asks for (and requires) a phone number" }
+  example: |
+    { "business": "Sala Nueve", "timeZone": "Europe/Madrid", "resource": { "singular": "Stylist", "plural": "Stylists", "count": 4, "names": [] },
+      "services": [{ "name": "Cut", "minutes": 30, "price": 25, "currency": "EUR" }], "slotMinutes": 30,
+      "hours": [{ "weekday": 2, "open": "10:00", "close": "20:00" }], "policy": { "cancelNoticeHours": 12, "bookingNoticeMinutes": 0, "horizonDays": 60 },
+      "customer": { "singular": "customer", "plural": "customers" }, "faq": [], "askPhone": true }

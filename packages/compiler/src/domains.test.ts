@@ -55,6 +55,31 @@ describe("domain detection (deterministic, ADR-0033)", () => {
     expect(r!.assumptions.join(" ")).toMatch(/Time zone inferred/);
   });
 
+  it("reads services listed with their own durations and prices, and the phone field (Sala Nueve)", () => {
+    const r = extractBookingParams(
+      'Build an online booking site for "Sala Nueve", a hair salon with four stylists. Services: cut 30 min (25 €), ' +
+        "colour 90 min (70 €), cut and colour 120 min (90 €). Opening hours Tuesday–Saturday 10:00–20:00, " +
+        "Europe/Madrid. Customers pick a service, a stylist (or any) and a free slot, enter name, email and phone, and " +
+        "receive a confirmation email with a link to cancel up to 12 hours before. No double bookings, ever.",
+    );
+    const p = r!.params;
+    expect(p.business).toBe("Sala Nueve");
+    expect(p.services).toEqual([
+      { name: "Cut", minutes: 30, price: 25, currency: "EUR" },
+      { name: "Colour", minutes: 90, price: 70, currency: "EUR" },
+      { name: "Cut and colour", minutes: 120, price: 90, currency: "EUR" },
+    ]);
+    expect(p.slotMinutes).toBe(30);
+    expect(p.resource).toMatchObject({ singular: "Stylist", count: 4 });
+    expect(p.hours.map((h) => h.weekday)).toEqual([2, 3, 4, 5, 6]);
+    expect(p.policy.cancelNoticeHours).toBe(12);
+    expect(p.askPhone).toBe(true);
+    expect(r!.assumptions).toEqual([]);
+    expect(detectDomains("Online booking site for a salon", "bookings")[0]?.component).toBe(
+      "domain.bookings.turbineh",
+    );
+  });
+
   it("only applies to booking requests in a recipe that hosts the domain", () => {
     expect(extractBookingParams("A CRM for sales teams with deals and contacts")).toBeNull();
     expect(detectDomains(CAPABILITY_B, "saas-crud")).toEqual([]);

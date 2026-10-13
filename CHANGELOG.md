@@ -27,6 +27,19 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   matcher is not relaxed: on the 109 labelled pairs precision stays 1.00 and recall goes from 0.62 to 0.92;
   `verify:spec` Fieldnote 0/11 → 9/11, Kilnwise 0/6 → 1/6, Pixelyard 1/7 → 2/7 met; storefront Frontiers spec 7/7.
 
+- Domain components, part 2 (ADR-0048): `storage.private-uploads.turbineh` (limits and types from params, local disk
+  or S3-compatible storage with SigV4 and an offline mock, per-scope authorised downloads, staff email on client
+  uploads), the bookings recipe on `domain.bookings.turbineh` (public `/book` page, cancel link with the notice policy,
+  staff day/week calendar per team member, time off, staff move/cancel with customer emails; the recipe's own booking
+  code removed) and `jobs.scheduled.turbineh` (cron route protected by `CRON_SECRET`, idempotent runs, overdue and
+  daily email digests). New seams: `src/server/body-limit.ts`, `src/workflow/extras.tsx`, `src/workflow/board.tsx`.
+  Group 2: `ui.kanban.turbineh` (accessible drag-and-drop and keyboard board over workflow states),
+  `site.public-pages.turbineh` (public collections with filters, a page per entry, SEO, sitemap, Open Graph images),
+  `growth.waitlist.turbineh` (double opt-in, position, referral boost, CSV export) and
+  `data.analytics-import.turbineh` (all-or-nothing CSV import with a report, periods, comparisons, per-scope access,
+  chart CSV exports). Every component is declared for its recipes and accepts the fidelity patterns' params, so the
+  learning-round requests select it (ADR-0044). Checked combinations: Ledgerline, Sala Nueve, Pixelyard, Brickline,
+  Orbit Notes, Altamira, Brightside.
 - Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists

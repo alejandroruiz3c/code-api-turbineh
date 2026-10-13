@@ -19,8 +19,11 @@ describe("recipe + component combinations (ADR-0037 §D4)", () => {
     expect(names).toContain("ai-agents");
     expect(names).toContain("bookings");
     expect(names).toContain("ai-agents+domain.bookings.turbineh");
-    // The booking domain is an ai-agents component: the plain bookings recipe does not assemble it.
-    expect(names).not.toContain("bookings+domain.bookings.turbineh");
+    // The bookings recipe is built on the booking domain, with its own request (Sala Nueve), not the AI probe.
+    expect(names.filter((n) => n === "bookings+domain.bookings.turbineh")).toHaveLength(1);
+    expect(
+      combinations(repo).find((c) => c.name === "bookings+domain.bookings.turbineh")?.prompt,
+    ).toMatch(/Sala Nueve/);
   });
 
   it("every domain component has a probe request or a checked combination", () => {

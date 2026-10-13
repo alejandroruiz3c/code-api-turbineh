@@ -4,6 +4,7 @@
 file: src/bookings/params.json
 tests:
   - tests/e2e/booking-assistant.spec.ts
+  - tests/e2e/bookings.spec.ts
   - tests/unit/bookings.test.ts
 aliases:
   - term: customer

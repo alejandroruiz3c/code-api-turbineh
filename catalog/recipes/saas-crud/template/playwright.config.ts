@@ -81,6 +81,17 @@ if (process.env.TURBINEH_AI_URL?.startsWith("http://127.0.0.1")) {
   process.env.AI_API_KEY ||= secret();
   process.env.AI_MODEL ||= "mock-model";
 }
+if (process.env.S3_BASE_URL?.startsWith("http://127.0.0.1")) {
+  // Private-bucket mock (storage.private-uploads.turbineh): the app uses its S3 driver with throwaway credentials,
+  // and the mock checks every request's SigV4 signature with them.
+  process.env.STORAGE_DRIVER = "s3";
+  process.env.S3_BUCKET ||= "e2e-private";
+  process.env.S3_REGION ||= "us-east-1";
+  process.env.S3_ACCESS_KEY_ID ||= secret("e2e");
+  process.env.S3_SECRET_ACCESS_KEY ||= secret();
+}
+// Scheduled jobs (jobs.scheduled.turbineh): the cron route's shared secret, generated per run.
+process.env.CRON_SECRET ||= secret();
 // Recipe-specific test settings (tests/e2e/test-env.ts), e.g. a second shop currency.
 for (const [k, v] of Object.entries(TEST_ENV)) process.env[k] ||= v;
 

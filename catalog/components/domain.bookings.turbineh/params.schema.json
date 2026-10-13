@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "domain.bookings.turbineh params (src/bookings/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "business",
+    "timeZone",
+    "resource",
+    "customer",
+    "services",
+    "slotMinutes",
+    "hours",
+    "policy",
+    "faq"
+  ],
+  "$defs": {
+    "hhmm": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" }
+  },
+  "properties": {
+    "business": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "timeZone": {
+      "type": "string",
+      "minLength": 1,
+      "description": "IANA time zone of the opening hours, e.g. Europe/Madrid (DST handled)."
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["singular", "plural", "count", "names"],
+      "description": "Who or what is booked: stylists, physiotherapists, rooms, tables.",
+      "properties": {
+        "singular": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "plural": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "count": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "names": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+        }
+      }
+    },
+    "customer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["singular", "plural"],
+      "properties": {
+        "singular": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "plural": { "type": "string", "minLength": 1, "maxLength": 40 }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "minutes", "price", "currency"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "minutes": { "type": "integer", "minimum": 5, "maximum": 480 },
+          "price": { "type": ["number", "null"], "minimum": 0, "maximum": 1000000 },
+          "currency": { "type": ["string", "null"], "minLength": 1, "maxLength": 8 }
+        }
+      }
+    },
+    "slotMinutes": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 240,
+      "description": "Grid of start times from each opening time (the GCD of the service durations)."
+    },
+    "hours": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 28,
+      "description": "Opening windows per ISO weekday (1 = Monday … 7 = Sunday), local time.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["weekday", "open", "close"],
+        "properties": {
+          "weekday": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "open": { "$ref": "#/$defs/hhmm" },
+          "close": { "$ref": "#/$defs/hhmm" }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cancelNoticeHours", "bookingNoticeMinutes", "horizonDays"],
+      "properties": {
+        "cancelNoticeHours": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 720,
+          "description": "Customers may move or cancel up to this many hours before the start (staff always can)."
+        },
+        "bookingNoticeMinutes": { "type": "integer", "minimum": 0, "maximum": 10080 },
+        "horizonDays": { "type": "integer", "minimum": 1, "maximum": 365 }
+      }
+    },
+    "faq": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["topic", "answer"],
+        "properties": {
+          "topic": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "answer": { "type": ["string", "null"], "maxLength": 1000 }
+        }
+      }
+    },
+    "businessKind": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 40,
+      "description": "What the business is, in the request's word (clinic, salon, studio); used by criteria aliases (ADR-0047)."
+    },
+    "askPhone": {
+      "type": "boolean",
+      "description": "The public booking page asks for a phone number (required when true)."
+    }
+  }
+}

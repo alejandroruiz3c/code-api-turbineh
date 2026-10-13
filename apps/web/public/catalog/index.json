@@ -3064,6 +3064,198 @@
       "details": "https://software.turbineh.com/v1/capabilities/content.rss.feed"
     },
     {
+      "id": "data.analytics-import.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "data",
+      "package": "pkg:generic/turbineh/data.analytics-import.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "data.analytics-import"
+      ],
+      "does": "CSV import for analytics with the columns of the request (date, dimensions such as shop and product, measures such as quantity and revenue): every row validated first and the file imported whole or not at all, with a report of line, column and reason; a dashboard of totals compared with the previous period, measures by day/week/month/quarter/year, top values per dimension and a comparison between values of the scope dimension, filtered by date range and scope value; every chart exported as CSV with the same filters; per-scope access (a shop manager sees and imports only their shop) through record-access.",
+      "doesNot": "Does not connect to databases or APIs, schedule imports, or draw line charts beyond accessible bars and tables",
+      "title": "Analytics from CSV imports — all-or-nothing validation, periods, comparisons, per-scope access, chart exports",
+      "summary": "Turns \"managers upload daily sales as CSV (date, shop, product, quantity, revenue); invalid rows are rejected with a clear report and never half-imported\" into a working dashboard. Each file is validated row by row first and imported whole in one transaction, or not at all with a report of line, column and reason. The dashboard shows totals compared with the previous period of equal length, measures by day, week, month, quarter or year, top values of each dimension and a comparison between shops, filtered by date range and shop; every chart exports its numbers as CSV with the same filters. With per-record scopes a shop manager sees and imports only their shop while the owner sees all.",
+      "useCases": [
+        "Daily sales of six coffee shops uploaded as CSV, with revenue and units by day, week and month",
+        "Shop managers who see only their shop while the owner compares all shops",
+        "Exporting the numbers behind every chart as CSV"
+      ],
+      "useWhen": [
+        "The request uploads or imports CSV data and asks for totals, periods, comparisons or charts",
+        "Invalid rows must be reported and never partially imported"
+      ],
+      "avoidWhen": [
+        "Data entered record by record in forms (generated CRUD with a summary page)",
+        "Live connections to external databases or BI tools"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Generic rows (date + JSON dimensions and measures)",
+          "gain": "Any column set from the request without generated tables",
+          "cost": "No per-column database types or indexes beyond date and scope"
+        },
+        {
+          "choice": "Validate everything before one insert transaction",
+          "gain": "Never half-imported; one complete report",
+          "cost": "Whole file in memory (bounded to 5 MB / 50,000 rows)"
+        },
+        {
+          "choice": "Bars and tables instead of a chart library",
+          "gain": "No dependency, accessible, the same numbers as the CSV export",
+          "cost": "No line or pie charts"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/analytics-import/params.json",
+          "default": "date, store, product, quantity, revenue; day/week/month",
+          "description": "Columns, periods, comparisons, filters and exports from the request (validated at start-up)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "importCsv",
+          "signature": "importCsv(actor, fileName, text) → { ok: true, rows } | { ok: false, errors: { line, column, message }[] }",
+          "where": "src/analytics-import/service.ts"
+        },
+        {
+          "name": "Queries",
+          "signature": "totals(actor, filters); series(actor, filters, period); byDimension(actor, filters, dimension, limit?); scopeValues(actor); lastDay(actor)",
+          "where": "src/analytics-import/service.ts"
+        },
+        {
+          "name": "Rules",
+          "signature": "parseCsv(text); validateCsv(text, dataset, allowedScopes?); periodStart(day, period); previousRange(from, to); change(now, before)",
+          "where": "src/analytics-import/rules.ts"
+        },
+        {
+          "name": "Dataset",
+          "signature": "toDataset(params) → { columns, date, measures, dimensions, scope, periods, compare, exportCsv }",
+          "where": "src/analytics-import/config.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/reports (filters from, to, period, scope); /dashboard/reports/import; /dashboard/reports/export?chart=series|compare|top-<dimension>",
+          "where": "src/app/dashboard/reports/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a column, change which columns are numbers or which one is the scope",
+          "where": "src/analytics-import/params.json",
+          "how": "Edit columns (and measures/dateColumn/scopeColumn when names do not say it); validated at start-up; the unit tests cover the roles."
+        },
+        {
+          "what": "Add a validation rule (e.g. revenue must equal quantity × price)",
+          "where": "src/analytics-import/rules.ts (validateCsv)",
+          "how": "Push a { line, column, message } error; the file stays all-or-nothing. Add a unit test."
+        },
+        {
+          "what": "Add a chart",
+          "where": "src/app/dashboard/reports/page.tsx, src/analytics-import/service.ts, src/app/dashboard/reports/export/route.ts",
+          "how": "Add a query in the service (it applies workspace and scope filters), render it with <Bars> and add its chart key to the export route."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions), drizzle-orm with PostgreSQL (jsonb, date_trunc), zod 4",
+        "recipes": [
+          "analytics-dashboard",
+          "internal-tool",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.audit-log.turbineh"
+        ],
+        "notes": "Per-shop access needs domain.membership-access.turbineh with a scope whose names match the scope column's values."
+      },
+      "security": [
+        "Imports require a member who may create; restricted members may import only rows of their own scopes",
+        "Every query is filtered by workspace and visible scopes; exports use the same filters",
+        "Column names come from validated params and reach SQL only as parameters",
+        "Files are bounded (5 MB, 50,000 rows) and rate-limited per person"
+      ],
+      "guarantees": [
+        {
+          "claim": "An invalid file imports nothing and reports line, column and reason",
+          "test": "tests/e2e/analytics-import.spec.ts › a CSV upload with one invalid row: the entire file is rejected, nothing is imported, and the report provides the row number, field and reason for each error"
+        },
+        {
+          "claim": "Valid files are imported whole and aggregated by period",
+          "test": "tests/e2e/analytics-import.spec.ts › a valid CSV is imported whole and the dashboard shows totals by day, week and month"
+        },
+        {
+          "claim": "Totals are compared with the previous period and between shops",
+          "test": "tests/e2e/analytics-import.spec.ts › the dashboard compares the period with the previous one and between values of each dimension"
+        },
+        {
+          "claim": "Every chart exports as CSV with the same filters",
+          "test": "tests/e2e/analytics-import.spec.ts › every chart on the dashboard exports its data as a CSV file with the same filters"
+        },
+        {
+          "claim": "Shop managers see and import only their shop",
+          "test": "tests/e2e/analytics-scopes.spec.ts › a shop manager sees only their own shop's figures and cannot import another shop's"
+        },
+        {
+          "claim": "Validation is all-or-nothing with a report",
+          "test": "tests/unit/analytics-import.test.ts › rejects the whole file when any row is invalid, with the line, column and reason of each problem"
+        }
+      ],
+      "limits": [
+        "5 MB and 50,000 rows per file; aggregates computed per request in PostgreSQL",
+        "Bars and tables only (no line or pie charts)"
+      ],
+      "example": "// src/analytics-import/params.json — Brightside Coffee\n{ \"entity\": \"DailySale\", \"columns\": [\"date\", \"shop\", \"product\", \"quantity\", \"revenue\"], \"periods\": [\"day\", \"week\", \"month\"],\n  \"compareWithPreviousPeriod\": true, \"filters\": [\"date range\", \"shop\"], \"exportCsv\": true, \"atomic\": true, \"errorReport\": true }\n",
+      "keywords": [
+        "analytics",
+        "dashboard",
+        "csv import",
+        "upload csv",
+        "validation report",
+        "all or nothing",
+        "kpi",
+        "revenue",
+        "units",
+        "by day",
+        "by week",
+        "by month",
+        "previous period",
+        "comparison",
+        "top products",
+        "filters",
+        "date range",
+        "export csv",
+        "per shop",
+        "per store"
+      ],
+      "synonyms": {
+        "import": [
+          "upload",
+          "load",
+          "ingest"
+        ],
+        "measure": [
+          "metric",
+          "kpi",
+          "revenue",
+          "quantity",
+          "units"
+        ],
+        "dimension": [
+          "shop",
+          "store",
+          "product",
+          "region",
+          "category"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/data.analytics-import.turbineh"
+    },
+    {
       "id": "data.countries.i18n-iso-countries",
       "version": "0.1.0",
       "status": "approved",
@@ -6939,7 +7131,7 @@
       "provides": [
         "domain.bookings"
       ],
-      "does": "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite.",
+      "does": "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list: list, day/week calendar per team member, time off, move and cancel with customer emails; a public booking page (no account) and a cancel link in the confirmation email that honours the notice policy. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite.",
       "doesNot": "Does not take payments, sync external calendars or send reminders; one business per app",
       "title": "Booking domain (appointments, availability, policy) with an assistant toolkit",
       "summary": "Everything an appointment business needs behind its assistant or its staff: team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded, and staff pages behind an ADMIN_EMAILS allow-list. Parameters come from the request. In AI apps it exposes six tools to runAgent; create/move/cancel need the person's confirmation.",
@@ -7023,8 +7215,18 @@
         },
         {
           "name": "Staff pages",
-          "signature": "/dashboard/appointments (list, book, cancel), /dashboard/appointments/settings (team, answers)",
+          "signature": "/dashboard/appointments (list, book, cancel), /[id] (move, cancel), /calendar (day/week per team member), /time-off, /settings (team, answers)",
           "where": "src/app/dashboard/appointments/page.tsx"
+        },
+        {
+          "name": "Public pages",
+          "signature": "/book (service, team member or any, free times, name/email/phone; publicAction bookSlot), /book/cancel/[token] (cancel link, notice policy)",
+          "where": "src/app/book/page.tsx"
+        },
+        {
+          "name": "Management",
+          "signature": "cancelByToken(token); appointmentByCancelToken(token); staffMove(id, { day, time, resource? }); addTimeOff({ resourceId, day, from, to, reason?, by }); removeTimeOff(id); calendar(fromDay, days, resourceId?)",
+          "where": "src/bookings/manage.ts"
         }
       ],
       "extensionPoints": [
@@ -7039,6 +7241,16 @@
           "how": "Add a function to service.ts that enforces the rule, then a defineTool() calling it; irreversible: true + prepare() if it changes data. Add a mock rule in tests/mock-llm/scripts/bookings.ts and an E2E case."
         },
         {
+          "what": "Change the public booking page or what the customer enters",
+          "where": "src/app/book/page.tsx, src/app/book/actions.ts (publicAction bookSlot)",
+          "how": "Keep it a publicAction (rate limit + Zod schema first); createAppointment re-checks the time against real availability."
+        },
+        {
+          "what": "Change the cancel link or its notice rule",
+          "where": "src/bookings/manage.ts (cancelByToken), src/bookings/params.json (policy.cancelNoticeHours)",
+          "how": "The token is single-use per booking and stored hashed; the notice rule is canChange() in availability.ts."
+        },
+        {
           "what": "Different availability rule (breaks, holidays)",
           "where": "src/bookings/availability.ts",
           "how": "Filter dayStarts()/freeSlots(); everything (assistant, staff form) uses them, so one change applies everywhere."
@@ -7048,7 +7260,8 @@
         "runtime": "node >= 20",
         "framework": "next ^16, drizzle-orm with PostgreSQL, zod 4",
         "recipes": [
-          "ai-agents"
+          "ai-agents",
+          "bookings"
         ],
         "requires": [],
         "works_with": [
@@ -7091,11 +7304,40 @@
         {
           "claim": "Only staff on ADMIN_EMAILS see appointments",
           "test": "tests/e2e/booking-assistant.spec.ts › only staff on ADMIN_EMAILS see appointments"
+        },
+        {
+          "claim": "Customers book a real free time on the public page and receive a cancel link",
+          "test": "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+        },
+        {
+          "claim": "The same time is never booked twice for one team member, even from a stale page",
+          "test": "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+        },
+        {
+          "claim": "The cancel link honours the notice policy",
+          "test": "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+        },
+        {
+          "claim": "Staff calendar per team member, day and week",
+          "test": "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+        },
+        {
+          "claim": "Time off removes times from what customers are offered",
+          "test": "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+        },
+        {
+          "claim": "Staff moves and cancellations email the customer",
+          "test": "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+        },
+        {
+          "claim": "Times outside the opening hours are never offered or booked",
+          "test": "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"
         }
       ],
       "limits": [
         "One business per app; one booking per resource per time cell; up to 60 slots per answer; horizon from params (default 60 days)",
         "No payments, reminders or external calendar sync",
+        "Time off is checked when times are offered and booked; a booking racing a time-off change in the same instant is not locked out",
         "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
       ],
       "example": "import { availability, createAppointment } from \"@/bookings/service\";\nconst day = await availability({ day: \"2026-11-02\" });            // real free times\nconst first = day.slots[0];\nif (first) await createAppointment({ day: \"2026-11-02\", time: first.time, name: \"Ana García\", email: \"ana@example.com\", via: \"staff\" });\n",
@@ -9437,6 +9679,184 @@
       "details": "https://software.turbineh.com/v1/capabilities/files.upload.busboy"
     },
     {
+      "id": "growth.waitlist.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "growth",
+      "package": "pkg:generic/turbineh/growth.waitlist.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "growth.waitlist"
+      ],
+      "does": "Waitlist mechanics from the request: join through publicAction (per-IP rate limit, Zod, honeypot, same answer for known emails), double opt-in by an emailed link (logged when there is no email provider; confirmed by a button, so mail scanners never confirm), position in the queue, a personal referral link and a boost of N places per confirmed referral, and a staff page with positions, referrals, CSV export and removal.",
+      "doesNot": "Does not send launch invitations, run drip campaigns or verify that referrals are real people beyond the email confirmation",
+      "title": "Waitlist with double opt-in, positions, referral links and a referral boost",
+      "summary": "Turns a waitlist form into a launch queue: visitors join through a rate-limited public action, confirm by the link emailed to them (logged when there is no email provider), and then see their position and a personal referral link. Every friend who confirms through that link moves the referrer up by the number of places the request says. Staff see the list with positions and referrals, export it as CSV and remove entries. Known emails get the same answer as new ones, so the form never reveals who signed up. It does not send launch invitations or drip campaigns.",
+      "useCases": [
+        "A launch landing page whose waitlist confirms emails and shows each person their position",
+        "Referral links where every confirmed friend moves the referrer up five places",
+        "An owner who exports the list as CSV and removes spam entries"
+      ],
+      "useWhen": [
+        "The request mentions a waitlist with confirmation, positions or referrals",
+        "Signups must be confirmed before they count"
+      ],
+      "avoidWhen": [
+        "A plain newsletter signup with no queue (a simple form and email are enough)",
+        "Paid pre-orders (use a checkout)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Confirmation by a button on the link's page",
+          "gain": "Mail scanners that open links never confirm anyone",
+          "cost": "One extra click for the person"
+        },
+        {
+          "choice": "Positions computed on read from confirmations and referrals",
+          "gain": "Always consistent, no stored ranks to repair",
+          "cost": "Reads every confirmed signup per status view"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/waitlist/params.json",
+          "default": "double opt-in, positions, referral boost 1, export and removal on",
+          "description": "Mechanics from the request (validated at start-up)"
+        },
+        {
+          "name": "ADMIN_EMAILS",
+          "description": "Staff who see, export and remove entries (deny by default)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "joinWaitlist",
+          "signature": "publicAction(\"waitlist\", { rateLimit: 10/min, schema: { name, email, ref?, website } }) → { ok, message }",
+          "where": "src/app/waitlist/actions.ts"
+        },
+        {
+          "name": "confirmSignup",
+          "signature": "publicAction(\"waitlist-confirm\", { token }) → { ok, message }",
+          "where": "src/app/waitlist/actions.ts"
+        },
+        {
+          "name": "WaitlistForm",
+          "signature": "<WaitlistForm /> — name, email, hidden ref from ?ref=",
+          "where": "src/app/waitlist/form.tsx"
+        },
+        {
+          "name": "Service",
+          "signature": "join({ name, email, ref? }); confirm(token); status(token) → { confirmed, position, total, referrals, referralLink }; listSignups(); removeSignups(ids)",
+          "where": "src/waitlist/service.ts"
+        },
+        {
+          "name": "positions",
+          "signature": "positions(entries: { id, confirmedAt, referrals }[], boost) → Map<id, position>",
+          "where": "src/waitlist/rules.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/waitlist/confirm/<token> (confirm, position, referral link); /dashboard/waitlist (staff); /dashboard/waitlist/export (CSV)",
+          "where": "src/app/waitlist/confirm/[token]/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Change how many places a referral is worth, or turn off positions or opt-in",
+          "where": "src/waitlist/params.json",
+          "how": "Edit referral.boost, showPosition or doubleOptIn; validated at start-up; the unit tests cover the rule."
+        },
+        {
+          "what": "Change the ranking rule (e.g. cap the boost)",
+          "where": "src/waitlist/rules.ts",
+          "how": "positions() is pure; add a unit test in tests/unit/waitlist.test.ts for the new rule."
+        },
+        {
+          "what": "Add a field to the signup form",
+          "where": "src/db/component-waitlist.ts, src/app/waitlist/actions.ts, src/app/waitlist/form.tsx",
+          "how": "Add the column, the Zod field in joinWaitlist's schema (it stays a publicAction) and the input; then `pnpm db:generate`."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "landing-waitlist",
+          "corporate-site",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "email.transactional.turbineh"
+        ],
+        "notes": "Replaces the landing-waitlist recipe's own waitlist (same form and action names, so its home page keeps working)."
+      },
+      "security": [
+        "Public writes only through publicAction (per-IP rate limit, Zod, honeypot)",
+        "The same answer for known and new emails (no enumeration)",
+        "Link tokens are stored as SHA-256; confirming needs a POST from the link's page",
+        "Self-referrals are ignored; staff pages require a verified ADMIN_EMAILS account"
+      ],
+      "guarantees": [
+        {
+          "claim": "Signups count only after the emailed confirmation; confirmed people see their position and referral link",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link"
+        },
+        {
+          "claim": "Each confirmed referral moves the referrer up by the configured places",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › a new user signs up through a referral link and confirms their email: the referrer's waitlist position increases by the configured number of places"
+        },
+        {
+          "claim": "The owner exports the list as CSV and removes entries",
+          "test": "tests/e2e/waitlist-mechanics.spec.ts › an authenticated owner can access the admin dashboard, sees the full list of waitlist entries, uses the export option to generate a CSV and deletes a selected entry"
+        },
+        {
+          "claim": "Referral boosts never move anyone above first place",
+          "test": "tests/unit/waitlist.test.ts › every confirmed referral moves the referrer up by the boost, never above first place"
+        }
+      ],
+      "limits": [
+        "Positions are computed per view over every confirmed signup",
+        "No launch invitations or reminder emails"
+      ],
+      "example": "// src/waitlist/params.json — \"every confirmed referral moves the referrer up by five positions\"\n{ \"doubleOptIn\": true, \"showPosition\": true, \"referral\": { \"enabled\": true, \"boost\": 5 }, \"ownerCanExport\": true, \"ownerCanRemove\": true }\n",
+      "keywords": [
+        "waitlist",
+        "wait list",
+        "early access",
+        "double opt-in",
+        "confirmation email",
+        "referral",
+        "referral link",
+        "invite friends",
+        "position",
+        "queue",
+        "move up",
+        "viral",
+        "launch",
+        "signup",
+        "csv export"
+      ],
+      "synonyms": {
+        "waitlist": [
+          "wait list",
+          "early access list",
+          "beta list",
+          "launch list"
+        ],
+        "referral": [
+          "invite",
+          "share link",
+          "refer a friend"
+        ],
+        "double opt-in": [
+          "confirm your email",
+          "confirmation link"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/growth.waitlist.turbineh"
+    },
+    {
       "id": "jobs.queue.turbineh",
       "version": "0.1.0",
       "status": "approved",
@@ -9566,6 +9986,189 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/jobs.queue.turbineh"
+    },
+    {
+      "id": "jobs.scheduled.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "jobs",
+      "package": "pkg:generic/turbineh/jobs.scheduled.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "jobs.scheduled"
+      ],
+      "does": "Scheduled jobs from the request (\"overdue tasks are emailed every morning\"): cron expressions evaluated in each job's IANA time zone (DST-correct), a cron route protected by a secret header (x-cron-secret or Vercel Cron's Bearer), idempotent runs (each scheduled time of each job runs once, recorded under a unique key; failed runs are retried), and email digests — overdue/stuck records to the person who created them and a daily attention digest to the members who manage the workspace — logged when there is no email provider.",
+      "doesNot": "Does not run a clock by itself (an external scheduler calls the route), queue arbitrary background work (jobs.queue.turbineh) or send SMS/push",
+      "title": "Scheduled jobs with time zones, a protected cron route, idempotent runs and email digests",
+      "summary": "Runs the recurring work a request describes — \"overdue tasks are emailed to the assignee every morning\", \"a daily summary for managers\" — from a cron route that any scheduler (Vercel Cron, GitHub Actions, a crontab) calls every few minutes with a secret header. Each job has a cron expression evaluated in its own IANA time zone, so \"07:00 in Madrid\" stays 07:00 across daylight saving. Every scheduled time of every job runs at most once: the run is claimed under a unique key, so retries and two schedulers never send twice; failed runs are retried. With workflow records it emails overdue and stuck records to the person who created them and a daily attention digest to the members who manage the workspace, logged when no email provider is configured. It does not keep a clock itself.",
+      "useCases": [
+        "Overdue tasks emailed to their owner every morning at 07:00 local time",
+        "A weekday digest of everything that needs attention for workspace managers",
+        "Any recurring job the app adds (custom kind) with the same protection and idempotence"
+      ],
+      "useWhen": [
+        "The request says something happens every morning, daily, weekly or on a schedule",
+        "Overdue or stuck records must be emailed"
+      ],
+      "avoidWhen": [
+        "One-off background work triggered by a user action (use jobs.queue.turbineh)",
+        "Sub-minute schedules or long-running workers"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "An external scheduler calls a route",
+          "gain": "Works on serverless hosts and anywhere; nothing to keep alive",
+          "cost": "A scheduler must be configured (Vercel Cron, GitHub Actions…)"
+        },
+        {
+          "choice": "Run key = (job, latest scheduled time)",
+          "gain": "Idempotent across retries and concurrent calls; missed runs catch up on the next call",
+          "cost": "Only the latest missed occurrence runs (no backfill of older ones)"
+        },
+        {
+          "choice": "Cron evaluated in-app per time zone",
+          "gain": "Local times stay right across daylight saving",
+          "cost": "Minute-by-minute scan of up to 8 days per call (cheap, bounded)"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/jobs/params.json",
+          "default": "overdue reminders 07:00 daily, digest 08:00 weekdays, UTC",
+          "description": "Jobs from the request: id, kind, cron, timeZone, what (validated at start-up)"
+        },
+        {
+          "name": "CRON_SECRET",
+          "description": "Shared secret of /api/cron/run (≥32 chars); without it the route answers 503"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Cron route",
+          "signature": "GET|POST /api/cron/run[?job=<id>] — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { ran, skipped, failed }",
+          "where": "src/app/api/cron/run/route.ts"
+        },
+        {
+          "name": "runScheduled",
+          "signature": "runScheduled({ jobId?, now? }, jobs?) → RunReport — claims (job, latest occurrence), sends the digest, records the run",
+          "where": "src/jobs/runner.ts"
+        },
+        {
+          "name": "DIGESTS",
+          "signature": "Record<kind, (job, now) => Promise<{ to, subject, text }[]>>",
+          "where": "src/jobs/digests.ts"
+        },
+        {
+          "name": "Cron",
+          "signature": "parseCron(expr); matches(cron, at, timeZone); lastOccurrence(expr, timeZone, now, lookbackDays = 8)",
+          "where": "src/jobs/cron.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a scheduled job (weekly report, reminder before a booking…)",
+          "where": "src/jobs/params.json, src/jobs/digests.ts",
+          "how": "Add a job with kind \"custom\" (or a new kind) and return its emails from DIGESTS; the runner handles the schedule, idempotence and logging."
+        },
+        {
+          "what": "Change when a job runs or its time zone",
+          "where": "src/jobs/params.json",
+          "how": "Edit cron (five fields) and timeZone (IANA); validated at start-up."
+        },
+        {
+          "what": "Call the route on a schedule in production",
+          "where": "CRON_SECRET, your scheduler",
+          "how": "Vercel Cron: add `{ \"crons\": [{ \"path\": \"/api/cron/run\", \"schedule\": \"*/10 * * * *\" }] }` to vercel.json and set CRON_SECRET; elsewhere call it with the x-cron-secret header."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 route handlers, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "projects",
+          "internal-tool",
+          "client-portal",
+          "tracker",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.workflow.turbineh",
+          "email.transactional.turbineh",
+          "jobs.queue.turbineh"
+        ],
+        "notes": "Without domain.workflow.turbineh the built-in digests have no data (custom jobs only)."
+      },
+      "security": [
+        "The route requires CRON_SECRET (≥32 characters) in a header, compared in constant time; disabled without it",
+        "No user input besides a validated job id; digests read data through the domain services",
+        "A run never sends twice for the same scheduled time (unique key in the database)"
+      ],
+      "guarantees": [
+        {
+          "claim": "The cron route refuses calls without the secret",
+          "test": "tests/e2e/scheduled-jobs.spec.ts › the cron route refuses calls without the secret header"
+        },
+        {
+          "claim": "Each scheduled time of a job runs once",
+          "test": "tests/e2e/scheduled-jobs.spec.ts › a due job runs once per scheduled time: calling again sends nothing (idempotent)"
+        },
+        {
+          "claim": "Schedules follow the job's time zone across daylight saving",
+          "test": "tests/unit/scheduled-jobs.test.ts › finds the latest scheduled time in the job's time zone, across daylight saving"
+        },
+        {
+          "claim": "Overdue records are emailed to their creator, logged without an email provider",
+          "test": "tests/e2e/jobs-digests.spec.ts › overdue records are emailed every morning to the person who created them, logged when there is no email provider"
+        },
+        {
+          "claim": "The daily digest goes to the members who manage the workspace",
+          "test": "tests/e2e/jobs-digests.spec.ts › the daily digest lists what needs attention to the members who manage the workspace"
+        }
+      ],
+      "limits": [
+        "Needs an external scheduler; only the latest missed occurrence of a job runs",
+        "Workflow records have a creator, not an assignee: overdue emails go to whoever created the record",
+        "Email only (no SMS or push)"
+      ],
+      "example": "// src/jobs/params.json\n{ \"jobs\": [{ \"id\": \"overdue-reminders\", \"kind\": \"overdue-digest\", \"cron\": \"0 7 * * *\", \"timeZone\": \"Europe/Madrid\",\n             \"what\": \"Overdue tasks are emailed to the assignee every morning\" }], \"logWhenNoEmailProvider\": true }\n// scheduler: curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/cron/run\n",
+      "keywords": [
+        "cron",
+        "scheduled jobs",
+        "scheduler",
+        "every morning",
+        "daily email",
+        "digest",
+        "reminders",
+        "overdue reminders",
+        "overdue emails",
+        "recurring task",
+        "vercel cron",
+        "time zone",
+        "idempotent",
+        "notifications",
+        "summary email"
+      ],
+      "synonyms": {
+        "scheduled job": [
+          "cron job",
+          "recurring task",
+          "scheduled task",
+          "periodic job"
+        ],
+        "digest": [
+          "summary email",
+          "daily report",
+          "reminder email"
+        ],
+        "overdue": [
+          "late",
+          "past due",
+          "stuck",
+          "over the limit"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/jobs.scheduled.turbineh"
     },
     {
       "id": "jobs.scheduler.cron-parser",
@@ -11782,6 +12385,185 @@
       "details": "https://software.turbineh.com/v1/capabilities/seo.structured-data.schema-dts"
     },
     {
+      "id": "site.public-pages.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "site",
+      "package": "pkg:generic/turbineh/site.public-pages.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "site.public-pages"
+      ],
+      "does": "Public collections of a website from the request — portfolio projects, open positions, team members, services: a list per collection with filters by its fields (sector, location…), a page per entry with SEO metadata (title, description, canonical URL, Open Graph, JSON-LD) and a generated Open Graph image in the brand colours, published entries in the sitemap; staff add, edit, publish and delete entries; drafts are never shown.",
+      "doesNot": "Does not provide a page builder, rich-text editor, image uploads or multiple languages",
+      "title": "Public collection pages with filters, a page per entry, SEO metadata and Open Graph images",
+      "summary": "Adds the public collections a company website asks for — a projects portfolio filtered by sector with a page per project, careers with open positions, the team — from the request. Visitors see published entries only, filter the list by the collection's fields and open a page per entry with title, description, canonical URL, Open Graph tags, JSON-LD and a generated Open Graph image in the brand colours; published pages are listed in the sitemap. Staff add, edit, publish and delete entries in the dashboard. It is not a page builder: entries share one simple shape and text is shown as plain paragraphs.",
+      "useCases": [
+        "A structural engineering firm's projects portfolio with filters by sector and a page per project",
+        "Careers with open positions, each with its own page and JobPosting data",
+        "A team page edited by staff"
+      ],
+      "useWhen": [
+        "The request lists public sections made of records (projects, positions, team, services)",
+        "It asks for a page per record, filters, SEO, a sitemap or Open Graph images"
+      ],
+      "avoidWhen": [
+        "Free-form marketing pages (edit the recipe's pages)",
+        "A blog with posts and RSS (the corporate-site recipe has one)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "One generic entry shape for every collection",
+          "gain": "Any collection from the request works with no generated code",
+          "cost": "Collection-specific fields beyond the filter fields need code"
+        },
+        {
+          "choice": "Top-level dynamic route /<collection>",
+          "gain": "Paths straight from the request (/projects, /careers)",
+          "cost": "A collection path cannot reuse a path the app already has (static routes win)"
+        },
+        {
+          "choice": "Open Graph images by next/og",
+          "gain": "A share image per page in the brand colours, no dependency",
+          "cost": "Title-only design"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/site-pages/params.json",
+          "default": "projects (sector) and careers (location)",
+          "description": "Collections from the request: entity, path, page per entry, filters; seo"
+        },
+        {
+          "name": "ADMIN_EMAILS",
+          "description": "Staff who edit the public pages (deny by default)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Public pages",
+          "signature": "/<path> (published list, filters as query parameters); /<path>/<slug> (page, metadata, JSON-LD); /<path>/<slug>/opengraph-image (PNG)",
+          "where": "src/app/[collection]/page.tsx"
+        },
+        {
+          "name": "Staff pages",
+          "signature": "/dashboard/site-pages, /dashboard/site-pages/<collection>, /dashboard/site-pages/<collection>/<id>",
+          "where": "src/app/dashboard/site-pages/page.tsx"
+        },
+        {
+          "name": "Service",
+          "signature": "publishedEntries(collection, filters) → { rows, options }; publishedEntry(collection, slug); sitemapEntries(); saveEntry(collection, input, id?); deleteEntry(collection, id)",
+          "where": "src/site-pages/service.ts"
+        },
+        {
+          "name": "Config",
+          "signature": "collections: { key, entity, path, detail, filters: { key, label }[], label, plural }[]; collectionOf(key)",
+          "where": "src/site-pages/config.ts"
+        },
+        {
+          "name": "SitePagesFrame",
+          "signature": "<SitePagesFrame>{children}</SitePagesFrame> — the layout of the public pages",
+          "where": "src/components/site-pages/frame.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a public collection or a filter",
+          "where": "src/site-pages/params.json",
+          "how": "Add { entity, path, detail, filters } (validated at start-up); staff fill it in at /dashboard/site-pages."
+        },
+        {
+          "what": "Use the site's own layout and navigation",
+          "where": "src/components/site-pages/frame.tsx, the site's nav, src/app/sitemap.ts",
+          "how": "Wrap children in the site shell, list `collections` in the menu and add `await sitemapEntries()` to the sitemap (done for corporate-site)."
+        },
+        {
+          "what": "Show a collection-specific field (budget, salary range)",
+          "where": "src/app/[collection]/[slug]/page.tsx, src/components/site-pages/entry-form.tsx",
+          "how": "Add it as a filter field in params (stored in attributes) or add a column to site_entries and the form; then `pnpm db:generate`."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (metadata API, next/og), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "corporate-site",
+          "landing-waitlist",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [],
+        "notes": "On corporate-site the pages use its SiteShell, appear in its menu and in its sitemap (files-recipe/corporate-site)."
+      },
+      "security": [
+        "Visitors only ever read published entries; drafts and unknown collections are 404",
+        "Staff writes require a verified ADMIN_EMAILS account (requireAdmin)",
+        "Entry text is rendered as text; JSON-LD escapes '<'; image URLs must be http(s)"
+      ],
+      "guarantees": [
+        {
+          "claim": "Staff publish entries; visitors browse and filter the list",
+          "test": "tests/e2e/public-pages.spec.ts › staff publish entries and visitors browse the list, filtered by its field"
+        },
+        {
+          "claim": "Every entry has a page with SEO metadata and an Open Graph image",
+          "test": "tests/e2e/public-pages.spec.ts › each entry has its own page with title, description, canonical URL and an Open Graph image"
+        },
+        {
+          "claim": "Drafts never show and the sitemap lists only published pages",
+          "test": "tests/e2e/public-pages.spec.ts › drafts are never shown to visitors, and the sitemap lists only published pages"
+        },
+        {
+          "claim": "Only real filter fields from the request become filters",
+          "test": "tests/unit/site-pages.test.ts › names collections from the entity and keeps only real filter fields from the request"
+        }
+      ],
+      "limits": [
+        "One entry shape; no rich text, image uploads or translations",
+        "500 entries listed per collection"
+      ],
+      "example": "// src/site-pages/params.json — \"projects portfolio with filters by sector and a page per project\"\n{ \"pages\": [{ \"entity\": \"Project\", \"path\": \"/projects\", \"detail\": true, \"filters\": [\"sector\"] }], \"seo\": true }\n",
+      "keywords": [
+        "portfolio",
+        "projects",
+        "case studies",
+        "careers",
+        "jobs",
+        "open positions",
+        "team",
+        "public pages",
+        "page per project",
+        "filters",
+        "seo",
+        "metadata",
+        "open graph",
+        "og image",
+        "sitemap",
+        "json-ld",
+        "company website"
+      ],
+      "synonyms": {
+        "portfolio": [
+          "projects",
+          "case studies",
+          "our work",
+          "references"
+        ],
+        "careers": [
+          "jobs",
+          "open positions",
+          "vacancies",
+          "join us"
+        ],
+        "open graph image": [
+          "og image",
+          "social preview",
+          "share image"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/site.public-pages.turbineh"
+    },
+    {
       "id": "storage.objects.aws-s3",
       "version": "0.1.0",
       "status": "approved",
@@ -12091,6 +12873,256 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/storage.objects.vercel-blob"
+    },
+    {
+      "id": "storage.private-uploads.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "storage",
+      "package": "pkg:generic/turbineh/storage.private-uploads.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "files.private-uploads",
+        "storage.private-uploads"
+      ],
+      "does": "Private file uploads with limits from the request: maximum size, accepted types recognised by content (PDF, images, text, CSV, Office), files per record; stored outside the public directory on local disk (development, tests, one server) or in any S3-compatible bucket with SigV4-signed requests (production), with an offline S3 mock for E2E; every download goes through an authorised route that checks the workspace and the record's scope (record-access canSeeScope); optional email to staff when a client uploads; attach files to any record (workflow items included).",
+      "doesNot": "Does not resize images, scan for viruses, issue public or pre-signed links, or stream files larger than the server-action limit",
+      "title": "Private file uploads with limits from the request, S3 or local disk, and per-record downloads",
+      "summary": "Lets members upload files to a record (a client's document request, a task, a project) or to the workspace, with the size limit, accepted types and files per record of the request. Types are recognised by content, so an HTML page renamed to .pdf is refused. Bytes are stored outside the public directory: on local disk in development and tests, or in any S3-compatible bucket in production (AWS S3, Cloudflare R2, MinIO…) through SigV4-signed requests, with an offline mock for E2E. The only way to read a file is an authorised download route that checks the workspace and the record's scope, so a client downloads only their company's files and staff see all. It can email staff when a client uploads. It does not resize images, scan for viruses or issue public links.",
+      "useCases": [
+        "Clients upload PDF/JPG/PNG documents up to 10 MB, downloadable only by that client and the firm's staff",
+        "Tasks with file attachments seen only by the members of the task's project",
+        "Loose private files of a team workspace, stored in an S3 bucket in production"
+      ],
+      "useWhen": [
+        "The request says files are private, per client, per project, or only for staff",
+        "The request limits file size or types (\"PDF/JPG/PNG up to 10 MB\")",
+        "The app will run on serverless hosting and needs object storage"
+      ],
+      "avoidWhen": [
+        "Public images of a site or shop (use public assets or the shop's image URLs)",
+        "Very large media (video) that should go straight to the bucket from the browser"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Files pass through the app (no pre-signed URLs)",
+          "gain": "One authorisation path for every read; the bucket stays private and keys never reach the browser",
+          "cost": "Upload size is bounded by the server-action body limit and the host's request limit"
+        },
+        {
+          "choice": "SigV4 by hand instead of an AWS SDK",
+          "gain": "No dependency, works with every S3-compatible store, verified offline",
+          "cost": "Single-request PUT only (no multipart upload above the size limit)"
+        },
+        {
+          "choice": "Type by content (magic bytes)",
+          "gain": "Renamed or disguised files are refused",
+          "cost": "Only the listed formats; others need a signature in sniff.ts"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/uploads/params.json",
+          "default": "10 MB, PDF/PNG/JPG, 20 files per record, no staff email",
+          "description": "Limits and types from the request (validated at start-up); maxBytes also sets the server-action body limit (src/server/body-limit.ts)"
+        },
+        {
+          "name": "UPLOADS_DIR",
+          "default": ".data/uploads",
+          "description": "Local-disk driver directory; refused when inside public/"
+        },
+        {
+          "name": "S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY",
+          "description": "Selects the S3 driver (private bucket); credentials only from the environment"
+        },
+        {
+          "name": "S3_BASE_URL, S3_REGION",
+          "default": "AWS endpoint of S3_REGION (us-east-1)",
+          "description": "Endpoint of an S3-compatible store (path-style requests)"
+        },
+        {
+          "name": "STORAGE_DRIVER",
+          "default": "s3 when S3_BUCKET is set, else local",
+          "description": "Forces local or s3"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "saveUpload",
+          "signature": "saveUpload(actor, file: File, { subjectType, subjectId?, scopeId? }) → Promise<id> — throws UserFacingError when refused",
+          "where": "src/uploads/service.ts"
+        },
+        {
+          "name": "readUpload",
+          "signature": "readUpload(actor, id) → { row, bytes } — only when the actor may see the file's scope",
+          "where": "src/uploads/service.ts"
+        },
+        {
+          "name": "listUploads",
+          "signature": "listUploads(actor, { subjectType?, subjectId? }, limit = 200) → Upload[]",
+          "where": "src/uploads/service.ts"
+        },
+        {
+          "name": "deleteUpload",
+          "signature": "deleteUpload(actor, id) → uploader or a role that may delete",
+          "where": "src/uploads/service.ts"
+        },
+        {
+          "name": "Attachments",
+          "signature": "<Attachments ctx subjectType subjectId? back /> — list, download links and upload form for one record",
+          "where": "src/components/uploads/attachments.tsx"
+        },
+        {
+          "name": "resolveSubject",
+          "signature": "resolveSubject(actor, subjectType, subjectId, requestedScope) → { scopeId } — the record's scope, read on the server",
+          "where": "src/uploads/subjects.ts"
+        },
+        {
+          "name": "Storage",
+          "signature": "storage() → { put(key, bytes, type), get(key), delete(key) }; localDriver(dir); s3Driver({ baseUrl, bucket, region, accessKeyId, secretAccessKey })",
+          "where": "src/uploads/storage.ts"
+        },
+        {
+          "name": "Download route",
+          "signature": "GET /dashboard/files/<id>/download → attachment, nosniff, no-store; 404 when not allowed",
+          "where": "src/app/dashboard/files/[id]/download/route.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Attach files to another kind of record (task, project, order…)",
+          "where": "src/uploads/subjects.ts, the record's page",
+          "how": "Add a case to resolveSubject that loads the record with the caller's access check and returns its scopeId; render `<Attachments ctx={ctx} subjectType=\"task\" subjectId={task.id} back={path} />` on its page."
+        },
+        {
+          "what": "Accept another file type or change the limits",
+          "where": "src/uploads/params.json, src/uploads/sniff.ts",
+          "how": "Edit maxBytes/types in params (the body limit follows); a new format needs its magic bytes in detect() and a unit test."
+        },
+        {
+          "what": "Store files elsewhere (another S3-compatible store)",
+          "where": "S3_BASE_URL, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY",
+          "how": "Set them in the hosting environment; the bucket stays private (no public ACL). The E2E suite proves the driver against tests/e2e/mocks/S3_BASE_URL.mjs."
+        },
+        {
+          "what": "Tell someone else when a file is uploaded",
+          "where": "src/uploads/service.ts (notifyStaff)",
+          "how": "notifyOnUpload in params emails members who see every scope; change the recipients there (emails are logged without a provider)."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "client-portal",
+          "projects",
+          "internal-tool",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.workflow.turbineh",
+          "domain.audit-log.turbineh"
+        ],
+        "notes": "Per-record scopes come from src/server/record-access.ts (domain.membership-access.turbineh); without it every member of the workspace sees its files."
+      },
+      "security": [
+        "Types are recognised by content (magic bytes); HTML, SVG and scripts are never accepted, whatever their name",
+        "Size is checked before the file is read and again after; the server-action body limit follows the param",
+        "Storage keys are generated by the app (workspace id + UUID); path traversal is refused by the local driver",
+        "Files are never under public/ and the bucket is private: every read goes through the download route, which re-checks workspace and record scope",
+        "Downloads are attachments with X-Content-Type-Options: nosniff and Cache-Control: private, no-store",
+        "S3 credentials come only from the environment; requests are SigV4-signed"
+      ],
+      "guarantees": [
+        {
+          "claim": "Uploads and downloads round-trip byte for byte",
+          "test": "tests/e2e/uploads.spec.ts › a member uploads an allowed file and downloads exactly the same bytes"
+        },
+        {
+          "claim": "Files over the size limit or of another type are refused",
+          "test": "tests/e2e/uploads.spec.ts › a file larger than the size limit, or whose content is not an allowed type, is refused"
+        },
+        {
+          "claim": "Files are stored privately (private bucket, never under public/)",
+          "test": "tests/e2e/uploads.spec.ts › files are stored privately: never under public/, never readable without the app"
+        },
+        {
+          "claim": "Anonymous visitors and other workspaces cannot download a file",
+          "test": "tests/e2e/uploads.spec.ts › only people who may see a file can download it: not anonymous visitors, not other workspaces"
+        },
+        {
+          "claim": "Types are recognised by content, whatever the file name",
+          "test": "tests/unit/uploads.test.ts › accepts only the configured types, recognised by content whatever the file name"
+        },
+        {
+          "claim": "Local storage stays outside public/ and refuses escaping keys",
+          "test": "tests/unit/uploads.test.ts › stores files on local disk outside public/ and refuses keys that try to escape it"
+        },
+        {
+          "claim": "S3 requests are signed with SigV4",
+          "test": "tests/unit/uploads.test.ts › signs S3 requests with SigV4 (canonical request, scope, signed headers)"
+        },
+        {
+          "claim": "A member restricted to a scope (a client) downloads only that scope's files",
+          "test": "tests/e2e/uploads-scopes.spec.ts › a client downloads only their own company's files, never another company's"
+        },
+        {
+          "claim": "Staff see every scope's files and are emailed when a client uploads",
+          "test": "tests/e2e/uploads-scopes.spec.ts › staff see every client's files and are emailed when a client uploads"
+        }
+      ],
+      "limits": [
+        "One request per file (no multipart upload); size bounded by the server-action body limit and the host",
+        "No image processing or virus scanning",
+        "Local-disk storage is for one server; serverless hosts need the S3 driver"
+      ],
+      "example": "import { Attachments } from \"@/components/uploads/attachments\";\nconst ctx = await requireMember();\n// On a record page (the record's scope is read on the server by src/uploads/subjects.ts):\n<Attachments ctx={ctx} subjectType=\"workflow:request\" subjectId={item.id} back={`/dashboard/workflow/request/${item.id}`} />\n",
+      "keywords": [
+        "upload",
+        "file upload",
+        "attachments",
+        "documents",
+        "private files",
+        "s3",
+        "r2",
+        "minio",
+        "object storage",
+        "signed requests",
+        "sigv4",
+        "download",
+        "file size limit",
+        "file types",
+        "pdf",
+        "jpg",
+        "png",
+        "client documents",
+        "per-record access",
+        "secure download"
+      ],
+      "synonyms": {
+        "upload": [
+          "attach",
+          "attachment",
+          "send a document",
+          "file"
+        ],
+        "private": [
+          "secure",
+          "not public",
+          "access-controlled",
+          "signed"
+        ],
+        "s3": [
+          "object storage",
+          "bucket",
+          "r2",
+          "minio",
+          "spaces"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/storage.private-uploads.turbineh"
     },
     {
       "id": "ui.accordion.radix",
@@ -14246,6 +15278,168 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/ui.icons.lucide-react"
+    },
+    {
+      "id": "ui.kanban.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "ui",
+      "package": "pkg:generic/turbineh/ui.kanban.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "ui.kanban"
+      ],
+      "does": "Accessible kanban board over workflow states (domain.workflow.turbineh): one column per state, cards moved by drag and drop or with the keyboard alone (Space to pick up, arrows to choose a column, Space/Enter to drop, Escape to cancel) with every step announced in a live region; each move is a server-checked workflow transition (definition, current state, role) recorded in the immutable history; a refused move puts the card back with the reason; overdue and stuck cards highlighted.",
+      "doesNot": "Does not reorder cards inside a column, set WIP limits or swimlanes; boards only exist for workflows",
+      "title": "Accessible kanban board with drag and drop and keyboard moves over workflow states",
+      "summary": "Turns the list of a status workflow (tasks, pieces, requests) into a kanban board: one column per state, cards moved by drag and drop or with the keyboard alone, every step announced to screen readers. A move is the same server-checked transition as on the record page — the workflow's definition, the current state and the person's role decide, under a row lock — and lands in the record's immutable history with who and when. A refused move puts the card back and says why. Overdue and stuck cards are highlighted. It needs domain.workflow.turbineh; it does not reorder cards inside a column or add swimlanes.",
+      "useCases": [
+        "A kanban board per project with drag and drop between task statuses",
+        "A board by stage for production pieces, highlighting the ones stuck too long",
+        "Staff moving client requests through review statuses"
+      ],
+      "useWhen": [
+        "The request mentions a kanban, a board by status or stage, or drag and drop between statuses",
+        "Records already follow a status workflow"
+      ],
+      "avoidWhen": [
+        "Free ordering of items without statuses (a sortable list)",
+        "Gantt charts or timelines"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Columns are workflow states",
+          "gain": "One rule set and one history for the board and the record page",
+          "cost": "Columns change only by editing the workflow"
+        },
+        {
+          "choice": "Native drag events + keyboard model, no library",
+          "gain": "No dependency; works with keyboard and screen readers",
+          "cost": "No touch-specific drag (touch users open the card and use its buttons)"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/kanban/params.json",
+          "default": "every workflow, drag and drop on, overdue highlighted",
+          "description": "Which workflows are boards, whether cards move, whether late cards are highlighted"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "KanbanBoard",
+          "signature": "<KanbanBoard columns={{ key, label }[]} cards={{ id, title, column, href, allowed[], badges[] }[]} dragAndDrop move={(id, to) => Promise<{ ok, message }>} />",
+          "where": "src/components/kanban/kanban-board.tsx"
+        },
+        {
+          "name": "moveCard",
+          "signature": "moveCard(id, to) → { ok, message } — a workflow transition, re-checked on the server",
+          "where": "src/app/dashboard/workflow/board-actions.ts"
+        },
+        {
+          "name": "WorkflowBoard",
+          "signature": "<WorkflowBoard ctx wf items /> — the board on /dashboard/workflow/<key>",
+          "where": "src/workflow/board.tsx"
+        },
+        {
+          "name": "Keyboard",
+          "signature": "keyAction(key, { picked, home, target }, columns, allowed); nextColumn(columns, allowed, current, dir)",
+          "where": "src/kanban/keyboard.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Show more on a card (assignee, priority, a photo)",
+          "where": "src/workflow/board.tsx (cards mapping), src/components/kanban/kanban-board.tsx",
+          "how": "Add the field to the card object and render it; keep the move handle and its aria-label."
+        },
+        {
+          "what": "Allow or forbid a move",
+          "where": "src/workflow/params.json (transitions)",
+          "how": "Moves are workflow transitions: edit the transitions and roles; the board follows."
+        },
+        {
+          "what": "Use the board for another kind of record",
+          "where": "src/components/kanban/kanban-board.tsx",
+          "how": "Pass columns, cards and a server action `move(id, to)` that checks the change on the server."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 (server actions, client components), react 19",
+        "recipes": [
+          "projects",
+          "tracker",
+          "internal-tool",
+          "client-portal"
+        ],
+        "requires": [
+          "domain.workflow.turbineh"
+        ],
+        "works_with": [
+          "storage.private-uploads.turbineh",
+          "jobs.scheduled.turbineh"
+        ],
+        "notes": "Without domain.workflow.turbineh the board has no data; the pipeline adds it through `requires`."
+      },
+      "security": [
+        "The browser only proposes a move; the server re-checks membership, the transition and the role under a row lock",
+        "Moves are rate-limited per person and recorded in the immutable history"
+      ],
+      "guarantees": [
+        {
+          "claim": "Drag and drop moves a card and records the change with who and when",
+          "test": "tests/e2e/kanban.spec.ts › a card dragged on the kanban board to another status column is persisted, with who and when in its history"
+        },
+        {
+          "claim": "The board works with the keyboard alone and announces each step",
+          "test": "tests/e2e/kanban.spec.ts › a card can be moved with the keyboard alone, and each step is announced"
+        },
+        {
+          "claim": "Moves the workflow does not allow are refused and the card stays",
+          "test": "tests/e2e/kanban.spec.ts › a move the workflow does not allow is refused by the server and the card stays where it was"
+        },
+        {
+          "claim": "Keyboard moves only target columns the card may go to",
+          "test": "tests/unit/kanban.test.ts › moves with the keyboard only between the columns the card may go to"
+        }
+      ],
+      "limits": [
+        "No ordering inside a column, WIP limits or swimlanes",
+        "Touch devices drag through the record page's buttons"
+      ],
+      "example": "// src/kanban/params.json — a board for the \"task\" workflow only\n{ \"workflows\": [\"task\"], \"dragAndDrop\": true, \"highlightOverdue\": true }\n",
+      "keywords": [
+        "kanban",
+        "board",
+        "drag and drop",
+        "drag-and-drop",
+        "columns",
+        "statuses",
+        "stages",
+        "cards",
+        "keyboard accessible",
+        "a11y",
+        "task board",
+        "production board",
+        "trello-like",
+        "move card"
+      ],
+      "synonyms": {
+        "kanban": [
+          "board",
+          "task board",
+          "status board",
+          "stage board"
+        ],
+        "move": [
+          "drag",
+          "drop",
+          "change status",
+          "transition"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/ui.kanban.turbineh"
     },
     {
       "id": "ui.lightbox.yarl",

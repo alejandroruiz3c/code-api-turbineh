@@ -1,0 +1,13 @@
+# Criteria aliases (ADR-0047): the words this component's tests use, and which of its params hold this app's word for
+# each. Resolved by the assembler from src/uploads/params.json and applied to these tests' proofs only. The accepted
+# types (`asserted`) count only when the test asserts the types it reads from params.
+file: src/uploads/params.json
+tests:
+  - tests/e2e/uploads.spec.ts
+  - tests/unit/uploads.test.ts
+aliases:
+  - term: allowed type
+    from: ["types[]", "extensions[]"]
+    asserted: "params\\.types"
+  - term: record
+    from: attachTo

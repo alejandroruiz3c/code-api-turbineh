@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "data.analytics-import.turbineh params (src/analytics-import/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["columns", "periods"],
+  "properties": {
+    "entity": {
+      "type": ["string", "null"],
+      "maxLength": 60,
+      "description": "What one CSV row is (Sale, DailySale, Measurement…); names the pages."
+    },
+    "columns": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 30,
+      "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9 _-]{0,39}$" },
+      "description": "CSV header in order. A column named date/day is the date; amounts and counts (revenue, quantity, units, price, sales, cost, total, amount, count, value) are measures; the rest are dimensions. Override with dateColumn/measures."
+    },
+    "dateColumn": {
+      "type": "string",
+      "maxLength": 40,
+      "description": "The date column, when not called date or day."
+    },
+    "measures": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 40 },
+      "description": "Numeric columns, when their names do not say so."
+    },
+    "scopeColumn": {
+      "type": ["string", "null"],
+      "maxLength": 40,
+      "description": "Dimension whose values are per-record access scopes (shop, region…): people restricted to scopes see and import only theirs. Default: a dimension named in filters."
+    },
+    "atomic": {
+      "type": "boolean",
+      "description": "A file with any invalid row imports nothing (always true)."
+    },
+    "errorReport": {
+      "type": "boolean",
+      "description": "Invalid files get a report of row, column and reason (always true)."
+    },
+    "periods": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["day", "week", "month", "quarter", "year"] },
+      "description": "Periods the dashboard aggregates by."
+    },
+    "compareWithPreviousPeriod": {
+      "type": "boolean",
+      "description": "KPIs compared with the previous period of equal length."
+    },
+    "filters": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 60 },
+      "description": "Filters stated in the request (date range, a dimension name)."
+    },
+    "exportCsv": { "type": "boolean", "description": "Every chart can be exported as CSV." }
+  }
+}

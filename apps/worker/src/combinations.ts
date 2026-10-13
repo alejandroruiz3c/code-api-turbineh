@@ -140,6 +140,314 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
       },
     },
   },
+  {
+    // Orbit Notes (learning round, landing-waitlist): double opt-in, position, referral link, +5 places per
+    // confirmed referral, owner export and removal.
+    recipe: "landing-waitlist",
+    with: ["growth.waitlist.turbineh"],
+    prompt:
+      'Build the launch landing page of "Orbit Notes", a note-taking app for students. Visual identity: midnight blue ' +
+      "`#0D1B3E` background, electric lime `#C6FF3D` call-to-action, white text, playful sans-serif. Sections: hero " +
+      "with a waitlist form, three benefits, how it works, FAQ, footer. The waitlist stores the email with double " +
+      "opt-in (a confirmation link sent by email, logged when no provider is configured), shows each confirmed person " +
+      "their position and a referral link; every confirmed referral moves the referrer up by five positions. The owner " +
+      "signs in to see the list, export it as CSV and remove entries.",
+    params: {
+      "growth.waitlist.turbineh": {
+        doubleOptIn: true,
+        showPosition: true,
+        referral: { enabled: true, boost: 5 },
+        ownerCanExport: true,
+        ownerCanRemove: true,
+      },
+    },
+  },
+  {
+    // Altamira (learning round, corporate-site): projects portfolio with filters by sector and a page per project,
+    // careers with open positions, team; SEO metadata, sitemap, Open Graph images.
+    recipe: "corporate-site",
+    with: ["site.public-pages.turbineh"],
+    prompt:
+      'Build the website of "Altamira Engineering", a structural engineering firm. Visual identity: charcoal ' +
+      "`#222831`, white, signal orange `#FF6B1A` for buttons, serif headings. Pages: home with hero and key figures, " +
+      "services (four services, each with its own page), projects portfolio with filters by sector and a page per " +
+      "project, team, careers with open positions, and contact with a form (name, email, company, message, consent) " +
+      "that is stored, rate-limited, protected against spam and emailed to the firm. Staff sign in to edit projects " +
+      "and positions and read contact requests. Good SEO: metadata, sitemap, robots, Open Graph images.",
+    params: {
+      "site.public-pages.turbineh": {
+        pages: [
+          { entity: "Project", path: "/projects", detail: true, filters: ["sector"] },
+          {
+            entity: "JobPosition",
+            path: "/careers",
+            detail: true,
+            filters: ["location"],
+            title: "Careers",
+          },
+          { entity: "TeamMember", path: "/team", detail: false, filters: [], title: "Team" },
+        ],
+        seo: true,
+      },
+    },
+  },
+  {
+    // Brightside (learning round, analytics-dashboard): CSV of daily sales validated all-or-nothing with a report,
+    // revenue and units by day/week/month, top products, shops vs previous period, filters, chart CSV exports; shop
+    // managers see only their shop.
+    recipe: "analytics-dashboard",
+    with: ["domain.membership-access.turbineh", "data.analytics-import.turbineh"],
+    prompt:
+      'Build a sales analytics dashboard for "Brightside Coffee", a chain of six coffee shops. Visual identity: ' +
+      "espresso brown `#3E2723`, cream `#FFF8E7`, caramel `#D4A373` charts. Managers upload daily sales as CSV (date, " +
+      "shop, product, quantity, revenue); invalid rows are rejected with a clear report and never half-imported. The " +
+      "dashboard shows revenue and units by day, week and month, top products, comparison between shops and versus the " +
+      "previous period, with filters by date range and shop; every chart can be exported as CSV. Shop managers see " +
+      "only their shop; the owner sees all.",
+    params: {
+      "domain.membership-access.turbineh": {
+        roles: [
+          {
+            key: "owner",
+            label: "Owner",
+            can: [
+              "read",
+              "create",
+              "update",
+              "delete",
+              "manage_members",
+              "view_audit",
+              "see_all_scopes",
+            ],
+          },
+          { key: "shop_manager", label: "Shop manager", can: ["read", "create"] },
+        ],
+        defaultRole: "shop_manager",
+        inviteRoles: ["shop_manager"],
+        invitationDays: 7,
+        scope: { kind: "shop", label: "Shop", plural: "Shops" },
+      },
+      "data.analytics-import.turbineh": {
+        entity: "DailySale",
+        columns: ["date", "shop", "product", "quantity", "revenue"],
+        atomic: true,
+        errorReport: true,
+        periods: ["day", "week", "month"],
+        compareWithPreviousPeriod: true,
+        filters: ["date range", "shop"],
+        exportCsv: true,
+      },
+    },
+  },
+  {
+    // Brickline (learning round, projects): tasks with statuses on a kanban board with drag and drop, file attachments,
+    // overdue tasks emailed every morning (logged without an email provider).
+    recipe: "projects",
+    with: [
+      "domain.workflow.turbineh",
+      "ui.kanban.turbineh",
+      "storage.private-uploads.turbineh",
+      "jobs.scheduled.turbineh",
+    ],
+    prompt:
+      'Build "Brickline", a project management tool for a small construction company. Visual identity: slate ' +
+      "`#2F3A45`, safety yellow `#FFC300` accents. Projects have phases, tasks (title, assignee, due date, status, " +
+      "priority) and a Kanban board per project with drag-and-drop between statuses; each task has comments and file " +
+      'attachments. Members see only the projects they belong to; managers create projects and assign people. A "my ' +
+      'tasks" page lists what is due this week, and overdue tasks are emailed to the assignee every morning (log it ' +
+      "when no email provider is configured).",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "task",
+            label: "Task",
+            plural: "Tasks",
+            initial: "todo",
+            dueDate: true,
+            createRoles: ["*"],
+            states: [
+              { key: "todo", label: "To do", limitHours: null, final: false },
+              { key: "in_progress", label: "In progress", limitHours: 120, final: false },
+              { key: "done", label: "Done", limitHours: null, final: true },
+            ],
+            transitions: [
+              { from: ["todo"], to: "in_progress", label: "Start", roles: ["*"] },
+              { from: ["in_progress"], to: "done", label: "Complete", roles: ["*"] },
+              { from: ["in_progress"], to: "todo", label: "Back to do", roles: ["*"] },
+            ],
+          },
+        ],
+      },
+      "ui.kanban.turbineh": { workflows: ["task"], dragAndDrop: true, highlightOverdue: true },
+      "storage.private-uploads.turbineh": {
+        maxBytes: 10 * 1024 * 1024,
+        types: ["pdf", "png", "jpg"],
+        maxFilesPerRecord: 20,
+        notifyOnUpload: false,
+      },
+      "jobs.scheduled.turbineh": {
+        jobs: [
+          {
+            id: "overdue-reminders",
+            kind: "overdue-digest",
+            cron: "0 7 * * *",
+            timeZone: "UTC",
+            what: "Overdue tasks are emailed to the assignee every morning",
+          },
+        ],
+        logWhenNoEmailProvider: true,
+      },
+    },
+  },
+  {
+    // Pixelyard (learning round, internal-tool): loans requested by staff, approved or rejected by a manager, returned;
+    // overdue loans highlighted and the borrower emailed (logged without an email provider).
+    recipe: "internal-tool",
+    with: ["domain.workflow.turbineh", "jobs.scheduled.turbineh"],
+    prompt:
+      'Build an internal equipment-loan tool for "Pixelyard", a video production company. Visual identity: black, ' +
+      "white and red `#E63946`. Staff sign in with company emails only (@pixelyard.test). Equipment items have a name, " +
+      "category, serial number, condition and photo URL. Staff request items for a date range; a manager approves or " +
+      "rejects; an item cannot be lent twice for overlapping dates. Returns are checked in with condition notes; overdue " +
+      "loans are highlighted and the borrower is emailed (log it when no email provider is configured). Managers see a " +
+      "dashboard of utilisation per category and export loans as CSV.",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "loan",
+            label: "Loan",
+            plural: "Loans",
+            initial: "requested",
+            dueDate: true,
+            createRoles: ["*"],
+            states: [
+              { key: "requested", label: "Requested", limitHours: 48, final: false },
+              { key: "approved", label: "Approved", limitHours: null, final: false },
+              { key: "rejected", label: "Rejected", limitHours: null, final: true },
+              { key: "returned", label: "Returned", limitHours: null, final: true },
+            ],
+            transitions: [
+              { from: ["requested"], to: "approved", label: "Approve", roles: ["owner", "admin"] },
+              { from: ["requested"], to: "rejected", label: "Reject", roles: ["owner", "admin"] },
+              {
+                from: ["approved"],
+                to: "returned",
+                label: "Check in",
+                roles: ["owner", "admin", "creator"],
+              },
+            ],
+          },
+        ],
+      },
+      "jobs.scheduled.turbineh": {
+        jobs: [
+          {
+            id: "overdue-reminders",
+            kind: "overdue-digest",
+            cron: "0 8 * * *",
+            timeZone: "UTC",
+            what: "Overdue loans are emailed to the borrower",
+          },
+        ],
+        logWhenNoEmailProvider: true,
+      },
+    },
+  },
+  {
+    // Sala Nueve (learning round, bookings): public booking page, stylist or any, cancel link up to 12 hours before,
+    // no double bookings, staff day/week calendar per stylist, time off, staff move/cancel with customer emails.
+    // Parameters come from the request through detectDomains (recipe bookings requires domain.bookings).
+    recipe: "bookings",
+    with: ["domain.bookings.turbineh"],
+    prompt:
+      'Build an online booking site for "Sala Nueve", a hair salon with four stylists. Services: cut 30 min (25 €), ' +
+      "colour 90 min (70 €), cut and colour 120 min (90 €). Opening hours Tuesday–Saturday 10:00–20:00, Europe/Madrid. " +
+      "Customers pick a service, a stylist (or any) and a free slot, enter name, email and phone, and receive a " +
+      "confirmation email with a link to cancel up to 12 hours before. No double bookings, ever. Staff sign in to see " +
+      "the day and week calendar per stylist, block time off and move or cancel bookings (the customer is emailed). No AI.",
+  },
+  {
+    // Ledgerline (learning round, client-portal): staff/client roles, a client sees only their company, private
+    // uploads (PDF/JPG/PNG up to 10 MB) downloadable by that client and staff, document requests pending → received →
+    // approved with due dates, staff emailed when a client uploads.
+    recipe: "client-portal",
+    with: [
+      "domain.membership-access.turbineh",
+      "storage.private-uploads.turbineh",
+      "domain.workflow.turbineh",
+    ],
+    prompt:
+      'Build a client portal for "Ledgerline", a small accounting firm. Visual identity: deep green `#0B3D2E`, cream ' +
+      "background `#F7F3EA`, gold highlights `#C9A227`. Staff create client accounts and invite each client by email; a " +
+      "client only ever sees their own company. Clients upload documents (PDF/JPG/PNG up to 10 MB, stored privately, " +
+      "downloadable only by that client and staff), see a list of document requests with due dates and statuses " +
+      "(pending, received, approved), and exchange messages with the firm per request. Staff see all clients, change " +
+      "statuses and get an email when a client uploads (log it when no email provider is configured).",
+    params: {
+      "domain.membership-access.turbineh": {
+        roles: [
+          {
+            key: "owner",
+            label: "Owner",
+            can: [
+              "read",
+              "create",
+              "update",
+              "delete",
+              "manage_members",
+              "view_audit",
+              "see_all_scopes",
+            ],
+          },
+          {
+            key: "staff",
+            label: "Staff",
+            can: ["read", "create", "update", "delete", "manage_members", "see_all_scopes"],
+          },
+          { key: "client", label: "Client", can: ["read", "create"] },
+        ],
+        defaultRole: "client",
+        inviteRoles: ["staff", "client"],
+        invitationDays: 7,
+        scope: { kind: "company", label: "Company", plural: "Companies" },
+      },
+      "storage.private-uploads.turbineh": {
+        maxBytes: 10 * 1024 * 1024,
+        types: ["pdf", "jpg", "png"],
+        maxFilesPerRecord: 20,
+        notifyOnUpload: true,
+      },
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "request",
+            label: "Document request",
+            plural: "Document requests",
+            initial: "pending",
+            dueDate: true,
+            createRoles: ["owner", "staff"],
+            states: [
+              { key: "pending", label: "Pending", limitHours: null, final: false },
+              { key: "received", label: "Received", limitHours: 72, final: false },
+              { key: "approved", label: "Approved", limitHours: null, final: true },
+            ],
+            transitions: [
+              {
+                from: ["pending"],
+                to: "received",
+                label: "Mark received",
+                roles: ["owner", "staff"],
+              },
+              { from: ["received"], to: "approved", label: "Approve", roles: ["owner", "staff"] },
+              { from: ["received"], to: "pending", label: "Ask again", roles: ["owner", "staff"] },
+            ],
+          },
+        ],
+      },
+    },
+  },
 ];
 
 /** Every recipe alone, every recipe a domain component's probe selects it for, and COMPONENT_COMBINATIONS. */
@@ -150,10 +458,16 @@ export function combinations(repoRoot: string): Combination[] {
     .map((d) => d.name)
     .sort();
   const out: Combination[] = recipes.map((recipe) => ({ name: recipe, recipe, prompt: "" }));
+  const explicit = new Set(
+    COMPONENT_COMBINATIONS.map((c) => [c.recipe, ...(c.with ?? [])].join("+")),
+  );
   for (const recipe of recipes) {
     for (const [component, prompt] of Object.entries(DOMAIN_PROBES)) {
+      const name = `${recipe}+${component}`;
+      // A combination with its own request (e.g. Sala Nueve for bookings) replaces the generic probe.
+      if (explicit.has(name)) continue;
       if (detectDomains(prompt, recipe).some((d) => d.component === component)) {
-        out.push({ name: `${recipe}+${component}`, recipe, prompt });
+        out.push({ name, recipe, prompt });
       }
     }
   }
