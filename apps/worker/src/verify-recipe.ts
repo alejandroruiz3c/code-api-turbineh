@@ -46,7 +46,11 @@ assemble({
   spec,
   selected: withIds.map((id) => ({
     capability: id.split(".").slice(0, 2).join("."),
-    component: { id, pkg: { name: `turbineh/${id}`, version: "1.0.0" } } as never,
+    component: {
+      id,
+      pkg: { name: `turbineh/${id}`, version: "1.0.0" },
+      license: { detected: "Apache-2.0" },
+    } as never,
     why: { pBest: 1, covers: 1, risk: 0 },
   })),
   gaps: [],
