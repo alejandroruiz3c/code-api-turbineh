@@ -5,8 +5,9 @@ providedEntities:
   [Product, Item, Article, Variant, ProductVariant, ProductOption, Size, Cart, CartItem, Order, OrderItem, OrderLine, Purchase, Payment, Customer, Stock, Inventory, Category, Shipping, ShippingRate, ShippingMethod, Tax, TaxRate, Coupon, DiscountCode, Discount, Promotion, PromoCode, Voucher, Currency, Price, ProductPrice]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # Implemented by the template itself (native): no SDK, signature verification and money in integer cents.
+# ops.idempotency: the signed webhook changes only pending orders and Stripe calls carry an Idempotency-Key.
 providedCapabilities:
-  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection]
+  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection, ops.idempotency]
 nav:
   - { label: Products, href: /dashboard/products }
   - { label: Shipping & taxes, href: /dashboard/shipping }
