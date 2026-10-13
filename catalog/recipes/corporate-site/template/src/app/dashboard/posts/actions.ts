@@ -7,7 +7,7 @@ import { db } from "@/db/client";
 import { posts } from "@/db/schema";
 import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 const postSchema = z.object({
   title: z.string().trim().min(3).max(160),
@@ -16,6 +16,7 @@ const postSchema = z.object({
   published: z.literal("on").optional(),
 });
 
+/** Blog post actions: save (create, edit, publish) and delete (staff only). */
 export async function savePost(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = formData.get("id") ? z.uuid().parse(formData.get("id")) : null;

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { orders } from "@/db/schema";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 /** Paid orders can be marked fulfilled; pending ones cancelled. Payments themselves are only set by the webhook. */
 export async function setOrderStatus(formData: FormData): Promise<void> {

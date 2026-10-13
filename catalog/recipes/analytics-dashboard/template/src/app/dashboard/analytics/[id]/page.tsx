@@ -25,6 +25,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
+/** One dataset: KPIs with period comparison, time series and breakdown charts, filters and export. */
 export default async function DatasetPage({
   params,
   searchParams,
@@ -119,8 +120,8 @@ export default async function DatasetPage({
             k.change === null ? "—" : `${k.change > 0 ? "+" : ""}${k.change}%`,
           ],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-slate-200 bg-white p-4">
-            <dt className="text-xs text-slate-500">{label}</dt>
+          <div key={label} className="rounded-lg border border-line bg-panel p-4">
+            <dt className="text-xs text-muted">{label}</dt>
             <dd className="mt-1 text-2xl font-semibold" data-kpi={label}>
               {value}
             </dd>
@@ -154,7 +155,7 @@ export default async function DatasetPage({
             <Button type="submit">Import</Button>
           </form>
           {sp.imported ? (
-            <p role="status" className="mt-2 text-sm text-slate-600">
+            <p role="status" className="mt-2 text-sm text-muted">
               Imported {str(sp.imported)} rows, rejected {str(sp.rejected) || "0"}.
             </p>
           ) : null}
@@ -184,7 +185,7 @@ export default async function DatasetPage({
       <Card title="Latest entries">
         <Table head={["Date", "Category", "Value"]}>
           {latest.map((r) => (
-            <tr key={r.id} className="border-b border-slate-100">
+            <tr key={r.id} className="border-b border-line">
               <td className="px-3 py-2">{r.day}</td>
               <td className="px-3 py-2">{r.category}</td>
               <td className="px-3 py-2">{fmt(Number(r.value), ds.unit)}</td>

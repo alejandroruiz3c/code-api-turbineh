@@ -17,6 +17,19 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Local service mocks for the E2E run (plain Node scripts).
+    files: ["tests/e2e/mocks/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+      },
+    },
+  },
+  {
     plugins: { "@next/next": nextPlugin, "react-hooks": reactHooks },
     rules: {
       ...nextPlugin.configs.recommended.rules,

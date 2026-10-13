@@ -7,3 +7,10 @@ defaultCapabilities: [data.csv-import, data.csv-export, data.pagination]
 providedCapabilities: [ui.charts]
 nav:
   - { label: Analytics, href: /dashboard/analytics }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a KPI or chart"
+      where: "src/server/analytics.ts, src/components/charts.tsx, src/app/dashboard/analytics/[id]/page.tsx"
+      how: "Compute it on the server (unit-test it), render it with the native SVG charts."

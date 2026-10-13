@@ -9,6 +9,7 @@ import { dataPoints, datasets } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { createDataset } from "./actions";
 
+/** Datasets of the workspace: import from CSV or create, then open one to analyse it. */
 export default async function Analytics() {
   const ctx = await requireMember();
   const rows = await db
@@ -41,14 +42,14 @@ export default async function Analytics() {
       </Card>
       <ul className="grid gap-4 md:grid-cols-3">
         {rows.map((d) => (
-          <li key={d.id} className="rounded-lg border border-slate-200 bg-white p-5">
+          <li key={d.id} className="rounded-lg border border-line bg-panel p-5">
             <Link
               href={`/dashboard/analytics/${d.id}`}
               className="text-lg font-semibold hover:underline"
             >
               {d.name}
             </Link>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted">
               {d.points} data points{d.unit ? ` · ${d.unit}` : ""}
             </p>
           </li>

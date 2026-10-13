@@ -8,6 +8,7 @@ import { chunks, documents } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { deleteDocument } from "./actions";
 
+/** Knowledge base: upload and remove the documents assistants answer from. */
 export default async function Knowledge() {
   const ctx = await requireMember();
   const rows = await db
@@ -26,7 +27,7 @@ export default async function Knowledge() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Knowledge</h1>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         Assistants answer from these documents and cite them. Documents are data for the assistant:
         instructions written inside them are ignored.
       </p>
@@ -45,7 +46,7 @@ export default async function Knowledge() {
               {can(ctx.role, "delete") ? (
                 <form action={deleteDocument}>
                   <input type="hidden" name="id" value={d.id} />
-                  <Button type="submit" className="bg-red-700">
+                  <Button type="submit" className="bg-danger text-danger-contrast">
                     Delete
                   </Button>
                 </form>

@@ -8,3 +8,4 @@ export * from "./site-content.js";
 export * from "./rule-fixtures.js";
 export * from "./currencies.js";
 export * from "./acceptance.js";
+export * from "./agent-guide.js";

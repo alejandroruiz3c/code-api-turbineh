@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   finalizeAcceptance,
+  verifiedGuide,
   writeReports,
   writeStartHere,
   type HandoverFacts,
@@ -36,7 +37,7 @@ import {
   type CorrectionStep,
   type ModelCfg,
 } from "@turbineh/integrator";
-import { quickCheck, verify, type VerifyResult } from "@turbineh/verifier";
+import { gateFindings, quickCheck, verify, type VerifyResult } from "@turbineh/verifier";
 
 export interface FinalizeDeps {
   decider: Decider;
@@ -144,7 +145,7 @@ function evidenceOf(repoDir: string): string[] {
     const files = readdirSync(path);
     for (const f of files.filter((x) => /\.(spec|test|setup)\.ts$/.test(x))) {
       const src = readFileSync(join(repoDir, dir, f), "utf8");
-      for (const m of src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,140})"/g)) {
+      for (const m of src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,200})"/g)) {
         out.add(`${dir.endsWith("e2e") ? "End-to-end test" : "Unit test"}: ${m[1]}`);
       }
     }
@@ -374,6 +375,19 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     report: { writer: report.writer },
   };
   writeStartHere(input.repoDir, handover);
+  // AGENTS.md + turbineh.json: the verified gate results and, per acceptance criterion, the passing test that proves
+  // it or where to implement it — so a coding agent knows at once what is left.
+  verifiedGuide(input.repoDir, {
+    gate: {
+      ok: result.ok,
+      verifiedAt: result.scannedAt,
+      environment: "TurbineH sandbox: no internet, ephemeral Postgres, service mocks",
+      steps: result.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
+      findings: gateFindings(result),
+    },
+    criteria: report.criteria,
+    gaps: facts.gaps,
+  });
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),
@@ -410,6 +424,16 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   };
 }
 
+function policyFindings(v: VerifyResult): string {
+  const policy = gateFindings(v).filter((f) => f.category === "policy");
+  if (policy.length === 0) return "";
+  const lines = policy.map(
+    (f) =>
+      `- ${f.blocking ? "blocking" : "non-blocking"} \`${f.rule}\` at \`${f.where}\`: ${f.message}`,
+  );
+  return `\n## Policy findings\n\n${lines.join("\n")}\n`;
+}
+
 function securityMarkdown(
   v: VerifyResult,
   alerts: SecurityAlert[],
@@ -425,17 +449,20 @@ function securityMarkdown(
 - Scope: this repository at the commit that contains this file, its lockfile (direct and transitive npm dependencies)
   and the running app in an isolated network without internet access.
 
-| Check | Tool | Result |
-|---|---|---|
-| Secrets in git history | gitleaks | ${row("secrets")} |
-| Static analysis (injection, authorization, secrets, XSS, redirects, logging) | Semgrep OSS engine + TurbineH rules | ${row("static")} |
-| Known vulnerabilities (direct + transitive) | OSV database | ${row("dependencies")} |
-| Licenses (copyleft / unlicensed blocked) | installed package metadata | ${row("licenses")} |
-| Type safety | TypeScript strict | ${row("typecheck")} |
-| Lint | ESLint | ${row("lint")} |
-| Unit tests (security headers, rate limit, role policy) | Vitest | ${row("unit")} |
-| End-to-end (sign-up, access control, data flows) | Playwright | ${row("e2e")} |
+| Check | Kind | Tool | Result |
+|---|---|---|---|
+| Secrets in git history | security | gitleaks | ${row("secrets")} |
+| Static analysis (injection, authorization, secrets, XSS, redirects, logging) | security | Semgrep OSS engine + TurbineH rules | ${row("static")} |
+| Known vulnerabilities (direct + transitive) | security | OSV database | ${row("dependencies")} |
+| Licences (copyleft / unlicensed blocked) | policy | installed package metadata | ${row("licenses")} |
+| Type safety | quality | TypeScript strict | ${row("typecheck")} |
+| Lint | quality | ESLint | ${row("lint")} |
+| Unit tests (security headers, rate limit, role policy) | quality | Vitest | ${row("unit")} |
+| End-to-end (sign-up, access control, data flows) | quality | Playwright | ${row("e2e")} |
 
+Security = a weakness an attacker could use. Policy = TurbineH delivery policy (licence list, no secret-shaped literals
+in tracked files): it can block delivery but is not a vulnerability. Quality = the app's own checks.
+${policyFindings(v)}
 ## Fixed automatically before delivery
 
 ${fixed.length ? fixed.map((c) => `- ${c.kind === "dependency" ? "Dependency" : "Code"} · ${c.target} — ${c.detail} (${c.reason})`).join("\n") : "- Nothing needed fixing."}

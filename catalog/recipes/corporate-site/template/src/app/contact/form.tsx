@@ -30,7 +30,7 @@ export function ContactForm() {
           minLength={10}
           maxLength={5000}
           rows={6}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-field px-3 py-2 text-sm"
         />
       </div>
       <input
@@ -44,7 +44,7 @@ export function ContactForm() {
         {pending ? "Sending…" : "Send message"}
       </Button>
       {state ? (
-        <p role="status" className={state.ok ? "text-green-700" : "text-red-600"}>
+        <p role="status" className={state.ok ? "text-success" : "text-danger"}>
           {state.message}
         </p>
       ) : null}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
+/** Create an account and its first workspace (sign-up policy in src/lib/sign-up-policy.ts). */
 export default function SignUp() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function SignUp() {
             <Input id="workspace" name="workspace" required maxLength={60} />
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           ) : null}

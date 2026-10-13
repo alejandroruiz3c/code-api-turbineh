@@ -5,10 +5,11 @@ import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { waitlistEntries } from "@/db/schema";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Waitlist entries, paginated (staff only). */
 export default async function WaitlistAdmin({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const { page, offset, limit } = parsePage((await searchParams).page);
@@ -26,7 +27,7 @@ export default async function WaitlistAdmin({ searchParams }: { searchParams: Se
     <Card title={`Waitlist (${total})`}>
       <Table head={["Name", "Email", "Joined"]}>
         {rows.map((r) => (
-          <tr key={r.id} className="border-b border-slate-100">
+          <tr key={r.id} className="border-b border-line">
             <td className="px-3 py-2">{r.name}</td>
             <td className="px-3 py-2">{r.email}</td>
             <td className="px-3 py-2">{r.createdAt.toISOString().slice(0, 10)}</td>

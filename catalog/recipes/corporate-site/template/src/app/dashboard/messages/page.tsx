@@ -4,11 +4,12 @@ import { Card } from "@/components/ui/card";
 import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
 import { PAGE_SIZE, parsePage } from "@/lib/pagination";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { markHandled } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Contact messages received from the site (staff only). */
 export default async function Messages({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const { page, offset, limit } = parsePage((await searchParams).page);
@@ -28,7 +29,7 @@ export default async function Messages({ searchParams }: { searchParams: SearchP
         {rows.map((m) => (
           <li
             key={m.id}
-            className={`rounded-lg border p-4 ${m.handled ? "border-slate-100 opacity-60" : "border-slate-300"}`}
+            className={`rounded-lg border p-4 ${m.handled ? "border-line opacity-60" : "border-field"}`}
           >
             <p className="font-medium">
               {m.name} ·{" "}
@@ -37,7 +38,7 @@ export default async function Messages({ searchParams }: { searchParams: SearchP
               </a>
               {m.company ? ` · ${m.company}` : ""}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               {m.createdAt.toISOString().slice(0, 16).replace("T", " ")}
             </p>
             <p className="mt-2 whitespace-pre-wrap">{m.message}</p>

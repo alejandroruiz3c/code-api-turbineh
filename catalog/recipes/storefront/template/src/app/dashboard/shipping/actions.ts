@@ -8,7 +8,7 @@ import { env } from "@/env";
 import { isCountry } from "@/lib/countries";
 import { parseCountries, parsePrice, parseRatePercent } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 
 const text = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");

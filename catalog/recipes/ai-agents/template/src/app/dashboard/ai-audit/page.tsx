@@ -18,7 +18,7 @@ export default async function AiAudit() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">AI audit</h1>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         Every AI request of the workspace. Content is not stored here: only its size and a
         fingerprint.
       </p>

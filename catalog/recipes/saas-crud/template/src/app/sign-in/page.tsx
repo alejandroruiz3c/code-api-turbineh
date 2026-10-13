@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
+/** Sign in with email and password; resumes the user's workspace. */
 export default function SignIn() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export default function SignIn() {
             <Input id="password" name="password" type="password" required />
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {error}
             </p>
           ) : null}

@@ -71,21 +71,21 @@ export default function Home() {
             <img src={BRAND.logo} alt="" className="h-20 w-auto" />
           ) : null}
           <h1 className="text-5xl font-bold tracking-tight">__APP_NAME__</h1>
-          <p className="text-2xl font-medium text-slate-800">{SITE.tagline}</p>
-          <p className="text-lg text-slate-600">{SITE.hero_subtitle}</p>
+          <p className="text-2xl font-medium text-ink">{SITE.tagline}</p>
+          <p className="text-lg text-muted">{SITE.hero_subtitle}</p>
           <WaitlistForm />
         </section>
 
-        <section aria-labelledby="features" className="bg-white py-16">
+        <section aria-labelledby="features" className="bg-panel py-16">
           <div className="mx-auto max-w-5xl px-6">
             <h2 id="features" className="mb-8 text-center text-3xl font-semibold">
               Why __APP_NAME__
             </h2>
             <ul className="grid gap-6 md:grid-cols-3">
               {SITE.features.map((f) => (
-                <li key={f.title} className="rounded-lg border border-slate-200 p-6">
+                <li key={f.title} className="rounded-lg border border-line p-6">
                   <h3 className="mb-2 font-semibold">{f.title}</h3>
-                  <p className="text-slate-600">{f.text}</p>
+                  <p className="text-muted">{f.text}</p>
                 </li>
               ))}
             </ul>
@@ -99,26 +99,26 @@ export default function Home() {
             </h2>
             <ol className="grid gap-6 md:grid-cols-3">
               {SITE.steps.map((s, i) => (
-                <li key={s.title} className="rounded-lg bg-white p-6 shadow-sm">
+                <li key={s.title} className="rounded-lg bg-panel p-6 shadow-sm">
                   <span className="text-sm font-semibold text-brand">Step {i + 1}</span>
                   <h3 className="mt-1 mb-2 font-semibold">{s.title}</h3>
-                  <p className="text-slate-600">{s.text}</p>
+                  <p className="text-muted">{s.text}</p>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        <section aria-labelledby="faq" className="bg-white py-16">
+        <section aria-labelledby="faq" className="bg-panel py-16">
           <div className="mx-auto max-w-3xl px-6">
             <h2 id="faq" className="mb-8 text-center text-3xl font-semibold">
               Frequently asked questions
             </h2>
             <div className="flex flex-col gap-3">
               {SITE.faq.map((f) => (
-                <details key={f.q} className="rounded-lg border border-slate-200 p-4">
+                <details key={f.q} className="rounded-lg border border-line p-4">
                   <summary className="cursor-pointer font-medium">{f.q}</summary>
-                  <p className="mt-2 text-slate-600">{f.a}</p>
+                  <p className="mt-2 text-muted">{f.a}</p>
                 </details>
               ))}
             </div>
@@ -136,7 +136,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500">
+      <footer className="border-t border-line py-8 text-center text-sm text-muted">
         © __APP_NAME__ ·{" "}
         <Link className="underline" href="/sign-in">
           Admin sign-in

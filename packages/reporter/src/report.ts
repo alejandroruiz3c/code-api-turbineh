@@ -148,9 +148,56 @@ async function writePart<T>(
   }
 }
 
-/** Decider maps each acceptance criterion to the evidence that verified it (one atomic Choice per criterion). */
+const STOP = new Set(
+  "a an and are as at be by can for from given has have if in into is it its of on or that the their them then they this to when with without user users must should will each every".split(
+    " ",
+  ),
+);
+const stems = (s: string) =>
+  new Set(
+    s
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .map((w) =>
+        w
+          .replace(/(ment|ing|ed|es|s)$/, "")
+          .replace(/([bdglmnprt])\1$/, "$1")
+          .replace(/(.{3,})y$/, "$1"),
+      )
+      .filter((w) => w.length > 2 && !STOP.has(w)),
+  );
+
+/**
+ * Deterministic first pass: the passing test whose title states the criterion (strong word overlap). Only clear
+ * matches count (at least 3 shared words covering at least 40 % of the criterion); everything else goes to the
+ * decider. Test titles are evidence produced by this build's verification.
+ */
+export function lexicalEvidence(criterion: string, evidence: string[]): string | null {
+  const want = stems(criterion);
+  let best: { e: string; shared: number } | null = null;
+  for (const e of evidence) {
+    const have = stems(e.replace(/^(End-to-end|Unit) test:\s*/, ""));
+    const shared = [...want].filter((w) => have.has(w)).length;
+    if (!best || shared > best.shared) best = { e, shared };
+  }
+  return best && best.shared >= 3 && best.shared / Math.max(1, want.size) >= 0.4 ? best.e : null;
+}
+
+/**
+ * Maps each acceptance criterion to the evidence that verified it: a deterministic title match first, then the decider
+ * (one atomic Choice per remaining criterion).
+ */
 async function mapCriteria(facts: ReportFacts, decider: Decider): Promise<BuildReport["criteria"]> {
   if (facts.acceptanceCriteria.length === 0) return [];
+  const lexical = facts.acceptanceCriteria.map((c) => lexicalEvidence(c, facts.evidence));
+  if (lexical.every(Boolean)) {
+    return facts.acceptanceCriteria.map((criterion, i) => ({
+      criterion,
+      evidence: lexical[i] as string,
+      verified: true,
+      confidence: 1,
+    }));
+  }
   const options = Object.fromEntries([...facts.evidence, NOT_VERIFIED].map((e) => [e, null]));
   const questions = Object.fromEntries(
     facts.acceptanceCriteria.map((c, i) => [
@@ -167,6 +214,8 @@ async function mapCriteria(facts: ReportFacts, decider: Decider): Promise<BuildR
   );
   const d = await decider.ask({ app: facts.summary, evidence: facts.evidence }, questions);
   return facts.acceptanceCriteria.map((criterion, i) => {
+    const direct = lexical[i];
+    if (direct) return { criterion, evidence: direct, verified: true, confidence: 1 };
     const a = d.answers[`c${i}`];
     const evidence = a?.type === "choice" ? a.choice : NOT_VERIFIED;
     const confidence = a?.type === "choice" ? a.confidence : 0;

@@ -1,10 +1,12 @@
+import { CSP_IMG_EXTRA } from "./csp-sources";
+
 /** Security Pack · HTTP security headers applied to every route (next.config.ts). */
 export function securityHeaders(): { key: string; value: string }[] {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    ["img-src 'self' data: blob:", ...CSP_IMG_EXTRA].join(" "),
     "font-src 'self' data:",
     "connect-src 'self'",
     "frame-ancestors 'none'",

@@ -81,7 +81,7 @@ export function BarList({
             <span>{d.category}</span>
             <span className="font-medium">{fmt(d.value, unit)}</span>
           </div>
-          <div className="mt-1 h-2 rounded bg-slate-100" aria-hidden="true">
+          <div className="mt-1 h-2 rounded bg-subtle" aria-hidden="true">
             <div
               className="h-2 rounded bg-brand"
               style={{ width: `${Math.max(2, (d.value / max) * 100)}%` }}

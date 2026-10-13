@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paletteSchema } from "./palette.js";
 
 /** Beta recipes (PLAN §3.8). Anything else is answered honestly as out of scope. */
 export const RECIPES = [
@@ -147,6 +148,17 @@ export const CAPABILITIES = [
 const item = (t: number, x: number) =>
   z.object({ title: z.string().min(2).max(t), text: z.string().min(5).max(x) });
 
+type FaqItem = { q: string; a: string };
+const isQuestion = (s: string) => /\?\s*$/.test(s);
+
+/**
+ * FAQ items with question and answer in the right place (deterministic). Small models sometimes invert them (Frontiers
+ * shop: every answer was in `q`): an item whose answer is a question and whose question is not gets swapped back.
+ */
+export function normalizeFaq<T extends FaqItem>(faq: readonly T[]): T[] {
+  return faq.map((f) => (!isQuestion(f.q) && isQuestion(f.a) ? { ...f, q: f.a, a: f.q } : f));
+}
+
 /** Public-site copy (landing, corporate site, storefront). Rendered as plain text by the recipes. */
 export const sitePart = z.object({
   tagline: z.string().min(5).max(90),
@@ -228,6 +240,8 @@ export const buildSpecSchema = z
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(15),
     // Public-site copy (optional part; recipes fall back to deterministic copy when it is null).
     site: sitePart.nullable().optional(),
+    // Visual identity stated in the prompt (explicit colours and type), extracted by code; applied as theme tokens.
+    palette: paletteSchema.nullable().optional(),
   })
   .superRefine((spec, ctx) => {
     if (spec.recipe === "out_of_scope" && !spec.out_of_scope_reason) {

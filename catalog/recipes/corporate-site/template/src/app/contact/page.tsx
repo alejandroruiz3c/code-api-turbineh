@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
+/** Public contact page with the contact form. */
 export default async function Contact() {
   const site = await getSite();
   return (
@@ -16,7 +17,7 @@ export default async function Contact() {
       <section className="mx-auto grid max-w-5xl gap-12 px-6 py-16 md:grid-cols-2">
         <div>
           <h1 className="mb-4 text-4xl font-bold">Contact us</h1>
-          <p className="text-slate-600">{site.hero_subtitle}</p>
+          <p className="text-muted">{site.hero_subtitle}</p>
         </div>
         <ContactForm />
       </section>

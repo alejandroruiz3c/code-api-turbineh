@@ -561,7 +561,7 @@ ${
           <Button type="submit">Import CSV</Button>
         </form>
         {params.imported ? (
-          <p className="mt-2 text-sm text-slate-600" role="status">
+          <p className="mt-2 text-sm text-muted" role="status">
             Imported {String(params.imported)} rows, rejected {String(params.rejected ?? 0)}.
           </p>
         ) : null}
@@ -579,7 +579,7 @@ ${
         }
         <Table head={[${fields.map((f) => `"${label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}""]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-slate-100">
+            <tr key={row.id} className="border-b border-line">
 ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
               <td className="flex items-center justify-end gap-3 px-3 py-2">
                 {canUpdate ? (
@@ -590,7 +590,7 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
                 {canDelete ? (
                   <form action={delete${n.pascal}}>
                     <input type="hidden" name="id" value={row.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Delete
                     </button>
                   </form>

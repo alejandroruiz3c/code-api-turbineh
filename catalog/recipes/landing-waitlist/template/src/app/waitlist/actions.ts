@@ -15,6 +15,7 @@ const schema = z.object({
   website: z.string().max(0).optional(), // honeypot: humans leave it empty
 });
 
+/** Waitlist sign-up: validated, rate-limited, stored once per email, with a confirmation email. */
 export type JoinState = { ok: boolean; message: string } | null;
 
 // Public by design (anyone can join): protected by IP rate limit, honeypot and Zod; no member to check.

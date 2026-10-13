@@ -25,6 +25,7 @@ const updateSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 });
 
+/** Task actions: update (status, assignee, priority, due date), delete and comment. */
 export async function updateTask(formData: FormData): Promise<void> {
   await requireMember();
   const id = z.uuid().parse(formData.get("id"));

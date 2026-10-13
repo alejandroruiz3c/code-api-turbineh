@@ -30,6 +30,7 @@ export const metadata: Metadata = { title: "Cart — __APP_NAME__", robots: { in
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Cart: quantities, shipping country, discount code and totals computed on the server, then Stripe Checkout. */
 export default async function Cart({ searchParams }: { searchParams: SearchParams }) {
   const id = await currentCartId();
   const currency = await currentCurrency();
@@ -62,7 +63,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
       <section className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="mb-6 text-4xl font-bold">Your cart</h1>
         {lines.length === 0 ? (
-          <p className="text-slate-600">
+          <p className="text-muted">
             Your cart is empty.{" "}
             <Link className="underline" href="/shop">
               Browse the shop
@@ -71,7 +72,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
           </p>
         ) : (
           <>
-            <ul className="mb-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+            <ul className="mb-6 divide-y divide-line rounded-lg border border-line bg-panel">
               {lines.map((l) => (
                 <li key={l.lineId} className="flex items-center justify-between gap-4 p-4">
                   <Link href={`/shop/${l.slug}`} className="font-medium">
@@ -86,7 +87,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                       min={0}
                       max={MAX_QTY}
                       defaultValue={l.quantity}
-                      className="w-16 rounded-md border border-slate-300 px-2 py-1"
+                      className="w-16 rounded-md border border-field px-2 py-1"
                     />
                     <button type="submit" className="underline">
                       Update
@@ -105,7 +106,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
               // A plain GET form: works without JavaScript and keeps the choice in the address.
               <form
                 method="get"
-                className="mb-6 grid gap-3 rounded-lg border border-slate-200 bg-white p-4"
+                className="mb-6 grid gap-3 rounded-lg border border-line bg-panel p-4"
               >
                 <label className="text-sm font-medium" htmlFor="ship-country">
                   Ship to
@@ -114,7 +115,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                   id="ship-country"
                   name="country"
                   defaultValue={country ?? ""}
-                  className="rounded-md border border-slate-300 px-2 py-2"
+                  className="rounded-md border border-field px-2 py-2"
                 >
                   <option value="" disabled>
                     Choose a country
@@ -154,22 +155,22 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
             ) : null}
 
             <dl
-              className="mb-6 grid grid-cols-2 gap-y-1 rounded-lg border border-slate-200 bg-white p-4 text-right"
+              className="mb-6 grid grid-cols-2 gap-y-1 rounded-lg border border-line bg-panel p-4 text-right"
               aria-label="Order summary"
             >
-              <dt className="text-left text-slate-600">Subtotal</dt>
+              <dt className="text-left text-muted">Subtotal</dt>
               <dd data-testid="cart-subtotal">{money(subtotal)}</dd>
               {q && !("error" in q) ? (
                 <>
                   {q.discountCents > 0 ? (
                     <>
-                      <dt className="text-left text-slate-600">Discount ({q.coupon?.code})</dt>
+                      <dt className="text-left text-muted">Discount ({q.coupon?.code})</dt>
                       <dd data-testid="cart-discount">−{money(q.discountCents)}</dd>
                     </>
                   ) : null}
                   {q.shipping ? (
                     <>
-                      <dt className="text-left text-slate-600">Shipping ({q.shipping.name})</dt>
+                      <dt className="text-left text-muted">Shipping ({q.shipping.name})</dt>
                       <dd data-testid="cart-shipping">
                         {q.shippingCents === 0 ? "Free" : money(q.shippingCents)}
                       </dd>
@@ -177,7 +178,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                   ) : null}
                   {q.tax ? (
                     <>
-                      <dt className="text-left text-slate-600">
+                      <dt className="text-left text-muted">
                         {q.pricesIncludeTax ? "Includes " : ""}
                         {q.tax.label} ({formatRate(q.tax.rateBp)})
                       </dt>
@@ -185,7 +186,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                     </>
                   ) : null}
                   {q.taxMode === "stripe" ? (
-                    <dd className="col-span-2 text-sm text-slate-600">
+                    <dd className="col-span-2 text-sm text-muted">
                       Tax is calculated on the secure payment page from your address.
                     </dd>
                   ) : null}
@@ -201,12 +202,12 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                     {money(subtotal)}
                   </dd>
                   {q && "error" in q ? (
-                    <dd className="col-span-2 text-sm text-slate-600">{q.error}</dd>
+                    <dd className="col-span-2 text-sm text-muted">{q.error}</dd>
                   ) : null}
                 </>
               )}
             </dl>
-            <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-6 rounded-lg border border-line bg-panel p-4">
               {coupon ? (
                 <form action={removeCoupon} className="flex items-center gap-3 text-sm">
                   <span>
@@ -220,7 +221,7 @@ export default async function Cart({ searchParams }: { searchParams: SearchParam
                 <CouponForm />
               )}
               {q && !("error" in q) && q.couponError ? (
-                <p role="alert" className="mt-2 text-sm text-red-600">
+                <p role="alert" className="mt-2 text-sm text-danger">
                   {q.couponError}
                 </p>
               ) : null}

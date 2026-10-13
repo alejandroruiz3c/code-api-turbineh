@@ -1,6 +1,7 @@
 import { cpSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
+import type { RecipeGuide } from "./agent-guide.js";
 
 export interface RecipeMeta {
   id: string;
@@ -22,6 +23,8 @@ export interface RecipeMeta {
   requiredComponents?: Record<string, string>;
   /** Extra dashboard navigation entries. */
   nav: { label: string; href: string }[];
+  /** Agent guide inputs (AGENTS.md / turbineh.json): recipe-specific extension points. */
+  guide?: RecipeGuide;
 }
 
 export function readRecipe(recipesDir: string, id: string): RecipeMeta {
@@ -69,5 +72,7 @@ export function mergedRecipe(chain: RecipeMeta[]): Omit<RecipeMeta, "extends"> {
       ...chain.map((m) => m.requiredComponents ?? {}),
     ) as Record<string, string>,
     nav: chain.flatMap((m) => m.nav),
+    // Most specific recipe first.
+    guide: { extend: [...chain].reverse().flatMap((m) => m.guide?.extend ?? []) },
   };
 }

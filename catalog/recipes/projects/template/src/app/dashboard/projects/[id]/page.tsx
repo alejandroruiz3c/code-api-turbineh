@@ -13,12 +13,13 @@ import { workspaceMembers } from "@/server/members";
 import { createTask, moveTask } from "../actions";
 
 const PRIORITY_STYLE: Record<string, string> = {
-  low: "bg-slate-100 text-slate-700",
-  medium: "bg-blue-50 text-blue-800",
-  high: "bg-amber-50 text-amber-800",
-  urgent: "bg-red-50 text-red-800",
+  low: "bg-subtle text-muted",
+  medium: "bg-info-soft text-info",
+  high: "bg-warning-soft text-warning",
+  urgent: "bg-danger-soft text-danger",
 };
 
+/** One project's kanban board (drag tasks between columns). */
 export default async function Board({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;
@@ -40,7 +41,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
           ← Projects
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">{project.name}</h1>
-        {project.description ? <p className="text-slate-600">{project.description}</p> : null}
+        {project.description ? <p className="text-muted">{project.description}</p> : null}
       </div>
       <Card title="New task">
         <form action={createTask} className="grid gap-3 md:grid-cols-5 md:items-end">
@@ -54,7 +55,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
             <select
               id="t-assignee"
               name="assigneeId"
-              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+              className="w-full rounded-md border border-field px-2 py-2 text-sm"
               defaultValue={ctx.userId}
             >
               <option value="">Unassigned</option>
@@ -71,7 +72,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
               id="t-priority"
               name="priority"
               defaultValue="medium"
-              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+              className="w-full rounded-md border border-field px-2 py-2 text-sm"
             >
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
@@ -97,10 +98,10 @@ export default async function Board({ params }: { params: Promise<{ id: string }
               key={status}
               role="listitem"
               aria-labelledby={`col-${status}`}
-              className="rounded-lg bg-slate-100 p-3"
+              className="rounded-lg bg-subtle p-3"
             >
               <h2 id={`col-${status}`} className="mb-3 text-sm font-semibold">
-                {STATUS_LABEL[status]} <span className="text-slate-500">({column.length})</span>
+                {STATUS_LABEL[status]} <span className="text-muted">({column.length})</span>
               </h2>
               <ul className="flex flex-col gap-2">
                 {column.map((t) => {
@@ -109,7 +110,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
                   return (
                     <li
                       key={t.id}
-                      className="rounded-md bg-white p-3 shadow-sm"
+                      className="rounded-md bg-panel p-3 shadow-sm"
                       data-task={t.title}
                     >
                       <Link
@@ -124,11 +125,9 @@ export default async function Board({ params }: { params: Promise<{ id: string }
                         >
                           {t.priority}
                         </span>
-                        <span className="text-slate-600">{name(t.assigneeId)}</span>
+                        <span className="text-muted">{name(t.assigneeId)}</span>
                         {t.dueDate ? (
-                          <span
-                            className={overdue ? "font-semibold text-red-600" : "text-slate-500"}
-                          >
+                          <span className={overdue ? "font-semibold text-danger" : "text-muted"}>
                             {overdue ? "Overdue · " : ""}
                             {t.dueDate}
                           </span>

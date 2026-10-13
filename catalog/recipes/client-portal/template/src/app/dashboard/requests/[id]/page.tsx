@@ -11,6 +11,7 @@ import { changeStatus, uploadFile } from "../actions";
 
 const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`;
 
+/** One request: details, files (safe downloads) and status updates by staff. */
 export default async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;
@@ -49,7 +50,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
             <select
               id="rq-status"
               name="status"
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="rounded-md border border-field px-2 py-1 text-sm"
             >
               {moves.map((s) => (
                 <option key={s} value={s}>
@@ -76,7 +77,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
         ) : null}
         <Table head={["File", "Size", "Uploaded"]}>
           {files.map((f) => (
-            <tr key={f.id} className="border-b border-slate-100">
+            <tr key={f.id} className="border-b border-line">
               <td className="px-3 py-2">
                 <a className="underline" href={`/dashboard/requests/${row.id}/files/${f.id}`}>
                   {f.fileName}

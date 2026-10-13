@@ -69,6 +69,17 @@ describe("entity generation", () => {
     expect(table.match(/\bid:/g)).toHaveLength(1);
   });
 
+  it("generates screens that use only theme tokens (no hard-coded surfaces or palette colours)", () => {
+    const files = entitiesToGenerate(spec).flatMap((e) =>
+      generateEntity(e, { csvExport: true, csvImport: true }),
+    );
+    const palette =
+      /\b(bg|text|border|divide)-(white|black|slate|gray|zinc|neutral|red|green|amber|emerald|blue)(-\d{2,3})?\b/;
+    for (const f of files.filter((x) => x.path.endsWith(".tsx"))) {
+      expect(palette.exec(f.content)?.[0] ?? null, f.path).toBeNull();
+    }
+  });
+
   it("scopes every query and action by organization and checks roles", () => {
     const files = generateEntity(entitiesToGenerate(spec)[0]!);
     const actions = files.find((f) => f.path.endsWith("actions.ts"))!.content;

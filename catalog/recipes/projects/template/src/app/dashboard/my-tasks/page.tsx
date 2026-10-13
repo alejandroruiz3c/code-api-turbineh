@@ -7,6 +7,7 @@ import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { byUrgency, isOverdue, isStatus, STATUS_LABEL } from "@/server/board";
 
+/** Tasks assigned to the signed-in user across projects. */
 export default async function MyTasks() {
   const ctx = await requireMember();
   const rows = await db
@@ -35,7 +36,7 @@ export default async function MyTasks() {
           const s = isStatus(t.status) ? t.status : "todo";
           const overdue = isOverdue(t.dueDate, s);
           return (
-            <tr key={t.id} className="border-b border-slate-100">
+            <tr key={t.id} className="border-b border-line">
               <td className="px-3 py-2">
                 <Link className="underline" href={`/dashboard/tasks/${t.id}`}>
                   {t.title}
@@ -44,7 +45,7 @@ export default async function MyTasks() {
               <td className="px-3 py-2">{t.project}</td>
               <td className="px-3 py-2">{STATUS_LABEL[s]}</td>
               <td className="px-3 py-2">{t.priority}</td>
-              <td className={`px-3 py-2 ${overdue ? "font-semibold text-red-600" : ""}`}>
+              <td className={`px-3 py-2 ${overdue ? "font-semibold text-danger" : ""}`}>
                 {t.dueDate ? `${overdue ? "Overdue · " : ""}${t.dueDate}` : "—"}
               </td>
             </tr>

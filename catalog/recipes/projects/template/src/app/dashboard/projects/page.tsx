@@ -9,6 +9,7 @@ import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { createProject } from "./actions";
 
+/** Projects of the workspace: list and create. */
 export default async function Projects() {
   const ctx = await requireMember();
   const rows = await db
@@ -41,15 +42,15 @@ export default async function Projects() {
       </Card>
       <ul className="grid gap-4 md:grid-cols-3">
         {rows.map((p) => (
-          <li key={p.id} className="rounded-lg border border-slate-200 bg-white p-5">
+          <li key={p.id} className="rounded-lg border border-line bg-panel p-5">
             <Link
               href={`/dashboard/projects/${p.id}`}
               className="text-lg font-semibold hover:underline"
             >
               {p.name}
             </Link>
-            <p className="mt-1 text-sm text-slate-600">{p.description}</p>
-            <p className="mt-3 text-xs text-slate-500">{p.open} to do</p>
+            <p className="mt-1 text-sm text-muted">{p.description}</p>
+            <p className="mt-3 text-xs text-muted">{p.open} to do</p>
           </li>
         ))}
       </ul>

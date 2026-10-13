@@ -12,8 +12,9 @@ import { PRIORITIES, STATUSES, STATUS_LABEL } from "@/server/board";
 import { workspaceMembers } from "@/server/members";
 import { addComment, deleteTask, updateTask } from "../actions";
 
-const field = "w-full rounded-md border border-slate-300 px-2 py-2 text-sm";
+const field = "w-full rounded-md border border-field px-2 py-2 text-sm";
 
+/** One task: details, assignee, priority, due date and comments. */
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;
@@ -100,7 +101,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         {can(ctx.role, "delete") ? (
           <form action={deleteTask} className="mt-4">
             <input type="hidden" name="id" value={task.id} />
-            <button type="submit" className="text-sm text-red-600 underline">
+            <button type="submit" className="text-sm text-danger underline">
               Delete task
             </button>
           </form>
@@ -109,8 +110,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       <Card title={`Comments (${comments.length})`}>
         <ul className="mb-4 flex flex-col gap-3">
           {comments.map((c) => (
-            <li key={c.id} className="rounded-md border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">
+            <li key={c.id} className="rounded-md border border-line p-3">
+              <p className="text-xs text-muted">
                 {c.authorName} · {c.createdAt.toISOString().slice(0, 16).replace("T", " ")}
               </p>
               <p className="mt-1 whitespace-pre-wrap">{c.body}</p>

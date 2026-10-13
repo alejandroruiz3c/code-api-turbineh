@@ -5,3 +5,13 @@ providedEntities: [WaitlistEntry, Waitlist, Signup, Subscriber, Lead, Registrati
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 nav:
   - { label: Waitlist, href: /dashboard/waitlist }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Change the landing copy"
+      where: "src/content/site.ts"
+      how: "Plain text read by every section; no test asserts the copy."
+    - what: "Add a waitlist field"
+      where: "src/db/recipe-tables.ts, src/app/waitlist/actions.ts, src/app/page.tsx"
+      how: "Add the column, validate it in joinWaitlist (Zod) and add the input; then `pnpm db:generate`."

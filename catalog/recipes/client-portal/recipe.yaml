@@ -8,3 +8,13 @@ defaultCapabilities: [ops.rate-limit, data.pagination]
 providedCapabilities: [files.upload, files.type-detection, files.mime]
 nav:
   - { label: Requests, href: /dashboard/requests }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Change request statuses or who sees what"
+      where: "src/server/portal.ts, src/app/dashboard/requests/"
+      how: "Clients see their own requests, staff see all; keep the access checks on the server."
+    - what: "Accept another file type"
+      where: "src/server/portal.ts"
+      how: "Types are detected by content (magic bytes) with size limits; add the signature and a unit test."

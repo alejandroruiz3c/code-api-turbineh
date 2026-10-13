@@ -10,6 +10,7 @@ import { processes, processItems } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { addItems, deleteProcess, runNow } from "../actions";
 
+/** One AI batch process: add items, run now, results per item, CSV export and delete. */
 export default async function ProcessPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const id = z.uuid().safeParse((await params).id);
@@ -29,7 +30,7 @@ export default async function ProcessPage({ params }: { params: Promise<{ id: st
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">{proc.name}</h1>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {proc.instruction}
         {proc.labels.length > 0 ? ` · Labels: ${proc.labels.join(", ")}` : ""}
       </p>
@@ -43,7 +44,7 @@ export default async function ProcessPage({ params }: { params: Promise<{ id: st
                 id="pi-items"
                 name="items"
                 rows={5}
-                className="w-full rounded-md border border-slate-300 p-2 text-sm"
+                className="w-full rounded-md border border-field p-2 text-sm"
               />
             </div>
             <div>
@@ -63,7 +64,7 @@ export default async function ProcessPage({ params }: { params: Promise<{ id: st
             Run now
           </Button>
         </form>
-        <span className="text-sm text-slate-600">{queued} queued</span>
+        <span className="text-sm text-muted">{queued} queued</span>
         <a className="text-sm underline" href={`/dashboard/processes/${proc.id}/export`}>
           Export CSV
         </a>
@@ -80,7 +81,7 @@ export default async function ProcessPage({ params }: { params: Promise<{ id: st
       {can(ctx.role, "update") ? (
         <form action={deleteProcess}>
           <input type="hidden" name="processId" value={proc.id} />
-          <Button type="submit" className="bg-red-700">
+          <Button type="submit" className="bg-danger text-danger-contrast">
             Delete process
           </Button>
         </form>

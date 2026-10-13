@@ -3,6 +3,7 @@ import {
   apply,
   init,
   inspect,
+  left,
   login,
   plan,
   revert,
@@ -25,6 +26,8 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh verify [integration]     check the integration inside this project
   turbineh revert [integration]     undo one integration, keep later work
   turbineh status [plan]            flows, states and integrations
+  turbineh left                     in a delivered package: what is left (open criteria, gate, settings)
+  turbineh verify                   in a delivered package: typecheck, lint, unit tests → file:line and fix
 
   --json   structured output (same state and errors) for coding agents
   --yes    do not ask for confirmation (respects .turbineh/project.json policy)
@@ -63,6 +66,7 @@ const COMMANDS: Record<string, (c: Ctx) => Promise<CommandResult>> = {
   verify,
   revert,
   status,
+  left,
 };
 
 async function main(): Promise<number> {

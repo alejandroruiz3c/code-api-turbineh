@@ -25,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** Public home page: hero, services, steps, FAQ and call to action (copy in src/content/site.ts). */
 export default async function Home() {
   const site = await getSite();
   const latest = await db
@@ -56,10 +57,10 @@ export default async function Home() {
           __html: websiteJsonLd("__APP_NAME__", absolute("/"), site.hero_subtitle),
         }}
       />
-      <section className="bg-white">
+      <section className="bg-panel">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-6 py-24 text-center">
           <h1 className="text-5xl font-bold tracking-tight">{site.tagline}</h1>
-          <p className="text-lg text-slate-600">{site.hero_subtitle}</p>
+          <p className="text-lg text-muted">{site.hero_subtitle}</p>
           <div className="flex gap-3">
             <Link
               href="/contact"
@@ -67,7 +68,7 @@ export default async function Home() {
             >
               {site.cta}
             </Link>
-            <Link href="/services" className="rounded-md border border-slate-300 px-6 py-3">
+            <Link href="/services" className="rounded-md border border-field px-6 py-3">
               Our services
             </Link>
           </div>
@@ -80,15 +81,15 @@ export default async function Home() {
         </h2>
         <ul className="grid gap-6 md:grid-cols-3">
           {site.services.map((s) => (
-            <li key={s.title} className="rounded-lg border border-slate-200 bg-white p-6">
+            <li key={s.title} className="rounded-lg border border-line bg-panel p-6">
               <h3 className="mb-2 font-semibold">{s.title}</h3>
-              <p className="text-slate-600">{s.text}</p>
+              <p className="text-muted">{s.text}</p>
             </li>
           ))}
         </ul>
       </section>
 
-      <section aria-labelledby="why" className="bg-white py-16">
+      <section aria-labelledby="why" className="bg-panel py-16">
         <div className="mx-auto max-w-6xl px-6">
           <h2 id="why" className="mb-8 text-3xl font-semibold">
             Why choose us
@@ -97,7 +98,7 @@ export default async function Home() {
             {site.features.map((f) => (
               <li key={f.title}>
                 <h3 className="mb-1 font-semibold">{f.title}</h3>
-                <p className="text-slate-600">{f.text}</p>
+                <p className="text-muted">{f.text}</p>
               </li>
             ))}
           </ul>
@@ -111,29 +112,29 @@ export default async function Home() {
           </h2>
           <ul className="grid gap-6 md:grid-cols-3">
             {latest.map((p) => (
-              <li key={p.slug} className="rounded-lg border border-slate-200 bg-white p-6">
+              <li key={p.slug} className="rounded-lg border border-line bg-panel p-6">
                 <h3 className="mb-2 font-semibold">
                   <Link href={`/blog/${p.slug}`} className="hover:underline">
                     {p.title}
                   </Link>
                 </h3>
-                <p className="text-slate-600">{p.excerpt}</p>
+                <p className="text-muted">{p.excerpt}</p>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
 
-      <section aria-labelledby="faq" className="bg-white py-16">
+      <section aria-labelledby="faq" className="bg-panel py-16">
         <div className="mx-auto max-w-3xl px-6">
           <h2 id="faq" className="mb-8 text-3xl font-semibold">
             Frequently asked questions
           </h2>
           <div className="flex flex-col gap-3">
             {site.faq.map((f) => (
-              <details key={f.q} className="rounded-lg border border-slate-200 p-4">
+              <details key={f.q} className="rounded-lg border border-line p-4">
                 <summary className="cursor-pointer font-medium">{f.q}</summary>
-                <p className="mt-2 text-slate-600">{f.a}</p>
+                <p className="mt-2 text-muted">{f.a}</p>
               </details>
             ))}
           </div>

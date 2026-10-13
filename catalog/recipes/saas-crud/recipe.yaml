@@ -6,3 +6,13 @@ defaultCapabilities: [auth.session, authz.organizations, authz.roles, data.orm, 
 # Implemented by the template itself: better-auth hashes passwords (scrypt) before storing them.
 providedCapabilities: [security.password-hash]
 nav: []
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a data entity"
+      where: "src/db/tables/<entity>.ts, src/entities/<entity>/, src/app/dashboard/<entity>/"
+      how: "Copy an existing generated entity (table, schema, actions, page, E2E spec) and register it in src/entities/index.ts and src/db/schema.ts."
+    - what: "Change the role policy"
+      where: "src/server/authz.ts (can)"
+      how: "Edit can(role, action); keep the unit test tests/unit/authz.test.ts in step."

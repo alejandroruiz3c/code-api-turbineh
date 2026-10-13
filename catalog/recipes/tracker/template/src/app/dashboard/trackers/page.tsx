@@ -10,6 +10,7 @@ import { requireMember } from "@/server/authz";
 import { streak, totalsByDay } from "@/server/streaks";
 import { createTracker } from "./actions";
 
+/** The user's trackers: list, create and quick-log today. */
 export default async function Trackers() {
   const ctx = await requireMember();
   const today = new Date().toISOString().slice(0, 10);
@@ -36,14 +37,14 @@ export default async function Trackers() {
           );
           const s = streak(totals, Number(t.dailyTarget), today);
           return (
-            <li key={t.id} className="rounded-lg border border-slate-200 bg-white p-5">
+            <li key={t.id} className="rounded-lg border border-line bg-panel p-5">
               <Link
                 href={`/dashboard/trackers/${t.id}`}
                 className="text-lg font-semibold hover:underline"
               >
                 {t.name}
               </Link>
-              <p className="mt-2 text-sm text-slate-600" data-streak={t.name}>
+              <p className="mt-2 text-sm text-muted" data-streak={t.name}>
                 🔥 {s} day streak
               </p>
             </li>
@@ -67,7 +68,7 @@ export default async function Trackers() {
             <select
               id="tr-kind"
               name="kind"
-              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+              className="w-full rounded-md border border-field px-2 py-2 text-sm"
             >
               <option value="habit">Habit (done / not done)</option>
               <option value="quantity">Amount per day</option>

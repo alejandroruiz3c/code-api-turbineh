@@ -5,10 +5,27 @@ providedEntities:
   [Product, Item, Article, Variant, ProductVariant, ProductOption, Size, Cart, CartItem, Order, OrderItem, OrderLine, Purchase, Payment, Customer, Stock, Inventory, Category, Shipping, ShippingRate, ShippingMethod, Tax, TaxRate, Coupon, DiscountCode, Discount, Promotion, PromoCode, Voucher, Currency, Price, ProductPrice]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # Implemented by the template itself (native): no SDK, signature verification and money in integer cents.
+# ops.idempotency: the signed webhook changes only pending orders and Stripe calls carry an Idempotency-Key.
 providedCapabilities:
-  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection]
+  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection, ops.idempotency]
 nav:
   - { label: Products, href: /dashboard/products }
   - { label: Shipping & taxes, href: /dashboard/shipping }
   - { label: Coupons, href: /dashboard/coupons }
   - { label: Orders, href: /dashboard/orders }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a product field"
+      where: "src/db/recipe-tables.ts (products), src/app/dashboard/products/actions.ts + page.tsx, src/app/shop/[slug]/page.tsx"
+      how: "Add the column, the Zod field in saveProduct, the admin input and where shoppers see it; then `pnpm db:generate`."
+    - what: "Change prices, taxes, shipping or discounts"
+      where: "src/lib/shop.ts (pure rules, unit-tested) and src/lib/checkout.ts"
+      how: "Amounts are always computed on the server from these functions; add a unit test in tests/unit/shop.test.ts."
+    - what: "Change what happens when an order is paid"
+      where: "src/app/api/stripe/webhook/route.ts"
+      how: "The only place an order becomes paid (signed, idempotent, one transaction): stock, coupon count, emails."
+    - what: "Change the order emails"
+      where: "src/app/api/stripe/webhook/route.ts (sendEmail calls), src/lib/email.ts"
+      how: "Without RESEND_API_KEY emails are logged; E2E asserts them through EMAIL_OUTBOX_FILE."

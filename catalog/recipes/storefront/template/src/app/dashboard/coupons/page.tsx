@@ -7,10 +7,11 @@ import { Table } from "@/components/ui/table";
 import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { describeCoupon } from "@/lib/shop";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 import { deactivateCoupon, saveCoupon } from "./actions";
 
+/** Discount codes: create, see usage, deactivate (staff only). */
 export default async function Coupons() {
   await requireAdmin();
   const rows = await db.select().from(coupons).orderBy(desc(coupons.createdAt)).limit(200);
@@ -20,7 +21,7 @@ export default async function Coupons() {
   return (
     <div className="flex flex-col gap-6">
       <Card title="New discount code">
-        <p className="mb-4 text-sm text-slate-600">
+        <p className="mb-4 text-sm text-muted">
           Buyers type the code in their cart (upper or lower case). The discount applies to
           products, before shipping and tax, and a use is counted only when the payment is
           confirmed.
@@ -49,7 +50,7 @@ export default async function Coupons() {
               id="cp-currency"
               name="currency"
               defaultValue=""
-              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+              className="w-full rounded-md border border-field px-2 py-2 text-sm"
             >
               <option value="">Any currency (percent codes)</option>
               {currencies.map((c) => (
@@ -79,7 +80,7 @@ export default async function Coupons() {
       <Card title="Discount codes">
         <Table head={["Code", "Discount", "Used", "Valid until", "Status", ""]}>
           {rows.map((c) => (
-            <tr key={c.id} className="border-b border-slate-100" data-code={c.code}>
+            <tr key={c.id} className="border-b border-line" data-code={c.code}>
               <td className="px-3 py-2 font-mono">{c.code}</td>
               <td className="px-3 py-2">{describeCoupon(c)}</td>
               <td className="px-3 py-2" data-testid={`coupon-used-${c.code}`}>
@@ -92,7 +93,7 @@ export default async function Coupons() {
                 {c.active ? (
                   <form action={deactivateCoupon}>
                     <input type="hidden" name="id" value={c.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Deactivate
                     </button>
                   </form>

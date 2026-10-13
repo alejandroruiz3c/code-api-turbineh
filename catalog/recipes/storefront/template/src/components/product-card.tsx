@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPrice } from "@/lib/shop";
+import { formatPrice, productImageSrc } from "@/lib/shop";
 
 export function ProductCard({
   p,
@@ -11,28 +11,30 @@ export function ProductCard({
     name: string;
     priceCents: number | null;
     imageMime: string | null;
+    imageUrl: string | null;
   };
   currency: string;
 }) {
+  const src = productImageSrc(p);
   return (
-    <li className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <li className="overflow-hidden rounded-lg border border-line bg-panel">
       <Link href={`/shop/${p.slug}`} className="block">
-        {p.imageMime ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served by our own image route
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element -- own image route or the admin's https URL
           <img
-            src={`/shop/images/${p.id}`}
+            src={src}
             alt={p.name}
             className="aspect-square w-full object-cover"
             loading="lazy"
           />
         ) : (
-          <div className="flex aspect-square w-full items-center justify-center bg-slate-100 text-slate-400">
+          <div className="flex aspect-square w-full items-center justify-center bg-subtle text-muted">
             No image
           </div>
         )}
         <div className="p-4">
           <h3 className="font-semibold">{p.name}</h3>
-          <p className="text-slate-700">
+          <p className="text-muted">
             {p.priceCents === null
               ? `Not sold in ${currency.toUpperCase()}`
               : formatPrice(p.priceCents, currency)}

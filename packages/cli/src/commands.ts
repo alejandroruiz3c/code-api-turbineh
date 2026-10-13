@@ -28,6 +28,7 @@ import {
   mergeDependencies,
   missingEnv,
 } from "./project.js";
+import { left as leftOf, readGuide, verifyPackage } from "./package-guide.js";
 
 export interface Ctx {
   cwd: string;
@@ -535,6 +536,11 @@ function run(cwd: string, cmd: string, args: string[]): { ok: boolean; detail: s
 
 export async function verify(c: Ctx): Promise<CommandResult> {
   const project = readProject(c.cwd);
+  // A delivered TurbineH package (turbineh.json) without capability integrations: check the package itself.
+  const guide = readGuide(c.cwd);
+  if (guide && !c.args[0] && !project?.integrations.some((i) => i.state !== "reverted")) {
+    return verifyPackage(c.cwd, guide);
+  }
   const entry = c.args[0]
     ? project?.integrations.find((i) => i.id === c.args[0] || i.slug === c.args[0])
     : project?.integrations.filter((i) => i.state !== "reverted").at(-1);
@@ -649,6 +655,18 @@ export async function verify(c: Ctx): Promise<CommandResult> {
         }
       : { next: "Keep building — the capability is integrated and verified here." }),
   };
+}
+
+/** What is left in a delivered package (turbineh.json): open criteria, gaps, gate findings, missing settings. */
+export async function left(c: Ctx): Promise<CommandResult> {
+  const guide = readGuide(c.cwd);
+  if (!guide)
+    fail(
+      "no_package",
+      "No turbineh.json here: this is not a TurbineH package.",
+      "Run it in the root of a repository delivered by TurbineH.",
+    );
+  return leftOf(c.cwd, guide as NonNullable<typeof guide>);
 }
 
 export async function revert(c: Ctx): Promise<CommandResult> {

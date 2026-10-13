@@ -80,7 +80,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
     <section
       aria-label={title}
       data-ready={ready ? "true" : "false"}
-      className="flex w-full max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm"
+      className="flex w-full max-w-xl flex-col gap-3 rounded-lg border border-line bg-panel p-4 text-left shadow-sm"
     >
       <h2 className="font-semibold">{title}</h2>
       <ol
@@ -94,9 +94,9 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
             data-role={l.role}
             className={
               l.role === "user"
-                ? "self-end whitespace-pre-wrap rounded-md bg-slate-100 px-3 py-2"
+                ? "self-end whitespace-pre-wrap rounded-md bg-subtle px-3 py-2"
                 : l.role === "error"
-                  ? "whitespace-pre-wrap rounded-md bg-red-50 px-3 py-2 text-red-800"
+                  ? "whitespace-pre-wrap rounded-md bg-danger-soft px-3 py-2 text-danger"
                   : "whitespace-pre-wrap rounded-md bg-brand/10 px-3 py-2"
             }
           >
@@ -119,7 +119,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
             type="button"
             disabled={busy}
             onClick={() => void send("No, don't do it.", false)}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
+            className="rounded-md border border-field px-3 py-1 text-sm disabled:opacity-50"
           >
             Don&apos;t do it
           </button>
@@ -135,7 +135,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
           onChange={(e) => setText(e.target.value)}
           maxLength={1000}
           autoComplete="off"
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-field px-3 py-2 text-sm"
           placeholder="Type your message"
         />
         <button

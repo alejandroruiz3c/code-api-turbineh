@@ -9,6 +9,7 @@
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
     "build:local": "tsx src/cli.ts",
+    "verify:recipe": "tsx src/verify-recipe.ts",
     "service": "tsx src/service.ts"
   },
   "dependencies": {

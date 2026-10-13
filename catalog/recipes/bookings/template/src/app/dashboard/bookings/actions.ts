@@ -10,6 +10,7 @@ import { rateLimit } from "@/security/rate-limit";
 import { slotProblem, withinAvailability } from "@/server/bookings";
 import { can, requireMember } from "@/server/authz";
 
+/** Booking actions: create (conflict-free, within availability, with a confirmation email) and cancel. */
 export type BookingState = { ok: boolean; message: string } | null;
 
 // <input type="datetime-local"> has no zone: the app works in UTC and says so in the form.

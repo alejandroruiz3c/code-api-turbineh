@@ -9,3 +9,10 @@ providedCapabilities: [ui.drag-drop]
 nav:
   - { label: Projects, href: /dashboard/projects }
   - { label: My tasks, href: /dashboard/my-tasks }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a task field or column"
+      where: "src/db/recipe-tables.ts, src/server/board.ts, src/app/dashboard/tasks/"
+      how: "Add the column, update the board and task page; then `pnpm db:generate`."

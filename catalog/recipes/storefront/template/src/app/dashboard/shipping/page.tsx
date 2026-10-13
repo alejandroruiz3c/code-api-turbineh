@@ -9,10 +9,11 @@ import { shippingRates, taxRates } from "@/db/schema";
 import { env } from "@/env";
 import { countryName } from "@/lib/countries";
 import { formatPrice, formatRate } from "@/lib/shop";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
 import { removeShippingRate, removeTaxRate, saveShippingRate, saveTaxRate } from "./actions";
 
+/** Shipping options by country and currency, and tax rates (staff only). */
 export default async function ShippingAndTaxes() {
   await requireAdmin();
   const [rates, taxes] = await Promise.all([
@@ -35,7 +36,7 @@ export default async function ShippingAndTaxes() {
   return (
     <div className="flex flex-col gap-6">
       <Card title="Shipping options">
-        <p className="mb-4 text-sm text-slate-600">
+        <p className="mb-4 text-sm text-muted">
           Buyers choose one of the options that ship to their country. Without any option, orders
           need no shipping (digital goods or pick-up).
         </p>
@@ -43,7 +44,7 @@ export default async function ShippingAndTaxes() {
           <Table head={["Option", "Countries", "Price", "Free from", ""]}>
             {/* Each option charges in its own currency and is offered to buyers paying in it. */}
             {rates.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-line">
                 <td className="px-3 py-2">{r.name}</td>
                 <td className="px-3 py-2">{where(r.countries)}</td>
                 <td className="px-3 py-2">
@@ -55,7 +56,7 @@ export default async function ShippingAndTaxes() {
                 <td className="px-3 py-2 text-right">
                   <form action={removeShippingRate}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Remove
                     </button>
                   </form>
@@ -84,7 +85,7 @@ export default async function ShippingAndTaxes() {
                 id="sh-currency"
                 name="currency"
                 defaultValue={env.SHOP_CURRENCY}
-                className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm"
+                className="w-full rounded-md border border-field px-2 py-2 text-sm"
               >
                 {currencies.map((c) => (
                   <option key={c} value={c}>
@@ -106,13 +107,13 @@ export default async function ShippingAndTaxes() {
 
       <Card title="Taxes">
         {env.SHOP_TAX_MODE === "stripe" ? (
-          <p className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">
             Stripe Tax calculates tax at checkout from the buyer&apos;s address
             (SHOP_TAX_MODE=stripe): the rates below are not used. Keep your tax registrations up to
             date in your Stripe dashboard.
           </p>
         ) : null}
-        <p className="mb-4 text-sm text-slate-600">
+        <p className="mb-4 text-sm text-muted">
           {env.SHOP_PRICES_INCLUDE_TAX
             ? "Your prices include tax: the cart shows the tax they contain."
             : "Your prices exclude tax: the tax is added at checkout."}{" "}
@@ -122,7 +123,7 @@ export default async function ShippingAndTaxes() {
         {taxes.length > 0 ? (
           <Table head={["Country", "Tax", "Rate", ""]}>
             {taxes.map((t) => (
-              <tr key={t.id} className="border-b border-slate-100">
+              <tr key={t.id} className="border-b border-line">
                 <td className="px-3 py-2">
                   {t.country === "*" ? "Every other country" : countryName(t.country)}
                 </td>
@@ -131,7 +132,7 @@ export default async function ShippingAndTaxes() {
                 <td className="px-3 py-2 text-right">
                   <form action={removeTaxRate}>
                     <input type="hidden" name="id" value={t.id} />
-                    <button className="text-sm text-red-600" type="submit">
+                    <button className="text-sm text-danger" type="submit">
                       Remove
                     </button>
                   </form>

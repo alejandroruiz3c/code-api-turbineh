@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Public blog index (published posts). */
 export default async function Blog({ searchParams }: { searchParams: SearchParams }) {
   const site = await getSite();
   const { page, offset, limit } = parsePage((await searchParams).page);
@@ -39,7 +40,7 @@ export default async function Blog({ searchParams }: { searchParams: SearchParam
     <SiteShell cta={site.cta}>
       <section className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="mb-8 text-4xl font-bold">Blog</h1>
-        {rows.length === 0 ? <p className="text-slate-600">No articles yet.</p> : null}
+        {rows.length === 0 ? <p className="text-muted">No articles yet.</p> : null}
         <ul className="flex flex-col gap-8">
           {rows.map((p) => (
             <li key={p.slug}>
@@ -48,8 +49,8 @@ export default async function Blog({ searchParams }: { searchParams: SearchParam
                   {p.title}
                 </Link>
               </h2>
-              <p className="text-sm text-slate-500">{p.publishedAt?.toISOString().slice(0, 10)}</p>
-              <p className="mt-2 text-slate-700">{p.excerpt}</p>
+              <p className="text-sm text-muted">{p.publishedAt?.toISOString().slice(0, 10)}</p>
+              <p className="mt-2 text-muted">{p.excerpt}</p>
             </li>
           ))}
         </ul>

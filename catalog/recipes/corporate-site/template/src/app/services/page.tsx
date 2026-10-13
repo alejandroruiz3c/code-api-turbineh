@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services" },
 };
 
+/** Public services page. */
 export default async function Services() {
   const site = await getSite();
   return (
@@ -17,9 +18,9 @@ export default async function Services() {
         <h1 className="mb-8 text-4xl font-bold">Services</h1>
         <div className="flex flex-col gap-6">
           {site.services.map((s) => (
-            <article key={s.title} className="rounded-lg border border-slate-200 bg-white p-6">
+            <article key={s.title} className="rounded-lg border border-line bg-panel p-6">
               <h2 className="mb-2 text-xl font-semibold">{s.title}</h2>
-              <p className="text-slate-600">{s.text}</p>
+              <p className="text-muted">{s.text}</p>
             </article>
           ))}
         </div>

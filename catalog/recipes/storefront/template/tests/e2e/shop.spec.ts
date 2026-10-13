@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 // 1×1 PNG
@@ -7,6 +8,16 @@ const PNG = Buffer.from(
   "base64",
 );
 const ADMIN_STATE = "playwright/.auth/owner.json";
+
+/** Emails the app logged (no provider in tests): one JSON line per email, see src/lib/email.ts. */
+function outbox(): { to: string; subject: string }[] {
+  const file = process.env.EMAIL_OUTBOX_FILE ?? "";
+  if (!file || !existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as { to: string; subject: string });
+}
 
 /** Signs a webhook exactly like Stripe does (t=…,v1=HMAC-SHA256 of "t.body"). */
 function stripeSignature(body: string): string {
@@ -23,10 +34,48 @@ test.describe.serial("storefront", () => {
     await page.getByLabel("Description").fill("A breathable linen shirt for summer days.");
     await page.getByLabel(/Stock/).fill("5");
     await page
-      .getByLabel(/^Image/)
+      .getByLabel(/upload an image/)
       .setInputFiles({ name: "shirt.png", mimeType: "image/png", buffer: PNG });
     await page.getByRole("button", { name: "Create product" }).click();
     await expect(page.getByRole("cell", { name: "Linen Shirt" })).toBeVisible();
+  });
+
+  test("the admin adds a product with an https image URL; shoppers find it by its description", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name").fill("Ethiopia Yirgacheffe");
+    await page.getByLabel(/^Price/).fill("18.50");
+    await page
+      .getByLabel("Description")
+      .fill("Washed single origin with jasmine and bergamot notes.");
+    await page.getByLabel(/^Image URL/).fill("https://images.example.com/yirgacheffe.jpg");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await expect(page.getByRole("cell", { name: "Ethiopia Yirgacheffe" })).toBeVisible();
+
+    await page.goto("/shop?q=bergamot");
+    await expect(page.getByRole("img", { name: "Ethiopia Yirgacheffe" })).toHaveAttribute(
+      "src",
+      "https://images.example.com/yirgacheffe.jpg",
+    );
+    await page.goto("/shop?q=no-such-coffee");
+    await expect(page.getByText("No products found.")).toBeVisible();
+  });
+
+  test("an image URL that is not https is refused by the server", async ({ page }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name").fill("Plain HTTP Mug");
+    await page.getByLabel(/^Price/).fill("9.00");
+    await page.getByLabel("Description").fill("A mug whose image is not served securely.");
+    // Bypass the browser's own checks: the server must refuse it too.
+    await page.getByLabel(/^Image URL/).evaluate((el) => {
+      el.removeAttribute("pattern");
+      el.setAttribute("type", "text");
+    });
+    await page.getByLabel(/^Image URL/).fill("http://images.example.com/mug.jpg");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await page.goto("/dashboard/products");
+    await expect(page.getByRole("cell", { name: "Plain HTTP Mug" })).toHaveCount(0);
   });
 
   test("an out-of-stock product cannot be added to the cart", async ({ page }) => {
@@ -106,10 +155,60 @@ test.describe.serial("storefront", () => {
     await expect(page.getByRole("cell", { name: "US Standard" })).toBeVisible();
   });
 
+  test("the admin updates a product's price and the public catalogue shows it at once", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name", { exact: true }).fill("Price Test Mug");
+    await page.getByLabel(/^Price/).fill("10.00");
+    await page.getByLabel("Description").fill("A mug used to check price updates.");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
+    await page.getByLabel(/^Price/).fill("12.50");
+    await page.getByRole("button", { name: "Save product" }).click();
+    // The action redirects back to the list once saved.
+    await expect(page).toHaveURL(/\/dashboard\/products$/);
+    await page.goto("/shop/price-test-mug");
+    await expect(page.getByTestId("price")).toContainText("12.50");
+  });
+
   test.describe("shopper", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
+    // The Stripe API is the local mock (tests/e2e/mocks/STRIPE_API_BASE.mjs); Stripe's hosted page is answered here.
+    test.beforeEach(async ({ page }) => {
+      await page.route("https://checkout.stripe.com/**", (route) =>
+        route.fulfill({ body: "Stripe Checkout (mock)", contentType: "text/plain" }),
+      );
+    });
 
-    test("buys an option with card: shipping, tax, signed payment webhook, order paid, stock and cart updated", async ({
+    test("shoppers search the catalogue by product name: only matching products are listed", async ({
+      page,
+    }) => {
+      await page.goto("/shop");
+      await page
+        .getByRole("searchbox")
+        .or(page.getByLabel("Search products"))
+        .first()
+        .fill("linen");
+      await page.getByRole("button", { name: "Search" }).click();
+      await expect(page.getByRole("link", { name: /Linen Shirt/ }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: /Cotton Tee/ })).toHaveCount(0);
+    });
+
+    test("a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal", async ({
+      page,
+    }) => {
+      await page.goto("/shop/linen-shirt");
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await expect(page).toHaveURL(/\/cart/);
+      await expect(page.getByLabel("Quantity of Linen Shirt")).toHaveValue("1");
+      await expect(page.getByTestId("cart-subtotal")).toContainText("49.90");
+      await page.getByLabel("Quantity of Linen Shirt").fill("3");
+      await page.getByRole("button", { name: "Update", exact: true }).click();
+      await expect(page.getByTestId("cart-subtotal")).toContainText("149.70");
+    });
+
+    test("pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged", async ({
       page,
       browser,
       request,
@@ -140,13 +239,9 @@ test.describe.serial("storefront", () => {
       await expect(page.getByTestId("cart-tax")).toContainText("21.99");
       await expect(page.getByTestId("cart-total")).toContainText("126.70");
 
-      // The hosted Stripe page is outside the sandbox: answer it locally and check we were sent there.
-      await page.route("https://checkout.stripe.com/**", (route) =>
-        route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
-      );
       await page.getByLabel(/Email for your receipt/).fill("buyer@example.com");
       await page.getByRole("button", { name: "Checkout" }).click();
-      await page.waitForURL(/checkout\.stripe\.com/);
+      await page.waitForURL(/checkout\.stripe\.com\/c\/pay\/cs_test_/);
 
       const admin = await browser.newContext({ storageState: ADMIN_STATE });
       const adminPage = await admin.newPage();
@@ -192,7 +287,13 @@ test.describe.serial("storefront", () => {
       await expect(adminPage.getByTestId("variant-stock-S")).toHaveValue("1");
       await admin.close();
 
-      await page.unroute("https://checkout.stripe.com/**");
+      // The confirmation email went to the shopper exactly once (logged: no email provider in tests).
+      expect(
+        outbox().filter(
+          (m) => m.to === "buyer@example.com" && m.subject === "Your order is confirmed",
+        ),
+      ).toHaveLength(1);
+
       await page.goto("/cart");
       await expect(page.getByText("Your cart is empty")).toBeVisible();
     });
@@ -215,11 +316,8 @@ test.describe.serial("storefront", () => {
       await expect(page.getByTestId("cart-tax")).toContainText("8.64");
       await expect(page.getByTestId("cart-total")).toContainText("49.81");
 
-      await page.route("https://checkout.stripe.com/**", (route) =>
-        route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
-      );
       await page.getByRole("button", { name: "Checkout" }).click();
-      await page.waitForURL(/checkout\.stripe\.com/);
+      await page.waitForURL(/checkout\.stripe\.com\/c\/pay\/cs_test_/);
 
       const admin = await browser.newContext({ storageState: ADMIN_STATE });
       const adminPage = await admin.newPage();
@@ -288,11 +386,8 @@ test.describe.serial("storefront", () => {
       await expect(page.getByTestId("cart-shipping")).toContainText("9.00");
       await expect(page.getByTestId("cart-total")).toContainText("US$63.00");
 
-      await page.route("https://checkout.stripe.com/**", (route) =>
-        route.fulfill({ body: "Stripe Checkout (simulated)", contentType: "text/plain" }),
-      );
       await page.getByRole("button", { name: "Checkout" }).click();
-      await page.waitForURL(/checkout\.stripe\.com/);
+      await page.waitForURL(/checkout\.stripe\.com\/c\/pay\/cs_test_/);
 
       const admin = await browser.newContext({ storageState: ADMIN_STATE });
       const adminPage = await admin.newPage();
@@ -322,5 +417,14 @@ test.describe.serial("storefront", () => {
       expect(tee).toContain('"sku":"TEE-L"');
       expect(tee).toContain('"price":"22.00"');
     });
+  });
+
+  test("the admin sees every order with its payment status in the orders section", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/orders");
+    await expect(page.locator('tr[data-status="paid"]').first()).toBeVisible();
+    await expect(page.locator('tr[data-status="pending"]').first()).toBeVisible();
+    expect(await page.locator("tr[data-order-id]").count()).toBeGreaterThanOrEqual(3);
   });
 });

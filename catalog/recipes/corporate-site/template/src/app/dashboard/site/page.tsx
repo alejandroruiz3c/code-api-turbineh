@@ -2,13 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { requireAdmin } from "@/server/admin";
+import { requireAdmin } from "@/server/authz";
 import { getSite } from "@/server/site";
 import { saveSite } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-const area = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+const area = "w-full rounded-md border border-field px-3 py-2 text-sm";
 
+/** Editable website texts (staff only). */
 export default async function SiteEditor({ searchParams }: { searchParams: SearchParams }) {
   await requireAdmin();
   const site = await getSite();
@@ -18,7 +19,7 @@ export default async function SiteEditor({ searchParams }: { searchParams: Searc
   return (
     <Card title="Website texts">
       {saved ? (
-        <p role="status" className="mb-4 text-green-700">
+        <p role="status" className="mb-4 text-success">
           Saved. Your website shows the new texts.
         </p>
       ) : null}
