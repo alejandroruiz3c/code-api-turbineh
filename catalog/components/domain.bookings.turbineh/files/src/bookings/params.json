@@ -13,5 +13,6 @@
     { "weekday": 5, "open": "09:00", "close": "17:00" }
   ],
   "policy": { "cancelNoticeHours": 24, "bookingNoticeMinutes": 0, "horizonDays": 60 },
-  "faq": []
+  "faq": [],
+  "askPhone": false
 }

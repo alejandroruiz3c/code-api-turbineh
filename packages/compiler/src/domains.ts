@@ -58,6 +58,8 @@ export const bookingParamsSchema = z.object({
   faq: z
     .array(z.object({ topic: z.string().min(1).max(120), answer: z.string().max(1000).nullable() }))
     .max(30),
+  /** The public booking form asks for a phone number (the request says customers enter one). */
+  askPhone: z.boolean().optional(),
 });
 export type BookingParams = z.infer<typeof bookingParamsSchema>;
 
@@ -355,6 +357,45 @@ export function extractBookingParams(
     if (name.length < 2 || name.length > 80) continue;
     services.push({ name: cap(name), minutes, price: money.price, currency: money.currency });
   }
+  // Services listed with their own durations: "Services: cut 30 min (25 €), colour 90 min (70 €), …".
+  if (services.length === 0) {
+    const head = /\bservices?\b\s*(?:are|include|:)\s*/i.exec(text);
+    // The list runs to the first sentence end outside parentheses ("(25.50 €)" keeps its decimal point).
+    const parts: string[] = [];
+    let depth = 0;
+    let cur = "";
+    const rest = head ? text.slice(head.index + head[0].length) : "";
+    for (let i = 0; i < rest.length; i++) {
+      const ch = rest[i] ?? "";
+      if (ch === "(") depth++;
+      if (ch === ")") depth = Math.max(0, depth - 1);
+      if (depth === 0 && (ch === ";" || (ch === "." && !/\d/.test(rest[i + 1] ?? "")))) break;
+      if (ch === "," && depth === 0) {
+        parts.push(cur);
+        cur = "";
+      } else cur += ch;
+    }
+    if (cur.trim()) parts.push(cur);
+    for (const part of parts) {
+      const m =
+        /^\s*(?:and\s+)?(.+?)\s*[(:–-]?\s*(\d{1,3})\s*-?\s*(min(?:ute)?s?|h(?:ours?)?)\b\s*[,)]?\s*(?:\(([^)]*)\))?/i.exec(
+          part,
+        );
+      if (!m) continue;
+      const name = (m[1] ?? "").replace(/[\s(:–-]+$/, "").trim();
+      const mins = Number(m[2]) * (/^h/i.test(m[3] ?? "") ? 60 : 1);
+      if (name.length < 2 || name.length > 80 || mins < 5 || mins > 480) continue;
+      const money = parseMoney(m[4] ?? part.slice(m.index + m[0].length)) ?? parseMoney(part);
+      services.push({
+        name: cap(name),
+        minutes: mins,
+        price: money?.price ?? null,
+        currency: money?.currency ?? null,
+      });
+    }
+    if (services.length > 0 && assumptions.includes("Appointment length not stated: 30 minutes."))
+      assumptions.splice(assumptions.indexOf("Appointment length not stated: 30 minutes."), 1);
+  }
   if (services.length === 0) {
     services.push({
       name: cap(sessionNoun ? singular(sessionNoun) : "Appointment"),
@@ -385,6 +426,7 @@ export function extractBookingParams(
     slotMinutes,
     hours,
     policy: { cancelNoticeHours, bookingNoticeMinutes: 0, horizonDays: 60 },
+    askPhone: /\bphone\b/i.test(text),
     faq,
   });
   return { params, assumptions };
@@ -429,14 +471,16 @@ const pascal = (s: string) =>
 /** Every domain detected in the request, for the given recipe. */
 export function detectDomains(prompt: string, recipe: string, appName?: string): DomainSelection[] {
   const out: DomainSelection[] = [];
-  if (recipe === "ai-agents") {
+  // The bookings recipe is built on the domain (public booking page, cancel link, staff calendar); ai-agents adds the
+  // assistant on top of it.
+  if (recipe === "ai-agents" || recipe === "bookings") {
     const b = extractBookingParams(prompt, appName);
     if (b) {
       out.push({
         id: "bookings",
         capability: "domain.bookings",
         component: "domain.bookings.turbineh",
-        recipes: ["ai-agents"],
+        recipes: ["ai-agents", "bookings"],
         paramsFile: "src/bookings/params.json",
         params: b.params as unknown as Record<string, unknown>,
         providedEntities: [

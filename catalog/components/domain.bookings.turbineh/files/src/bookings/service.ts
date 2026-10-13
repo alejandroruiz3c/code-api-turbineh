@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, asc, desc, eq, gt, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -7,7 +7,9 @@ import {
   bookingNotifications,
   bookingResources,
   bookingSlotLocks,
+  bookingTimeOff,
 } from "@/db/schema";
+import { env } from "@/env";
 import { sendEmail } from "@/lib/email";
 import {
   assertBookableDay,
@@ -123,24 +125,42 @@ async function resolveService(name: string | undefined, email?: string): Promise
   return cfg.services[0] as Service;
 }
 
+/** Confirmed appointments and time off of these resources overlapping [from, to). */
 async function busyOf(resourceIds: string[], from: Date, to: Date, ignoreId?: string) {
   if (resourceIds.length === 0) return [];
-  return db
-    .select({
-      resourceId: bookingAppointments.resourceId,
-      start: bookingAppointments.startsAt,
-      end: bookingAppointments.endsAt,
-    })
-    .from(bookingAppointments)
-    .where(
-      and(
-        eq(bookingAppointments.status, "confirmed"),
-        inArray(bookingAppointments.resourceId, resourceIds),
-        lt(bookingAppointments.startsAt, to),
-        gt(bookingAppointments.endsAt, from),
-        ignoreId ? ne(bookingAppointments.id, ignoreId) : undefined,
+  const [booked, off] = await Promise.all([
+    db
+      .select({
+        resourceId: bookingAppointments.resourceId,
+        start: bookingAppointments.startsAt,
+        end: bookingAppointments.endsAt,
+      })
+      .from(bookingAppointments)
+      .where(
+        and(
+          eq(bookingAppointments.status, "confirmed"),
+          inArray(bookingAppointments.resourceId, resourceIds),
+          lt(bookingAppointments.startsAt, to),
+          gt(bookingAppointments.endsAt, from),
+          ignoreId ? ne(bookingAppointments.id, ignoreId) : undefined,
+        ),
       ),
-    );
+    db
+      .select({
+        resourceId: bookingTimeOff.resourceId,
+        start: bookingTimeOff.startsAt,
+        end: bookingTimeOff.endsAt,
+      })
+      .from(bookingTimeOff)
+      .where(
+        and(
+          inArray(bookingTimeOff.resourceId, resourceIds),
+          lt(bookingTimeOff.startsAt, to),
+          gt(bookingTimeOff.endsAt, from),
+        ),
+      ),
+  ]);
+  return [...booked, ...off];
 }
 
 /** Free slots of a day (real data: hours, duration, time zone, confirmed bookings). */
@@ -226,8 +246,9 @@ async function notify(
   to: string,
   subject: string,
   text: string,
+  link?: string,
 ): Promise<"log" | "resend"> {
-  const sent = await sendEmail({ to, subject, text }).catch(() => ({
+  const sent = await sendEmail({ to, subject, text, ...(link ? { link } : {}) }).catch(() => ({
     transport: "resend" as const,
     delivered: false,
   }));
@@ -263,14 +284,21 @@ async function lockCells(
 export interface BookingRequest extends SlotChoice {
   name: string;
   email: string;
-  via: "assistant" | "staff";
+  phone?: string | null;
+  via: "assistant" | "staff" | "public";
 }
+
+/** Single-use secret of the cancel link; only its SHA-256 is stored. */
+export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const appUrl = () => env.BETTER_AUTH_URL.replace(/\/+$/, "");
 
 /** Creates a confirmed appointment and sends the confirmation (logged when no email provider is configured). */
 export async function createAppointment(req: BookingRequest, now = new Date()) {
   const email = normEmail(req.email);
   const slot = await checkSlot({ ...req, email }, now);
   const reference = newReference();
+  const cancelToken = randomBytes(24).toString("base64url");
+  const cancelLink = `${appUrl()}/book/cancel/${cancelToken}`;
   let id: string;
   try {
     id = await db.transaction(async (tx) => {
@@ -284,6 +312,8 @@ export async function createAppointment(req: BookingRequest, now = new Date()) {
           currency: slot.service.currency,
           customerName: req.name.trim().slice(0, 120),
           customerEmail: email,
+          customerPhone: req.phone?.trim().slice(0, 40) || null,
+          cancelTokenHash: hashToken(cancelToken),
           startsAt: slot.start,
           endsAt: slot.end,
           createdVia: req.via,
@@ -309,10 +339,12 @@ export async function createAppointment(req: BookingRequest, now = new Date()) {
       `Your ${slot.service.name} (${slot.service.minutes} min) with ${slot.resource.name} is confirmed for ${when(slot.start)}.`,
       price ? `Price: ${price}.` : "",
       `Booking reference: ${reference}.`,
-      `You can change or cancel it up to ${cfg.policy.cancelNoticeHours} hours before, with this reference and your email.`,
+      `You can cancel it up to ${cfg.policy.cancelNoticeHours} hours before with this link: ${cancelLink}`,
+      `To change it, use this reference and your email.`,
     ]
       .filter(Boolean)
       .join("\n"),
+    cancelLink,
   );
   return {
     reference,

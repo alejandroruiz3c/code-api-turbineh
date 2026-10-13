@@ -38,6 +38,9 @@ export const bookingAppointments = pgTable(
     currency: varchar("currency", { length: 8 }),
     customerName: varchar("customer_name", { length: 120 }).notNull(),
     customerEmail: varchar("customer_email", { length: 320 }).notNull(),
+    customerPhone: varchar("customer_phone", { length: 40 }),
+    /** SHA-256 of the cancel link's token (the link itself is only in the confirmation email). */
+    cancelTokenHash: varchar("cancel_token_hash", { length: 64 }),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 16 }).notNull().default("confirmed"),
@@ -48,6 +51,7 @@ export const bookingAppointments = pgTable(
   },
   (t) => [
     uniqueIndex("booking_appointments_reference_idx").on(t.reference),
+    uniqueIndex("booking_appointments_cancel_token_idx").on(t.cancelTokenHash),
     index("booking_appointments_start_idx").on(t.startsAt),
     index("booking_appointments_email_idx").on(t.customerEmail),
   ],
@@ -72,6 +76,23 @@ export const bookingSlotLocks = pgTable(
     primaryKey({ columns: [t.resourceId, t.cellStart] }),
     index("booking_slot_locks_appointment_idx").on(t.appointmentId),
   ],
+);
+
+/** Time a team member (or room) is not bookable: holidays, breaks, training. Staff add and remove it. */
+export const bookingTimeOff = pgTable(
+  "booking_time_off",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    resourceId: uuid("resource_id")
+      .notNull()
+      .references(() => bookingResources.id),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    reason: varchar("reason", { length: 120 }),
+    createdBy: varchar("created_by", { length: 320 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("booking_time_off_resource_idx").on(t.resourceId, t.startsAt)],
 );
 
 /** Answers the assistant may give (topics come from the request; staff write or correct the answers). */

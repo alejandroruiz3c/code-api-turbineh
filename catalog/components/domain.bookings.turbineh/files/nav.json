@@ -1,1 +1,5 @@
-[{ "label": "Appointments", "href": "/dashboard/appointments" }]
+[
+  { "label": "Appointments", "href": "/dashboard/appointments" },
+  { "label": "Calendar", "href": "/dashboard/appointments/calendar" },
+  { "label": "Time off", "href": "/dashboard/appointments/time-off" }
+]

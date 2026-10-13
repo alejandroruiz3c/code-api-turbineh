@@ -27,9 +27,17 @@ export default async function Appointments() {
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">Appointments</h1>
-        <Link className="text-sm underline" href="/dashboard/appointments/settings">
-          Team and answers
-        </Link>
+        <nav aria-label="Bookings" className="flex gap-3 text-sm">
+          <Link className="underline" href="/dashboard/appointments/calendar">
+            Calendar
+          </Link>
+          <Link className="underline" href="/dashboard/appointments/time-off">
+            Time off
+          </Link>
+          <Link className="underline" href="/dashboard/appointments/settings">
+            Team and answers
+          </Link>
+        </nav>
       </div>
       <p className="text-sm text-muted">
         {cfg.business} · {cfg.timeZone} · {hoursText()}
@@ -55,7 +63,11 @@ export default async function Appointments() {
             <td className="px-3 py-2">{r.customerName}</td>
             <td className="px-3 py-2">{r.customerEmail}</td>
             <td className="px-3 py-2">{r.status}</td>
-            <td className="px-3 py-2 font-mono">{r.reference}</td>
+            <td className="px-3 py-2 font-mono">
+              <Link className="underline" href={`/dashboard/appointments/${r.id}`}>
+                {r.reference}
+              </Link>
+            </td>
             <td className="px-3 py-2">{r.email}</td>
             <td className="px-3 py-2">
               {r.status === "confirmed" ? (
