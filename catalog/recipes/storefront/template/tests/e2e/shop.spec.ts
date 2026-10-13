@@ -208,7 +208,7 @@ test.describe.serial("storefront", () => {
       await expect(page.getByTestId("cart-subtotal")).toContainText("149.70");
     });
 
-    test("pays with Stripe Checkout: amounts computed on the server, the signed webhook marks the order paid, decrements stock, logs the confirmation email and empties the cart", async ({
+    test("pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged", async ({
       page,
       browser,
       request,
@@ -417,5 +417,14 @@ test.describe.serial("storefront", () => {
       expect(tee).toContain('"sku":"TEE-L"');
       expect(tee).toContain('"price":"22.00"');
     });
+  });
+
+  test("the admin sees every order with its payment status in the orders section", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/orders");
+    await expect(page.locator('tr[data-status="paid"]').first()).toBeVisible();
+    await expect(page.locator('tr[data-status="pending"]').first()).toBeVisible();
+    expect(await page.locator("tr[data-order-id]").count()).toBeGreaterThanOrEqual(3);
   });
 });

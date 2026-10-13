@@ -5,7 +5,7 @@ import { lexicalEvidence } from "./report.js";
 const evidence = [
   "End-to-end test: shoppers search the catalogue by product name: only matching products are listed",
   "End-to-end test: a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
-  "End-to-end test: pays with Stripe Checkout: amounts computed on the server, the signed webhook marks the order paid, decrements stock, logs the confirmation email and empties the cart",
+  "End-to-end test: pays with Stripe Checkout: server-computed amounts, signed webhook marks the order paid, stock decremented, confirmation email logged",
   "End-to-end test: the admin updates a product's price and the public catalogue shows it at once",
   "Unit test: totals carts exactly and formats money",
 ];

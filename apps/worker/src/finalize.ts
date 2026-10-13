@@ -145,7 +145,7 @@ function evidenceOf(repoDir: string): string[] {
     const files = readdirSync(path);
     for (const f of files.filter((x) => /\.(spec|test|setup)\.ts$/.test(x))) {
       const src = readFileSync(join(repoDir, dir, f), "utf8");
-      for (const m of src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,140})"/g)) {
+      for (const m of src.matchAll(/(?:test|it|setup)\(\s*"([^"]{5,200})"/g)) {
         out.add(`${dir.endsWith("e2e") ? "End-to-end test" : "Unit test"}: ${m[1]}`);
       }
     }
