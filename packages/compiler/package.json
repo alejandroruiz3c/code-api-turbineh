@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./learning-specs": {
+      "types": "./dist/fidelity/learning-specs.fixtures.d.ts",
+      "import": "./dist/fidelity/learning-specs.fixtures.js"
     }
   },
   "scripts": {

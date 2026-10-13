@@ -6,6 +6,19 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
+  kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
+  configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists
+  and joins as a section of the parent page, logs as a table and writer without UI, memberships and tags with no page.
+  Generated `src/server/permissions.ts` (role matrix, per-resource rules, sign-up email domains) behind `can(role,
+action, resource?)`, `src/lib/spec-constraints.ts` (time zone, currency, limits, statuses, sort, page size), unit
+  tests per app (`tests/unit/permissions.test.ts`, `spec-constraints.test.ts`) and a sign-up-domain E2E. Domain
+  patterns select approved catalog components by capability with params validated against their
+  `params.schema.json` (new components are picked up automatically); missing ones are listed in AGENTS.md with where
+  and how. List filters are shared with a CSV export that honours them and the `export` permission.
+- `verify:spec <fixture>`: offline build of a learning-round spec (no model), before/after summary and the gate.
+- E2E proofs act as the workspace owner under the request's label (Staff, Manager…); the base `authz.test.ts`
+  checks the role matrix generically (ADR-0044).
 - `turbineh verify --full` (ADR-0043, learning round G4c): the gate's security and policy checks locally with the
   gate's pinned versions — gitleaks 8.30.1 (git history and the files the next commit adds, redacted), the TurbineH
   Semgrep rules on Semgrep 1.178.0 (embedded in the CLI), OSV (package name@version only) and the licence policy — plus
@@ -14,7 +27,6 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   uses the gate findings' shape (which now carry `fix` too). The default `turbineh verify` flags secret-shaped literals
   in `src/env.ts`. AGENTS.md "Before handing over", the agent instructions, the MCP `verify` tool (`full`) and /use
   name it.
-
 - Spec fidelity in the compiler (ADR-0042): entity kinds (business, relationship, event, configuration, log) by code with decider fallback only for unsure entities, roles and permission rules from the request mapped onto workspace roles, constraints (time zone, uploads, notice, hours, prices, statuses, sort, schedules, email domains) and domain-pattern detection with catalog-gated component selection. Regression tests over the 9 learning-round specs; offline summary in `bench/frontiers/fidelity-2026-10-13.md`. The generator supports `tags` fields with a tag filter and enum options from stated status lists.
 
 ### Security

@@ -9,10 +9,20 @@ describe("staff allowlist", () => {
     expect(isStaffEmail("OWNER@example.com")).toBe(true);
     expect(isStaffEmail("visitor@example.com")).toBe(false);
     expect(isStaffEmail("owner@example.com", "")).toBe(false);
-    expect(maySignUp("visitor@example.com", "open")).toBe(true);
-    expect(maySignUp("visitor@example.com", "staff")).toBe(false);
-    expect(maySignUp("staff@example.com", "staff")).toBe(true);
+    expect(maySignUp("visitor@example.com", "open", undefined, [])).toBe(true);
+    expect(maySignUp("visitor@example.com", "staff", undefined, [])).toBe(false);
+    expect(maySignUp("staff@example.com", "staff", undefined, [])).toBe(true);
     expect(maySignUp("staff@example.com", "staff", "")).toBe(false);
+  });
+
+  it("restricts open sign-up to the allowed email domains, staff excepted", async () => {
+    const { maySignUp } = await import("@/lib/staff");
+    const raw = "staff@example.com";
+    expect(maySignUp("ana@company.test", "open", raw, ["company.test"])).toBe(true);
+    expect(maySignUp("Ana@Company.TEST", "open", raw, ["company.test"])).toBe(true);
+    expect(maySignUp("eve@company.test.evil.io", "open", raw, ["company.test"])).toBe(false);
+    expect(maySignUp("eve@other.test", "open", raw, ["company.test"])).toBe(false);
+    expect(maySignUp("staff@example.com", "open", raw, ["company.test"])).toBe(true);
   });
 
   it("grants staff access only to a verified allowlisted address", async () => {

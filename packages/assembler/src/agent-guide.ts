@@ -88,6 +88,11 @@ export interface PackageGuide {
   env: { required: { name: string; about: string }[]; optional: { name: string; about: string }[] };
   tests: { file: string; kind: "e2e" | "unit"; titles: string[] }[];
   rerun: { change: string; run: string; note: string }[];
+  /**
+   * Spec fidelity (ADR-0044): parts of the request no catalog component implements yet (domain patterns) and wiring
+   * the generator could not do, each with where and how. Their criteria stay open until a test proves them.
+   */
+  todo?: { what: string; where: string; how: string }[];
 }
 
 export interface RecipeGuide {
@@ -425,6 +430,7 @@ export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
       how: `Implement it in the files listed and prove it with an E2E test in ${spec} whose title states the criterion; nothing proves it yet.`,
     });
   }
+  for (const t of g.todo ?? []) left.push({ kind: "gap", ...t });
   for (const gap of g.gaps) {
     left.push({
       kind: "gap",
@@ -592,6 +598,8 @@ export function initialGuide(input: {
   gaps: { capability: string; trigger: string }[];
   /** Installed catalog components and their extension points (guide.yaml), listed after the recipe's. */
   components?: { id: string; extend: { what: string; where: string; how: string }[] }[];
+  /** What the request asks that the package does not implement yet, with where and how (spec fidelity). */
+  todo?: { what: string; where: string; how: string }[];
 }): Omit<PackageGuide, "left"> {
   const files = fileMap(input.outDir);
   const tests = testsOf(input.outDir);
@@ -619,6 +627,7 @@ export function initialGuide(input: {
     env: envOf(input.outDir),
     tests,
     rerun: rerunGuide(tests),
+    ...(input.todo?.length ? { todo: input.todo } : {}),
   };
 }
 

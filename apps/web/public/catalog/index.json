@@ -1812,8 +1812,8 @@
       ],
       "guarantees": [
         {
-          "claim": "Members can read and create but not update or delete",
-          "test": "recipe template saas-crud/tests/unit/authz.test.ts › lets members read and create but not update or delete"
+          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create, not update or delete)",
+          "test": "recipe template saas-crud/tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
         },
         {
           "claim": "Staff access is granted only to verified allowlisted addresses",
@@ -1975,8 +1975,8 @@
       ],
       "guarantees": [
         {
-          "claim": "Members can read and create but are restricted from updating or deleting.",
-          "test": "recipe template saas-crud/tests/unit/authz.test.ts › lets members read and create but not update or delete"
+          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create, not update or delete).",
+          "test": "recipe template saas-crud/tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
         },
         {
           "claim": "Staff access is restricted to verified allowlisted addresses.",

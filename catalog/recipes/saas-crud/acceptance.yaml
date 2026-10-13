@@ -24,7 +24,7 @@
 - test: "tests/e2e/theme.spec.ts › the app shows the requested colours: page background, accent colour and call-to-action buttons"
   covers:
     - "colou?rs?\\b|palette|theme|visual identity|#[0-9a-f]{3,6}\\b|brand (colou?r|identity)"
-- test: "tests/unit/authz.test.ts › lets members read and create but not update or delete"
+- test: "tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
   covers:
     - "workspace|organi[sz]ation|tenant|role|member"
     - "check|isolat|scope|only|authori[sz]|permission|cannot"

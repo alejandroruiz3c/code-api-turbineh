@@ -10,3 +10,5 @@ export * from "./currencies.js";
 export * from "./acceptance.js";
 export * from "./agent-guide.js";
 export * from "./ownership.js";
+export * from "./fidelity.js";
+export * from "./kinds.js";

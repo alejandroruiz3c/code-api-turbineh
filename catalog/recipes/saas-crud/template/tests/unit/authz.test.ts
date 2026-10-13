@@ -21,21 +21,37 @@ beforeEach(() => {
 });
 
 describe("role policy", () => {
-  it("lets members read and create but not update or delete", async () => {
+  it("checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else", async () => {
     const { can } = await import("@/server/authz");
-    expect(can("member", "read")).toBe(true);
-    expect(can("member", "create")).toBe(true);
-    expect(can("member", "update")).toBe(false);
-    expect(can("member", "delete")).toBe(false);
-    expect(can("admin", "delete")).toBe(true);
+    const { ROLE_MATRIX } = await import("@/server/permissions");
+    const actions = [
+      "read",
+      "create",
+      "update",
+      "delete",
+      "approve",
+      "export",
+      "configure",
+      "manage_members",
+      "view_audit",
+    ] as const;
+    for (const [role, rights] of Object.entries(ROLE_MATRIX))
+      for (const action of actions)
+        expect(can(role, action), `${role} ${action}`).toBe(rights.can.includes(action));
+    // The workspace owner can always manage the workspace; unknown roles can do nothing.
+    expect(can("owner", "manage_members")).toBe(true);
+    expect(can("superuser", "read")).toBe(false);
   });
 
   it("gives an unknown stored role the least privilege (deny by default)", async () => {
-    const { toRole, can } = await import("@/server/role-policy");
+    const { toRole, can, DEFAULT_ROLE } = await import("@/server/role-policy");
+    const { ROLE_MATRIX } = await import("@/server/permissions");
     expect(toRole("owner")).toBe("owner");
-    expect(toRole("superuser")).toBe("member");
-    expect(toRole(undefined)).toBe("member");
-    expect(can(toRole("superuser"), "delete")).toBe(false);
+    expect(toRole("superuser")).toBe(DEFAULT_ROLE);
+    expect(toRole(undefined)).toBe(DEFAULT_ROLE);
+    expect(can(toRole("superuser"), "delete")).toBe(
+      ROLE_MATRIX[DEFAULT_ROLE]?.can.includes("delete") ?? false,
+    );
   });
 
   it("staff allow-list denies by default and matches whole emails only", async () => {

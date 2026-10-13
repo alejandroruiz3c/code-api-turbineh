@@ -84,10 +84,11 @@ describe("entity generation", () => {
     const files = generateEntity(entitiesToGenerate(spec)[0]!);
     const actions = files.find((f) => f.path.endsWith("actions.ts"))!.content;
     expect(actions).toContain("requireMember()");
-    expect(actions).toContain('can(ctx.role, "create")');
+    expect(actions).toContain('can(ctx.role, "create", "membership-plans")');
     expect(actions).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
-    const page = files.find((f) => f.path.endsWith("page.tsx"))!.content;
-    expect(page).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
+    // The list page and the CSV export share one query module (filters and workspace).
+    const query = files.find((f) => f.path.endsWith("query.ts"))!.content;
+    expect(query).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
   });
 });
 
@@ -153,12 +154,12 @@ describe("business rules hook (T3)", () => {
     );
     expect(actions).toContain("eq(membershipPlans.organizationId, organizationId)");
     // Update: role check, workspace-scoped read and write.
-    expect(actions).toContain('if (!can(ctx.role, "update"))');
+    expect(actions).toContain('if (!can(ctx.role, "update", "membership-plans"))');
     expect(actions).toContain(
       ".where(and(eq(membershipPlans.id, id), eq(membershipPlans.organizationId, ctx.organizationId)))",
     );
     const edit = files.find((f) => f.path.endsWith("[id]/edit/page.tsx"))?.content ?? "";
-    expect(edit).toContain('if (!can(ctx.role, "update")) notFound();');
+    expect(edit).toContain('if (!can(ctx.role, "update", "membership-plans")) notFound();');
     expect(edit).toContain("eq(membershipPlans.organizationId, ctx.organizationId)");
     const e2e = files.find((f) => f.path.endsWith(".spec.ts"))?.content ?? "";
     expect(e2e).toContain("owner edits a membership plan and sees the change");
