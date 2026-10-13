@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   buildPlan,
   catalogToPlanned,
+  PLATFORM_SERVICES,
   decisionFromSelection,
   searchCapabilities,
   USE_CASES,
@@ -164,7 +165,8 @@ const INFERENCE =
  * involves inference gets the TurbineH AI orchestrator and its AI Safety Pack (PLAN §16, owner decision).
  */
 export function componentPlan(buildId: string, request: PlanRequest, componentsDir: string): Plan {
-  const all = catalogEntries(componentsDir);
+  // Platform services (repository integration, analysis) are discoverable in search but never packaged as code.
+  const all = catalogEntries(componentsDir).filter((c) => !PLATFORM_SERVICES.has(c.id));
   const found = searchCapabilities(request.need, all, { limit: 30, useCases: [] }).filter(
     (x) => x.kind === "component",
   );

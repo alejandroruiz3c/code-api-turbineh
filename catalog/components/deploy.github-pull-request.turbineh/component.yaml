@@ -1,0 +1,91 @@
+schema: turbineh.component/v0.1
+id: deploy.github-pull-request.turbineh
+version: 0.1.0
+status: approved
+category: deploy
+source:
+  purl: pkg:generic/turbineh/deploy.github-pull-request.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "TurbineH platform service: connect GitHub to a workspace (OAuth with state + PKCE, or a token) and integrate a verified capability package into the client's existing repository as a pull request — adapted to the project's conventions (paths, import alias, existing Drizzle client, package manager), one commit per logical step on turbineh/<capability>, lockfile and migration generated with the project's own tools, then verified inside the project in the sandbox (install, typecheck, lint, tests, capability tests, migration, build); ready for review and state integration_verified only when every check passes, otherwise a draft with the exact failures and next step. Keywords: github, pull request, PR, integrate into existing repo, connect repository, brownfield, add feature to my app, apply to codebase, code review, branch, merge request, monorepo, Next.js, Drizzle, migration, lockfile, verify in project, OAuth, PKCE, CI"
+  does_not: "Does not merge, push to the default branch, run code outside the sandbox, read env files or secrets, deploy, or support GitLab/Bitbucket, Bun or Yarn Berry yet; it does not wire the capability into the client's pages (it documents where, in agent/INTEGRATE.md)"
+  use_cases: [integrate-into-existing-repository, pull-request-delivery, coding-agent-handoff]
+  pros:
+    [
+      "Zero extra work for the reviewer: clean PR with summary, files, decisions and why, verification results, limits, what to configure and how to revert",
+      "Never overwrites unrelated files; exact dependency versions, never downgrades",
+      "Verified inside the client's own project, not only in TurbineH's template",
+      "Same engine for people (product area) and agents (API, turbineh CLI)",
+    ]
+  cons:
+    [
+      "Needs a GitHub connection with write access (public_repo, or repo for private repositories)",
+      "Private registries and git/URL dependencies cannot be installed in the sandbox (reported, not hidden)",
+    ]
+  alternatives: ["ZIP download (GET /v1/plans/{id}/package)", "turbineh apply (local branch + commit)"]
+contract:
+  inputs:
+    [
+      "GET /api/github/connect?private=0|1&return=/path (browser, invitation cookie) → GitHub authorize → GET /api/auth/callback/github/workspace",
+      "POST /v1/github/connect {private?} → {url, code, expires_in} for `turbineh connect github`; poll GET /v1/github",
+      "POST /v1/github/token {token} (agents/CI; stored encrypted, never echoed)",
+      "GET /v1/repos?q= → writable repositories with private/public flag",
+      "POST /v1/plans/{id}/pull-request {repo?, base?} → 202 integration job",
+    ]
+  outputs:
+    [
+      "GET /v1/plans/{id}/pull-request → integrations [{id, repo, status, phase: analysing|adapting|preparing|committing|verifying|done, state: integrated|integration_verified, branch, pull_request {url, number, draft}, result {checks, decisions, conflicts, limits, reviewerSetup, commits}, error {code, message, action, resume}}]",
+      "GET /v1/plans/{id} → state integrated / integration_verified with the integration record",
+      "GET /v1/github → {connected, login, private_repos, scopes, via}; DELETE /v1/github disconnects and revokes the grant",
+    ]
+  errors:
+    [
+      "github_not_connected (409) → connect first; resume `turbineh connect github && turbineh apply <plan> --pr`",
+      "package_not_ready (409), repo_required (422), no_write_access, incompatible_project, integration_not_verified (checks failed: PR stays draft with each failure and its action)",
+    ]
+  limits:
+    [
+      "OAuth state and CLI tickets: one use, 10 minutes",
+      "Package managers: pnpm, npm, Yarn classic; dependencies from the npm registry only",
+      "Install has network to the registry with install scripts disabled; checks run without internet; placeholder settings and a throwaway PostgreSQL",
+      "Draft PRs need a paid plan on private repositories: the PR is then marked [Draft] in the title until verified",
+    ]
+compat:
+  runtime: node@>=20
+effects: { network: true, fs: true, db: true, external_services: [github] }
+integration:
+  strategy: adapter
+  install: "Platform service of TurbineH (apps/web routes + worker job apps/worker/src/repo-integration.ts); nothing is vendored into the client's app by this component. See catalog/components/deploy.github-pull-request.turbineh/README.md and docs/adr/0032-github-integration-repo-analysis.md"
+  config: [GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, DELIVERY_TOKEN_KEY]
+  migrations: true
+quality:
+  tests:
+    {
+      command: "pnpm --filter @turbineh/web test (OAuth state, cookie, PKCE, workspace binding, encryption) · pnpm --filter @turbineh/engine test (adaptation, PR composition) · TURBINEH_E2E_GITHUB=1 vitest run apps/worker/src/repo-integration.e2e.test.ts (real throwaway GitHub repository)",
+      passed: true,
+      date: 2026-10-12,
+    }
+security:
+  scanned_at: 2026-10-12
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed: OAuth CSRF/PKCE/workspace binding, token encryption at rest (AES-256-GCM), no token in logs or responses, secret files removed before analysis and sandbox, symlinks escaping the project removed, registry-only install with scripts disabled, offline checks."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "State must match the httpOnly cookie, is single-use, bound to the workspace; PKCE verifier sent only in the server-side exchange; token stored encrypted and never returned"
+    origin: tested
+    ref: "apps/web/src/server/github-oauth.test.ts"
+  - claim: "Adapted package never touches unrelated files, keeps dependency versions, uses the project's alias and Drizzle client; PR body has every required section"
+    origin: tested
+    ref: "packages/engine/src/repo-integration.test.ts"
+  - claim: "End to end on a real private GitHub repository: PR opened, verified in the sandbox, integration_verified"
+    origin: tested
+    ref: "apps/worker/src/repo-integration.e2e.test.ts"
+relations:
+  requires: [ops.repo-analysis.turbineh]
+  provides: [deploy.github-pull-request, repo.integration]
+  conflicts: []
+  tested_with: [ai.orchestrator.turbineh, security.ai-safety.turbineh]
