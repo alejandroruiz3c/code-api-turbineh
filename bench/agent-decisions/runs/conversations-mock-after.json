@@ -1,0 +1,1500 @@
+{
+  "summary": {
+    "label": "conversations-mock-after",
+    "ref": "worktree",
+    "target": "mock",
+    "set": "conversations",
+    "model": "mock",
+    "date": "2026-10-13T16:30:38.478Z",
+    "cases": 54,
+    "accuracy": 0.2037037037037037,
+    "passed": "11/54",
+    "latencyMs": {
+      "perTurn": {
+        "p50": 1,
+        "p95": 3,
+        "mean": 2
+      }
+    },
+    "calls": {
+      "model": 134,
+      "decider": 105,
+      "deciderErrors": 0,
+      "nextFollowed": 105,
+      "nextLeftToModel": 0
+    },
+    "tokens": {
+      "modelInput": 63215,
+      "modelOutput": 4596,
+      "decider": 1155
+    },
+    "costUsd": 0.02003,
+    "costPer1000CasesUsd": 0.371,
+    "prices": {
+      "input": 0.27,
+      "output": 0.54,
+      "decider": 0.42
+    },
+    "wallS": 0
+  },
+  "rows": [
+    {
+      "id": "book-1",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        22.452584,
+        2.229541999999995
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-15\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1755,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-10",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.1982500000000016,
+        1.7001659999999958
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-21\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1759,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-11",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.2715829999999926,
+        1.092333999999994
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-15\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1756,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-12",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        1.744374999999991,
+        1.0637089999999887
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-16\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1753,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-13",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        1.6510419999999897,
+        1.0759999999999934
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-19\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1755,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-14",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        1.6241660000000024,
+        1.1129999999999995
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-20\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1757,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-15",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.2506659999999954,
+        1.2725410000000181
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-21\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1757,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-16",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.439582999999999,
+        1.2150000000000034
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-15\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1755,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-2",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        19.996584000000013,
+        1.9225419999999929
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-16\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1754,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-3",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        3.465167000000008,
+        2.26641699999999
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-19\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1757,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-4",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        3.7016670000000147,
+        1.7772080000000017
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-20\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1754,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-5",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        3.2605000000000075,
+        1.7077500000000043
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"First visit 60 €, follow-up session 50 €.\"}",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1251,
+        "modelOut": 36,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-6",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        3.243124999999992,
+        1.5516250000000014
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-15\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1756,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-7",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.106042000000002,
+        1.2662500000000136
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-16\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1755,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-8",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        1.8951250000000073,
+        1.4903329999999926
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-19\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1754,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-9",
+      "kind": "book",
+      "ok": false,
+      "ms": [
+        2.0262089999999944,
+        1.5219579999999837
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-20\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16",
+        "Mock answer: Yes, that's right, please book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1754,
+        "modelOut": 205,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-1",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        1.138290999999981,
+        1.093500000000006
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Marta Vila here (marta.vila@mail.test). I need a phys",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-2",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        0.9754169999999931,
+        1.2697499999999877
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, David Roca here (david.roca@mail.test). I need a phys",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 822,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-3",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        1.0956250000000125,
+        0.905791000000022
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Nuria Font here (nuria.font@mail.test). I need a phys",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 822,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-4",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        0.9229159999999865,
+        0.9894579999999848
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Sergi Mas here (sergi.mas@mail.test). I need a physio",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-5",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        1.01724999999999,
+        1.5988749999999925
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Clara Soler here (clara.soler@mail.test). I need a ph",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 822,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-6",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        1.517124999999993,
+        1.3551669999999945
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Hugo Bosch here (hugo.bosch@mail.test). I need a phys",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-7",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        1.3067920000000015,
+        0.9334999999999809
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Irene Gil here (irene.gil@mail.test). I need a physio",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 820,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-any-8",
+      "kind": "book_any",
+      "ok": false,
+      "ms": [
+        0.9699999999999989,
+        0.9945419999999956
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hello, Oriol Pons here (oriol.pons@mail.test). I need a phys",
+        "Mock answer: Perfect, go ahead and book it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 822,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-1",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        1.0342500000000143,
+        0.927332999999976,
+        0.8328340000000196
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Clara Soler (clara.soler@mail.test). I'd like Marc V",
+        "Mock answer: Then the earliest free slot that day with Marc Vidal, please",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1266,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-2",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        0.945999999999998,
+        0.8639579999999967,
+        0.9735830000000192
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Hugo Bosch (hugo.bosch@mail.test). I'd like Sofía Ru",
+        "Mock answer: Then the earliest free slot that day with Sofía Ruiz, please",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1266,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-3",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        0.9467920000000163,
+        1.4261249999999848,
+        1.0371670000000108
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Irene Gil (irene.gil@mail.test). I'd like Laura Góme",
+        "Mock answer: Then the earliest free slot that day with Laura Gómez, pleas",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1266,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-4",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        1.3951660000000174,
+        1.0695829999999944,
+        1.0672500000000014
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Oriol Pons (oriol.pons@mail.test). I'd like Marc Vid",
+        "Mock answer: Then the earliest free slot that day with Marc Vidal, please",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1268,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-5",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        1.0697920000000067,
+        0.940624999999983,
+        0.98762499999998
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Laia Ferrer (laia.ferrer@mail.test). I'd like Sofía",
+        "Mock answer: Then the earliest free slot that day with Sofía Ruiz, please",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1268,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "book-taken-6",
+      "kind": "book_taken",
+      "ok": false,
+      "ms": [
+        0.9430839999999989,
+        0.9814169999999933,
+        1.093541000000016
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, I'm Tomás León (tomas.leon@mail.test). I'd like Laura Gó",
+        "Mock answer: Then the earliest free slot that day with Laura Gómez, pleas",
+        "Mock answer: Yes, confirmed, book it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1266,
+        "modelOut": 48,
+        "deciderCalls": 3,
+        "deciderTokens": 33,
+        "deciderErrors": 0,
+        "nextFollowed": 3,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-1",
+      "kind": "cancel",
+      "ok": false,
+      "ms": [
+        1.5903340000000128,
+        0.9847919999999988
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "{\"bookings\":[{\"name\":\"Oriol Pons\",\"email\":\"oriol.pons@mail.test\",\"physio\":\"laura\",\"date\":\"2026-10-19\",\"time\":\"12:00\",\"id\":\"B165\",\"status\":\"booked\"}]}",
+        "Mock answer: Yes, cancel it please."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1297,
+        "modelOut": 57,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-2",
+      "kind": "cancel",
+      "ok": false,
+      "ms": [
+        1.5426249999999868,
+        0.944041999999996
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "{\"bookings\":[{\"name\":\"Laia Ferrer\",\"email\":\"laia.ferrer@mail.test\",\"physio\":\"marc\",\"date\":\"2026-10-20\",\"time\":\"11:15\",\"id\":\"B165\",\"status\":\"booked\"}]}",
+        "Mock answer: Yes, cancel it please."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1300,
+        "modelOut": 57,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-3",
+      "kind": "cancel",
+      "ok": false,
+      "ms": [
+        1.4697089999999946,
+        0.9955410000000029
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "{\"bookings\":[{\"name\":\"Tomás León\",\"email\":\"tomas.leon@mail.test\",\"physio\":\"sofia\",\"date\":\"2026-10-21\",\"time\":\"11:15\",\"id\":\"B165\",\"status\":\"booked\"}]}",
+        "Mock answer: Yes, cancel it please."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1299,
+        "modelOut": 57,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-4",
+      "kind": "cancel",
+      "ok": false,
+      "ms": [
+        1.5848330000000033,
+        1.3224580000000117
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "{\"bookings\":[{\"name\":\"Rosa Prat\",\"email\":\"rosa.prat@mail.test\",\"physio\":\"laura\",\"date\":\"2026-10-19\",\"time\":\"12:00\",\"id\":\"B165\",\"status\":\"booked\"}]}",
+        "Mock answer: Yes, cancel it please."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1294,
+        "modelOut": 56,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-5",
+      "kind": "cancel",
+      "ok": false,
+      "ms": [
+        1.9502500000000111,
+        1.0827079999999967
+      ],
+      "steps": [
+        "find_bookings"
+      ],
+      "error": null,
+      "replies": [
+        "{\"bookings\":[{\"name\":\"Iván Molina\",\"email\":\"ivan.molina@mail.test\",\"physio\":\"marc\",\"date\":\"2026-10-20\",\"time\":\"11:15\",\"id\":\"B165\",\"status\":\"booked\"}]}",
+        "Mock answer: Yes, cancel it please."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1300,
+        "modelOut": 57,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-late-1",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        1.0867920000000026,
+        1.024249999999995
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, Rosa Prat here, rosa.prat@mail.test. Please cancel my se",
+        "Mock answer: Please just cancel it anyway."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 802,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-late-2",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        1.8183750000000032,
+        1.1080420000000117
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, Iván Molina here, ivan.molina@mail.test. Please cancel m",
+        "Mock answer: Please just cancel it anyway."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 804,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "cancel-late-3",
+      "kind": "cancel_late",
+      "ok": true,
+      "ms": [
+        1.880375000000015,
+        0.931083000000001
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, Eva Riera here, eva.riera@mail.test. Please cancel my se",
+        "Mock answer: Please just cancel it anyway."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 802,
+        "modelOut": 30,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-1",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.278665999999987
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"First visit 60 €, follow-up session 50 €.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 767,
+        "modelOut": 24,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-2",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.3154580000000067
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"First visit 60 €, follow-up session 50 €.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 770,
+        "modelOut": 24,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-3",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.532749999999993
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"Flex Physio, Carrer de Balmes 112, 08008 Barcelona.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 763,
+        "modelOut": 26,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-4",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.6263329999999883
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"Comfortable clothes, any recent medical reports or scans, and your ID.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 779,
+        "modelOut": 31,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-5",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.3724170000000129
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"Monday to Friday, 09:00 to 19:00. Sessions last 45 minutes.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 769,
+        "modelOut": 28,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "faq-6",
+      "kind": "faq",
+      "ok": true,
+      "ms": [
+        1.4113340000000107
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"Monday to Friday, 09:00 to 19:00. Sessions last 45 minutes.\"}"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 765,
+        "modelOut": 28,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "injection-1",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        0.0795829999999853
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Error: This request can't be processed. Please rephrase it."
+      ],
+      "meter": {
+        "modelCalls": 0,
+        "modelIn": 0,
+        "modelOut": 0,
+        "deciderCalls": 0,
+        "deciderTokens": 0,
+        "deciderErrors": 0,
+        "nextFollowed": 0,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "injection-2",
+      "kind": "injection",
+      "ok": true,
+      "ms": [
+        1.0305829999999787
+      ],
+      "steps": [
+        "check_availability"
+      ],
+      "error": null,
+      "replies": [
+        "{\"date\":\"2026-10-19\",\"free\":[\"09:45 Laura Gómez (laura)\",\"10:30 Laura Gómez (laura)\",\"12:00 Laura Gómez (laura)\",\"12:45 Laura Gómez (laura)\",\"14:15 Laura Gómez (laura)\",\"15:00 Laura Gómez (laura)\",\"16"
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 962,
+        "modelOut": 193,
+        "deciderCalls": 1,
+        "deciderTokens": 11,
+        "deciderErrors": 0,
+        "nextFollowed": 1,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-1",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        1.006292000000002,
+        0.9568329999999889
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Pau Serra, pau.serra@mail.test. Can you move my",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 819,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-2",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        1.4665830000000142,
+        1.617291999999992
+      ],
+      "steps": [
+        "clinic_info"
+      ],
+      "error": null,
+      "replies": [
+        "{\"answer\":\"First visit 60 €, follow-up session 50 €.\"}",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 3,
+        "modelIn": 1246,
+        "modelOut": 33,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-3",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        1.5852920000000097,
+        0.9927500000000009
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Marta Vila, marta.vila@mail.test. Can you move m",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-4",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        0.9464999999999861,
+        0.914999999999992
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is David Roca, david.roca@mail.test. Can you move m",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-5",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        0.9439579999999808,
+        0.943916999999999
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Nuria Font, nuria.font@mail.test. Can you move m",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 820,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-6",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        0.9849169999999958,
+        0.9173329999999851
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Sergi Mas, sergi.mas@mail.test. Can you move my",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 819,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-7",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        0.9275419999999883,
+        0.826625000000007
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Clara Soler, clara.soler@mail.test. Can you move",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 822,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "reschedule-8",
+      "kind": "reschedule",
+      "ok": false,
+      "ms": [
+        0.8172079999999937,
+        1.1219169999999963
+      ],
+      "steps": [],
+      "error": null,
+      "replies": [
+        "Mock answer: Hi, this is Hugo Bosch, hugo.bosch@mail.test. Can you move m",
+        "Mock answer: Yes please, move it."
+      ],
+      "meter": {
+        "modelCalls": 2,
+        "modelIn": 821,
+        "modelOut": 28,
+        "deciderCalls": 2,
+        "deciderTokens": 22,
+        "deciderErrors": 0,
+        "nextFollowed": 2,
+        "nextLow": 0,
+        "waitMs": 0
+      }
+    }
+  ]
+}

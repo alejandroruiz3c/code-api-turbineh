@@ -189,8 +189,8 @@ function vector(text: string, dims: number): number[] {
 type Question = { type?: string; criteria?: Record<string, string> };
 
 /**
- * runAgent's next action, decided the way the scripted model would act: after a tool result of this turn, reply;
- * otherwise the first script rule that matches the latest message (and whose tool is an option), else reply.
+ * runAgent's first action of a turn, decided the way the scripted model would act: the first script rule that
+ * matches the latest message (and whose tool is an option), else reply.
  */
 export function scriptedNext(
   state: Record<string, unknown>,
@@ -198,8 +198,6 @@ export function scriptedNext(
   scripts: MockScript[],
 ): string {
   const reply = options[0] ?? "reply";
-  const results = state.tool_results_this_turn;
-  if (typeof results === "string" && results !== "none") return reply;
   const text = typeof state.latest_message === "string" ? state.latest_message : "";
   for (const script of scripts)
     for (const rule of script.rules) {

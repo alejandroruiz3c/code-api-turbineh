@@ -133,7 +133,7 @@ describe("runAgent (tool-calling runtime)", () => {
     expect(fake.seen).toHaveLength(0);
   });
 
-  it("follows the decider's next action: the model writes only that tool's arguments, then only the reply", async () => {
+  it("follows the decider's first action: the model writes only that tool's arguments, then continues with every tool", async () => {
     const fake = io([{ toolCalls: [call("check", { day: "2026-11-02" })] }, { text: "10:00" }]);
     const offered: { tools: string[]; choice?: string }[] = [];
     const complete = fake.complete;
@@ -141,16 +141,12 @@ describe("runAgent (tool-calling runtime)", () => {
       offered.push({ tools: t.map((x) => x.name), ...(choice ? { choice } : {}) });
       return complete(m, msgs, t, ms, choice);
     };
-    const decisions = [
-      { next: "check", confidence: 0.9 },
-      { next: "reply", confidence: 0.8 },
-    ];
-    const asked: { first: boolean; results: number }[] = [];
-    fake.decide = async (input, _t, first) => {
-      asked.push({ first, results: input.toolResults.length });
-      const d = decisions.shift() ?? { next: "reply", confidence: 1 };
+    let asked = 0;
+    fake.decide = async () => {
+      asked++;
       return {
-        ...d,
+        next: "check",
+        confidence: 0.9,
         route: "balanced",
         unsafe: 0.01,
         probabilities: {},
@@ -160,11 +156,30 @@ describe("runAgent (tool-calling runtime)", () => {
     };
     const r = await runAgent({ ...base, input: "free on 2026-11-02?" }, fake);
     expect(r.status).toBe("answered");
-    expect(offered).toEqual([{ tools: ["check"], choice: "check" }, { tools: [] }]);
-    expect(asked).toEqual([
-      { first: true, results: 0 },
-      { first: false, results: 1 },
-    ]);
+    expect(asked).toBe(1);
+    expect(offered).toEqual([{ tools: ["check"], choice: "check" }, { tools: ["check", "book"] }]);
+  });
+
+  it("a confident reply decision calls the model without tools", async () => {
+    const fake = io([{ text: "Hello! How can I help?" }]);
+    const offered: string[][] = [];
+    const complete = fake.complete;
+    fake.complete = (m, msgs, t, ms, choice) => {
+      offered.push(t.map((x) => x.name));
+      return complete(m, msgs, t, ms, choice);
+    };
+    fake.decide = async () => ({
+      next: "reply",
+      confidence: 0.95,
+      route: "balanced",
+      unsafe: 0,
+      probabilities: {},
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+    const r = await runAgent({ ...base, input: "hello" }, fake);
+    expect(r.reply).toBe("Hello! How can I help?");
+    expect(offered).toEqual([[]]);
   });
 
   it("lets the model choose among every tool when the decision is not confident", async () => {

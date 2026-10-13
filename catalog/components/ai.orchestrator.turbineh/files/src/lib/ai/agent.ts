@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { UserFacingError } from "@/security/errors";
-import { decideAgentStep, DeciderUnavailable, REPLY_ACTION, type AgentStepInput } from "./decider";
+import { decideAgentTurn, DeciderUnavailable, REPLY_ACTION, type AgentTurnInput } from "./decider";
 import {
   chatWithTools,
   routes,
@@ -28,10 +28,10 @@ import {
  *
  *   1. AI Safety Pack: input size, prompt-injection refusal, per-user/workspace limits (same as orchestrate()).
  *   2. TurbineH orchestration decides the route (which open model) and refuses unsafe requests.
- *   3. Tool loop: at every step TurbineH orchestration decides the next action — which tool, or a reply — and the
- *      open model writes only that (the chosen tool's arguments, or the reply). When the decision is not confident
- *      enough, or no decider is configured, the model sees every tool and chooses itself. The model may only act
- *      through the tools it is given. Arguments are validated with each tool's Zod schema; unknown tools and invalid
+ *   3. Tool loop: in the same request, TurbineH orchestration decides the turn's first action — which tool, or a
+ *      reply — and the open model writes only that (the chosen tool's arguments, or the reply). After a tool result,
+ *      when the decision is not confident enough, or without a decider, the model sees every tool and chooses itself
+ *      (ADR-0038). The model may only act through the tools it is given. Arguments are validated with each tool's Zod schema; unknown tools and invalid
  *      arguments go back to the model as errors; a step limit and timeouts bound every run.
  *   4. Irreversible tools (create, move, cancel, send, pay…) never run on the model's say-so: their `prepare` step
  *      validates against real data and returns a summary; the person must explicitly confirm it in their next
@@ -240,18 +240,17 @@ export interface AgentIO {
     toolChoice?: string,
   ) => Promise<ToolModelReply>;
   /**
-   * Next action (a tool or REPLY_ACTION) with its confidence; on the first step of a turn also the route and the
-   * unsafe probability. Throws DeciderUnavailable when no decider is configured.
+   * Route, unsafe probability and the turn's first action (a tool or REPLY_ACTION) with its confidence, in one
+   * request. Throws DeciderUnavailable when no decider is configured.
    */
   decide: (
-    input: AgentStepInput,
+    input: AgentTurnInput,
     tools: ToolSpec[],
-    first: boolean,
   ) => Promise<{
+    route: string;
+    unsafe: number;
     next: string;
     confidence: number;
-    route?: string;
-    unsafe?: number;
     probabilities: Record<string, unknown>;
     inputTokens: number;
     outputTokens: number;
@@ -274,7 +273,7 @@ export interface AgentIO {
 const defaultIO: AgentIO = {
   complete: (model, messages, tools, timeoutMs, toolChoice) =>
     chatWithTools(model, messages, tools, { timeoutMs, ...(toolChoice ? { toolChoice } : {}) }),
-  decide: (input, tools, first) => decideAgentStep(input, tools, first ? routes() : null),
+  decide: (input, tools) => decideAgentTurn(input, tools, routes()),
   limits: checkLimits,
   record: async (req, usage, route, model, decider, status, started, decision, flags) => {
     await recordUsage(req, usage, route, model, decider, status, started);
@@ -379,23 +378,18 @@ export async function runAgent(
       .slice(-8)
       .map((m) => `${m.role === "user" ? "Person" : "Assistant"}: ${m.content.slice(0, 600)}`)
       .join("\n");
-    const toolResults: string[] = [];
-    const stepInput = (): AgentStepInput => ({ request: input.text, conversation, toolResults });
-    const nextActions: { next: string; confidence: number; followed: boolean }[] = [];
-    let deciderUp = true;
     let next: { next: string; confidence: number } | null = null;
     try {
-      const d = await io.decide(stepInput(), specs, true);
+      const d = await io.decide({ request: input.text, conversation }, specs);
       usage.inputTokens += d.inputTokens;
       usage.outputTokens += d.outputTokens;
-      decision = { ...d.probabilities, steps: nextActions };
-      chosenRoute = d.route ?? null;
+      decision = d.probabilities;
+      chosenRoute = d.route;
       next = { next: d.next, confidence: d.confidence };
-      if ((d.unsafe ?? 0) >= UNSAFE_THRESHOLD)
+      if (d.unsafe >= UNSAFE_THRESHOLD)
         throw new AiSafetyError("This request can't be processed. Please rephrase it.");
     } catch (err) {
       if (err instanceof AiSafetyError) throw err;
-      deciderUp = false;
       deciderName = err instanceof DeciderUnavailable ? "none" : "unavailable";
       flags.push("decider-unavailable");
     }
@@ -435,8 +429,7 @@ export async function runAgent(
         flags.push(...content.flags);
         state.messages.push({ role: "assistant", content: null, tool_calls: [call] });
         state.messages.push({ role: "tool", tool_call_id: call.id, content: content.text });
-        toolResults.push(`${tool.name}(confirmed) → ${content.text.slice(0, 600)}`);
-        // The first decision was taken before this action ran: ask again with its result.
+        // The turn's decision was taken before this action ran: the model continues from its result.
         next = null;
       } else {
         flags.push("confirmation-not-given");
@@ -460,21 +453,9 @@ export async function runAgent(
     const modelTools = req.tools.map(toModelTool);
     for (let step = 0; step < maxSteps; step++) {
       if (deadline - Date.now() <= 1000) break;
-      // 4a · The decider chooses the next action (a tool or a reply); the model then writes only that.
-      if (!next && deciderUp) {
-        try {
-          const d = await io.decide(stepInput(), specs, false);
-          usage.inputTokens += d.inputTokens;
-          usage.outputTokens += d.outputTokens;
-          next = { next: d.next, confidence: d.confidence };
-        } catch {
-          deciderUp = false;
-          flags.push("decider-unavailable");
-        }
-      }
+      // 4a · The decider chose the turn's first action (a tool or a reply): the model writes only that.
       const follow = next && next.confidence >= NEXT_ACTION_THRESHOLD ? next.next : null;
       const forced = follow && follow !== REPLY_ACTION && tools.has(follow) ? follow : undefined;
-      if (next) nextActions.push({ ...next, followed: Boolean(follow) });
       next = null;
       // 4b · Below the threshold or without a decider, the model sees every tool and chooses itself.
       const offered =
@@ -570,9 +551,6 @@ export async function runAgent(
         const content = toolContent(result);
         flags.push(...content.flags);
         state.messages.push({ role: "tool", tool_call_id: call.id, content: content.text });
-        toolResults.push(
-          `${call.function.name.slice(0, 64)}(${call.function.arguments.slice(0, 300)}) → ${content.text.slice(0, 600)}`,
-        );
       }
       if (confirmation) {
         return await finish(

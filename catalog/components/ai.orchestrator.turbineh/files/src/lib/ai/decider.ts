@@ -138,23 +138,20 @@ export async function decideRoute(
 /** The `next` option that means "answer the person now, without a tool" (runAgent). */
 export const REPLY_ACTION = "reply";
 
-export interface AgentStepInput {
+export interface AgentTurnInput {
   /** The person's latest message. */
   request: string;
   /** Recent turns, plain text, oldest first. */
   conversation: string;
-  /** Tool calls and results of this turn so far (`tool(args) → result`). */
-  toolResults: string[];
 }
 
-export interface AgentStepDecision {
-  /** A tool name or REPLY_ACTION. */
+export interface AgentTurnDecision {
+  route: string;
+  unsafe: number;
+  /** First action of the turn: a tool name or REPLY_ACTION. */
   next: string;
-  /** Calibrated confidence of `next` (0–1); thresholds are applied by runAgent in code. */
+  /** Calibrated confidence of `next` (0–1); runAgent applies its threshold in code. */
   confidence: number;
-  /** Only on the first step of a turn (batched with `next` in the same request). */
-  route?: string;
-  unsafe?: number;
   probabilities: Record<string, unknown>;
   model: string;
   inputTokens: number;
@@ -162,25 +159,25 @@ export interface AgentStepDecision {
 }
 
 /**
- * runAgent's per-step decision: which action comes next — one of the tools or a plain reply — as one Choice over the
- * tools the app offers. On the first step of a turn the route and safety questions travel in the same request. The
- * open model then only writes the reply or the arguments of the chosen tool.
+ * runAgent's decision for one turn (ADR-0038), in the same single request as before: the route, the safety check and
+ * the first action — one of the tools or a plain reply — as one Choice over the tools the app offers. The open model
+ * then writes only the chosen tool's arguments, or only the reply. Later steps of the turn (after a tool result) are
+ * left to the model: a decider request per step was measured slower and costlier for the same accuracy.
  */
-export async function decideAgentStep(
-  input: AgentStepInput,
+export async function decideAgentTurn(
+  input: AgentTurnInput,
   tools: readonly ToolSpec[],
-  routes: readonly Route[] | null,
-): Promise<AgentStepDecision> {
+  routes: readonly Route[],
+): Promise<AgentTurnDecision> {
   const cfg = gateway();
   const state = {
     latest_message: input.request.slice(0, 2000),
     conversation: input.conversation.slice(-3000) || "none",
-    tool_results_this_turn: input.toolResults.join("\n").slice(-3000) || "none",
   };
   const questions: Record<string, Question> = {
-    ...(routes ? routeQuestions(routes) : {}),
+    ...routeQuestions(routes),
     next: choice(
-      "Which action should the assistant take next to serve the person correctly? Use a tool when it provides a fact the answer needs (availability, prices, records, policies) or does what the person asked; reply when this turn's tool results already answer, or when the person must first give or confirm details.",
+      "Which action should the assistant take first to serve the person correctly? Use a tool when it provides a fact the answer needs (availability, prices, records, policies) or does what the person asked; reply when the person must first give or confirm details, or when no tool is needed.",
       {
         [REPLY_ACTION]: "Answer the person now, without using a tool.",
         ...Object.fromEntries(
@@ -199,10 +196,10 @@ export async function decideAgentStep(
   const offered = new Set([REPLY_ACTION, ...tools.map((t) => t.name)]);
   const valid = n?.type === "choice" && offered.has(n.choice);
   return {
+    route: r?.type === "choice" ? r.choice : (routes[0]?.name ?? ""),
+    unsafe: u?.type === "noul" ? u.noul : 0,
     next: valid ? n.choice : REPLY_ACTION,
     confidence: valid ? n.confidence : 0,
-    ...(r?.type === "choice" ? { route: r.choice } : {}),
-    ...(u?.type === "noul" ? { unsafe: u.noul } : {}),
     probabilities: {
       ...(r?.type === "choice" ? { route: r.probabilities } : {}),
       ...(u?.type === "noul" ? { unsafe: u.noul } : {}),
