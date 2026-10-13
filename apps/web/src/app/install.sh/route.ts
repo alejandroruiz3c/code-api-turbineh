@@ -19,16 +19,17 @@ if [ "$MAJOR" -lt 20 ]; then echo "turbineh needs Node.js 20 or later (found $(n
 DIR="\${TURBINEH_HOME:-$HOME/.turbineh}"
 mkdir -p "$DIR/bin"
 curl -fsSL "$BASE/cli/turbineh.mjs" -o "$DIR/bin/turbineh.mjs"
-printf '#!/bin/sh\\nexec node "%s/bin/turbineh.mjs" "$@"\\n' "$DIR" > "$DIR/bin/turbineh"
+# The CLI talks to the server it was installed from unless TURBINEH_URL or "turbineh login --url" says otherwise.
+printf '#!/bin/sh\\nexport TURBINEH_INSTALL_URL="%s"\\nexec node "%s/bin/turbineh.mjs" "$@"\\n' "$BASE" "$DIR" > "$DIR/bin/turbineh"
 chmod +x "$DIR/bin/turbineh" "$DIR/bin/turbineh.mjs"
 if [ -w /usr/local/bin ] && [ ! -e /usr/local/bin/turbineh ]; then ln -s "$DIR/bin/turbineh" /usr/local/bin/turbineh; fi
 echo "✔ turbineh installed in $DIR/bin"
 case ":$PATH:" in *":$DIR/bin:"*|*":/usr/local/bin:"*) ;; *) echo "  Add it to your PATH: export PATH=\\"$DIR/bin:\\$PATH\\"";; esac
 echo ""
-echo "Next:"
+echo "Next (TURBINEH_TOKEN in the environment replaces login):"
 echo "  turbineh login <your access token>"
-echo "  cd your-project && turbineh init"
-echo '  turbineh search "AI support agent"'
+echo "  cd your-project && turbineh init --agent claude     # or codex / cursor"
+echo '  turbineh build "<what to build>"   # or: turbineh build @spec.md'
 `;
   return new Response(script, {
     headers: {

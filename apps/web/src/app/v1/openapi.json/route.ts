@@ -48,7 +48,7 @@ const spec = {
                 type: "object",
                 required: ["prompt"],
                 properties: {
-                  prompt: { type: "string", minLength: 20, maxLength: 4000 },
+                  prompt: { type: "string", minLength: 20, maxLength: 20000 },
                   github_username: { type: "string" },
                   options: { type: "object" },
                 },
@@ -167,7 +167,7 @@ const spec = {
       post: {
         summary: "Plan a need against your stack (nothing is generated)",
         description:
-          'Body: { need, environment: { repo | files | stack }, preferences? }. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
+          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate? }. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
         responses: {
           "200": { description: "Plan" },
           "202": { description: "{ id, state: planning, status_url }" },
@@ -207,7 +207,8 @@ const spec = {
     },
     "/v1/plans/{id}/package": {
       get: {
-        summary: "Download the capability package (ZIP) or ?format=manifest",
+        summary:
+          "Download the capability package (ZIP), ?format=manifest, or ?format=app (the complete verified application)",
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],

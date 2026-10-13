@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readZip } from "@turbineh/engine";
 import type { CapabilitySummary, FlowResult, Plan } from "@turbineh/shared";
@@ -17,8 +17,8 @@ import {
   type IntegrationEntry,
 } from "./context.js";
 import { bold, dim, green, red, STATE_LABEL, yellow, type CommandResult } from "./output.js";
+import { AGENT_BLOCK, writeAgentFiles, type AgentKind } from "./agent-docs.js";
 import {
-  AGENT_BLOCK,
   appendEnvExample,
   extractPackage,
   git,
@@ -37,6 +37,8 @@ export interface Ctx {
   flags: Record<string, string | boolean>;
   json: boolean;
   confirm: (question: string) => Promise<boolean>;
+  /** Progress events for agents (`--json` prints one per line before the result; MCP sends them as progress). */
+  emit?: (event: Record<string, unknown>) => void;
 }
 
 interface PlanResponse {
@@ -79,22 +81,14 @@ export async function init(c: Ctx): Promise<CommandResult> {
   const stack = localStack(c.cwd);
   project.preferences = { ...project.preferences, stack };
   writeProject(c.cwd, project);
-  const target = existsSync(join(c.cwd, "CLAUDE.md"))
-    ? "CLAUDE.md"
-    : existsSync(join(c.cwd, "AGENTS.md"))
-      ? "AGENTS.md"
-      : "CLAUDE.md";
-  let wrote = false;
-  const already =
-    existsSync(join(c.cwd, target)) &&
-    readFileSync(join(c.cwd, target), "utf8").includes("## TurbineH capabilities");
-  if (!already && c.flags.yes) {
-    appendFileSync(
-      join(c.cwd, target),
-      `${existsSync(join(c.cwd, target)) ? "\n" : ""}${AGENT_BLOCK}`,
-    );
-    wrote = true;
-  }
+  const agentFlag = c.flags.agent;
+  if (agentFlag !== undefined && !["claude", "codex", "cursor"].includes(String(agentFlag)))
+    fail("usage", `Unknown agent "${String(agentFlag)}".`, "Use --agent claude, --agent codex or --agent cursor.");
+  const agent = typeof agentFlag === "string" ? (agentFlag as AgentKind) : null;
+  // --agent writes the instructions (and the Claude Code skill); without it, --yes writes them, otherwise they are shown.
+  const write = agent !== null || c.flags.yes === true;
+  const docs = write ? writeAgentFiles(c.cwd, agent, baseUrl()) : null;
+  const target = docs?.file ?? (existsSync(join(c.cwd, "AGENTS.md")) && !existsSync(join(c.cwd, "CLAUDE.md")) ? "AGENTS.md" : "CLAUDE.md");
   return {
     ok: true,
     command: "init",
@@ -102,18 +96,17 @@ export async function init(c: Ctx): Promise<CommandResult> {
       project: ".turbineh/project.json",
       workspace: project.workspace,
       stack,
-      agentInstructions: { file: target, written: wrote || already, block: AGENT_BLOCK },
+      agentInstructions: { file: target, written: Boolean(docs), skill: docs?.skill ?? null },
     },
     lines: [
       `${green("✔")} ${existing ? "Updated" : "Created"} .turbineh/project.json (workspace ${project.workspace.slice(0, 8)}…)`,
       `  Stack: ${stack.language}${stack.framework ? ` · ${stack.framework}` : ""}${stack.versions.next ? ` ${stack.versions.next}` : ""}${stack.packageManager ? ` · ${stack.packageManager}` : ""}`,
-      `  Change policy: apply ${project.preferences.changePolicy?.autoApply === "never" ? "only after you confirm" : "automatically"} · new dependencies ${project.preferences.changePolicy?.allowDependencyChanges ? "allowed" : "not allowed"}`,
       "",
-      wrote || already
-        ? `${green("✔")} Agent instructions ${already ? "already in" : "added to"} ${target}.`
-        : `Proposed block for ${target} (run \`turbineh init --yes\` to add it):\n\n${dim(AGENT_BLOCK)}`,
+      docs
+        ? `${green("✔")} Agent instructions in ${target}${docs.skill ? ` and the Claude Code skill in ${docs.skill}` : ""}.`
+        : `Proposed block for ${target} (run \`turbineh init --agent claude|codex|cursor\` to add it):\n\n${dim(AGENT_BLOCK)}`,
     ],
-    next: 'turbineh search "<what you need>"',
+    next: 'turbineh build "<what to build>"   or   turbineh build @spec.md',
   };
 }
 
@@ -562,7 +555,7 @@ export async function verify(c: Ctx): Promise<CommandResult> {
       "Run `turbineh apply` first.",
     );
   const e = entry as IntegrationEntry;
-  const dir = join(c.cwd, "turbineh", e.slug);
+  const dir = join(c.cwd, e.dir ?? join("turbineh", e.slug));
   const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as {
     dependencies: Record<string, string>;
     environment: string[];
@@ -771,8 +764,4 @@ export async function status(c: Ctx): Promise<CommandResult> {
         : []),
     ],
   };
-}
-
-export function writeAgentBlock(cwd: string): void {
-  writeFileSync(join(cwd, ".turbineh", "AGENT_INSTRUCTIONS.md"), AGENT_BLOCK);
 }

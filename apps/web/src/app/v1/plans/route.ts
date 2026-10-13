@@ -26,6 +26,7 @@ import { workspaceGitHub } from "@/server/github";
 
 const MANIFESTS = new Set<string>(MANIFEST_FILES);
 const PLAN_WAIT_MS = 50_000;
+const MAX_NEED = 20_000;
 
 export const maxDuration = 60;
 
@@ -34,7 +35,8 @@ const Body = z.object({
     .string()
     .trim()
     .min(8, "Describe the need in a few words (at least 8 characters)")
-    .max(4000),
+    // A full specification file is accepted (ADR-0036): every criterion it states is compiled and reported.
+    .max(MAX_NEED, `The specification is longer than ${MAX_NEED} characters: keep the parts that state behaviour`),
   environment: z
     .object({
       repo: z
@@ -60,6 +62,11 @@ const Body = z.object({
   /** Without a GitHub connection: reads a private repository during this request only; never stored. */
   github_token: z.string().max(200).optional(),
   idempotency_key: z.string().max(200).optional(),
+  /**
+   * Continue into generation as soon as the plan is ready when it needs no decision from a person (`turbineh build`,
+   * ADR-0036): saves a request and a queue round trip. Plans that need approval stop at `planned` as usual.
+   */
+  generate: z.boolean().optional(),
 });
 
 /**
@@ -165,6 +172,7 @@ export async function POST(req: Request): Promise<Response> {
         ...(analysis ? { analysis } : {}),
       },
       ...(environment.repo ? { repo: environment.repo } : {}),
+      ...(parsed.data.generate ? { autoGenerate: true } : {}),
     },
   });
   const links = { status_url: `/v1/plans/${id}`, events_url: `/v1/plans/${id}/events` };

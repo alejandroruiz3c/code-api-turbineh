@@ -1,42 +1,37 @@
 import { createInterface } from "node:readline/promises";
-import {
-  apply,
-  init,
-  inspect,
-  left,
-  login,
-  plan,
-  revert,
-  search,
-  status,
-  verify,
-  type Ctx,
-} from "./commands.js";
-import { CliError, VERSION } from "./context.js";
-import { connect, disconnect } from "./github.js";
-import { print, type CommandResult } from "./output.js";
+import type { Ctx } from "./commands.js";
+import { VERSION } from "./context.js";
+import { serve } from "./mcp.js";
+import { print } from "./output.js";
+import { runCommand } from "./registry.js";
 
 const HELP = `turbineh ${VERSION} — verified software capabilities for people and coding agents
 
-  turbineh login <token>            save your invitation token
-  turbineh init [--yes]             project preferences + instructions for Claude Code/Codex
+  turbineh build "<spec>" | @spec.md  spec → verified code written and committed here (empty folder: whole app;
+                                    project: capability in its own folder) + summary of what is left
+         [--approve] [--timeout <min>] [--json]
+  turbineh resume [id]              keep waiting for a build that timed out or was interrupted, then write it
+  turbineh status [id]              flows, states, pending build and integrations
+  turbineh left                     in a delivered package: what is left (open criteria with where, gate, settings)
+  turbineh verify [integration]     fast checks with file:line and the fix
+  turbineh init [--agent claude|codex|cursor]
+                                    project file + instructions for the agent (+ Claude Code skill)
+  turbineh mcp                      MCP server on stdio: claude mcp add turbineh -- turbineh mcp
   turbineh search "<need>"          capabilities and components that cover a need
   turbineh inspect <id>             what a capability includes, needs and was verified with
-  turbineh plan "<need>"            plan for this project: components, files, deps, settings, cost
-  turbineh apply [plan] [--approve] generate, then integrate on a new branch (one commit)
+  turbineh plan "<need>"            plan only: components, files, deps, settings, criteria, cost
+  turbineh apply [plan] [--approve] generate a plan, integrate it on a new branch (one commit)
   turbineh apply [plan] --pr [--repo owner/name] [--base branch]
                                     verified pull request on your GitHub repository
-  turbineh connect github [--private] [--with-token]
-                                    connect GitHub for this project (browser, or token on stdin)
-  turbineh disconnect github        delete and revoke the GitHub connection
-  turbineh verify [integration]     check the integration inside this project
+  turbineh connect github [--private] [--with-token]   ·   turbineh disconnect github
   turbineh revert [integration]     undo one integration, keep later work
-  turbineh status [plan]            flows, states and integrations
-  turbineh left                     in a delivered package: what is left (open criteria, gate, settings)
-  turbineh verify                   in a delivered package: typecheck, lint, unit tests → file:line and fix
+  turbineh login <token>            save your invitation token (or set TURBINEH_TOKEN)
 
-  --json   structured output (same state and errors) for coding agents
+  --json   structured output for coding agents (build/resume: one JSON event per line, the last line is the result)
   --yes    do not ask for confirmation (respects .turbineh/project.json policy)
+
+  Exit codes: 0 ok · 1 error · 2 usage · 3 needs the user's decision (--approve) · 4 timeout (resume)
+              5 generation failed · 6 written, gate not green · 7 local conflict
 `;
 
 export function parse(argv: string[]): {
@@ -54,7 +49,7 @@ export function parse(argv: string[]): {
       const next = argv[i + 1];
       if (v !== undefined) flags[k] = v;
       else if (
-        ["url", "stack", "limit", "resume", "repo", "base"].includes(k) &&
+        ["url", "stack", "limit", "resume", "repo", "base", "agent", "spec", "timeout"].includes(k) &&
         next &&
         !next.startsWith("--")
       ) {
@@ -65,21 +60,6 @@ export function parse(argv: string[]): {
   }
   return { cmd: args.shift() ?? "help", args, flags };
 }
-
-const COMMANDS: Record<string, (c: Ctx) => Promise<CommandResult>> = {
-  login,
-  init,
-  search,
-  inspect,
-  plan,
-  apply,
-  verify,
-  revert,
-  status,
-  left,
-  connect,
-  disconnect,
-};
 
 async function main(): Promise<number> {
   const { cmd, args, flags } = parse(process.argv.slice(2));
@@ -92,22 +72,11 @@ async function main(): Promise<number> {
     process.stdout.write(`${VERSION}\n`);
     return 0;
   }
-  const fn = COMMANDS[cmd];
-  if (!fn) {
-    print(
-      {
-        ok: false,
-        command: cmd,
-        error: {
-          code: "usage",
-          message: `Unknown command "${cmd}".`,
-          action: "Run `turbineh help`.",
-        },
-      },
-      json,
-    );
-    return 2;
+  if (cmd === "mcp") {
+    await serve();
+    return 0;
   }
+  const streaming = json && (cmd === "build" || cmd === "resume");
   const ctx: Ctx = {
     cwd: process.cwd(),
     args,
@@ -120,30 +89,12 @@ async function main(): Promise<number> {
       rl.close();
       return /^y(es)?$/i.test(a.trim());
     },
+    // --json: one compact line per event, then the result line (NDJSON); humans get the few progress lines only.
+    ...(streaming ? { emit: (e) => process.stdout.write(`${JSON.stringify(e)}\n`) } : {}),
   };
-  try {
-    const r = await fn(ctx);
-    print(r, json);
-    return r.ok ? 0 : 1;
-  } catch (err) {
-    if (err instanceof CliError) {
-      print({ ok: false, command: cmd, error: err.error }, json);
-      return err.exitCode;
-    }
-    print(
-      {
-        ok: false,
-        command: cmd,
-        error: {
-          code: "internal",
-          message: err instanceof Error ? err.message : String(err),
-          action: "Run the same command again; if it repeats, report it with `turbineh status`.",
-        },
-      },
-      json,
-    );
-    return 1;
-  }
+  const { result, exitCode } = await runCommand(cmd, ctx);
+  print(result, json, streaming);
+  return exitCode;
 }
 
 if (!process.env.VITEST) process.exitCode = await main();

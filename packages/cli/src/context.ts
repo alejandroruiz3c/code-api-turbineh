@@ -58,8 +58,14 @@ export function token(): string {
   return t as string;
 }
 
+/** TURBINEH_URL › `login --url` › the server the CLI was installed from (install.sh) › production. */
 export const baseUrl = () =>
-  (process.env.TURBINEH_URL ?? readUserConfig().url ?? DEFAULT_URL).replace(/\/$/, "");
+  (
+    process.env.TURBINEH_URL ??
+    readUserConfig().url ??
+    process.env.TURBINEH_INSTALL_URL ??
+    DEFAULT_URL
+  ).replace(/\/$/, "");
 
 // ── project (.turbineh/project.json) ───────────────────────────────────────────────────────────────────────
 
@@ -71,12 +77,26 @@ export interface IntegrationEntry {
   commit: string;
   state: "integrated" | "integration_verified" | "reverted";
   at: string;
+  /** Folder of the capability in the project (adapted placement); default turbineh/<slug>. */
+  dir?: string;
+}
+
+/** A `turbineh build` still running or not written yet (resumable with `turbineh resume`). */
+export interface PendingBuild {
+  id: string;
+  /** app = complete application into an empty folder; repo = capability adapted into this project. */
+  target: "app" | "repo";
+  need: string;
+  startedAt: string;
 }
 
 export interface ProjectFile {
   workspace: string;
   preferences: ProjectPreferences;
   lastPlan?: string;
+  pending?: PendingBuild;
+  /** Every `turbineh build` written here (id = plan/build id on the server). */
+  builds?: { id: string; target: "app" | "repo"; commit: string; at: string }[];
   integrations: IntegrationEntry[];
 }
 

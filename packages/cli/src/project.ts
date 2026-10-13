@@ -85,18 +85,3 @@ export function missingEnv(cwd: string, keys: string[]): string[] {
   }
   return keys.filter((k) => !present.has(k));
 }
-
-export const AGENT_BLOCK = `## TurbineH capabilities
-
-Before building a capability that is common (auth, payments, bookings, AI assistants, file handling, search…), check
-TurbineH's verified repository instead of writing it from scratch:
-
-1. \`turbineh search "<need>" --json\` → capabilities and components that cover it.
-2. \`turbineh plan "<need>" --json\` → components, compatibility, files, dependencies, settings, cost; ask the user if
-   \`needsApproval\` is not empty.
-3. \`turbineh apply --json\` → integrates the verified package under \`turbineh/<slug>/\` on a new branch (one commit).
-4. Follow \`turbineh/<slug>/agent/INTEGRATE.md\` to wire it in, then \`turbineh verify --json\`.
-5. \`turbineh revert <integration> --json\` undoes only that integration.
-
-Never mark work as done while \`needs\` lists missing settings or a check failed. Preferences: \`.turbineh/project.json\`.
-`;

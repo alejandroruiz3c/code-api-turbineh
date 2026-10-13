@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+  acceptanceStatus,
   assemble,
+  coverageRules,
   entitiesToGenerate,
   providedTables,
   fieldsOf,
@@ -36,6 +38,7 @@ import type { FixerSlot } from "@turbineh/remediation";
 import type { WriterConfig } from "@turbineh/reporter";
 import {
   fillGap,
+  glueCacheKey,
   integrateComponents,
   isFillable,
   rulesCapability,
@@ -49,6 +52,7 @@ import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
+import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 
 export type Phase =
@@ -77,6 +81,11 @@ export interface PipelineDeps {
   /** Catalog flywheel records (default: catalog/gaps under repoRoot). */
   gapsDir?: string;
   /** Selection cache (PLAN §9): same normalized spec + same candidates → same selection, no decider call. */
+  /** Glue modules that passed the full gate, reused by later builds (ADR-0036). */
+  glueCache?: {
+    get: (key: string) => Promise<{ content: string } | null>;
+    put: (key: string, content: string) => Promise<void>;
+  };
   selectionCache?: {
     get: (key: string) => Promise<SelectionResult | null>;
     put: (key: string, result: SelectionResult) => Promise<void>;
@@ -108,6 +117,29 @@ const git = (dir: string, ...args: string[]) =>
       stdio: "pipe",
     },
   );
+
+/**
+ * Which of the request's criteria a test shipped with the recipe chain or a selected component will prove (the same
+ * acceptance.yaml rules the assembler applies), known before anything is generated (ADR-0036). Criteria proved later by
+ * generated entity tests show as open here and as met in the delivered package's turbineh.json.
+ */
+export function planCriteria(
+  criteria: readonly string[],
+  recipesDir: string,
+  recipe: string,
+  componentIds: string[],
+): NonNullable<Plan["criteria"]> {
+  const rules = coverageRules({
+    recipesDir,
+    recipe,
+    selected: componentIds.map((id) => ({ component: { id } })) as SelectedComponent[],
+  });
+  return acceptanceStatus(criteria, rules, false).map((c) => ({
+    criterion: c.criterion,
+    status: c.status === "open" ? "open" : "covered",
+    tests: c.tests,
+  }));
+}
 
 export async function runBuild(
   prompt: string,
@@ -327,6 +359,9 @@ export async function runBuild(
       entities: spec.entities.map((e) => e.name),
       labels: (cap) => CAPABILITY_LABELS[cap] ?? cap,
     });
+    plan.criteria = planCriteria(spec.acceptance_criteria, recipesDir, recipeId, [
+      ...Object.values(resolution.selected).map((c) => c.id),
+    ]);
     return {
       buildId,
       status: "done",
@@ -405,6 +440,9 @@ export async function runBuild(
       label: label(g.capability),
       trigger: g.trigger as "T1" | "T2",
     }));
+  const externals = external.map((e) =>
+    externalComponent(componentsDir, e.component, e.capability, label(e.capability)),
+  );
   let integrations: IntegrationResult[] = [];
   let filled: FilledGap[] = [];
   let integrationError: string | null = null;
@@ -414,13 +452,7 @@ export async function runBuild(
       gaps: toFill.map((g) => g.capability),
     });
     const [ints, fills] = await Promise.all([
-      integrateComponents(
-        repoDir,
-        external.map((e) =>
-          externalComponent(componentsDir, e.component, e.capability, label(e.capability)),
-        ),
-        deps.compiler,
-      ).catch((err: unknown) => {
+      integrateComponents(repoDir, externals, deps.compiler, deps.glueCache).catch((err: unknown) => {
         integrationError = err instanceof Error ? err.message.slice(0, 300) : "integration failed";
         return [] as IntegrationResult[];
       }),
@@ -651,6 +683,18 @@ export async function runBuild(
     finalizeDeps(deps, buildId),
   );
   lap("verify", t);
+  // Model-written glue that is still in the app after a green gate is now known-good: later builds reuse it.
+  if (fin.ok && deps.glueCache) {
+    for (const i of integrations) {
+      const c = externals.find((e) => e.id === i.component && e.capability === i.capability);
+      if (!c || !i.glue || i.reused) continue;
+      if (fin.swappedOut.includes(i.capability) || fin.glueRemoved.includes(i.capability)) continue;
+      const file = join(repoDir, i.glue);
+      const content = existsSync(file) ? readFileSync(file, "utf8") : "";
+      if (!content.includes("source=catalog"))
+        await deps.glueCache.put(glueCacheKey(c), content).catch(() => undefined);
+    }
+  }
   const finalMetrics = {
     ...metrics,
     timings: { ...timings, total: Math.round(performance.now() - t0) },

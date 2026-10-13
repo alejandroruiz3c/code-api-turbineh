@@ -5,7 +5,8 @@ import { storage } from "@/server/storage";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /v1/plans/{id}/package — download the capability package (ZIP), or `?format=manifest` for manifest.json.
+ * GET /v1/plans/{id}/package — download the capability package (ZIP), `?format=manifest` for manifest.json, or
+ * `?format=app` for the complete verified application (what `turbineh build` writes into an empty folder).
  * Redirects to a short-lived signed URL.
  */
 export async function GET(
@@ -18,8 +19,14 @@ export async function GET(
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
   const pkg = row.artifact?.package as { zipKey?: string; manifestKey?: string } | undefined;
+  const format = new URL(req.url).searchParams.get("format");
+  // `format=app`: the complete verified application (ZIP of the delivered repository), for a new project.
   const key =
-    new URL(req.url).searchParams.get("format") === "manifest" ? pkg?.manifestKey : pkg?.zipKey;
+    format === "manifest"
+      ? pkg?.manifestKey
+      : format === "app"
+        ? (row.artifact?.zipKey as string | undefined)
+        : pkg?.zipKey;
   if (!key) {
     return productProblem(
       409,

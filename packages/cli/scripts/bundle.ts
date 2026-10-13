@@ -5,10 +5,15 @@
 import { chmodSync, copyFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadFoundation } from "@turbineh/engine";
 import { build } from "esbuild";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "dist", "turbineh.mjs");
+// Security Pack basics + verified versions, embedded so `turbineh build` adapts packages locally without the catalog.
+const foundation = loadFoundation(
+  join(here, "..", "..", "..", "catalog", "recipes", "saas-crud", "template"),
+);
 await build({
   entryPoints: [join(here, "..", "src", "index.ts")],
   outfile: out,
@@ -18,6 +23,7 @@ await build({
   target: "node20",
   banner: { js: "#!/usr/bin/env node" },
   legalComments: "none",
+  define: { __TURBINEH_FOUNDATION__: JSON.stringify(foundation) },
   logLevel: "warning",
 });
 chmodSync(out, 0o755);
