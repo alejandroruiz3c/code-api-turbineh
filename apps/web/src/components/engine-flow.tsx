@@ -107,6 +107,8 @@ export function EngineFlow({ id }: { id: string }) {
             {r.package.zipUrl ? (
               <a
                 href={r.package.zipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-full border border-teal px-5 py-2 text-sm text-teal"
               >
                 Download ZIP

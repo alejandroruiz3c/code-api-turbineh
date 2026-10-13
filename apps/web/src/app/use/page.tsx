@@ -256,7 +256,12 @@ export default function UsePage() {
             </a>{" "}
             and enter the access token from your invitation. Your browser keeps a signed cookie with
             a private workspace — never the token itself. Not invited yet?{" "}
-            <a className="text-teal underline" href="https://api.turbineh.com">
+            <a
+              className="text-teal underline"
+              href="https://api.turbineh.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Join the waitlist
             </a>
             .

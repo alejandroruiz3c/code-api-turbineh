@@ -432,6 +432,8 @@ function ResultScreen({
         </button>
         <a
           href={result.artifact?.zip_url ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
           className="rounded-full border border-teal px-5 py-2 text-sm text-teal hover:bg-teal/10"
         >
           Download ZIP
