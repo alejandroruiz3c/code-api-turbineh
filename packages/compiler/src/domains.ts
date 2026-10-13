@@ -115,7 +115,7 @@ const CUSTOMER_NOUNS = [
   "visitors",
   "pet owners",
 ];
-const CITY_ZONES: Record<string, string> = {
+export const CITY_ZONES: Record<string, string> = {
   madrid: "Europe/Madrid",
   barcelona: "Europe/Madrid",
   valencia: "Europe/Madrid",
@@ -153,7 +153,7 @@ const DAY = String.raw`(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?`;
 const TIME = String.raw`(\d{1,2})(?:[:.h](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?`;
 const DASH = String.raw`(?:–|—|-|to|until|till)`;
 
-const isTimeZone = (tz: string) => {
+export const isTimeZone = (tz: string) => {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
     return true;
@@ -211,7 +211,7 @@ function parseDays(phrase: string): number[] {
   return [...out].sort();
 }
 
-function parseHours(prompt: string): BookingParams["hours"] {
+export function parseHours(prompt: string): BookingParams["hours"] {
   const hours: BookingParams["hours"] = [];
   const re = new RegExp(
     String.raw`((?:${DAY}\s*(?:–|—|-|to|through|thru|,|and|&)?\s*)+)[\s,:(]*(?:from\s+)?${TIME}\s*${DASH}\s*${TIME}`,
@@ -240,7 +240,7 @@ function parseHours(prompt: string): BookingParams["hours"] {
   return hours.sort((a, b) => a.weekday - b.weekday || a.open.localeCompare(b.open));
 }
 
-function parseMoney(text: string): { price: number; currency: string } | null {
+export function parseMoney(text: string): { price: number; currency: string } | null {
   const m =
     /(€|\$|£)\s*(\d+(?:[.,]\d{1,2})?)/.exec(text) ??
     /(\d+(?:[.,]\d{1,2})?)\s*(€|eur\b|euros?\b|\$|usd\b|dollars?\b|£|gbp\b|pounds?\b)/i.exec(text);

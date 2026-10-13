@@ -88,7 +88,9 @@ function column(f: Field): string {
     boolean: `boolean("${c}")`,
     date: `date("${c}")`,
     datetime: `timestamp("${c}", { withTimezone: true })`,
+    tags: `text("${c}").array()`,
   }[f.type];
+  if (f.type === "tags") return `${base}.notNull().default([])`;
   const req = f.required && f.type !== "boolean" ? ".notNull()" : "";
   const def = f.type === "boolean" ? ".notNull().default(false)" : "";
   return `${base}${req}${def}`;
@@ -100,7 +102,14 @@ function zodField(f: Field): string {
     f.required
       ? `z.string().trim().min(1).max(${max})`
       : `z.string().trim().max(${max}).transform((v) => v || undefined).optional()`;
+  if (f.type === "enum" && f.options?.length) {
+    const e = `z.enum(${JSON.stringify(f.options)})`;
+    return f.required ? e : `z.union([${e}, z.literal("").transform(() => undefined)]).optional()`;
+  }
   switch (f.type) {
+    case "tags":
+      // Comma- or semicolon-separated, normalised (lowercase, unique, at most 20).
+      return `z.string().trim().max(500).default("").transform((v) => [...new Set(v.split(/[,;]/).map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 20).map((t) => t.slice(0, 40)))`;
     case "string":
     case "enum":
     case "reference":
@@ -145,8 +154,13 @@ function inputType(f: Field): string {
     boolean: "checkbox",
     date: "date",
     datetime: "datetime-local",
+    tags: "text",
   }[f.type];
 }
+
+/** An enum field with the values the request lists (rendered as a select). */
+export const hasOptions = (f: Field): f is Field & { options: string[] } =>
+  f.type === "enum" && Array.isArray(f.options) && f.options.length > 0;
 
 /** A text field that holds an email address (the compiler sometimes types it as plain text). */
 const emailLike = (f: Field) =>
@@ -155,7 +169,10 @@ const emailLike = (f: Field) =>
 /** Sample values used by the generated E2E test (deterministic). */
 export function sampleValue(f: Field, entityLabel: string, nth = 0): string {
   if (emailLike(f)) return "e2e@example.com";
+  if (hasOptions(f)) return f.options[0] ?? "";
   switch (f.type) {
+    case "tags":
+      return "interview, research";
     case "email":
       return "e2e@example.com";
     case "integer":
@@ -187,6 +204,9 @@ export function nthOfType(fields: Field[], f: Field): number {
  */
 export function importedSample(f: Field, value: string, suffix: string): string {
   if (emailLike(f)) return value.replace("@", `+${suffix}@`);
+  if (hasOptions(f)) return value;
+  // Tags in a CSV cell are separated by semicolons (commas separate cells).
+  if (f.type === "tags") return value.replace(/,\s*/g, ";");
   // A reference keeps pointing to the same record (rules may require that it exists).
   if (["string", "text", "enum"].includes(f.type)) return `${value} ${suffix}`;
   return value;
@@ -273,10 +293,56 @@ export interface GeneratedFile {
   content: string;
 }
 
+/**
+ * How an entity is generated, from its kind (ADR-0042 §1): `crud` (business), `settings` (configuration: owners and
+ * admins set values under /dashboard/settings, upsert by the first field, no delete).
+ */
+export interface EntityOptions {
+  variant?: "crud" | "settings";
+  /** Append-only histories of this entity: written on every change of the tracked field, shown as a timeline. */
+  events?: EventLink[];
+  /** Child lists (comments, messages, phases…) added and listed on this entity's edit page. */
+  children?: ChildLink[];
+  /** Default order of the list: one of the entity's date fields, as the request states it. */
+  sort?: { field: string; direction: "asc" | "desc" } | null;
+}
+
+/** An event entity attached to its parent. Field names are camelCase names of the event entity. */
+export interface EventLink {
+  event: Entity;
+  /** Event field holding the parent id. */
+  parentField: string;
+  /** Parent field whose changes are recorded (status, stage…); null = timeline only. */
+  tracked: string | null;
+  map: { from?: string; to?: string; actor?: string; at?: string };
+}
+
+/** A child entity managed on its parent's page. */
+export interface ChildLink {
+  child: Entity;
+  /** Child field holding the parent id. */
+  parentField: string;
+}
+
 /** Optional features switched on by components selected for the build. */
 export interface EntityFeatures {
   csvExport: boolean;
   csvImport: boolean;
+}
+
+/** `await recordX({...})` for an event link: parent id, previous and new value of the tracked field, actor, time. */
+function eventCall(l: EventLink, id: string, from: string, to: string): string {
+  const en = entityNames(l.event.name);
+  const at = fieldsOf(l.event).find((f) => camel(f.name) === l.map.at);
+  const parts = ["organizationId: ctx.organizationId", `${l.parentField}: ${id}`];
+  if (l.map.from) parts.push(`${l.map.from}: ${from}`);
+  if (l.map.to) parts.push(`${l.map.to}: ${to}`);
+  if (l.map.actor) parts.push(`${l.map.actor}: ctx.userId`);
+  if (l.map.at)
+    parts.push(
+      `${l.map.at}: ${at?.type === "date" ? "new Date().toISOString().slice(0, 10)" : "new Date()"}`,
+    );
+  return `await record${en.pascal}({ ${parts.join(", ")} });`;
 }
 
 /**
@@ -288,9 +354,33 @@ export function generateEntity(
   e: Entity,
   features: EntityFeatures = { csvExport: false, csvImport: false },
   all: Entity[] = [e],
+  opts: EntityOptions = {},
 ): GeneratedFile[] {
   const n = entityNames(e.name);
   const fields = fieldsOf(e);
+  const settings = opts.variant === "settings";
+  const base = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;
+  // The template's role policy: can(role, action). Settings are changed by those who may update records.
+  const act = (a: "create" | "update" | "delete") => (settings ? `"update"` : `"${a}"`);
+  const events = opts.events ?? [];
+  const children = opts.children ?? [];
+  const tagField = fields.find((f) => f.type === "tags");
+  // Settings are keyed by their first required text field (e.g. the stage a limit applies to).
+  const settingKey = fields.find(
+    (f) => f.required && ["string", "enum", "reference", "email"].includes(f.type),
+  );
+  const sortField = opts.sort
+    ? (fields.find(
+        (f) =>
+          (f.type === "date" || f.type === "datetime") &&
+          words(f.name)
+            .join(" ")
+            .includes(opts.sort?.field ?? "\u0000"),
+      ) ??
+      (/date|time/.test(opts.sort.field)
+        ? fields.find((f) => f.type === "date" || f.type === "datetime")
+        : undefined))
+    : undefined;
   const pgImports = new Set(["pgTable", "uuid", "varchar", "timestamp"]);
   for (const f of fields) {
     const fn = column(f).split("(")[0] ?? "";
@@ -379,7 +469,13 @@ ${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : "
 import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-import { related${n.pascal} } from "./related";
+${events
+  .filter((l) => l.tracked)
+  .map((l) => {
+    const en = entityNames(l.event.name);
+    return `import { record${en.pascal} } from "@/entities/${en.slug}/record";\n`;
+  })
+  .join("")}import { related${n.pascal} } from "./related";
 import { check${n.pascal}Rules } from "./rules";
 import { create${n.pascal}Schema, to${n.pascal}Values, type ${n.pascal}Row } from "./schema";
 
@@ -400,7 +496,7 @@ function existing${n.pascal}(organizationId: string, exceptId?: string): Promise
 
 export async function create${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to create ${n.labelPlural.toLowerCase()}.");
+  if (!can(ctx.role, ${act("create")})) throw new UserFacingError("You are not allowed to create ${n.labelPlural.toLowerCase()}.");
   if (!rateLimit(\`create:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
   const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
   const violation = await check${n.pascal}Rules(input, {
@@ -410,16 +506,42 @@ export async function create${n.pascal}(formData: FormData): Promise<void> {
     related: related${n.pascal}(ctx.organizationId),
   });
   if (violation) throw new UserFacingError(violation);
-  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
-  const [row] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
-  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: row?.id ?? null, after: values });
-  revalidatePath("/dashboard/${n.slug}");
+${
+  settings && settingKey
+    ? `  // A setting is one row per ${label(settingKey.name).toLowerCase()}: saving an existing one updates it (no duplicates, no delete).
+  const [same] = await db
+    .select({ id: ${n.variable}.id })
+    .from(${n.variable})
+    .where(and(eq(${n.variable}.organizationId, ctx.organizationId), eq(${n.variable}.${camel(settingKey.name)}, to${n.pascal}Values(input).${camel(settingKey.name)})))
+    .limit(1);
+  if (same) {
+    await db.update(${n.variable}).set(to${n.pascal}Values(input)).where(eq(${n.variable}.id, same.id));
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: same.id, after: to${n.pascal}Values(input) });
+    revalidatePath("${base}");
+    return;
+  }
+`
+    : ""
+}  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
+  const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
+  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
+${
+  events.some((l) => l.tracked)
+    ? `  if (created) {
+${events
+  .filter((l) => l.tracked)
+  .map((l) => `    ${eventCall(l, "created.id", "null", `String(input.${l.tracked} ?? "")`)}`)
+  .join("\n")}
+  }
+`
+    : ""
+}  revalidatePath("${base}");
 }
 
 /** Changes one record of the active workspace; business rules run again with the previous values. */
 export async function update${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!can(ctx.role, "update")) throw new UserFacingError("You are not allowed to change ${n.labelPlural.toLowerCase()}.");
+  if (!can(ctx.role, ${act("update")})) throw new UserFacingError("You are not allowed to change ${n.labelPlural.toLowerCase()}.");
   if (!rateLimit(\`update:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
   const id = z.uuid().parse(formData.get("id"));
   const [previous] = await db
@@ -442,13 +564,24 @@ export async function update${n.pascal}(formData: FormData): Promise<void> {
     .set(values)
     .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
   await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: id, before: previous, after: { ...previous, ...values } });
-  revalidatePath("/dashboard/${n.slug}");
-  redirect("/dashboard/${n.slug}");
+${events
+  .filter((l) => l.tracked)
+  .map(
+    (
+      l,
+    ) => `  // Every change of ${label(l.tracked ?? "").toLowerCase()} is recorded (append-only history, ${entityNames(l.event.name).labelPlural}).
+  if (String(previous.${l.tracked} ?? "") !== String(input.${l.tracked} ?? "")) {
+    ${eventCall(l, "id", `previous.${l.tracked} ?? null`, `String(input.${l.tracked} ?? "")`)}
+  }
+`,
+  )
+  .join("")}  revalidatePath("${base}");
+  redirect("${base}");
 }
 
 export async function delete${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!can(ctx.role, "delete")) throw new UserFacingError("You are not allowed to delete ${n.labelPlural.toLowerCase()}.");
+  if (!can(ctx.role, ${act("delete")})) throw new UserFacingError("You are not allowed to delete ${n.labelPlural.toLowerCase()}.");
   const id = String(formData.get("id") ?? "");
   const removed = await db
     .delete(${n.variable})
@@ -456,7 +589,7 @@ export async function delete${n.pascal}(formData: FormData): Promise<void> {
     .returning();
   for (const before of removed)
     await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before });
-  revalidatePath("/dashboard/${n.slug}");
+  revalidatePath("${base}");
 }
 ${
   features.csvImport
@@ -464,7 +597,7 @@ ${
 /** CSV import (component data.csv-import.turbineh): bounded size and rows, every row validated. */
 export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to import ${n.labelPlural.toLowerCase()}.");
+  if (!can(ctx.role, ${act("create")})) throw new UserFacingError("You are not allowed to import ${n.labelPlural.toLowerCase()}.");
   if (!rateLimit(\`import:${n.table}:\${ctx.userId}\`, 5)) throw new UserFacingError("Too many imports. Try again later.");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) throw new UserFacingError("Choose a CSV file.");
@@ -486,8 +619,8 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
     await db.insert(${n.variable}).values(accepted);
     await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.imported", subjectType: "${n.labelSingular}", summary: \`\${accepted.length} imported from CSV, \${rows.length - accepted.length} rejected\` });
   }
-  revalidatePath("/dashboard/${n.slug}");
-  redirect(\`/dashboard/${n.slug}?imported=\${accepted.length}&rejected=\${rows.length - accepted.length}\`);
+  revalidatePath("${base}");
+  redirect(\`${base}?imported=\${accepted.length}&rejected=\${rows.length - accepted.length}\`);
 }
 `
     : ""
@@ -502,10 +635,20 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
             <Label htmlFor="${id}">${label(f.name)}</Label>
           </div>`;
       }
+      if (hasOptions(f)) {
+        return `          <div>
+            <Label htmlFor="${id}">${label(f.name)}</Label>
+            <select id="${id}" name="${camel(f.name)}" className="w-full rounded-md border border-field px-3 py-2 text-sm focus:outline-brand"${f.required ? " required" : ""}>
+${f.required ? "" : `              <option value="">—</option>\n`}${f.options.map((o) => `              <option value=${JSON.stringify(o)}>${o}</option>`).join("\n")}
+            </select>
+          </div>`;
+      }
       const step = f.type === "decimal" ? ` step="0.01"` : "";
+      const hint =
+        f.type === "tags" ? ` placeholder="Comma-separated, e.g. pricing, onboarding"` : "";
       return `          <div>
             <Label htmlFor="${id}">${label(f.name)}</Label>
-            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${f.required ? " required" : ""} />
+            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${hint}${f.required ? " required" : ""} />
           </div>`;
     })
     .join("\n");
@@ -515,7 +658,7 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   const columns = fields.map((f) => camel(f.name));
 
   const page = `${GENERATED}
-import { and, count, desc, eq${search ? ", ilike" : ""} } from "drizzle-orm";
+import { and, ${tagField ? "arrayContains, " : ""}${sortField ? "asc, " : ""}count, desc, eq${search ? ", ilike" : ""} } from "drizzle-orm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -535,25 +678,33 @@ export default async function ${n.pascal}Page({ searchParams }: { searchParams: 
   const params = await searchParams;
   const { page, offset, limit } = parsePage(params.page);
   const q = parseQuery(params.q);
-  const where = and(
+${tagField ? `  const tag = parseQuery(params.tag).toLowerCase();\n` : ""}${
+    sortField
+      ? `  // Sort order from the request: ${label(sortField.name).toLowerCase()}, ${opts.sort?.direction === "asc" ? "oldest" : "newest"} first by default.
+  const sort = params.sort === "oldest" || params.sort === "newest" || params.sort === "added" ? params.sort : "${opts.sort?.direction === "asc" ? "oldest" : "newest"}";
+  const order = sort === "added" ? desc(${n.variable}.createdAt) : sort === "oldest" ? asc(${n.variable}.${camel(sortField.name)}) : desc(${n.variable}.${camel(sortField.name)});\n`
+      : ""
+  }  const where = and(
     eq(${n.variable}.organizationId, ctx.organizationId),
-    ${search ? `q ? ilike(${n.variable}.${search}, \`%\${q.replace(/[%_\\\\]/g, "\\\\$&")}%\`) : undefined` : "undefined"},
+    ${search ? `q ? ilike(${n.variable}.${search}, \`%\${q.replace(/[%_\\\\]/g, "\\\\$&")}%\`) : undefined` : "undefined"},${tagField ? `\n    tag ? arrayContains(${n.variable}.${camel(tagField.name)}, [tag]) : undefined,` : ""}
   );
   const [rows, [{ total } = { total: 0 }]] = await Promise.all([
-    db.select().from(${n.variable}).where(where).orderBy(desc(${n.variable}.createdAt)).limit(limit).offset(offset),
+    db.select().from(${n.variable}).where(where).orderBy(${sortField ? "order" : `desc(${n.variable}.createdAt)`}).limit(limit).offset(offset),
     db.select({ total: count() }).from(${n.variable}).where(where),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const canDelete = can(ctx.role, "delete");
-  const canUpdate = can(ctx.role, "update");
-  const link = (p: number) => \`/dashboard/${n.slug}?page=\${p}\${q ? \`&q=\${encodeURIComponent(q)}\` : ""}\`;
+  const canDelete = ${settings ? "false" : `can(ctx.role, ${act("delete")})`};
+  const canUpdate = can(ctx.role, ${act("update")});
+  const canCreate = can(ctx.role, ${act("create")});
+  const link = (p: number) => \`${base}?page=\${p}\${q ? \`&q=\${encodeURIComponent(q)}\` : ""}${tagField ? `\${tag ? \`&tag=\${encodeURIComponent(tag)}\` : ""}` : ""}${sortField ? `&sort=\${sort}` : ""}\`;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">${n.labelPlural}</h1>
-        ${features.csvExport ? `<a className="text-sm underline" href="/dashboard/${n.slug}/export">Export CSV</a>` : ""}
+        ${features.csvExport ? `<a className="text-sm underline" href="${base}/export">Export CSV</a>` : ""}
       </div>
-      <Card title="New ${n.labelSingular.toLowerCase()}">
+      {canCreate ? (
+      <Card title="${settings ? `Set ${n.labelSingular.toLowerCase()}` : `New ${n.labelSingular.toLowerCase()}`}">
         <form action={create${n.pascal}} className="grid grid-cols-1 gap-4 md:grid-cols-2">
 ${formFields}
           <div className="md:col-span-2">
@@ -561,6 +712,7 @@ ${formFields}
           </div>
         </form>
       </Card>
+      ) : null}
 ${
   features.csvImport
     ? `      <Card title="Import ${n.labelPlural.toLowerCase()} from CSV">
@@ -583,7 +735,21 @@ ${
         ${
           search
             ? `<form className="mb-4 flex gap-2" role="search">
-          <Input aria-label="Search ${n.labelPlural.toLowerCase()}" name="q" defaultValue={q} placeholder="Search by ${label(firstText?.name ?? "")}" />
+          <Input aria-label="Search ${n.labelPlural.toLowerCase()}" name="q" defaultValue={q} placeholder="Search by ${label(firstText?.name ?? "")}" />${
+            tagField
+              ? `
+          <Input aria-label="Filter by tag" name="tag" defaultValue={tag} placeholder="Tag" />`
+              : ""
+          }${
+            sortField
+              ? `
+          <select aria-label="Sort" name="sort" defaultValue={sort} className="rounded-md border border-field px-3 py-2 text-sm">
+            <option value="newest">${label(sortField.name)}: newest first</option>
+            <option value="oldest">${label(sortField.name)}: oldest first</option>
+            <option value="added">Recently added</option>
+          </select>`
+              : ""
+          }
           <Button type="submit">Search</Button>
         </form>`
             : ""
@@ -591,10 +757,10 @@ ${
         <Table head={[${fields.map((f) => `"${label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}""]}>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-line">
-${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
+${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : f.type === "tags" ? `(row.${camel(f.name)} ?? []).join(", ")` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}
               <td className="flex items-center justify-end gap-3 px-3 py-2">
                 {canUpdate ? (
-                  <Link className="text-sm underline" href={\`/dashboard/${n.slug}/\${row.id}/edit\`}>
+                  <Link className="text-sm underline" href={\`${base}/\${row.id}/edit\`}>
                     Edit
                   </Link>
                 ) : null}
@@ -634,7 +800,22 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f.type === "bool
             <Label htmlFor="${id}">${label(f.name)}</Label>
           </div>`;
       }
-      const value = f.type === "datetime" ? `asDateTime(${k})` : f.required ? k : `${k} ?? ""`;
+      if (hasOptions(f)) {
+        return `          <div>
+            <Label htmlFor="${id}">${label(f.name)}</Label>
+            <select id="${id}" name="${camel(f.name)}" className="w-full rounded-md border border-field px-3 py-2 text-sm focus:outline-brand" defaultValue={${k} ?? ""}${f.required ? " required" : ""}>
+${f.required ? "" : `              <option value="">—</option>\n`}${f.options.map((o) => `              <option value=${JSON.stringify(o)}>${o}</option>`).join("\n")}
+            </select>
+          </div>`;
+      }
+      const value =
+        f.type === "datetime"
+          ? `asDateTime(${k})`
+          : f.type === "tags"
+            ? `(${k} ?? []).join(", ")`
+            : f.required
+              ? k
+              : `${k} ?? ""`;
       const step = f.type === "decimal" ? ` step="0.01"` : "";
       return `          <div>
             <Label htmlFor="${id}">${label(f.name)}</Label>
@@ -654,7 +835,16 @@ import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 import { update${n.pascal} } from "@/entities/${n.slug}/actions";
-import { can, requireMember } from "@/server/authz";
+${[
+  ...events.map((l) => {
+    const en = entityNames(l.event.name);
+    return `import { ${en.pascal}Timeline } from "@/entities/${en.slug}/timeline";\n`;
+  }),
+  ...children.map((l) => {
+    const cn = entityNames(l.child.name);
+    return `import { ${cn.pascal}Section } from "@/entities/${cn.slug}/section";\n`;
+  }),
+].join("")}import { can, requireMember } from "@/server/authz";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 ${
@@ -668,7 +858,7 @@ const asDateTime = (d: Date | null) =>
 /** Edit one ${n.labelSingular.toLowerCase()} of the active workspace (owners and admins). */
 export default async function Edit${n.pascal}Page({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
-  if (!can(ctx.role, "update")) notFound();
+  if (!can(ctx.role, ${act("update")})) notFound();
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const [row] = await db
@@ -681,7 +871,7 @@ export default async function Edit${n.pascal}Page({ params }: { params: Promise<
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Edit ${n.labelSingular.toLowerCase()}</h1>
-        <Link className="text-sm underline" href="/dashboard/${n.slug}">
+        <Link className="text-sm underline" href="${base}">
           Back to ${n.labelPlural.toLowerCase()}
         </Link>
       </div>
@@ -694,7 +884,12 @@ ${editFields}
           </div>
         </form>
       </Card>
-    </div>
+${[
+  ...children.map(
+    (l) => `      <${entityNames(l.child.name).pascal}Section parentId={row.id} />\n`,
+  ),
+  ...events.map((l) => `      <${entityNames(l.event.name).pascal}Timeline parentId={row.id} />\n`),
+].join("")}    </div>
   );
 }
 `;
@@ -739,7 +934,9 @@ export async function GET(): Promise<Response> {
         .map((x) =>
           x.type === "boolean"
             ? `  await page.getByLabel("${label(x.name)}", { exact: true }).check();`
-            : `  await page.getByLabel("${label(x.name)}", { exact: true }).fill("${seed[camel(x.name)]}");`,
+            : hasOptions(x)
+              ? `  await page.getByLabel("${label(x.name)}", { exact: true }).selectOption("${seed[camel(x.name)]}");`
+              : `  await page.getByLabel("${label(x.name)}", { exact: true }).fill("${seed[camel(x.name)]}");`,
         );
       return [
         `  await page.goto("/dashboard/${t.slug}");
@@ -749,16 +946,40 @@ ${steps.join("\n")}
       ];
     });
   const editable = fields.find(
-    (f) => ["string", "text", "enum"].includes(f.type) && !referenceTarget(f, e, all),
+    (f) =>
+      ["string", "text", "enum"].includes(f.type) && !hasOptions(f) && !referenceTarget(f, e, all),
   );
+  const fill = (f: Field, value: string) =>
+    f.type === "boolean"
+      ? `  await page.getByLabel("${label(f.name)}", { exact: true }).check();`
+      : hasOptions(f)
+        ? `  await page.getByLabel("${label(f.name)}", { exact: true }).selectOption("${value}");`
+        : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${value}");`;
   const fills = fields
     .filter((f) => f.required || f === firstText)
-    .map((f) =>
-      f.type === "boolean"
-        ? `  await page.getByLabel("${label(f.name)}", { exact: true }).check();`
-        : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${sample(f)}");`,
-    )
+    .map((f) => fill(f, sample(f)))
     .join("\n");
+  // Values unique to one test, so filters and sort orders are checked on records only that test created.
+  const uniqueFills = (marker: string, extra: Record<string, string>) =>
+    fields
+      .filter((f) => f.required || f === firstText || extra[camel(f.name)] !== undefined)
+      .map((f) =>
+        fill(
+          f,
+          extra[camel(f.name)] ??
+            (f === firstText &&
+            !hasOptions(f) &&
+            f.type !== "reference" &&
+            !referenceTarget(f, e, all)
+              ? `${sample(f)} ${marker}`
+              : sample(f)),
+        ),
+      )
+      .join("\n");
+  const markerText = (marker: string) =>
+    firstText && !hasOptions(firstText) && !referenceTarget(firstText, e, all)
+      ? `${sample(firstText)} ${marker}`
+      : null;
   const expectation = firstText
     ? `  await expect(page.getByRole("cell", { name: "${sample(firstText)}" }).first()).toBeVisible();`
     : `  await expect(page.getByRole("row").nth(1)).toBeVisible();`;
@@ -776,7 +997,7 @@ ${steps.join("\n")}
 import { expect, test } from "@playwright/test";
 
 test("owner creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
-${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("/dashboard/${n.slug}");
+${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${fills}
   await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
 ${expectation}
@@ -785,7 +1006,7 @@ ${
   editable
     ? `
 test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async ({ page }) => {
-  await page.goto("/dashboard/${n.slug}");
+  await page.goto("${base}");
   // The record this test created (exact cell), not a record another entity's test seeded with a similar name.
   await page
     .getByRole("row")
@@ -805,7 +1026,7 @@ test("owner edits a ${n.labelSingular.toLowerCase()} and sees the change", async
     features.csvExport
       ? `
 test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ page }) => {
-  const res = await page.request.get("/dashboard/${n.slug}/export");
+  const res = await page.request.get("${base}/export");
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toContain("text/csv");
   expect((await res.text()).split("\\r\\n")[0]).toBe("${columns.join(",")}");
@@ -816,10 +1037,44 @@ test("${n.labelPlural.toLowerCase()} export as CSV with a header row", async ({ 
     features.csvImport
       ? `
 test("${n.labelPlural.toLowerCase()} import from CSV", async ({ page }) => {
-${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await page.goto("/dashboard/${n.slug}");
+${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await page.goto("${base}");
   await page.getByLabel(/CSV file/).setInputFiles({ name: "import.csv", mimeType: "text/csv", buffer: Buffer.from("${csvSample("imported")}") });
   await page.getByRole("button", { name: "Import CSV" }).click();
   await expect(page.getByRole("status")).toContainText("Imported 1 rows");
+});
+`
+      : ""
+  }${
+    tagField && markerText("tagged") && !settings
+      ? `
+test("owner filters ${n.labelPlural.toLowerCase()} by tag", async ({ page }) => {
+${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
+${uniqueFills("tagged", { [camel(tagField.name)]: "e2e-filter, research" })}
+  await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
+  await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true }).first()).toBeVisible();
+  await page.goto("${base}?tag=e2e-filter");
+  await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true }).first()).toBeVisible();
+  await page.goto("${base}?tag=no-such-tag");
+  await expect(page.getByRole("cell", { name: "${markerText("tagged")}", exact: true })).toHaveCount(0);
+});
+`
+      : ""
+  }${
+    sortField && markerText("latest") && !settings
+      ? `
+test("owner sorts ${n.labelPlural.toLowerCase()} by ${label(sortField.name).toLowerCase()}", async ({ page }) => {
+${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
+${uniqueFills("latest", { [camel(sortField.name)]: sortField.type === "date" ? "2099-12-31" : "2099-12-31T10:00" })}
+  await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
+  await expect(page.getByRole("cell", { name: "${markerText("latest")}", exact: true }).first()).toBeVisible();
+  await page.goto("${base}");
+${uniqueFills("earliest", { [camel(sortField.name)]: sortField.type === "date" ? "1999-01-01" : "1999-01-01T10:00" })}
+  await page.getByRole("button", { name: "Create ${n.labelSingular.toLowerCase()}" }).click();
+  await expect(page.getByRole("cell", { name: "${markerText("earliest")}", exact: true }).first()).toBeVisible();
+  await page.goto("${base}?sort=newest");
+  await expect(page.getByRole("row").nth(1)).toContainText("${markerText("latest")}");
+  await page.goto("${base}?sort=oldest");
+  await expect(page.getByRole("row").nth(1)).toContainText("${markerText("earliest")}");
 });
 `
       : ""
@@ -831,11 +1086,11 @@ ${seeds("imported").length ? `${seeds("imported").join("\n")}\n` : ""}  await pa
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
     { path: `src/entities/${n.slug}/rules.ts`, content: rules },
     { path: `src/entities/${n.slug}/related.ts`, content: related },
-    { path: `src/app/dashboard/${n.slug}/page.tsx`, content: page },
+    { path: `src/app${base}/page.tsx`, content: page },
     // Under /<id>/edit (not /<id>): the CSV download link /export must not look like a page route.
-    { path: `src/app/dashboard/${n.slug}/[id]/edit/page.tsx`, content: editPage },
+    { path: `src/app${base}/[id]/edit/page.tsx`, content: editPage },
     ...(features.csvExport
-      ? [{ path: `src/app/dashboard/${n.slug}/export/route.ts`, content: exportRoute }]
+      ? [{ path: `src/app${base}/export/route.ts`, content: exportRoute }]
       : []),
     { path: `tests/e2e/${n.slug}.spec.ts`, content: e2e },
   ];

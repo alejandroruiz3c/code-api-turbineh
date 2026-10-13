@@ -25,6 +25,7 @@ const FORMATS: Record<Entity["fields"][number]["type"], string> = {
   date: 'date only, exactly "YYYY-MM-DD" (e.g. "2026-10-13"), never a time',
   datetime: 'local date and time "YYYY-MM-DDTHH:mm" (e.g. "2026-10-13T10:30")',
   file: "https URL",
+  tags: 'comma- or semicolon-separated tags, e.g. "pricing, onboarding" (stored as a lowercase list)',
 };
 
 /** A generated entity whose records another entity's rules may read (ADR-0026). */
