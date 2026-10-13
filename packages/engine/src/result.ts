@@ -59,6 +59,19 @@ const CHECK_LABEL: Record<string, string> = {
 
 export const checkLabel = (name: string) => CHECK_LABEL[name] ?? name;
 
+/** The build failed its gate but delivered the package, marked not verified (ADR-0037 §D1). */
+export function deliveredUnverified(
+  row: Pick<FlowRow, "status" | "metrics" | "artifact">,
+): boolean {
+  const d = row.metrics.delivery as { kind?: string } | undefined;
+  return row.status === "failed" && d?.kind === "unverified" && Boolean(row.artifact?.zipKey);
+}
+
+/** "Delivered, not verified: 10/11 checks passed" (or the verified/report-only label), from the build metrics. */
+export function deliveryLabel(row: Pick<FlowRow, "metrics">): string | null {
+  return ((row.metrics.delivery as { label?: string } | undefined)?.label ?? null) || null;
+}
+
 export function flowState(row: FlowRow): FlowState {
   const mode = row.options.mode;
   const integrations = (row.metrics.integrations as IntegrationRecord[] | undefined) ?? [];
@@ -66,7 +79,9 @@ export function flowState(row: FlowRow): FlowState {
   if (row.metrics.deployment) return "deployed";
   if (last && (last.state === "integrated" || last.state === "integration_verified"))
     return last.state;
-  if (row.status === "failed") return "failed";
+  // ADR-0037 §D1: a failed gate that still delivered its package is "generated" (package produced, not verified) —
+  // never "verified", and still not deployable (deploy, improve and pull requests require a passed gate).
+  if (row.status === "failed") return deliveredUnverified(row) ? "generated" : "failed";
   if (mode === "plan") return row.status === "done" ? "planned" : "planning";
   if (row.status !== "done") return "generating";
   const checks = (row.metrics.verify as CheckResult[] | undefined) ?? [];
@@ -104,6 +119,14 @@ export function flowResult(
   const lastIntegration = integrations.at(-1);
   const needs: Requirement[] = (plan?.config ?? []).filter((r) => !r.satisfied);
   const errors: ProductError[] = [];
+  if (deliveredUnverified(row)) {
+    errors.push(
+      ERRORS.verificationFailed(
+        row.id,
+        row.error ?? deliveryLabel(row) ?? "Delivered, not verified",
+      ),
+    );
+  }
   if (state === "failed") {
     errors.push(
       row.options.mode === "plan" && /out of scope/i.test(row.error ?? "")

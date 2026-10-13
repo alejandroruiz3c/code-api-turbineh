@@ -21,6 +21,7 @@ export interface SwapPart {
 
 export interface FailureAttribution {
   step: GateFailure["step"];
+  message: string;
   test: string | null;
   file: string | null;
   line: number | null;
@@ -124,6 +125,7 @@ export function attributeFailures(
       const implicated = (named.length ? named : libs).map((p) => p.capability);
       return {
         step: f.step,
+        message: f.message,
         test: f.test,
         file: f.file,
         line: f.line,
@@ -140,6 +142,7 @@ export function attributeFailures(
     if (!f.file) {
       return {
         step: f.step,
+        message: f.message,
         test: f.test,
         file: null,
         line: f.line,
@@ -174,6 +177,7 @@ export function attributeFailures(
       .map((p) => p.capability);
     return {
       step: f.step,
+      message: f.message,
       test: f.test,
       file,
       line: f.line,

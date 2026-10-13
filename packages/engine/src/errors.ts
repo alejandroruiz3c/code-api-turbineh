@@ -48,6 +48,14 @@ export const ERRORS = {
       "Review the failed checks in the result, then generate again.",
       `turbineh apply --resume ${id}`,
     ),
+  /** ADR-0037 §D1: the package is delivered, but the gate failed — never presented as verified. */
+  verificationFailed: (id: string, reason: string) =>
+    productError(
+      "verification_failed",
+      reason,
+      'Download the package and fix the failing check first: AGENTS.md ("What is left") and turbineh.json give the exact test, file:line and the suggested fix; then re-run the gate.',
+      `turbineh status ${id}`,
+    ),
   missingEnv: (name: string, id: string) =>
     productError(
       "missing_env",

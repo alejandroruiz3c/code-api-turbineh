@@ -52,6 +52,7 @@ import {
 import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
 import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
+import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
@@ -107,6 +108,25 @@ export interface BuildOutcome {
   verify?: VerifyResult;
   spec?: unknown;
   reason?: string;
+  /**
+   * What the build delivers (ADR-0037 §D1). `unverified`: status stays "failed" (never verified, never deployable)
+   * but the package is stored and handed over with the exact failure; `report_only`: only the report.
+   */
+  delivery?: Delivery;
+}
+
+/**
+ * Test-only (ADR-0037): adds one E2E test that always fails, to prove the "delivered, not verified" path end to end.
+ * Honoured only when the worker runs with TURBINEH_TEST_FLAGS=1, which is never set in production (deploy.sh refuses a
+ * production worker whose environment file sets it).
+ */
+export const FORCED_FAILURE_SPEC = "tests/e2e/turbineh-forced-failure.spec.ts";
+export const FORCED_FAILURE_MARKER = "[turbineh-test:force-e2e-failure]";
+export function forcedFailureRequested(
+  prompt: string,
+  env: Record<string, string | undefined>,
+): boolean {
+  return env.TURBINEH_TEST_FLAGS === "1" && prompt.includes(FORCED_FAILURE_MARKER);
 }
 
 const git = (dir: string, ...args: string[]) =>
@@ -152,8 +172,12 @@ export async function runBuild(
     spec?: BuildSpec;
     /** Plan only (PLAN §16.4): stop after selection and resolution and return the plan. */
     plan?: PlanRequest;
+    /** Test-only (see FORCED_FAILURE_SPEC): one E2E test that always fails. */
+    forceFailure?: boolean;
   } = {},
 ): Promise<BuildOutcome> {
+  // The test-only marker never reaches a model (it is honoured only through options.forceFailure).
+  prompt = prompt.split(FORCED_FAILURE_MARKER).join(" ").trim();
   // Client brand: validated again here (colour format, font list, logo type by magic bytes, size).
   const brand = parseBrand(options.brand);
   const t0 = performance.now();
@@ -428,6 +452,21 @@ export async function runBuild(
     "-m",
     `feat: ${spec.app_name} assembled by CODE-API-TURBINEH (build ${buildId})`,
   );
+  if (options.forceFailure) {
+    writeAt(
+      repoDir,
+      FORCED_FAILURE_SPEC,
+      `import { expect, test } from "@playwright/test";
+
+// Test-only (TURBINEH_TEST_FLAGS): proves that a failing gate still delivers the package, marked not verified.
+test("forced failure for the not-verified delivery test", () => {
+  expect(1, "forced by the TurbineH test flag").toBe(2);
+});
+`,
+    );
+    git(repoDir, "add", "-A");
+    git(repoDir, "commit", "-q", "-m", "test: forced failure (test-only flag)");
+  }
   lap("assemble", t);
   await deps.emit(buildId, "assembling", "done", {
     generatedLines: assembled.generatedLines,
@@ -768,14 +807,17 @@ export async function runBuild(
     repoDir,
     alerts: fin.alerts.length,
     remediated: fin.remediation.length,
+    delivery: fin.delivery.kind,
   });
   return {
     buildId,
     status: fin.ok ? "done" : "failed",
     repoDir,
-    metrics: finalMetrics,
+    metrics: { ...finalMetrics, delivery: fin.delivery },
     verify: fin.verify,
     spec,
+    delivery: fin.delivery,
+    ...(fin.ok ? {} : { reason: deliveryReason(fin.delivery) }),
   };
 }
 
@@ -846,14 +888,17 @@ export async function improveBuild(
     repoDir,
     alerts: fin.alerts.length,
     remediated: fin.remediation.length,
+    delivery: fin.delivery.kind,
   });
   return {
     buildId,
     status: fin.ok ? "done" : "failed",
     repoDir,
-    metrics,
+    metrics: { ...metrics, delivery: fin.delivery },
     verify: fin.verify,
     spec: parent.spec,
+    delivery: fin.delivery,
+    ...(fin.ok ? {} : { reason: deliveryReason(fin.delivery) }),
   };
 }
 

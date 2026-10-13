@@ -1,4 +1,4 @@
-import { failureLocation, type StepName, type VerifyResult } from "./verify.js";
+import { failureLocation, gateFindings, type StepName, type VerifyResult } from "./verify.js";
 
 /**
  * One failing check, read deterministically from the gate output (ADR-0037): the step, the failing test (title and
@@ -117,4 +117,25 @@ export function rerunCommand(f: GateFailure): string {
     default:
       return "pnpm install";
   }
+}
+
+/**
+ * What a finished build delivers (ADR-0037 §D1), decided by code from the gate result only:
+ *  - verified: every check passed;
+ *  - unverified: only quality checks failed (install, migrations, lint, types, tests, build) — the package is
+ *    delivered, marked `verified: false`, with the exact failure and the fix;
+ *  - report_only: a security or policy check blocks (secrets, static security errors, blocking advisories, licences)
+ *    or did not report — no runnable code leaves the sandbox, only the report.
+ */
+export type DeliveryKind = "verified" | "unverified" | "report_only";
+
+export const SECURITY_STEPS: StepName[] = ["secrets", "static", "dependencies", "licenses"];
+
+export function deliveryKind(v: VerifyResult): DeliveryKind {
+  if (v.ok && v.steps.length > 0) return "verified";
+  const securityStepFailed = v.steps.some((s) => !s.ok && SECURITY_STEPS.includes(s.name));
+  const securityFinding = gateFindings(v).some((f) => f.blocking && f.category !== "quality");
+  // Fail closed: a security scan that did not report counts as blocking.
+  const scanned = SECURITY_STEPS.every((n) => v.steps.some((s) => s.name === n));
+  return securityStepFailed || securityFinding || !scanned ? "report_only" : "unverified";
 }

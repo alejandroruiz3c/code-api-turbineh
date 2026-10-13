@@ -384,7 +384,9 @@ export async function verify(dir: string, opts: { localDb?: boolean } = {}): Pro
   if (main.code !== 0 && steps.every((x) => x.ok))
     steps.push({ name: "install", ok: false, ms: main.ms, detail: main.tail });
 
-  const licenseLines = main.tail.split("\n").filter((l) => l.startsWith("LICENSE_BAD "));
+  const licenseLines = [
+    ...new Set(main.tail.split("\n").filter((l) => l.startsWith("LICENSE_BAD "))),
+  ];
   const blockingLicenses = licenseLines
     .filter(licenseLineBlocks)
     .map((l) => l.slice("LICENSE_BAD ".length));
@@ -503,6 +505,7 @@ grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typec
 /** Shell script run inside the verification container. Each step prints `STEP <name> <exit> <ms>`. */
 const VERIFY_SCRIPT = String.raw`
 set -u
+trap 'cat /tmp/licenses.txt 2>/dev/null' EXIT
 now() { date +%s%3N; }
 step() { n=$1; shift; s=$(now); "$@" > /tmp/$n.log 2>&1; c=$?; echo "STEP $n $c $(( $(now) - s ))"; [ $c -ne 0 ] && { tail -c 1800 /tmp/$n.log; failed_lines $n; }; return $c; }
 failed_lines() { grep -E '^ +[0-9]+\) |^ *(Error|AssertionError|TypeError|ReferenceError)|^ *FAIL |❯ (tests|src)/|error TS[0-9]+|^ +[0-9]+:[0-9]+ +error ' /tmp/$1.log | head -12 | cut -c1-220 | sed "s/^/FAILED_LINE $1 /"; }
@@ -516,7 +519,7 @@ fi
 cd $W
 step migrations pnpm -s db:generate || exit 1
 [ -d drizzle ] && cp -r drizzle /src/ 2>/dev/null
-node -e "const fs=require('fs'),p=require('path');const r='node_modules/.pnpm';const re=/\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;let t=0;for(const d of fs.readdirSync(r)){const nm=p.join(r,d,'node_modules');if(!fs.existsSync(nm))continue;for(const a of fs.readdirSync(nm)){const ns=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];for(const n of ns){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));t++;const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';if(re.test(l))console.log('LICENSE_BAD '+j.name+'@'+j.version+' '+l)}catch{}}}}console.log('LICENSE_TOTAL '+t)" 2>/dev/null
+node -e "const fs=require('fs'),p=require('path');const r='node_modules/.pnpm';const re=/\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;let t=0;for(const d of fs.readdirSync(r)){const nm=p.join(r,d,'node_modules');if(!fs.existsSync(nm))continue;for(const a of fs.readdirSync(nm)){const ns=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];for(const n of ns){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));t++;const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';if(re.test(l))console.log('LICENSE_BAD '+j.name+'@'+j.version+' '+l)}catch{}}}}console.log('LICENSE_TOTAL '+t)" > /tmp/licenses.txt 2>/dev/null
 ( step lint pnpm -s lint > /tmp/out.lint ) &
 ( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
 ( step unit only_required pnpm -s test > /tmp/out.unit ) &

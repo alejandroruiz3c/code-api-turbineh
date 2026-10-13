@@ -50,6 +50,7 @@ import {
   verify,
   type VerifyResult,
 } from "@turbineh/verifier";
+import { deliveryOf, notVerifiedMarkdown, type Delivery } from "./not-verified.js";
 
 export interface FinalizeDeps {
   decider: Decider;
@@ -107,6 +108,8 @@ export interface FinalizeResult {
   acceptance: { met: number; covered: number; open: string[] };
   /** Capabilities whose integration or Backup Coder fill was removed because it could not be made green. */
   swappedOut: string[];
+  /** What is delivered and why (ADR-0037 §D1). */
+  delivery: Delivery;
   /** Failure → owner → implicated parts, for every swap decision (ADR-0037 §D2). */
   attribution: { round: number; failures: FailureAttribution[]; removed: string[] }[];
 }
@@ -380,6 +383,19 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     }
   }
   const verifyMs = Math.round(performance.now() - t);
+  // What is delivered (ADR-0037 §D1): decided by code from the final gate result. Each failure is attributed to the
+  // owner of its file and gets an exact place and a suggested fix.
+  const keptParts = (input.swap?.parts ?? []).filter(
+    (p) =>
+      !swappedOut.includes(p.capability) &&
+      !(p.kind === "glue" && glueRemoved.includes(p.capability)),
+  );
+  const delivery = deliveryOf(
+    result,
+    result.ok
+      ? []
+      : attributeFailures(input.repoDir, gateFailures(result), keptParts, failureLog(result)),
+  );
   const alerts = alertsOf(result);
   // "Improve & redeliver" is offered once: never on an improvement build, never when nothing can be fixed.
   const improvement =
@@ -438,6 +454,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     },
     criteria: report.criteria,
     gaps: facts.gaps,
+    failures: delivery.failures,
   });
   const acceptance = guide
     ? guide.criteria.map((c) => ({
@@ -462,11 +479,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     report: { writer: report.writer },
   };
   // Post-assembly parts that stayed are recorded as owners too (the package's map of who owns what).
-  const kept = (input.swap?.parts ?? []).filter(
-    (p) =>
-      !swappedOut.includes(p.capability) &&
-      !(p.kind === "glue" && glueRemoved.includes(p.capability)),
-  );
+  const kept = keptParts;
   if (kept.length > 0) {
     recordOwners(
       input.repoDir,
@@ -483,7 +496,8 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, remediation),
-    reportMarkdown(report, JSON.stringify(publicMetrics(metrics), null, 2)),
+    notVerifiedMarkdown(delivery) +
+      reportMarkdown(report, JSON.stringify(publicMetrics(metrics), null, 2)),
   );
   execFileSync("git", ["add", "-A"], { cwd: input.repoDir });
   execFileSync(
@@ -514,6 +528,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     glueRemoved,
     attribution,
     acceptance: metrics.acceptance,
+    delivery,
   };
 }
 

@@ -10,6 +10,8 @@ import {
   compatibility,
   createZip,
   detectStack,
+  deliveredUnverified,
+  deliveryLabel,
   flowResult,
   flowState,
   PACKAGE_LAYOUT,
@@ -241,6 +243,37 @@ describe("states and results", () => {
     });
     expect(failed.errors[0]).toMatchObject({ code: "generation_failed" });
     expect(failed.errors[0]?.action).toBeTruthy();
+  });
+
+  it("a delivered, not verified build is 'generated' with the exact failure — never 'verified' (ADR-0037)", () => {
+    const label = "Delivered, not verified: 10/11 checks passed";
+    const delivered = row({
+      status: "failed",
+      error: `${label}. Failing: e2e "staff pages" at tests/e2e/booking-assistant.spec.ts:174`,
+      artifact: { zipKey: "builds/b1/app.zip" },
+      metrics: {
+        verify: [
+          { name: "unit", ok: true },
+          { name: "e2e", ok: false },
+        ],
+        delivery: { kind: "unverified", label },
+      },
+    });
+    expect(deliveredUnverified(delivered)).toBe(true);
+    expect(flowState(delivered)).toBe("generated");
+    expect(deliveryLabel(delivered)).toBe(label);
+    const r = flowResult(delivered, { zipUrl: "z", manifestUrl: null });
+    expect(r.state).toBe("generated");
+    expect(r.errors[0]).toMatchObject({ code: "verification_failed" });
+    expect(r.errors[0]?.message).toMatch(/booking-assistant\.spec\.ts:174/);
+    expect(r.works).toEqual(["Unit tests"]);
+    // Report only (security block) or nothing stored: still "failed".
+    expect(
+      flowState(row({ status: "failed", metrics: { delivery: { kind: "report_only" } } })),
+    ).toBe("failed");
+    expect(
+      flowState(row({ status: "failed", metrics: { delivery: { kind: "unverified" } } })),
+    ).toBe("failed");
   });
 });
 
