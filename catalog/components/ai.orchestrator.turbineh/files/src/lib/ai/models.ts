@@ -227,7 +227,8 @@ export async function chatWithTools(
   model: string,
   messages: AgentChatMessage[],
   tools: ModelTool[],
-  opts: { maxTokens?: number; timeoutMs?: number } = {},
+  /** `toolChoice`: a tool name forces that call (the decider chose it); default "auto". */
+  opts: { maxTokens?: number; timeoutMs?: number; toolChoice?: string } = {},
 ): Promise<ToolModelReply> {
   const data = ToolChatResponse.safeParse(
     await post(
@@ -243,7 +244,9 @@ export async function chatWithTools(
                 type: "function",
                 function: { name: t.name, description: t.description, parameters: t.parameters },
               })),
-              tool_choice: "auto",
+              tool_choice: opts.toolChoice
+                ? { type: "function", function: { name: opts.toolChoice } }
+                : "auto",
             }
           : {}),
       },

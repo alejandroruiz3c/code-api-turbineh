@@ -45,10 +45,38 @@ export const appTokenDefaults = (env: Record<string, string | undefined> = proce
   requestsPerMinute: Number(env.AI_GATEWAY_RPM ?? 60),
 });
 
-const Message = z.object({
-  role: z.enum(["system", "user", "assistant"]),
-  content: z.string().max(200_000),
+const ToolName = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+const ToolCall = z.object({
+  id: z.string().min(1).max(100),
+  type: z.literal("function"),
+  function: z.object({ name: ToolName, arguments: z.string().max(20_000) }),
 });
+/** Chat messages, including the tool-calling turns of runAgent (ADR-0033); unknown fields are dropped. */
+const Message = z.discriminatedUnion("role", [
+  z.object({ role: z.enum(["system", "user"]), content: z.string().max(200_000) }),
+  z.object({
+    role: z.literal("assistant"),
+    content: z.string().max(200_000).nullable(),
+    tool_calls: z.array(ToolCall).min(1).max(8).optional(),
+  }),
+  z.object({
+    role: z.literal("tool"),
+    tool_call_id: z.string().min(1).max(100),
+    content: z.string().max(200_000),
+  }),
+]);
+const Tool = z.object({
+  type: z.literal("function"),
+  function: z.object({
+    name: ToolName,
+    description: z.string().max(2000).optional(),
+    parameters: z.record(z.string(), z.unknown()).optional(),
+  }),
+});
+const ToolChoice = z.union([
+  z.enum(["auto", "none", "required"]),
+  z.object({ type: z.literal("function"), function: z.object({ name: ToolName }) }),
+]);
 
 /** Only the fields the orchestrator uses are forwarded; anything else is dropped. */
 export function chatBody(body: unknown, cfg: GatewayConfig): Record<string, unknown> {
@@ -59,17 +87,21 @@ export function chatBody(body: unknown, cfg: GatewayConfig): Record<string, unkn
       temperature: z.number().min(0).max(2).optional(),
       max_tokens: z.number().int().positive().optional(),
       response_format: z.object({ type: z.enum(["json_object", "text"]) }).optional(),
+      tools: z.array(Tool).max(32).optional(),
+      tool_choice: ToolChoice.optional(),
       stream: z.literal(false).optional(),
     })
     .parse(body);
   if (!list(cfg.AI_GATEWAY_CHAT_MODELS).includes(b.model))
     throw new GatewayError(400, "Model not allowed");
+  const tools = b.tools && b.tools.length > 0 ? b.tools : null;
   return {
     model: b.model,
     messages: b.messages,
     temperature: b.temperature ?? 0.2,
     max_tokens: Math.min(b.max_tokens ?? 1200, cfg.AI_GATEWAY_MAX_OUTPUT_TOKENS),
     ...(b.response_format ? { response_format: b.response_format } : {}),
+    ...(tools ? { tools, tool_choice: b.tool_choice ?? "auto" } : {}),
   };
 }
 

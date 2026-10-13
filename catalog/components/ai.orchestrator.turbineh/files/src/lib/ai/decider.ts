@@ -74,22 +74,16 @@ async function decide(
   return Decision.parse(await res.json());
 }
 
-export async function decideRoute(
-  plan: Plan,
-  routes: readonly Route[],
-  tools: readonly ToolSpec[],
-  requestPreview: string,
-): Promise<RouteDecision> {
+/** Gateway settings; throws DeciderUnavailable when the app has no token (the caller then uses its defaults). */
+function gateway(): { url: string; token: string } {
   const cfg = Env.parse(process.env);
   if (!cfg.TURBINEH_AI_TOKEN) throw new DeciderUnavailable("TURBINEH_AI_TOKEN is not set");
-  const state = {
-    request: requestPreview.slice(0, 2000),
-    intent: plan.intent,
-    subtasks: plan.subtasks,
-    needs_reasoning: plan.needs_reasoning,
-    needs_long_context: plan.needs_long_context,
-  };
-  const questions: Record<string, Question> = {
+  return { url: cfg.TURBINEH_AI_URL.replace(/\/$/, ""), token: cfg.TURBINEH_AI_TOKEN };
+}
+
+/** The route and safety questions, shared by orchestrate() and runAgent(). */
+function routeQuestions(routes: readonly Route[]): Record<string, Question> {
+  return {
     route: choice(
       "Which model route fits this request best (cheapest that can do it well)?",
       Object.fromEntries(routes.map((r) => [r.name, r.description])),
@@ -98,16 +92,29 @@ export async function decideRoute(
       "The request asks for something harmful, deceptive, illegal or clearly outside the purpose of a business assistant.",
     ),
   };
+}
+
+export async function decideRoute(
+  plan: Plan,
+  routes: readonly Route[],
+  tools: readonly ToolSpec[],
+  requestPreview: string,
+): Promise<RouteDecision> {
+  const cfg = gateway();
+  const state = {
+    request: requestPreview.slice(0, 2000),
+    intent: plan.intent,
+    subtasks: plan.subtasks,
+    needs_reasoning: plan.needs_reasoning,
+    needs_long_context: plan.needs_long_context,
+  };
+  const questions = routeQuestions(routes);
   if (tools.length > 0)
     questions.tool = choice("Which tool, if any, must be used to fulfil the request?", {
       none: "No tool: answer directly.",
       ...Object.fromEntries(tools.map((t) => [t.name, t.description])),
     });
-  const res = await decide(
-    { url: cfg.TURBINEH_AI_URL.replace(/\/$/, ""), token: cfg.TURBINEH_AI_TOKEN },
-    state,
-    questions,
-  );
+  const res = await decide(cfg, state, questions);
   const { route: r, unsafe: u, tool: t } = res.answers;
   const route = r?.type === "choice" ? r.choice : (routes[0]?.name ?? "");
   const unsafe = u?.type === "noul" ? u.noul : 0;
@@ -121,6 +128,85 @@ export async function decideRoute(
       ...(r?.type === "choice" ? { route: r.probabilities } : {}),
       unsafe,
       ...(t?.type === "choice" ? { tool: t.probabilities } : {}),
+    },
+    model: res.model,
+    inputTokens: res.usage.input_tokens,
+    outputTokens: res.usage.output_tokens,
+  };
+}
+
+/** The `next` option that means "answer the person now, without a tool" (runAgent). */
+export const REPLY_ACTION = "reply";
+
+export interface AgentStepInput {
+  /** The person's latest message. */
+  request: string;
+  /** Recent turns, plain text, oldest first. */
+  conversation: string;
+  /** Tool calls and results of this turn so far (`tool(args) → result`). */
+  toolResults: string[];
+}
+
+export interface AgentStepDecision {
+  /** A tool name or REPLY_ACTION. */
+  next: string;
+  /** Calibrated confidence of `next` (0–1); thresholds are applied by runAgent in code. */
+  confidence: number;
+  /** Only on the first step of a turn (batched with `next` in the same request). */
+  route?: string;
+  unsafe?: number;
+  probabilities: Record<string, unknown>;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
+ * runAgent's per-step decision: which action comes next — one of the tools or a plain reply — as one Choice over the
+ * tools the app offers. On the first step of a turn the route and safety questions travel in the same request. The
+ * open model then only writes the reply or the arguments of the chosen tool.
+ */
+export async function decideAgentStep(
+  input: AgentStepInput,
+  tools: readonly ToolSpec[],
+  routes: readonly Route[] | null,
+): Promise<AgentStepDecision> {
+  const cfg = gateway();
+  const state = {
+    latest_message: input.request.slice(0, 2000),
+    conversation: input.conversation.slice(-3000) || "none",
+    tool_results_this_turn: input.toolResults.join("\n").slice(-3000) || "none",
+  };
+  const questions: Record<string, Question> = {
+    ...(routes ? routeQuestions(routes) : {}),
+    next: choice(
+      "Which action should the assistant take next to serve the person correctly? Use a tool when it provides a fact the answer needs (availability, prices, records, policies) or does what the person asked; reply when this turn's tool results already answer, or when the person must first give or confirm details.",
+      {
+        [REPLY_ACTION]: "Answer the person now, without using a tool.",
+        ...Object.fromEntries(
+          tools.map((t) => [
+            t.name,
+            t.irreversible
+              ? `${t.description} (the person confirms before it runs)`
+              : t.description,
+          ]),
+        ),
+      },
+    ),
+  };
+  const res = await decide(cfg, state, questions);
+  const { route: r, unsafe: u, next: n } = res.answers;
+  const offered = new Set([REPLY_ACTION, ...tools.map((t) => t.name)]);
+  const valid = n?.type === "choice" && offered.has(n.choice);
+  return {
+    next: valid ? n.choice : REPLY_ACTION,
+    confidence: valid ? n.confidence : 0,
+    ...(r?.type === "choice" ? { route: r.choice } : {}),
+    ...(u?.type === "noul" ? { unsafe: u.noul } : {}),
+    probabilities: {
+      ...(r?.type === "choice" ? { route: r.probabilities } : {}),
+      ...(u?.type === "noul" ? { unsafe: u.noul } : {}),
+      ...(n?.type === "choice" ? { next: n.probabilities } : {}),
     },
     model: res.model,
     inputTokens: res.usage.input_tokens,

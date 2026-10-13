@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { UserFacingError } from "@/security/errors";
-import { decideRoute, DeciderUnavailable } from "./decider";
+import { decideAgentStep, DeciderUnavailable, REPLY_ACTION, type AgentStepInput } from "./decider";
 import {
   chatWithTools,
   routes,
@@ -28,9 +28,11 @@ import {
  *
  *   1. AI Safety Pack: input size, prompt-injection refusal, per-user/workspace limits (same as orchestrate()).
  *   2. TurbineH orchestration decides the route (which open model) and refuses unsafe requests.
- *   3. Tool loop: the model may only act through the tools it is given. Arguments are validated with each tool's
- *      Zod schema; unknown tools and invalid arguments go back to the model as errors; a step limit and timeouts
- *      bound every run.
+ *   3. Tool loop: at every step TurbineH orchestration decides the next action — which tool, or a reply — and the
+ *      open model writes only that (the chosen tool's arguments, or the reply). When the decision is not confident
+ *      enough, or no decider is configured, the model sees every tool and chooses itself. The model may only act
+ *      through the tools it is given. Arguments are validated with each tool's Zod schema; unknown tools and invalid
+ *      arguments go back to the model as errors; a step limit and timeouts bound every run.
  *   4. Irreversible tools (create, move, cancel, send, pay…) never run on the model's say-so: their `prepare` step
  *      validates against real data and returns a summary; the person must explicitly confirm it in their next
  *      message (or with a button) before code executes the tool.
@@ -154,6 +156,11 @@ export const PENDING_TTL_MS = 30 * 60_000;
 export const MAX_STATE_MESSAGES = 30;
 const DEFAULT_TOOL_TIMEOUT_MS = 10_000;
 const UNSAFE_THRESHOLD = 0.5;
+/**
+ * At or above this confidence the decider's next action is followed: the model writes only the chosen tool's
+ * arguments, or only the reply. Below it (or without a decider) the model sees every tool and chooses itself.
+ */
+export const NEXT_ACTION_THRESHOLD = 0.5;
 
 const AGENT_RULES =
   "You are an assistant inside a business application. You can only act through the tools you are given. " +
@@ -224,19 +231,27 @@ function toolContent(result: unknown): { text: string; flags: string[] } {
 
 /** I/O of the agent loop, injectable for unit tests. */
 export interface AgentIO {
+  /** One model call. `toolChoice` forces that tool (the decider chose it); no tools = a plain reply. */
   complete: (
     model: string,
     messages: AgentChatMessage[],
     tools: ModelTool[],
     timeoutMs: number,
+    toolChoice?: string,
   ) => Promise<ToolModelReply>;
-  /** Route + unsafe probability; throws DeciderUnavailable when no decider is configured. */
+  /**
+   * Next action (a tool or REPLY_ACTION) with its confidence; on the first step of a turn also the route and the
+   * unsafe probability. Throws DeciderUnavailable when no decider is configured.
+   */
   decide: (
-    input: string,
+    input: AgentStepInput,
     tools: ToolSpec[],
+    first: boolean,
   ) => Promise<{
-    route: string;
-    unsafe: number;
+    next: string;
+    confidence: number;
+    route?: string;
+    unsafe?: number;
     probabilities: Record<string, unknown>;
     inputTokens: number;
     outputTokens: number;
@@ -257,26 +272,9 @@ export interface AgentIO {
 }
 
 const defaultIO: AgentIO = {
-  complete: (model, messages, tools, timeoutMs) =>
-    chatWithTools(model, messages, tools, { timeoutMs }),
-  decide: async (input, tools) => {
-    const d = await decideRoute(
-      {
-        intent: "act on the app's data with tools on behalf of the user",
-        subtasks: [
-          input.slice(0, 200) || "answer",
-          ...tools.slice(0, 5).map((t) => `maybe use ${t.name}`),
-        ],
-        output: "text",
-        needs_reasoning: tools.length > 0,
-        needs_long_context: false,
-      },
-      routes(),
-      tools,
-      input,
-    );
-    return d;
-  },
+  complete: (model, messages, tools, timeoutMs, toolChoice) =>
+    chatWithTools(model, messages, tools, { timeoutMs, ...(toolChoice ? { toolChoice } : {}) }),
+  decide: (input, tools, first) => decideAgentStep(input, tools, first ? routes() : null),
   limits: checkLimits,
   record: async (req, usage, route, model, decider, status, started, decision, flags) => {
     await recordUsage(req, usage, route, model, decider, status, started);
@@ -372,16 +370,32 @@ export async function runAgent(
       irreversible: Boolean(t.irreversible),
     }));
     let chosenRoute: string | null = null;
+    // What the decider sees: the latest message, recent turns as plain text and this turn's tool results.
+    const conversation = state.messages
+      .filter(
+        (m): m is { role: "user" | "assistant"; content: string } =>
+          (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
+      )
+      .slice(-8)
+      .map((m) => `${m.role === "user" ? "Person" : "Assistant"}: ${m.content.slice(0, 600)}`)
+      .join("\n");
+    const toolResults: string[] = [];
+    const stepInput = (): AgentStepInput => ({ request: input.text, conversation, toolResults });
+    const nextActions: { next: string; confidence: number; followed: boolean }[] = [];
+    let deciderUp = true;
+    let next: { next: string; confidence: number } | null = null;
     try {
-      const d = await io.decide(input.text, specs);
+      const d = await io.decide(stepInput(), specs, true);
       usage.inputTokens += d.inputTokens;
       usage.outputTokens += d.outputTokens;
-      decision = d.probabilities;
-      chosenRoute = d.route;
-      if (d.unsafe >= UNSAFE_THRESHOLD)
+      decision = { ...d.probabilities, steps: nextActions };
+      chosenRoute = d.route ?? null;
+      next = { next: d.next, confidence: d.confidence };
+      if ((d.unsafe ?? 0) >= UNSAFE_THRESHOLD)
         throw new AiSafetyError("This request can't be processed. Please rephrase it.");
     } catch (err) {
       if (err instanceof AiSafetyError) throw err;
+      deciderUp = false;
       deciderName = err instanceof DeciderUnavailable ? "none" : "unavailable";
       flags.push("decider-unavailable");
     }
@@ -421,6 +435,9 @@ export async function runAgent(
         flags.push(...content.flags);
         state.messages.push({ role: "assistant", content: null, tool_calls: [call] });
         state.messages.push({ role: "tool", tool_call_id: call.id, content: content.text });
+        toolResults.push(`${tool.name}(confirmed) → ${content.text.slice(0, 600)}`);
+        // The first decision was taken before this action ran: ask again with its result.
+        next = null;
       } else {
         flags.push("confirmation-not-given");
       }
@@ -442,13 +459,38 @@ export async function runAgent(
       .join("\n\n");
     const modelTools = req.tools.map(toModelTool);
     for (let step = 0; step < maxSteps; step++) {
+      if (deadline - Date.now() <= 1000) break;
+      // 4a · The decider chooses the next action (a tool or a reply); the model then writes only that.
+      if (!next && deciderUp) {
+        try {
+          const d = await io.decide(stepInput(), specs, false);
+          usage.inputTokens += d.inputTokens;
+          usage.outputTokens += d.outputTokens;
+          next = { next: d.next, confidence: d.confidence };
+        } catch {
+          deciderUp = false;
+          flags.push("decider-unavailable");
+        }
+      }
+      const follow = next && next.confidence >= NEXT_ACTION_THRESHOLD ? next.next : null;
+      const forced = follow && follow !== REPLY_ACTION && tools.has(follow) ? follow : undefined;
+      if (next) nextActions.push({ ...next, followed: Boolean(follow) });
+      next = null;
+      // 4b · Below the threshold or without a decider, the model sees every tool and chooses itself.
+      const offered =
+        follow === REPLY_ACTION
+          ? []
+          : forced
+            ? modelTools.filter((t) => t.name === forced)
+            : modelTools;
       const remaining = deadline - Date.now();
       if (remaining <= 1000) break;
       const reply = await io.complete(
         chosen.model,
         [{ role: "system", content: system }, ...state.messages],
-        modelTools,
+        offered,
         remaining,
+        forced,
       );
       usage.calls += 1;
       usage.inputTokens += reply.inputTokens;
@@ -457,7 +499,7 @@ export async function runAgent(
         const text = reply.text.trim() || "Sorry, I could not answer that. Could you rephrase it?";
         return await finish("answered", text.slice(0, 4000));
       }
-      const calls = reply.toolCalls.slice(0, 4);
+      const calls = reply.toolCalls.slice(0, forced ? 1 : 4);
       state.messages.push({ role: "assistant", content: reply.text || null, tool_calls: calls });
       let confirmation: string | null = null;
       for (const call of calls) {
@@ -528,6 +570,9 @@ export async function runAgent(
         const content = toolContent(result);
         flags.push(...content.flags);
         state.messages.push({ role: "tool", tool_call_id: call.id, content: content.text });
+        toolResults.push(
+          `${call.function.name.slice(0, 64)}(${call.function.arguments.slice(0, 300)}) → ${content.text.slice(0, 600)}`,
+        );
       }
       if (confirmation) {
         return await finish(

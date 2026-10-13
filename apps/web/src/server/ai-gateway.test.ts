@@ -74,6 +74,7 @@ describe("TurbineH AI gateway", () => {
     const sent = JSON.parse(String(calls[0]?.init.body)) as Record<string, unknown>;
     expect(sent.max_tokens).toBe(500);
     expect(sent).not.toHaveProperty("tools");
+    expect(sent).not.toHaveProperty("tool_choice");
     expect(sent).not.toHaveProperty("user");
     expect(recorded).toEqual([
       {
@@ -84,6 +85,63 @@ describe("TurbineH AI gateway", () => {
         outputTokens: 7,
       },
     ]);
+  });
+
+  it("forwards the tool-calling turns of runAgent: tools, a forced tool choice, tool calls and results", async () => {
+    const { d, calls } = deps();
+    const tool = {
+      type: "function",
+      function: {
+        name: "check_availability",
+        description: "Free times",
+        parameters: { type: "object", properties: { date: { type: "string" } } },
+        strict: true,
+      },
+    };
+    const messages = [
+      { role: "system", content: "rules" },
+      { role: "user", content: "anything tomorrow?" },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "c1",
+            type: "function",
+            function: { name: "check_availability", arguments: '{"date":"2026-10-15"}' },
+          },
+        ],
+      },
+      { role: "tool", tool_call_id: "c1", content: '{"times":["10:00"]}' },
+    ];
+    const res = await handleGateway(
+      req(
+        chat({
+          messages,
+          tools: [tool],
+          tool_choice: { type: "function", function: { name: "check_availability" } },
+        }),
+      ),
+      "chat",
+      d,
+    );
+    expect(res.status).toBe(200);
+    const sent = JSON.parse(String(calls[0]?.init.body)) as Record<string, unknown>;
+    expect(sent.messages).toEqual(messages);
+    const { strict: _dropped, ...fn } = tool.function;
+    expect(sent.tools).toEqual([{ type: "function", function: fn }]);
+    expect(sent.tool_choice).toEqual({
+      type: "function",
+      function: { name: "check_availability" },
+    });
+    // Malformed tool turns are rejected before anything is sent.
+    const bad = await handleGateway(
+      req(chat({ messages: [{ role: "tool", content: "x" }] })),
+      "chat",
+      d,
+    );
+    expect(bad.status).toBe(400);
+    expect(calls).toHaveLength(1);
   });
 
   it("only allows documented models, no streaming and bounded requests", async () => {
