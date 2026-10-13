@@ -392,8 +392,9 @@ export async function processRepoIntegration(deps: IntegrationDeps): Promise<boo
   const job = await claimRepoIntegration(deps.db, deps.workerId);
   if (!job) return false;
   const work = mkdtempSync(join(tmpdir(), "turbineh-int-"));
+  const opened: OpenedPr = {};
   try {
-    await runJob(job, deps, work);
+    await runJob(job, deps, work, opened);
   } catch (e) {
     const error =
       e instanceof JobError
@@ -415,7 +416,18 @@ export async function processRepoIntegration(deps: IntegrationDeps): Promise<boo
       integrationId: job.id,
       code: error.code,
       error: e instanceof Error ? e.message.slice(0, 300) : String(e).slice(0, 300),
+      cause:
+        e instanceof Error && e.cause
+          ? String((e.cause as { code?: string }).code ?? e.cause).slice(0, 200)
+          : undefined,
     });
+    // A pull request that is already open must not keep saying "verification running".
+    if (opened.gh && opened.number)
+      await opened
+        .gh("PATCH", `/repos/${job.repo}/pulls/${opened.number}`, {
+          body: `${opened.body ?? ""}\n\n> ❌ **The verification stopped before finishing** (${error.message}) → ${error.action} This pull request stays a draft.`,
+        })
+        .catch(() => undefined);
     await updateRepoIntegration(deps.db, job.id, { status: "failed", phase: "failed", error });
   } finally {
     rmSync(work, { recursive: true, force: true });
@@ -423,7 +435,18 @@ export async function processRepoIntegration(deps: IntegrationDeps): Promise<boo
   return true;
 }
 
-async function runJob(job: RepoIntegrationRow, deps: IntegrationDeps, work: string): Promise<void> {
+interface OpenedPr {
+  gh?: GitHub;
+  number?: number;
+  body?: string;
+}
+
+async function runJob(
+  job: RepoIntegrationRow,
+  deps: IntegrationDeps,
+  work: string,
+  opened: OpenedPr,
+): Promise<void> {
   const t0 = Date.now();
   const { db } = deps;
   const phase = (p: string, extra: Parameters<typeof updateRepoIntegration>[2] = {}) =>
@@ -682,12 +705,14 @@ async function runJob(job: RepoIntegrationRow, deps: IntegrationDeps, work: stri
     glue: glueUsed,
     ...(flowUrl ? { flowUrl } : {}),
   };
+  const runningBody = prBody({ ...bodyInput, verification: { state: "running" } });
   const { pr, draft, draftUnsupported } = await openPr(gh, job.repo, {
     title: prTitle(adaptation),
     head: branch,
     base,
-    body: prBody({ ...bodyInput, verification: { state: "running" } }),
+    body: runningBody,
   });
+  Object.assign(opened, { gh, number: pr.number, body: runningBody });
   const integrated = {
     id: job.id,
     state: "integrated",

@@ -38,9 +38,25 @@ export function github(token: string | null, fetchImpl: Fetch = fetch): GitHub {
     "X-GitHub-Api-Version": "2022-11-28",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   });
+  /**
+   * Network errors (connection reset, DNS, timeouts) are retried with backoff when repeating is safe: reads,
+   * updates and content-addressed writes (blobs, trees, commits); creating a ref or a PR is not repeated blindly.
+   */
+  const send = async (method: string, path: string, init: RequestInit): Promise<Response> => {
+    const safe =
+      method !== "POST" || /\/git\/(blobs|trees|commits)$/.test(path) || path === "/graphql";
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fetchImpl(`https://api.github.com${path}`, init);
+      } catch (e) {
+        if (!safe || attempt >= 3) throw e;
+        await new Promise((r) => setTimeout(r, [2000, 5000, 10000][attempt] ?? 10000));
+      }
+    }
+  };
   const call = async <T>(method: string, path: string, body?: unknown): Promise<T | null> => {
     for (let attempt = 0; ; attempt++) {
-      const res = await fetchImpl(`https://api.github.com${path}`, {
+      const res = await send(method, path, {
         method,
         headers: { ...headers(), ...(body ? { "Content-Type": "application/json" } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -88,10 +104,10 @@ export function github(token: string | null, fetchImpl: Fetch = fetch): GitHub {
   };
   const fn = call as GitHub;
   fn.raw = (path: string, accept: string) =>
-    fetchImpl(`https://api.github.com${path}`, {
+    send("GET", path, {
       headers: headers(accept),
       redirect: "follow",
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(180_000),
     });
   return fn;
 }
