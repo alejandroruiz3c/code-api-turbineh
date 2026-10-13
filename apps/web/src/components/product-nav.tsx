@@ -6,8 +6,7 @@ const LINKS = [
   { href: "/discover", label: "Discover" },
   { href: "/flows/new", label: "New flow" },
   { href: "/activity", label: "Activity" },
-  { href: "/cli", label: "CLI" },
-  { href: "/docs", label: "API" },
+  { href: "/use", label: "How to use" },
 ];
 
 /** Product-area navigation (no sign-in: access is by invitation token, ADR-0030). */
