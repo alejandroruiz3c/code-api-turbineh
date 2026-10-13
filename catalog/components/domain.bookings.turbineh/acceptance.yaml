@@ -29,5 +29,5 @@
   covers: ["physiotherapist|stylist|therapist|staff member|chosen|any (one|available)"]
 - test: "tests/e2e/booking-assistant.spec.ts › a malicious prompt injection input is refused with a 400 error: the booking assistant does not process it"
   covers: ["injection|jailbreak|manipulat"]
-- test: "tests/e2e/booking-assistant.spec.ts › a user who sends a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
+- test: "tests/e2e/booking-assistant.spec.ts › a user who sends the assistant a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
   covers: ["abuse|input limit|character limit|too long|oversiz|exceed"]

@@ -177,7 +177,7 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     expect((await injected.json()).error).toContain("can't be processed");
   });
 
-  test("a user who sends a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse", async ({
+  test("a user who sends the assistant a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse", async ({
     request,
   }) => {
     const big = await request.post("/api/assistant", { data: { message: "x".repeat(5000) } });

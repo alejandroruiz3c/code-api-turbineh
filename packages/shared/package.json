@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./criterion-proof-pairs": {
+      "types": "./dist/criterion-proof-pairs.d.ts",
+      "import": "./dist/criterion-proof-pairs.js"
     }
   },
   "scripts": {
