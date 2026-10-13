@@ -49,7 +49,12 @@ export default async function AccessPage({
       </form>
       <p className="mt-8 text-xs text-muted">
         Not invited yet?{" "}
-        <a className="text-teal underline" href="https://api.turbineh.com">
+        <a
+          className="text-teal underline"
+          href="https://api.turbineh.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Join the waitlist
         </a>
       </p>

@@ -146,6 +146,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Web: links that leave the product (landing waitlist, pull requests, live deployments, Vercel and Neon token pages, ZIP downloads) open in a new tab with `rel="noopener noreferrer"`; internal navigation and the GitHub/Vercel connect flows stay in the same tab. `src/external-links.test.ts` fails on any new external `<a>` without it.
 - Acceptance criteria are "met" only when a test exercises them (ADR-0039 §4): generated CRUD tests no longer prove
   refusals, other roles or features they do not touch (production build `f195341c` showed "a viewer cannot edit a
   note", "invite a teammate", "audit log" and "search / tag filter" as met by create/edit tests); the report's mapping

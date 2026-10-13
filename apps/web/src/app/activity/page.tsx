@@ -106,7 +106,7 @@ export default async function ActivityPage() {
                         <a
                           href={i.pullRequest.url}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className={i.pullRequest.verified ? "text-teal" : "text-amber"}
                         >
                           {i.pullRequest.repo} ↗{" "}

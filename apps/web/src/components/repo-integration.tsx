@@ -131,7 +131,7 @@ export function RepoIntegration({ planId, defaultRepo }: { planId: string; defau
               <a
                 href={job.pull_request.url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="rounded-full bg-teal px-5 py-2 text-sm font-semibold text-navy"
               >
                 Open pull request #{job.pull_request.number} ↗

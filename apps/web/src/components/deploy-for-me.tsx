@@ -118,7 +118,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
       <a
         href={live.url}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy"
       >
         ● Live — open your app ↗
@@ -249,7 +249,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                           className="text-teal underline"
                           href="https://vercel.com/account/settings/tokens"
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                         >
                           create one
                         </a>{" "}
@@ -308,7 +308,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
                           className="text-teal underline"
                           href="https://console.neon.tech/app/settings/api-keys"
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                         >
                           create one
                         </a>{" "}
