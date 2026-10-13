@@ -47,7 +47,48 @@ export interface Combination {
  * found missing (bench/frontiers/ANALYSIS.md §12, G1), each with the request it comes from and the parameters a
  * compiler would write for it. `verify:recipe <name>` runs one; `--all` runs them all.
  */
+const STAGES = ["thrown", "trimmed", "bisque_fired", "glazed", "glaze_fired", "ready", "sold"];
+const stageLabel = (k: string) => (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+
 export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
+  {
+    // Kilnwise (learning round, tracker): stages with date and person, per-stage limits, history not editable.
+    recipe: "tracker",
+    with: ["domain.workflow.turbineh"],
+    prompt:
+      'Build "Kilnwise", a production tracker for a ceramics studio. Visual identity: terracotta `#C2522D`, sand ' +
+      "`#EFE6DA`, dark brown text. Each piece goes through stages (thrown, trimmed, bisque fired, glazed, glaze fired, " +
+      "ready, sold) with the date and the person for every change. Alerts when a piece has been in a stage longer than " +
+      "the stage's limit. Every stage change is recorded and cannot be edited afterwards.",
+    params: {
+      "domain.workflow.turbineh": {
+        workflows: [
+          {
+            key: "piece",
+            label: "Piece",
+            plural: "Pieces",
+            initial: "thrown",
+            dueDate: false,
+            createRoles: ["*"],
+            states: STAGES.map((key) => ({
+              key,
+              label: stageLabel(key),
+              limitHours:
+                { thrown: 48, trimmed: 72, bisque_fired: 120, glazed: 72, glaze_fired: 96 }[key] ??
+                null,
+              final: key === "sold",
+            })),
+            transitions: STAGES.slice(0, -1).map((from, i) => ({
+              from: [from],
+              to: STAGES[i + 1] as string,
+              label: `Mark ${stageLabel(STAGES[i + 1] as string).toLowerCase()}`,
+              roles: ["*"],
+            })),
+          },
+        ],
+      },
+    },
+  },
   {
     // Fieldnote (learning round, saas-crud): roles owner/editor/viewer, invitations, audit log visible to owners.
     recipe: "saas-crud",

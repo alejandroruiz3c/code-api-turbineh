@@ -6684,6 +6684,196 @@
       "details": "https://software.turbineh.com/v1/capabilities/deploy.github-pull-request.turbineh"
     },
     {
+      "id": "domain.audit-log.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "domain",
+      "package": "pkg:generic/turbineh/domain.audit-log.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "domain.audit-log"
+      ],
+      "does": "Append-only audit log per workspace: every change made through generated entities and domain components (who, when, action, record, field-level before/after with sensitive values redacted) is recorded by the audit() hook; an owner-visible page with filters (who, action, record type, date range), pagination and CSV export; the database refuses updates and deletes of entries.",
+      "doesNot": "Does not record reads, page views or changes made by hand-written code that does not call audit(); no retention or archiving job",
+      "title": "Append-only audit log with an owner page, filters and CSV export",
+      "summary": "Records every change made in a workspace — who, when, which action, which record and the field-level before/after values, with passwords and tokens redacted — through one hook, audit(), that generated entities and domain components already call. Owners (any role with view_audit) see the log at /dashboard/audit with filters by person, action, record type and date range, pagination and CSV export. Entries are append-only: no code updates or deletes them and a database trigger refuses it. It does not record reads or changes made by code that never calls audit().",
+      "useCases": [
+        "Every change to notes, requests or records is recorded and visible to the workspace owner",
+        "Compliance: who changed a client's data and when, exportable as CSV",
+        "History of invitations, role changes, status transitions and uploads in one place"
+      ],
+      "useWhen": [
+        "The request says changes are recorded, audited, traceable or visible to owners/admins",
+        "A regulated or multi-person workspace needs to know who did what"
+      ],
+      "avoidWhen": [
+        "Analytics of page views or product events (use an analytics tool)",
+        "Per-record status history shown to everyone (use domain.workflow.turbineh, which keeps its own history)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "One audit() hook replaced in place (src/lib/audit.ts)",
+          "gain": "Generated entities and every domain component record changes with no extra code",
+          "cost": "Hand-written actions must call audit() themselves"
+        },
+        {
+          "choice": "Append-only enforced by a database trigger",
+          "gain": "Entries cannot be altered even with direct SQL from the app's role",
+          "cost": "Retention needs a migration that drops the trigger deliberately"
+        },
+        {
+          "choice": "Stored in the app database",
+          "gain": "Same backups, same tenant filter, zero setup",
+          "cost": "Very high write volumes would need a separate log store"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/audit/params.json",
+          "default": "pageSize 50, redact password/secret/token/hash, export 5,000",
+          "description": "Page size, redacted field fragments, ignored fields and export bound (validated at start-up)"
+        },
+        {
+          "name": "src/server/role-policy.ts (view_audit)",
+          "default": "owner, admin",
+          "description": "Which roles see the log; domain.membership-access.turbineh maps it from the request's roles"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "audit",
+          "signature": "audit({ organizationId, actorId, actorEmail?, action, subjectType, subjectId?, summary?, before?, after? }) → Promise<void>",
+          "where": "src/lib/audit.ts"
+        },
+        {
+          "name": "diffChanges",
+          "signature": "diffChanges(before, after, { redact, ignore }) → { field, before, after }[]",
+          "where": "src/audit/diff.ts"
+        },
+        {
+          "name": "listAuditEvents",
+          "signature": "listAuditEvents(organizationId, filters, { limit, offset }) → { rows, total }",
+          "where": "src/audit/query.ts"
+        },
+        {
+          "name": "Audit page",
+          "signature": "/dashboard/audit?actor=&action=&subject=&from=YYYY-MM-DD&to=YYYY-MM-DD&page=",
+          "where": "src/app/dashboard/audit/page.tsx"
+        },
+        {
+          "name": "CSV export",
+          "signature": "GET /dashboard/audit/export?<same filters> → text/csv (recorded as audit.exported)",
+          "where": "src/app/dashboard/audit/export/route.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Record a change made by your own server action",
+          "where": "src/lib/audit.ts",
+          "how": "After the change, `await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: \"invoice.sent\", subjectType: \"Invoice\", subjectId: id, before, after })`."
+        },
+        {
+          "what": "Change who can read the log",
+          "where": "src/server/role-policy.ts",
+          "how": "Grant or remove the view_audit action for a role; the page and the export both check can(role, \"view_audit\")."
+        },
+        {
+          "what": "Hide another sensitive field",
+          "where": "src/audit/params.json",
+          "how": "Add a fragment of its name to redactFields; its values are stored as [redacted]."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16, drizzle-orm with PostgreSQL (plpgsql trigger), zod 4",
+        "recipes": [
+          "saas-crud",
+          "client-portal",
+          "internal-tool",
+          "projects",
+          "tracker",
+          "analytics-dashboard"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.workflow.turbineh",
+          "storage.private-uploads.turbineh"
+        ],
+        "notes": "Replaces the base no-op src/lib/audit.ts; the trigger is applied by scripts/migrate.ts from src/db/sql/."
+      },
+      "security": [
+        "Every read filters by the member's workspace; the page and CSV export require can(role, 'view_audit')",
+        "Sensitive values (password, secret, token, hash by default) are redacted before they are stored",
+        "Entries are append-only: no update/delete code path and a BEFORE UPDATE OR DELETE trigger",
+        "Exporting the log is itself recorded"
+      ],
+      "guarantees": [
+        {
+          "claim": "Owners see each change with who and when, and export it",
+          "test": "tests/e2e/audit-log.spec.ts › the owner sees each change in the audit log with who made it and when, and exports it as CSV"
+        },
+        {
+          "claim": "Filters by action and date",
+          "test": "tests/e2e/audit-log.spec.ts › the owner filters the audit log by action and by date"
+        },
+        {
+          "claim": "Entries cannot be changed or deleted, even with SQL",
+          "test": "tests/e2e/audit-log.spec.ts › audit entries cannot be changed or deleted, not even directly in the database"
+        },
+        {
+          "claim": "Workspaces are isolated",
+          "test": "tests/e2e/audit-log.spec.ts › another workspace never sees this workspace's audit entries"
+        },
+        {
+          "claim": "Sensitive values are never stored",
+          "test": "tests/unit/audit.test.ts › never stores sensitive values (passwords, tokens) in the log"
+        },
+        {
+          "claim": "Only changed fields are recorded",
+          "test": "tests/unit/audit.test.ts › records only the fields that changed, with before and after values"
+        }
+      ],
+      "limits": [
+        "Records only changes that go through audit() (generated entities and TurbineH domain components do)",
+        "No retention job: entries are kept until a deliberate migration removes them",
+        "Values longer than 300 characters are shortened in the log"
+      ],
+      "example": "import { audit } from \"@/lib/audit\";\nawait audit({\n  organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email,\n  action: \"note.updated\", subjectType: \"Note\", subjectId: note.id,\n  before: previous, after: { ...previous, title: \"New title\" },\n});\n",
+      "keywords": [
+        "audit log",
+        "audit trail",
+        "activity log",
+        "change log",
+        "history",
+        "who changed what",
+        "compliance",
+        "append-only",
+        "immutable",
+        "tamper-proof",
+        "owner visible",
+        "filters",
+        "csv export",
+        "record changes",
+        "before and after"
+      ],
+      "synonyms": {
+        "audit log": [
+          "audit trail",
+          "activity log",
+          "change history",
+          "change log",
+          "registro de auditoría"
+        ],
+        "owner": [
+          "admin",
+          "account owner",
+          "workspace owner"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/domain.audit-log.turbineh"
+    },
+    {
       "id": "domain.bookings.turbineh",
       "version": "0.1.0",
       "status": "approved",
@@ -6915,6 +7105,443 @@
         ]
       },
       "details": "https://software.turbineh.com/v1/capabilities/domain.bookings.turbineh"
+    },
+    {
+      "id": "domain.membership-access.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "domain",
+      "package": "pkg:generic/turbineh/domain.membership-access.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "domain.membership-access"
+      ],
+      "does": "Workspace membership from the request: roles and permissions mapped from the spec (owner/editor/viewer, manager/member, staff/client) applied by the one role policy every page and action uses; invitations by email with a role (hashed single-use link, expiry, accept flow for new or existing accounts with requireSession()); role changes and removal that never leave a workspace without an owner; and per-record access scopes (company, project, shop) so restricted members see only their records.",
+      "doesNot": "Does not do SSO, SCIM or multiple workspaces per invitation link; staff-only sign-up apps must allow the invited emails (ADMIN_EMAILS)",
+      "title": "Workspace roles from the request, invitations by email and per-record access scopes",
+      "summary": "Turns the roles a request names (owner/editor/viewer, manager/member, staff/client) into the one role policy every page, action and component already calls (can(role, action)); owners and managers invite people by email with a role through a single-use, expiring link that works for new and existing accounts; roles change and members leave without ever leaving a workspace without an owner; and per-record scopes (company, project, shop) make restricted members see only their own records in uploads, workflow items and analytics. It does not do SSO, SCIM or one link for several workspaces.",
+      "useCases": [
+        "Teams invite teammates by email as owner, editor or viewer; viewers cannot edit",
+        "Staff invite each client, who only ever sees their own company",
+        "Members see only the projects or shops they belong to; managers see all"
+      ],
+      "useWhen": [
+        "The request names roles beyond owner/admin/member or says who cannot do what",
+        "People join by invitation, or each client/project/shop must see only its own records"
+      ],
+      "avoidWhen": [
+        "Single-user apps or staff-only back offices where ADMIN_EMAILS is enough (src/lib/staff.ts)",
+        "Enterprise SSO/SCIM provisioning is required"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Replace src/server/role-policy.ts from params",
+          "gain": "Every existing can() call follows the request's roles with no other change",
+          "cost": "Roles are per workspace, not per record"
+        },
+        {
+          "choice": "Own invitation table with hashed single-use tokens",
+          "gain": "Deterministic, testable accept flow; links never stored in clear",
+          "cost": "Not better-auth's built-in invitation API"
+        },
+        {
+          "choice": "One scope kind per app (company, project or shop)",
+          "gain": "A single, simple rule shared by every component",
+          "cost": "Nested scopes need custom code"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/membership/params.json",
+          "default": "owner/admin/member, 7-day invitations, no scope",
+          "description": "Roles and permissions, default role, invitable roles, invitation lifetime, per-record scope kind (validated at start-up)"
+        },
+        {
+          "name": "BETTER_AUTH_URL",
+          "default": "(required by the app)",
+          "description": "Origin used in invitation links"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "can",
+          "signature": "can(role, action: read|create|update|delete|manage_members|view_audit|see_all_scopes) → boolean",
+          "where": "src/server/role-policy.ts"
+        },
+        {
+          "name": "visibleScopes",
+          "signature": "visibleScopes({ userId, organizationId, role }) → Promise<string[] | \"all\">; canSeeScope(ctx, scopeId | null); scopeOptions(ctx)",
+          "where": "src/server/record-access.ts"
+        },
+        {
+          "name": "invite",
+          "signature": "invite(actor, { email, role, scopeId }) → Promise<{ link }> — emails the link (logged without a provider)",
+          "where": "src/membership/service.ts"
+        },
+        {
+          "name": "acceptInvitation",
+          "signature": "acceptInvitation({ userId, email }, token) → Promise<organizationId>",
+          "where": "src/membership/service.ts"
+        },
+        {
+          "name": "changeRole",
+          "signature": "changeRole(actor, memberId, role | null)",
+          "where": "src/membership/service.ts"
+        },
+        {
+          "name": "Scopes",
+          "signature": "createScope(actor, name); addToScope(actor, scopeId, email); listScopes(organizationId)",
+          "where": "src/membership/service.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/members (invite, roles, scopes), /invite/[token] (accept; server action uses requireSession())",
+          "where": "src/app/dashboard/members/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add or change a role, or what a role may do",
+          "where": "src/membership/params.json",
+          "how": "Edit roles[].can; every page and action that calls can() follows. Keep an owner role with manage_members."
+        },
+        {
+          "what": "File a record under a scope (company, project, shop)",
+          "where": "src/server/record-access.ts",
+          "how": "Store a scope_id on the record; list with `visibleScopes(ctx)` (\"all\" or ids) and check single records with `canSeeScope(ctx, row.scopeId)`."
+        },
+        {
+          "what": "Act for someone who is signed in but not a member yet",
+          "where": "src/server/authz.ts",
+          "how": "Start the server action with `await requireSession()` (returns { userId, email }), never with a bare session read."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16, better-auth organization plugin (member table), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "saas-crud",
+          "client-portal",
+          "projects",
+          "analytics-dashboard",
+          "internal-tool",
+          "tracker"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.audit-log.turbineh",
+          "storage.private-uploads.turbineh",
+          "domain.workflow.turbineh",
+          "data.analytics-import.turbineh"
+        ],
+        "notes": "Replaces the base src/server/role-policy.ts and src/server/record-access.ts. In staff-only sign-up apps, invited emails must be on ADMIN_EMAILS."
+      },
+      "security": [
+        "Only the SHA-256 of an invitation token is stored; links are single use (row lock), expire and work only for the invited email",
+        "Inviting, changing roles and managing scopes require manage_members; owners are granted only by owners",
+        "Nobody changes their own role and a workspace always keeps an owner",
+        "Scope membership is checked on the server; restricted members never see unscoped or other scopes' records"
+      ],
+      "guarantees": [
+        {
+          "claim": "Invitations by email with a role, emailed",
+          "test": "tests/e2e/membership.spec.ts › the owner invites a teammate by email with a role and the invitation email is sent"
+        },
+        {
+          "claim": "Invitees create an account from the link and join with the invited role",
+          "test": "tests/e2e/membership.spec.ts › the invited person creates an account from the link, accepts and joins with the invited role"
+        },
+        {
+          "claim": "Roles without manage_members cannot invite or change roles",
+          "test": "tests/e2e/membership.spec.ts › a member whose role cannot manage the workspace cannot invite people or change roles"
+        },
+        {
+          "claim": "Links are single use and bound to the invited email",
+          "test": "tests/e2e/membership.spec.ts › an invitation link works only once and only for the invited email"
+        },
+        {
+          "claim": "Restricted members see only their own scope",
+          "test": "tests/e2e/membership.spec.ts › a member restricted to their own company sees only that company, never the others"
+        },
+        {
+          "claim": "Roles from the request decide every permission",
+          "test": "tests/unit/authz.test.ts › applies the request's roles: each role can do exactly what its params list, nothing else"
+        },
+        {
+          "claim": "The last owner can never be removed or demoted",
+          "test": "tests/unit/membership.test.ts › never removes the last owner and never lets you change your own role"
+        }
+      ],
+      "limits": [
+        "One scope kind per app; a member can belong to several scopes of that kind",
+        "Invitation links are for one workspace and one email address",
+        "In staff-only sign-up apps the invited email must be allowlisted (ADMIN_EMAILS)"
+      ],
+      "example": "import { can, requireMember } from \"@/server/authz\";\nimport { visibleScopes } from \"@/server/record-access\";\nconst ctx = await requireMember();\nif (!can(ctx.role, \"update\")) throw new UserFacingError(\"Viewers cannot edit notes.\");\nconst scopes = await visibleScopes(ctx); // \"all\" or the ids of the member's companies\n",
+      "keywords": [
+        "roles",
+        "permissions",
+        "invitations",
+        "invite by email",
+        "team members",
+        "workspace members",
+        "owner",
+        "editor",
+        "viewer",
+        "manager",
+        "staff",
+        "client",
+        "read-only",
+        "access control",
+        "rbac",
+        "per-record access",
+        "company",
+        "project members",
+        "shop managers",
+        "multi-tenant",
+        "accept invitation"
+      ],
+      "synonyms": {
+        "invitation": [
+          "invite",
+          "invite link",
+          "join link",
+          "invitación"
+        ],
+        "scope": [
+          "company",
+          "client company",
+          "project",
+          "shop",
+          "store",
+          "branch",
+          "location",
+          "account"
+        ],
+        "viewer": [
+          "read-only",
+          "reader",
+          "guest"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/domain.membership-access.turbineh"
+    },
+    {
+      "id": "domain.workflow.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "domain",
+      "package": "pkg:generic/turbineh/domain.workflow.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "domain.workflow"
+      ],
+      "does": "Status workflows from the request for any record kind (requests, loans, pieces, tasks): states, initial state, allowed transitions with the roles that may make them (role keys, creator, any member), optional due dates, row-locked state changes, an immutable history of every change with who and when (database-enforced), and alerts for records stuck in a state longer than its limit or overdue; pages per workflow (grouped by state), per record (transitions, history) and an overview of what needs attention.",
+      "doesNot": "Does not send notifications by itself (jobs.scheduled.turbineh emails digests), branch on custom conditions or run parallel states",
+      "title": "Status workflows with role-gated transitions, immutable history and stuck alerts",
+      "summary": "Moves records of any kind — requests, loans, ceramic pieces, tasks — through the states a request describes. Each workflow lists its states (with an optional time limit), the initial state, the allowed transitions and which roles may make each one (\"creator\" and \"*\" included). Every change is re-checked on the server under a row lock and written to an immutable history (who, when, from → to, note) that the database itself refuses to alter. Records stuck in a state longer than its limit, or past their due date, are flagged on the record, the list and an overview. It does not send notifications by itself (jobs.scheduled.turbineh emails digests) or model parallel states.",
+      "useCases": [
+        "Document requests that go pending → received → approved, changed only by staff",
+        "Equipment loans requested by staff and approved or rejected by a manager, with due dates and overdue flags",
+        "A ceramics piece moving through production stages with the date and person of every change and per-stage limits",
+        "Tasks that move between statuses with a full timeline"
+      ],
+      "useWhen": [
+        "The request lists statuses or stages and who may change them",
+        "Every change must be recorded (who, when) and must not be editable afterwards",
+        "Records that stay too long in a stage must be highlighted"
+      ],
+      "avoidWhen": [
+        "Free-form tags or labels with no order (use a field on the entity)",
+        "Long-running automated processes with timers and branches (use a job queue)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Definitions as data (src/workflow/params.json)",
+          "gain": "States, transitions, roles and limits from the request; reviewable and editable without code",
+          "cost": "Conditions beyond role, creator and current state need code in service.ts"
+        },
+        {
+          "choice": "Own workflow_items table linked by subjectId",
+          "gain": "Works with any entity or none, one engine for every kind of record",
+          "cost": "A record's own status column (if any) is not the source of truth; read the workflow item"
+        },
+        {
+          "choice": "History append-only in the database",
+          "gain": "Changes cannot be rewritten, even with SQL from the app",
+          "cost": "Corrections are new transitions, never edits"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/workflow/params.json",
+          "default": "one demo workflow (open → in progress → done)",
+          "description": "Workflows from the request: states, initial, transitions with roles, limits, due dates, who may create (validated at start-up)"
+        },
+        {
+          "name": "src/server/role-policy.ts",
+          "default": "owner, admin, member",
+          "description": "Role keys used in transitions; domain.membership-access.turbineh maps them from the request"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "createItem",
+          "signature": "createItem(actor, { workflow, title, description?, subjectId?, scopeId?, dueAt? }) → Promise<id>",
+          "where": "src/workflow/service.ts"
+        },
+        {
+          "name": "transition",
+          "signature": "transition(actor, id, to, note?) → Promise<newState> — throws UserFacingError when not allowed",
+          "where": "src/workflow/service.ts"
+        },
+        {
+          "name": "history",
+          "signature": "history(actor, id) → { fromState, toState, actorEmail, note, createdAt }[] (oldest first)",
+          "where": "src/workflow/service.ts"
+        },
+        {
+          "name": "listItems",
+          "signature": "listItems(actor, workflow, { state? }) → items with stuckHours and overdue",
+          "where": "src/workflow/service.ts"
+        },
+        {
+          "name": "attentionItems",
+          "signature": "attentionItems(organizationId | null, now?) → stuck or overdue items (for alerts and digests)",
+          "where": "src/workflow/service.ts"
+        },
+        {
+          "name": "Rules",
+          "signature": "allowedTransitions(wf, state, { role, isCreator }); transitionError(wf, from, to, actor); stuckHours(wf, state, since, now); isOverdue(wf, state, dueAt, now)",
+          "where": "src/workflow/engine.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/workflow (overview + needs attention), /dashboard/workflow/[key] (by state, create), /dashboard/workflow/[key]/[id] (transitions, history)",
+          "where": "src/app/dashboard/workflow/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a state, a transition or a time limit",
+          "where": "src/workflow/params.json",
+          "how": "Edit the workflow; it is validated at start-up and the unit tests check it. Roles are workspace role keys, \"creator\" or \"*\"."
+        },
+        {
+          "what": "Follow an entity of the app through a workflow",
+          "where": "src/workflow/service.ts",
+          "how": "When the entity is created call `createItem(ctx, { workflow: \"loan\", title, subjectId: row.id })`; link to /dashboard/workflow/loan/<item id> from its page."
+        },
+        {
+          "what": "Add a condition to a transition (e.g. an item cannot be lent twice for overlapping dates)",
+          "where": "src/workflow/service.ts (transition)",
+          "how": "Inside the locked transaction, check the condition and throw a UserFacingError; add a unit or E2E test."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16, drizzle-orm with PostgreSQL (plpgsql trigger), zod 4",
+        "recipes": [
+          "client-portal",
+          "internal-tool",
+          "tracker",
+          "projects",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.audit-log.turbineh",
+          "ui.kanban.turbineh",
+          "jobs.scheduled.turbineh"
+        ],
+        "notes": "Uses src/server/record-access.ts for per-record scopes and src/lib/audit.ts for the audit log (both no-ops without their components)."
+      },
+      "security": [
+        "Every state change is re-checked on the server against the definition, the current state and the person's role",
+        "Changes run under a row lock: two people cannot move the same record from the same state at once",
+        "History is append-only (no update/delete code path, database trigger)",
+        "Reads are filtered by workspace and by per-record scope"
+      ],
+      "guarantees": [
+        {
+          "claim": "New records start in the initial state and their creation is in the history",
+          "test": "tests/e2e/workflow.spec.ts › a new record starts in the initial status and its history records who created it and when"
+        },
+        {
+          "claim": "Only allowed transitions are offered; each change is recorded with who and when",
+          "test": "tests/e2e/workflow.spec.ts › only the allowed transitions are offered, and each change is recorded with who and when"
+        },
+        {
+          "claim": "The server refuses transitions the workflow does not define",
+          "test": "tests/e2e/workflow.spec.ts › a status change the workflow does not allow is refused by the server"
+        },
+        {
+          "claim": "History cannot be changed or deleted, even with SQL",
+          "test": "tests/e2e/workflow.spec.ts › status history cannot be changed or deleted, not even directly in the database"
+        },
+        {
+          "claim": "Records over their state's limit are flagged",
+          "test": "tests/e2e/workflow.spec.ts › a record that stays in a status longer than its limit is flagged as stuck"
+        },
+        {
+          "claim": "Transitions are role-gated (role keys, creator)",
+          "test": "tests/unit/workflow.test.ts › offers only the transitions of the current state that the person's role allows"
+        }
+      ],
+      "limits": [
+        "One current state per record; no parallel or timed automatic transitions",
+        "Lists show up to 500 records per workflow",
+        "Stuck and overdue are computed when pages load; emails need jobs.scheduled.turbineh"
+      ],
+      "example": "import { createItem, transition } from \"@/workflow/service\";\nconst ctx = await requireMember();\nconst id = await createItem(ctx, { workflow: \"loan\", title: \"Sony FX3 · 14–16 Oct\", dueAt: new Date(\"2026-10-16\") });\nawait transition(ctx, id, \"approved\", \"Approved for the shoot\");   // throws if the role cannot approve\n",
+      "keywords": [
+        "workflow",
+        "status",
+        "state machine",
+        "stages",
+        "transitions",
+        "approval",
+        "approve",
+        "reject",
+        "pipeline",
+        "role-gated",
+        "status history",
+        "timeline",
+        "audit trail",
+        "stuck",
+        "sla",
+        "time limit",
+        "overdue",
+        "requests",
+        "loans",
+        "tasks",
+        "production tracker",
+        "pieces"
+      ],
+      "synonyms": {
+        "state": [
+          "status",
+          "stage",
+          "step",
+          "phase",
+          "estado"
+        ],
+        "transition": [
+          "status change",
+          "move",
+          "approval",
+          "rejection",
+          "check-in"
+        ],
+        "stuck": [
+          "over the limit",
+          "too long in a stage",
+          "stale",
+          "sla breach"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/domain.workflow.turbineh"
     },
     {
       "id": "email.parsing.mailparser",
