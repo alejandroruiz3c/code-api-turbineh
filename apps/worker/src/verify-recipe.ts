@@ -3,7 +3,8 @@
  * [--assemble-only]` — assembles one recipe template with a minimal spec (no models involved) and runs the full
  * verification gate on it in the local sandbox. Used to check catalogue templates before they ship; prints the gate
  * steps and findings as JSON. `--local-db`: no Postgres container and no DATABASE_URL for migrations and E2E (the
- * package's zero-setup database must carry them). `--assemble-only`: print the assembled directory and stop.
+ * package's zero-setup database must carry them). `--assemble-only`: print the assembled directory and stop. Domain
+ * components the prompt names (e.g. bookings, ADR-0033) are detected by code and assembled as a build would.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -11,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assemble } from "@turbineh/assembler";
-import { extractPalette, type BuildSpec } from "@turbineh/compiler";
+import { detectDomains, extractPalette, type BuildSpec } from "@turbineh/compiler";
 import { gateFindings, verify } from "@turbineh/verifier";
 
 const argv = process.argv.slice(2);
@@ -47,8 +48,12 @@ const spec: BuildSpec = {
   site: null,
   palette: extractPalette(prompt),
 };
+// Domain components named by the prompt (detected by code, as in a build): their component joins the selection.
+const domains = prompt ? detectDomains(prompt, recipe, spec.app_name) : [];
+for (const d of domains) if (!withIds.includes(d.component)) withIds.push(d.component);
 assemble({
   buildId: "recipe-check",
+  domains,
   recipesDir: join(repoRoot, "catalog/recipes"),
   recipe,
   outDir,

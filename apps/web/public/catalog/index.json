@@ -327,10 +327,10 @@
     },
     {
       "id": "ai.orchestrator.turbineh",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "status": "approved",
       "category": "ai",
-      "package": "pkg:generic/turbineh/ai.orchestrator.turbineh@0.2.0",
+      "package": "pkg:generic/turbineh/ai.orchestrator.turbineh@0.3.0",
       "license": "Apache-2.0",
       "provides": [
         "ai.orchestrator"
@@ -338,7 +338,7 @@
       "does": "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace",
       "doesNot": "Does not host models or store prices; does not let app code call model providers directly (TurbineH rule turbineh.ai-direct-model-call)",
       "title": "TurbineH AI orchestrator and agent runtime (orchestrate, embed, runAgent)",
-      "summary": "Every AI call of the app goes through here. orchestrate() answers or returns structured output; embed() builds knowledge-base vectors; runAgent() is the tool-calling runtime: the model may only act through typed tools, irreversible tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. The model endpoint is the TurbineH AI gateway or any OpenAI-compatible endpoint configured by environment variables.",
+      "summary": "Every AI call of the app goes through here. orchestrate() answers or returns structured output; embed() builds knowledge-base vectors; runAgent() is the tool-calling runtime: the model may only act through typed tools, irreversible tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. TurbineH orchestration decides each turn's first action (which tool, or a reply) and the model writes only its arguments or the reply. The model endpoint is the TurbineH AI gateway or any OpenAI-compatible endpoint configured by environment variables.",
       "useCases": [
         "Booking/appointment assistant that checks availability and books, moves or cancels (with domain.bookings.turbineh)",
         "Support assistant that looks up orders or tickets and escalates to a person",
