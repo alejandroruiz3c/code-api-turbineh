@@ -349,6 +349,11 @@ export default function UsePage() {
               </li>
             ))}
           </ul>
+          <p className="mt-3 text-sm text-ice-2">
+            <span className="text-cream">Delivered, not verified: N/M checks passed.</span> If a
+            check does not pass, you still receive the package, with the exact failures and the
+            suggested fix shown first; it is never labelled verified.
+          </p>
           <p className="mt-2 text-xs text-muted">
             Nothing is reported as ready while credentials or checks are missing.
           </p>
