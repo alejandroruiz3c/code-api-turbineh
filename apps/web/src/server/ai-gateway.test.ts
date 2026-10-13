@@ -128,8 +128,17 @@ describe("TurbineH AI gateway", () => {
     expect(res.status).toBe(200);
     const sent = JSON.parse(String(calls[0]?.init.body)) as Record<string, unknown>;
     expect(sent.messages).toEqual(messages);
-    const { strict: _dropped, ...fn } = tool.function;
-    expect(sent.tools).toEqual([{ type: "function", function: fn }]);
+    // Unknown tool fields (here `strict`) are dropped.
+    expect(sent.tools).toEqual([
+      {
+        type: "function",
+        function: {
+          name: "check_availability",
+          description: "Free times",
+          parameters: tool.function.parameters,
+        },
+      },
+    ]);
     expect(sent.tool_choice).toEqual({
       type: "function",
       function: { name: "check_availability" },
