@@ -155,6 +155,21 @@ test.describe.serial("storefront", () => {
     await expect(page.getByRole("cell", { name: "US Standard" })).toBeVisible();
   });
 
+  test("the admin updates a product's price and the public catalogue shows it at once", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByLabel("Name", { exact: true }).fill("Price Test Mug");
+    await page.getByLabel(/^Price/).fill("10.00");
+    await page.getByLabel("Description").fill("A mug used to check price updates.");
+    await page.getByRole("button", { name: "Create product" }).click();
+    await page.getByRole("link", { name: "Price Test Mug", exact: true }).click();
+    await page.getByLabel(/^Price/).fill("12.50");
+    await page.getByRole("button", { name: "Save product" }).click();
+    await page.goto("/shop/price-test-mug");
+    await expect(page.getByTestId("price")).toContainText("12.50");
+  });
+
   test.describe("shopper", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
     // The Stripe API is the local mock (tests/e2e/mocks/STRIPE_API_BASE.mjs); Stripe's hosted page is answered here.
@@ -162,6 +177,33 @@ test.describe.serial("storefront", () => {
       await page.route("https://checkout.stripe.com/**", (route) =>
         route.fulfill({ body: "Stripe Checkout (mock)", contentType: "text/plain" }),
       );
+    });
+
+    test("shoppers search the catalogue by product name: only matching products are listed", async ({
+      page,
+    }) => {
+      await page.goto("/shop");
+      await page
+        .getByRole("searchbox")
+        .or(page.getByLabel("Search products"))
+        .first()
+        .fill("linen");
+      await page.getByRole("button", { name: "Search" }).click();
+      await expect(page.getByRole("link", { name: /Linen Shirt/ }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: /Cotton Tee/ })).toHaveCount(0);
+    });
+
+    test("a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal", async ({
+      page,
+    }) => {
+      await page.goto("/shop/linen-shirt");
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await page.goto("/cart");
+      await expect(page.getByLabel("Quantity of Linen Shirt")).toHaveValue("1");
+      await expect(page.getByTestId("cart-subtotal")).toContainText("49.90");
+      await page.getByLabel("Quantity of Linen Shirt").fill("3");
+      await page.getByRole("button", { name: "Update", exact: true }).click();
+      await expect(page.getByTestId("cart-subtotal")).toContainText("149.70");
     });
 
     test("pays with Stripe Checkout: amounts computed on the server, the signed webhook marks the order paid, decrements stock, logs the confirmation email and empties the cart", async ({
