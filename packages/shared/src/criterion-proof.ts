@@ -11,7 +11,7 @@
  */
 
 const NEGATION =
-  /\b(cannot|can ?not|can't|couldn't|not|never|no longer|unable|denie[sd]|deny|denial|refuse[sd]?|refusal|reject(s|ed)?|forbid(s|den)?|block(s|ed)?|prevent(s|ed)?|disallow(s|ed)?|unauthori[sz]ed|without (permission|access)|non-[a-z]+|only)\b/i;
+  /\b(cannot|can ?not|can't|couldn't|not|never|no longer|unable|denie[sd]|deny|denial|refuse[sd]?|refusal|reject(s|ed)?|forbid(s|den)?|block(s|ed)?|prevent(s|ed)?|disallow(s|ed)?|unauthori[sz]ed|unauthenticated|without (permission|access)|non-[a-z]+|only)\b/i;
 
 /** Role and actor words; "user" is generic (anyone) and never constrains a test. */
 const ROLES = [
@@ -44,7 +44,11 @@ const GENERIC = new Set(
     "which who will with would you your must able any all each every also just via upon after before same one " +
     "user users person people someone system app application page screen view see sees seen show shows shown display " +
     "displayed visible appear appears list correct correctly successful successfully success work works working " +
-    "time new data information item items file files use uses using"
+    "time new data information item items file files use uses using " +
+    // Narrative and UI mechanics of Given/When/Then criteria (ADR-0043): how a person gets there, not what is checked.
+    "click button press tap enter bar area section specific specifically particular certain relevant correspond " +
+    "accordingly immediately proceed complet process receiv brows navigat initiat attempt already current initial " +
+    "reflect contain detail level statu databas redirect authenticat consol get gets got"
   ).split(" "),
 );
 
@@ -70,15 +74,47 @@ const SYNONYMS: Record<string, string> = {
   export: "export",
   upload: "import",
   import: "import",
+  // ADR-0043: same action or object, different words (learning-round criteria vs the tests that prove them).
+  chang: "edit",
+  adjust: "edit",
+  increas: "edit",
+  decreas: "edit",
+  refus: "refus",
+  reject: "refus",
+  deny: "refus",
+  deni: "refus",
+  prevent: "refus",
+  block: "refus",
+  doubl: "overlap",
+  conflict: "overlap",
+  clash: "overlap",
+  purchas: "order",
+  buy: "order",
+  paid: "pay",
+  sent: "send",
+  subtotal: "total",
+  shopper: "shop",
+  shopp: "shop",
+  term: "search",
+  query: "search",
+  keyword: "search",
+  calculat: "comput",
+  cancellation: "cancel",
+  appointment: "book",
+  reservation: "book",
+  reserv: "book",
 };
 
+const SUFFIX = /(ment|ing|ed|es|s)$/;
+
 function stem(w: string): string {
-  const s = w
-    .replace(/(ies)$/, "y")
-    .replace(/(ment|ing|ed|es|s)$/, "")
+  // "-ment"/"-ing" under another suffix too, so "payments" and "payment", "decremented" and "decrement",
+  // "bookings" and "booking" share a stem.
+  const once = w.replace(/(ies)$/, "y").replace(SUFFIX, "");
+  const s = (once.length > 6 ? once.replace(/(ment|ing)$/, "") : once)
     .replace(/([bdglmnprt])\1$/, "$1")
     .replace(/(.{3,})e$/, "$1");
-  return SYNONYMS[s] ?? SYNONYMS[w] ?? s;
+  return SYNONYMS[s] ?? SYNONYMS[once] ?? SYNONYMS[w] ?? s;
 }
 
 function words(text: string): string[] {

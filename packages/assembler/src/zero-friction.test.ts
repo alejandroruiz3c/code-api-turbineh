@@ -21,6 +21,9 @@ const SHOP_CRITERIA = [
   "Given an authenticated admin user is in the admin area, when they update a product's stock level, then the change must be reflected in the public catalogue.",
 ];
 
+/** Not proven by the storefront's shipped tests as written (see the first test). */
+const OPEN_SHOP_CRITERIA = [SHOP_CRITERIA[0], SHOP_CRITERIA[4]];
+
 const spec = (recipe: BuildSpec["recipe"], criteria: string[]): BuildSpec => ({
   recipe,
   out_of_scope_reason: null,
@@ -50,12 +53,16 @@ function build(recipe: BuildSpec["recipe"], criteria: string[]): string {
 }
 
 describe("zero-friction packages (ADR-0035)", () => {
-  it("proves every criterion of the bench shop spec with a test the storefront ships", () => {
+  it("proves the bench shop spec's criteria that a storefront test exercises, and no others", () => {
     const statuses = acceptanceStatus(
       SHOP_CRITERIA,
       coverageRules({ recipesDir, recipe: "storefront", selected: [] }),
     );
-    expect(statuses.filter((s) => s.status === "open").map((s) => s.criterion)).toEqual([]);
+    // Hand-written rules go through proofVerdict (ADR-0043): the search test does not check a "filter", and the
+    // payment test's title and assertions never name the "product" whose stock is decremented. Precision first.
+    expect(statuses.filter((s) => s.status === "open").map((s) => s.criterion)).toEqual(
+      OPEN_SHOP_CRITERIA,
+    );
     expect(statuses[6]?.tests).toContain(
       "tests/e2e/shop.spec.ts › the admin updates a product's stock and the public catalogue reflects it at once",
     );
@@ -81,13 +88,15 @@ describe("zero-friction packages (ADR-0035)", () => {
         { criterion: extra, evidence: "Strict type checking and production build", verified: true },
       ],
     });
-    expect(guide?.criteria.slice(0, 7).every((c) => c.status === "met" && c.test)).toBe(true);
+    const proven = guide?.criteria.slice(0, 7).filter((c) => !OPEN_SHOP_CRITERIA.includes(c.text));
+    expect(proven?.length).toBe(5);
+    expect(proven?.every((c) => c.status === "met" && c.test)).toBe(true);
     const open = guide?.criteria[7];
     expect(open?.status).toBe("open");
     expect(open?.testFile).toBe("tests/e2e/shop.spec.ts");
-    expect(guide?.left[0]?.where).toContain("tests/e2e/shop.spec.ts");
+    expect(guide?.left.some((l) => l.where.includes("tests/e2e/shop.spec.ts"))).toBe(true);
     const acceptance = readFileSync(join(dir, "ACCEPTANCE.md"), "utf8");
-    expect(acceptance).toContain("1 of 8 criteria are open");
+    expect(acceptance).toContain("3 of 8 criteria are open");
     expect(acceptance).toContain(
       "the admin updates a product's stock and the public catalogue reflects it at once",
     );
