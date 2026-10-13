@@ -291,6 +291,16 @@ describe("turbineh build — empty folder → complete application", () => {
     expect(calls).toContain(`POST /v1/plans/${ID}/generate`);
   });
 
+  it("does not stop for parts TurbineH writes itself (gap notices are what the build asked for)", async () => {
+    needsApproval = [
+      "No verified component covers observability.logging: TurbineH writes it and verifies it with the rest.",
+    ];
+    states = ["planned"];
+    const r = await build(ctx(["online shop with Stripe checkout"]));
+    expect(r.exitCode).toBe(EXIT.ok);
+    expect(calls).toContain(`POST /v1/plans/${ID}/generate`);
+  });
+
   it("exit 5 when generation fails, nothing written", async () => {
     states = ["planning", "failed"];
     const r = await build(ctx(["online shop with Stripe checkout"]));

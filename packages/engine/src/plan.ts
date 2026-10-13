@@ -57,6 +57,17 @@ export interface PlanInput {
 
 const native = (purl: string) => purl.startsWith("pkg:generic/turbineh");
 
+const GAP_NOTICE = "No verified component covers ";
+const gapNotice = (g: string) =>
+  `${GAP_NOTICE}${g}: TurbineH writes it and verifies it with the rest.`;
+
+/**
+ * A decision that only says TurbineH will write (and verify with the same gate) a part no verified component covers.
+ * `turbineh build` (ADR-0036) treats these as accepted by asking for the build; incompatibilities, policy limits and
+ * adaptation conflicts still need a person.
+ */
+export const isGapNotice = (decision: string) => decision.startsWith(GAP_NOTICE);
+
 /** What `apply` will change in the project: the package folder plus dependencies and example configuration. */
 export function plannedFiles(
   slug: string,
@@ -163,9 +174,7 @@ export function buildPlan(input: PlanInput): Plan {
   const policy = input.preferences?.changePolicy;
   const needsApproval = [
     ...compat.incompatibilities.map((i) => `Incompatibility: ${i}`),
-    ...input.gaps.map(
-      (g) => `No verified component covers ${g}: TurbineH writes it and verifies it with the rest.`,
-    ),
+    ...input.gaps.map(gapNotice),
     ...(policy && !policy.allowDependencyChanges && deps.added.length > 0
       ? [
           `Adds ${deps.added.length} dependencies, but this project's policy does not allow new dependencies.`,

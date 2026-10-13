@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
-import { readZip } from "@turbineh/engine";
+import { isGapNotice, readZip } from "@turbineh/engine";
 import type { FlowResult, Plan } from "@turbineh/shared";
 import { adaptLocally } from "./adapt-local.js";
 import { api, sleep } from "./api.js";
@@ -55,14 +55,17 @@ interface PlanResponse {
 
 export type Target = "app" | "repo";
 
-/** Files that do not make a folder "a project": docs, agent settings, git and editor metadata, the spec itself. */
-const IGNORABLE =
-  /^(\.git|\.turbineh|\.claude|\.cursor|\.codex|\.agents|\.vscode|\.idea|\.DS_Store|\.gitignore|\.gitattributes|\.editorconfig|\.env(\..*)?|LICENSE(\..*)?|.*\.(md|mdx|txt))$/i;
+/** What makes a folder another kind of project (code TurbineH must not be dropped next to). */
+const OTHER_PROJECT =
+  /^(pyproject\.toml|requirements\.txt|setup\.py|Pipfile|go\.mod|Cargo\.toml|Gemfile|pom\.xml|build\.gradle(\.kts)?|composer\.json|mix\.exs|deno\.json|.*\.(py|go|rs|java|kt|rb|php|cs|swift|ts|tsx|js|jsx|mjs|cjs)|src|app|lib|pages)$/i;
 
-/** app = empty folder (complete application), repo = a JavaScript/TypeScript project, null = something else. */
+/**
+ * repo = a JavaScript/TypeScript project (package.json); app = a folder without code (empty, or docs, the spec, agent
+ * settings, logs): the complete application goes there; null = another kind of project.
+ */
 export function targetOf(cwd: string): Target | null {
   if (existsSync(join(cwd, "package.json"))) return "repo";
-  return readdirSync(cwd).every((e) => IGNORABLE.test(e)) ? "app" : null;
+  return readdirSync(cwd).some((e) => OTHER_PROJECT.test(e)) ? null : "app";
 }
 
 /** The specification: the arguments, `@file` / `--spec file`, or `-` for stdin. */
@@ -107,7 +110,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
   if (!target)
     fail(
       "not_a_project",
-      "This folder has files but no package.json: TurbineH does not know where the code goes.",
+      "This folder holds code of another kind of project (no package.json): TurbineH does not mix its app into it.",
       "Run it in an empty folder (complete application) or in the root of a JavaScript/TypeScript project.",
     );
   try {
@@ -232,17 +235,18 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
     }
     if (r.state === "planned") {
       const p = r.plan;
-      if (p?.needsApproval.length && c.flags.approve !== true) {
+      const decisions = (p?.needsApproval ?? []).filter((d) => !isGapNotice(d));
+      if (decisions.length && c.flags.approve !== true) {
         return {
           ok: false,
           command: "build",
           state: "planned",
           exitCode: EXIT.decision,
-          data: { id, needsApproval: p.needsApproval, plan: p },
-          lines: p.needsApproval.map((n) => `  ${yellow("?")} ${n}`),
+          data: { id, needsApproval: decisions, plan: p },
+          lines: decisions.map((n) => `  ${yellow("?")} ${n}`),
           error: {
             code: "needs_approval",
-            message: `The plan has ${p.needsApproval.length} decision(s) for a person.`,
+            message: `The plan has ${decisions.length} decision(s) for a person.`,
             action: "Show them to the user; if they agree, continue with --approve.",
             resume: `turbineh resume ${id} --approve`,
           },
@@ -253,7 +257,8 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
         await api(`/v1/plans/${id}/generate`, {
           method: "POST",
           workspace: ws,
-          body: { approve: c.flags.approve === true },
+          // Asking for the build accepts that TurbineH writes the parts no component covers (same gate).
+          body: { approve: c.flags.approve === true || decisions.length === 0 },
         }).catch((err: unknown) => {
           if (!(err instanceof CliError) || !/already|conflict/.test(err.error.code)) throw err;
         });

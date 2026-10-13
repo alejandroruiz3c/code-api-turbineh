@@ -48,6 +48,7 @@ import {
   type Phase,
   type PipelineDeps,
 } from "./pipeline.js";
+import { isGapNotice } from "@turbineh/engine";
 import { catalogEntries, storeCapabilityPackage, type PlanRequest } from "./product.js";
 import type { BuildSpec } from "@turbineh/compiler";
 import { trackedTokens } from "@turbineh/engine";
@@ -199,14 +200,15 @@ async function handle(build: BuildRow): Promise<void> {
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
   // `turbineh build` (ADR-0036): a plan asked to continue straight into generation goes back to the queue at once
-  // when nobody has to decide anything — no second request, no client poll interval in between.
+  // when nobody has to decide anything (TurbineH writing an uncovered part is what the build asked for) — no second
+  // request, no client poll interval in between.
   const planned = outcome.metrics.plan as Plan | undefined;
   if (
     mode === "plan" &&
     build.options.autoGenerate === true &&
     outcome.status === "done" &&
     planned &&
-    planned.needsApproval.length === 0 &&
+    planned.needsApproval.every(isGapNotice) &&
     build.owner_id &&
     (await costToday(db)).eur < DAILY_CAP_EUR
   ) {
