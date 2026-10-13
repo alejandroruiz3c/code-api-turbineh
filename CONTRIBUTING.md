@@ -28,3 +28,13 @@ Every recipe template and native component must be **agent-ready** ([ADR-0032](d
 
 Check a template end to end in the local sandbox: `pnpm --filter @turbineh/worker run verify:recipe <recipe>
 ["<prompt with colours>"] [--with <component,…>]`.
+
+### Component documentation (every component)
+
+Each component has a `guide.yaml` (`turbineh.guide/v0.1`, [ADR-0032 §Documentation](docs/adr/0032-agent-ready-components.md)):
+what it does, use cases, when to use it and when not (with the alternative), trade-offs, configuration and inputs,
+interfaces with real signatures, extension points, compatibility, security notes, guarantees each linked to a test
+(`<file> › <title>`), known limits, a minimal example, keywords and synonyms. You may write it by hand; otherwise
+`pnpm catalog:document <id>` writes it (facts from the code, narrative from our open model, every claim checked
+against the code; generated parts listed under `generated`). A missing guide is never a rejection — document it.
+After any guide change run `pnpm catalog:index` (the agent-readable index `apps/web/public/catalog/`).

@@ -86,6 +86,7 @@ export interface CatalogRow {
   purl: string;
   does: string;
   useCases: string[];
+  docs?: unknown;
 }
 
 /** Approved components for search (the catalog table, synced from the manifests). */
@@ -93,7 +94,8 @@ export async function approvedCatalog(db: pg.Pool): Promise<CatalogRow[]> {
   const res = await db.query<CatalogRow>(
     `SELECT id, version, category, provides, coalesce(license, '') AS license, purl,
        coalesce(manifest->'capability'->>'does', '') AS does,
-       coalesce(ARRAY(SELECT jsonb_array_elements_text(manifest->'capability'->'use_cases')), '{}') AS "useCases"
+       coalesce(ARRAY(SELECT jsonb_array_elements_text(manifest->'capability'->'use_cases')), '{}') AS "useCases",
+       manifest->'docs' AS docs
      FROM components WHERE status = 'approved' ORDER BY id`,
   );
   return res.rows;

@@ -39,6 +39,15 @@ export interface CapabilitySummary {
   stacks: string[]; // e.g. ["nextjs@16", "postgres"]
   requirements: Requirement[];
   example: string; // what the runnable example shows
+  /** Components: when to use it and not, trade-offs, limits, keywords, tested guarantees (guide.yaml). */
+  docs?: {
+    useWhen: string[];
+    avoidWhen: { instead: string; why: string }[];
+    tradeoffs: string[];
+    limits: string[];
+    keywords: string[];
+    testedGuarantees: number;
+  };
 }
 
 export interface EnvironmentInput {

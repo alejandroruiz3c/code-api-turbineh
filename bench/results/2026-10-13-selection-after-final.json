@@ -1,0 +1,208 @@
+{
+  "summary": {
+    "label": "after-final",
+    "cards": "docs",
+    "cases": 19,
+    "accuracy": 0.8421052631578947,
+    "meanPChosenWhenCorrect": 0.9500000000000001,
+    "meanCoversExpected": 0.7957894736842105,
+    "latencyMs": {
+      "mean": 130,
+      "p50": 131
+    },
+    "decider": "jev",
+    "at": "2026-10-13T03:04:41.625Z"
+  },
+  "rows": [
+    {
+      "capability": "email.transactional",
+      "expected": "email.smtp.nodemailer",
+      "chosen": "email.smtp.nodemailer",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.95,
+      "candidates": 3,
+      "ms": 226
+    },
+    {
+      "capability": "email.transactional",
+      "expected": "email.transactional.resend",
+      "chosen": "email.transactional.resend",
+      "correct": true,
+      "pChosen": 0.97,
+      "coversExpected": 0.96,
+      "candidates": 3,
+      "ms": 159
+    },
+    {
+      "capability": "data.ids",
+      "expected": "data.ids.ulid",
+      "chosen": "data.ids.ulid",
+      "correct": true,
+      "pChosen": 0.68,
+      "coversExpected": 0.58,
+      "candidates": 4,
+      "ms": 138
+    },
+    {
+      "capability": "data.ids",
+      "expected": "data.ids.uuid",
+      "chosen": "data.ids.uuid",
+      "correct": true,
+      "pChosen": 0.71,
+      "coversExpected": 0.85,
+      "candidates": 4,
+      "ms": 101
+    },
+    {
+      "capability": "data.ids",
+      "expected": "data.ids.nanoid",
+      "chosen": "data.ids.nanoid",
+      "correct": true,
+      "pChosen": 0.93,
+      "coversExpected": 0.9,
+      "candidates": 4,
+      "ms": 144
+    },
+    {
+      "capability": "files.qr",
+      "expected": "files.qr.qrcode-react",
+      "chosen": "files.qr.qrcode-react",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.94,
+      "candidates": 2,
+      "ms": 100
+    },
+    {
+      "capability": "files.qr",
+      "expected": "files.qr.qrcode",
+      "chosen": "files.qr.qrcode",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.98,
+      "candidates": 2,
+      "ms": 116
+    },
+    {
+      "capability": "jobs.scheduler",
+      "expected": "jobs.scheduler.cron-parser",
+      "chosen": null,
+      "correct": false,
+      "pChosen": 0,
+      "coversExpected": 0.07,
+      "candidates": 2,
+      "ms": 131
+    },
+    {
+      "capability": "jobs.scheduler",
+      "expected": "jobs.scheduler.croner",
+      "chosen": "jobs.scheduler.croner",
+      "correct": true,
+      "pChosen": 0.99,
+      "coversExpected": 0.76,
+      "candidates": 2,
+      "ms": 132
+    },
+    {
+      "capability": "storage.objects",
+      "expected": "storage.objects.vercel-blob",
+      "chosen": "storage.objects.vercel-blob",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.95,
+      "candidates": 3,
+      "ms": 97
+    },
+    {
+      "capability": "storage.objects",
+      "expected": "storage.objects.s3-presigner",
+      "chosen": "storage.objects.aws-s3",
+      "correct": false,
+      "pChosen": 0.26,
+      "coversExpected": 0.41,
+      "candidates": 3,
+      "ms": 120
+    },
+    {
+      "capability": "files.pdf",
+      "expected": "files.pdf.pdf-lib",
+      "chosen": "files.pdf.pdf-lib",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.96,
+      "candidates": 2,
+      "ms": 92
+    },
+    {
+      "capability": "files.pdf",
+      "expected": "files.pdf.react-pdf",
+      "chosen": "files.pdf.react-pdf",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.98,
+      "candidates": 2,
+      "ms": 114
+    },
+    {
+      "capability": "ui.markdown",
+      "expected": "content.markdown.react-markdown",
+      "chosen": "content.markdown.react-markdown",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.97,
+      "candidates": 3,
+      "ms": 102
+    },
+    {
+      "capability": "files.upload",
+      "expected": "files.dropzone.react-dropzone",
+      "chosen": "files.dropzone.react-dropzone",
+      "correct": true,
+      "pChosen": 1,
+      "coversExpected": 0.91,
+      "candidates": 2,
+      "ms": 113
+    },
+    {
+      "capability": "files.upload",
+      "expected": "files.upload.busboy",
+      "chosen": "files.upload.busboy",
+      "correct": true,
+      "pChosen": 0.99,
+      "coversExpected": 0.92,
+      "candidates": 2,
+      "ms": 135
+    },
+    {
+      "capability": "data.dates",
+      "expected": "data.duration.ms",
+      "chosen": "data.dates.date-fns",
+      "correct": false,
+      "pChosen": 0.26,
+      "coversExpected": 0.2,
+      "candidates": 3,
+      "ms": 155
+    },
+    {
+      "capability": "ui.drag-drop",
+      "expected": "ui.drag-drop.dnd-kit-sortable",
+      "chosen": "ui.drag-drop.dnd-kit-sortable",
+      "correct": true,
+      "pChosen": 0.99,
+      "coversExpected": 0.95,
+      "candidates": 2,
+      "ms": 148
+    },
+    {
+      "capability": "data.money",
+      "expected": "data.money.decimal-js",
+      "chosen": "data.money.decimal-js",
+      "correct": true,
+      "pChosen": 0.94,
+      "coversExpected": 0.88,
+      "candidates": 3,
+      "ms": 140
+    }
+  ]
+}

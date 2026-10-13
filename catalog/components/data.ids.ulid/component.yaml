@@ -9,7 +9,7 @@ source:
   integrity: sha512-yu26mwteFYzBAot7KVMqFGCVpsF6g8wXfJzQUHvu1no3+rRRSFcSV2nKeYvNPLD2J4b08jYBDhHUjeH0ygIl9w==
 capability:
   does: Time-sortable unique ids
-  does_not: Encodes creation time
+  does_not: Does not hide when an id was created (the time is encoded in it)
   use_cases:
     - saas-crud
     - internal-tool

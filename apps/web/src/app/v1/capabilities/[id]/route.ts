@@ -50,6 +50,7 @@ export async function GET(
     security?: unknown;
     license?: unknown;
     evidence?: { claim: string; origin: string }[];
+    docs?: Record<string, unknown>;
   };
   return Response.json({
     capability: componentSummary({ ...entry, does: productText(entry.does) }),
@@ -60,5 +61,7 @@ export async function GET(
     quality: m.quality ?? null,
     security: m.security ?? null,
     evidence: (m.evidence ?? []).map((e) => ({ claim: productText(e.claim), origin: e.origin })),
+    // Full documentation (guide.yaml): interfaces, inputs, guarantees linked to tests, limits, example.
+    docs: m.docs ?? null,
   });
 }

@@ -1,5 +1,5 @@
 import { approvedCatalog, getBuild, type BuildRow } from "@turbineh/db";
-import { ERRORS, flowResult, type CatalogEntry } from "@turbineh/engine";
+import { catalogDocs, ERRORS, flowResult, type CatalogEntry } from "@turbineh/engine";
 import type { FlowResult, ProductError } from "@turbineh/shared";
 import { getCaller, type Caller } from "./caller";
 import { db } from "./db";
@@ -34,7 +34,7 @@ let catalogCache: { at: number; rows: CatalogEntry[] } | null = null;
 /** Approved components (cached for a minute per instance: the catalog changes only on sync). */
 export async function catalog(): Promise<CatalogEntry[]> {
   if (catalogCache && Date.now() - catalogCache.at < 60_000) return catalogCache.rows;
-  const rows = await approvedCatalog(db);
+  const rows = (await approvedCatalog(db)).map((r) => ({ ...r, docs: catalogDocs(r.docs) }));
   catalogCache = { at: Date.now(), rows };
   return rows;
 }

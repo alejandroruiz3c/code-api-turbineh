@@ -145,6 +145,13 @@ export async function search(c: Ctx): Promise<CommandResult> {
           ...r.results.flatMap((x) => [
             `${x.kind === "use_case" ? green("◆ flow") : "◇ component"}  ${bold(x.id)}  ${dim(x.kind === "use_case" ? `${x.components} components` : "")}`,
             `   ${x.summary}`,
+            ...(x.docs?.useWhen[0] ? [`   ${dim(`use when: ${x.docs.useWhen[0]}`)}`] : []),
+            ...(x.docs?.avoidWhen[0]
+              ? [
+                  `   ${dim(`not when: ${x.docs.avoidWhen[0].why} → ${x.docs.avoidWhen[0].instead}`)}`,
+                ]
+              : []),
+            ...(x.docs ? [`   ${dim(`tested guarantees: ${x.docs.testedGuarantees}`)}`] : []),
             ...(x.requirements.length
               ? [`   ${dim(`needs: ${x.requirements.map((q2) => q2.name).join(", ")}`)}`]
               : []),
