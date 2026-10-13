@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Agent brain speed (ADR-0046): runAgent answers a confirmed irreversible action that ran from a template (the tool's
+  `message`, else the confirmed summary and reference) without a decider or model call, and bounds each model attempt
+  (15 s, one retry when stuck) and each decision attempt (5 s, one retry). On the 54-conversation agent bench, same
+  day: 54/54, turn p95 6.72 → 4.66 s, max 11.96 → 9.37 s, −23 % chat calls, −35 % decider calls, cost 2.08 → 1.40 USD
+  per 1,000 conversations [est.] (`bench/agent-brain/RESULTS.md`). The AI gateway can hedge slow chat completions
+  (one duplicate, per-app daily budget, billed on the answer only, `hedges`/`hedge_wins` in the usage metrics,
+  migration 0010); off by default because it showed no gain. The bench meters hedges, templated replies and network
+  failures, and can rotate a staging app token at its daily quota.
 - Spec fidelity wired into builds (ADR-0044): the pipeline models every request (decider only for unsure entity
   kinds) and the assembler generates by kind — business CRUD (status as a `domain.workflow` item when selected),
   configuration as a settings page, events as an append-only timeline on the parent (database trigger), child lists

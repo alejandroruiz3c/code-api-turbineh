@@ -385,7 +385,10 @@ describe("TurbineH AI gateway", () => {
         AI_GATEWAY_HEDGE_AFTER_MS_BY_MODEL: "glm-5.2=9000, deepseek-v4-flash-0731=2500",
         AI_GATEWAY_HEDGE_TARGET: "next",
       });
-      expect(hedgeDelay(cfg, "gemma-4-26b-a4b-it")).toBe(3800);
+      expect(hedgeDelay(cfg, "gemma-4-26b-a4b-it")).toBe(0);
+      expect(
+        hedgeDelay(gatewayConfig({ AI_GATEWAY_HEDGE_AFTER_MS: "3800" }), "gemma-4-26b-a4b-it"),
+      ).toBe(3800);
       expect(hedgeDelay(cfg, "glm-5.2")).toBe(9000);
       expect(hedgeDelay(cfg, "deepseek-v4-flash-0731")).toBe(2500);
       expect(hedgeModel(cfg, "gemma-4-26b-a4b-it")).toBe("deepseek-v4-flash-0731");

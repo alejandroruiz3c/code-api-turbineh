@@ -7,7 +7,8 @@ import { z } from "zod";
  * limits, a per-app rate limit and daily token quota, and records usage per app for billing. Prompts, outputs and
  * keys are never logged, and provider errors are never echoed.
  *
- * Chat completions are hedged (ADR-0046): when the provider has not answered after the model's hedge delay (about its
+ * Chat completions can be hedged (ADR-0046; off by default: measured no gain on the agent bench, see the ADR). When
+ * AI_GATEWAY_HEDGE_AFTER_MS is set and the provider has not answered after the model's hedge delay (about its
  * p90), or failed fast, one duplicate request goes to the same model (or to the next allowed one); the first valid
  * answer wins and the other request is cancelled. At most one hedge per request, within a per-app daily budget; the
  * app is billed only for the answer it receives, and hedges are recorded in the usage metrics (cost stays internal).
@@ -39,8 +40,11 @@ const ConfigSchema = z.object({
   AI_GATEWAY_MAX_BODY_BYTES: z.preprocess(empty, z.coerce.number().int().default(1_000_000)),
   AI_GATEWAY_MAX_OUTPUT_TOKENS: z.preprocess(empty, z.coerce.number().int().default(4096)),
   AI_GATEWAY_TIMEOUT_MS: z.preprocess(empty, z.coerce.number().int().default(90_000)),
-  /** Chat hedging (ADR-0046): delay before the duplicate request, ms (about the model's p90); 0 disables hedging. */
-  AI_GATEWAY_HEDGE_AFTER_MS: z.preprocess(empty, z.coerce.number().int().min(0).default(3800)),
+  /**
+   * Chat hedging (ADR-0046): delay before the duplicate request, ms (about the model's p90, e.g. 3800 for gemma);
+   * 0 = off, the default (measured: no p95/max gain on the agent bench at ~3.8 s).
+   */
+  AI_GATEWAY_HEDGE_AFTER_MS: z.preprocess(empty, z.coerce.number().int().min(0).default(0)),
   /** Per-model delays overriding the default: "model=ms,model=ms". */
   AI_GATEWAY_HEDGE_AFTER_MS_BY_MODEL: z.preprocess(empty, z.string().default("")),
   /** Where the hedge goes: the same model, or the next model of AI_GATEWAY_CHAT_MODELS. */
