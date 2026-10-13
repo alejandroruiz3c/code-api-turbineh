@@ -1,0 +1,94 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.upload.busboy
+does: Streaming multipart/form-data parser for file uploads
+does_not: Does not store files
+use_cases:
+  - Streaming multipart/form-data parsing for file uploads
+  - Extracting text fields and file streams from HTML form data in Node.js
+when_to_use:
+  - When you need to parse incoming HTTP request streams without buffering the entire payload in memory
+  - When handling large file uploads via multipart/form-data
+when_not_to_use:
+  - instead: files.type-detection.file-type
+    why: If you only need to detect the file type rather than parse the multipart stream
+tradeoffs:
+  - Provides low memory overhead through streaming but requires manual handling of file writes to disk or
+    other destinations
+inputs:
+  - name: pnpm add busboy@1.6.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: busboy
+    kind: export
+    about: A function that creates and returns a new Writable form parser stream based on provided configuration.
+extension_points:
+  - The parser emits 'file', 'field', and 'close' events for stream processing.
+dependencies:
+  package: busboy
+  version: 1.6.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence UNKNOWN; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Requires manual implementation of file destination logic to prevent unauthorized disk writes.
+guarantees:
+  - claim: parses a multipart field
+    test:
+      file: contract.test.ts
+      title: parses a multipart field
+limits:
+  - Does not store files automatically.
+example: |-
+  import busboy from "busboy";
+  const bb = busboy({ headers: { "content-type": "multipart/form-data; boundary=X" } });
+  bb.on("field", (name, value) => {
+    console.log(name, value);
+  });
+  bb.on("file", (name, file, info) => {
+    file.on("data", (data) => {
+      console.log(data);
+    });
+  });
+  bb.on("close", () => {
+    console.log("done");
+  });
+keywords:
+  - busboy
+  - files.upload
+  - files
+  - upload
+  - multipart
+  - streaming
+  - parser
+  - form-data
+  - node.js
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

@@ -1,0 +1,96 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ai.stopwords.stopword
+does: Removes stopwords in many languages for keyword extraction and keyword search
+does_not: No stemming or lemmatisation
+use_cases:
+  - Keyword extraction from text
+  - Keyword search and tagging
+  - Removing frequent words from multi-language datasets
+when_to_use:
+  - When you need to strip stopwords from an array of words in one of 62 supported languages
+  - When performing text preprocessing for search engines
+when_not_to_use:
+  - instead: stemming or lemmatisation
+    why: The component does not perform stemming or lemmatisation
+tradeoffs:
+  - Provides pre-defined lists for 62 languages but requires manual splitting of strings into arrays for the
+    core function.
+inputs:
+  - name: pnpm add stopword@3.1.5
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: eng
+    kind: export
+    about: English stopword list
+  - name: removeStopwords
+    kind: export
+    about: Removes stopwords from an array of words using a provided list
+  - name: spa
+    kind: export
+    about: Spanish stopword list
+  - name: keywords
+    kind: export
+    about: Returns lower-cased unique words longer than 2 characters without stopwords
+extension_points:
+  - Custom stopword lists can be passed as input to removeStopwords.
+dependencies:
+  package: stopword
+  version: 3.1.5
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access.
+guarantees:
+  - claim: removes stopwords in several languages
+    test:
+      file: contract.test.ts
+      title: removes stopwords in several languages
+limits:
+  - No stemming or lemmatisation provided
+example: |-
+  import { eng, removeStopwords, spa } from "stopword";
+  import { keywords } from "@/integrations/ai-stopwords";
+
+  const words = ["the", "invoice", "is", "late"];
+  const filtered = removeStopwords(words, eng);
+  const tags = keywords("The invoice is late");
+keywords:
+  - stopword
+  - ai.stopwords
+  - ai
+  - stopwords
+  - nlp
+  - keyword extraction
+  - text processing
+  - multilingual
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

@@ -1,0 +1,94 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.accordion.radix
+does: Accessible accordion for FAQs and collapsible sections
+does_not: Unstyled
+use_cases:
+  - FAQs
+  - Collapsible sections
+when_to_use:
+  - When accessible accordion functionality is required
+when_not_to_use:
+  - instead: ui.dialog.radix-dialog
+    why: If a modal overlay is preferred over an inline collapsible section
+tradeoffs:
+  - "Unstyled: requires manual CSS implementation"
+inputs:
+  - name: pnpm add @radix-ui/react-accordion@1.2.20
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Accordion
+    kind: export
+    about: The core accordion component primitives
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-accordion"
+  version: 1.2.20
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database access
+guarantees:
+  - claim: renders an accessible accordion
+    test:
+      file: contract.test.ts
+      title: renders an accessible accordion
+limits:
+  - Unstyled
+example: |-
+  import { Accordion } from "@radix-ui/react-accordion";
+
+  const Example = () => (
+    <Accordion.Root type="single" collapsible defaultValue="q1">
+      <Accordion.Item value="q1">
+        <Accordion.Header>
+          <Accordion.Trigger>Question?</Accordion.Trigger>
+        </Accordion.Header>
+        <Accordion.Content>Answer.</Accordion.Content>
+      </Accordion.Item>
+    </Accordion.Root>
+  );
+keywords:
+  - "@radix-ui/react-accordion"
+  - ui.accordion
+  - ui
+  - accordion
+  - collapsible
+  - accessible
+  - radix-ui
+  - unstyle
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

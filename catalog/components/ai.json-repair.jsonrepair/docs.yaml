@@ -1,0 +1,96 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ai.json-repair.jsonrepair
+does: Repairs almost-valid JSON produced by models (missing quotes, trailing commas, code fences)
+does_not: "Does not validate the shape: validate the repaired value with a schema"
+use_cases:
+  - Repairing almost-valid JSON produced by LLMs including missing quotes, trailing commas, and code fences
+  - Fixing broken JSON documents containing single quotes, Python constants (True/False/None), or comments
+  - Converting newline delimited JSON into valid JSON arrays
+  - Repairing truncated JSON or JSON with ellipsis in arrays/objects
+when_to_use:
+  - When model output contains non-standard JSON syntax like single quotes or unquoted keys
+  - When processing streaming JSON data via Node.js streams
+when_not_to_use:
+  - instead: ai.schema-validation.ajv
+    why: The component does not validate the shape of the repaired value; use a schema validator afterwards.
+tradeoffs:
+  - Repairs syntax but does not guarantee the semantic correctness or schema compliance of the resulting
+    object.
+inputs:
+  - name: pnpm add jsonrepair@3.15.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: jsonrepair
+    kind: export
+    about: Repairs invalid JSON strings by adding missing quotes, commas, brackets, and fixing quotes/constants.
+  - name: parseModelJson
+    kind: export
+    about: Parses model-generated text by repairing common mistakes and returning an unknown type.
+extension_points: []
+dependencies:
+  package: jsonrepair
+  version: 3.15.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence ISC; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database access performed.
+guarantees:
+  - claim: repairs typical model JSON mistakes
+    test:
+      file: contract.test.ts
+      title: repairs typical model JSON mistakes
+  - claim: throws on text that cannot be JSON
+    test:
+      file: contract.test.ts
+      title: throws on text that cannot be JSON
+limits:
+  - Does not validate the shape of the repaired object
+example: |-
+  import { jsonrepair } from 'jsonrepair';
+  import { parseModelJson } from '@/integrations/ai-json-repair';
+
+  const raw = "```json\n{name: 'Ana', tags: ['vip',], active: True}\n```";
+  const repaired = jsonrepair(raw);
+  const parsed = parseModelJson(raw);
+keywords:
+  - jsonrepair
+  - ai.json-repair
+  - ai
+  - json
+  - repair
+  - json repair
+  - llm output
+  - json parsing
+  - syntax correction
+  - model json
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

@@ -1,0 +1,82 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.slug.slugify
+does: Turns titles into URL slugs with transliteration
+does_not: Does not ensure uniqueness against a database
+use_cases:
+  - Converting titles or strings into URL-friendly slugs
+  - Transliterating foreign symbols to English equivalents
+  - Generating slugs with custom separators or regex-based character removal
+when_to_use:
+  - When you need to transform strings into lowercase, strict URL slugs
+when_not_to_use:
+  - instead: database uniqueness check
+    why: Does not ensure uniqueness against a database
+tradeoffs:
+  - Extending the charMap via .extend() affects the entire module cache
+inputs:
+  - name: pnpm add slugify@1.6.9
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: slugify
+    kind: export
+    about: Function that converts a string into a slug with options for replacement, removal, casing, and locale.
+extension_points:
+  - slugify.extend() to add or override Unicode symbol transliterations
+dependencies:
+  package: slugify
+  version: 1.6.9
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access performed
+guarantees:
+  - claim: creates lowercase strict slugs
+    test:
+      file: contract.test.ts
+      title: creates lowercase strict slugs
+limits:
+  - The remove option requires a global regex character class if not a single character string
+example: |-
+  import slugify from 'slugify';
+
+  slugify('Café Niño & Co!', { lower: true, strict: true }); // 'cafe-nino-and-co'
+keywords:
+  - slugify
+  - data.slug
+  - data
+  - slug
+  - transliteration
+  - url-friendly
+  - string-manipulation
+  - unicode
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

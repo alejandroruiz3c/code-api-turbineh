@@ -1,0 +1,94 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.timezones.date-fns-tz
+does: Time-zone aware formatting and conversion on top of date-fns
+does_not: Does not include a time-zone picker UI
+use_cases:
+  - Formatting a date in a specific time zone regardless of the system time zone
+  - Converting a date string with a time zone into a UTC Date object
+  - Handling IANA time zone names or offsets using the Intl API
+when_to_use:
+  - When using date-fns v3 and needing time zone support without adding large time zone data to bundles
+  - When you need to work with specific IANA time zones or offsets using plain JS Date objects
+when_not_to_use:
+  - instead: data.dates.dayjs
+    why: If you prefer a library that provides its own date-time classes instead of working with plain JS Date
+      objects
+  - instead: data.dates.date-fns
+    why: If you do not require time zone awareness or specific IANA/offset formatting
+tradeoffs:
+  - Uses the Intl API to avoid including large time zone data in bundles, which requires modern browser or
+    Node.js support or a polyfill.
+inputs:
+  - name: pnpm add date-fns-tz@3.2.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: formatInTimeZone
+    kind: export
+    about: Formats a date in the provided time zone, regardless of the system time zone
+  - name: fromZonedTime
+    kind: export
+    about: Given a date and any time zone, returns a Date with the equivalent UTC time
+extension_points: []
+dependencies:
+  package: date-fns-tz
+  version: 3.2.0
+  runtime: node@>=20
+  peers:
+    date-fns: ^3.0.0 || ^4.0.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: date-fns@^3.0.0 || ^4.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No security-sensitive operations identified.
+guarantees:
+  - claim: formats and converts across time zones
+    test:
+      file: contract.test.ts
+      title: formats and converts across time zones
+limits:
+  - Does not include a time-zone picker UI
+  - Requires date-fns as a peer dependency
+example: |-
+  import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+
+  const utc = new Date("2026-10-13T08:00:00Z");
+  const formatted = formatInTimeZone(utc, "Europe/Madrid", "HH:mm");
+  const zoned = fromZonedTime("2026-10-13 10:00", "Europe/Madrid");
+keywords:
+  - date-fns-tz
+  - data.timezones
+  - data
+  - timezones
+  - timezone
+  - date-fns
+  - formatting
+  - conversion
+  - intl api
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

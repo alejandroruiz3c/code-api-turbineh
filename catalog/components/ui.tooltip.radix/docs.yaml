@@ -1,0 +1,84 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.tooltip.radix
+does: Accessible tooltips
+does_not: Unstyled
+use_cases:
+  - Providing accessible descriptive text for UI elements
+  - Implementing hover or focus-based information popups
+when_to_use:
+  - When accessible tooltips are required
+when_not_to_use:
+  - instead: styling a custom div
+    why: The component is unstyled
+tradeoffs:
+  - Requires manual application of styles as it provides no default visual theme
+inputs:
+  - name: pnpm add @radix-ui/react-tooltip@1.2.16
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Tooltip
+    kind: export
+    about: The primary tooltip component exported from the package
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-tooltip"
+  version: 1.2.16
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access required
+guarantees:
+  - claim: renders the trigger inside a provider
+    test:
+      file: contract.test.ts
+      title: renders the trigger inside a provider
+limits:
+  - Does not provide default styling
+example: |-
+  import { Tooltip } from "@radix-ui/react-tooltip";
+
+  const Example = () => <Tooltip />;
+keywords:
+  - "@radix-ui/react-tooltip"
+  - ui.tooltip
+  - ui
+  - tooltip
+  - accessibility
+  - radix-ui
+  - popover
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

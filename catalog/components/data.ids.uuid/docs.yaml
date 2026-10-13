@@ -1,0 +1,95 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.ids.uuid
+does: RFC 9562 UUID generation (v4, v7) and validation
+does_not: Does not shorten ids for URLs
+use_cases:
+  - RFC 9562 UUID generation
+  - Validating UUID strings
+  - Generating v4 random UUIDs
+  - Generating v7 time-based UUIDs
+when_to_use:
+  - When RFC 9562 compliance is required
+  - When needing secure random values via crypto API
+when_not_to_use:
+  - instead: shortening ids for URLs
+    why: Does not shorten ids for URLs
+tradeoffs:
+  - Zero-dependency and tree-shakable but requires modern crypto API
+inputs:
+  - name: pnpm add uuid@14.0.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: v4
+    kind: export
+    about: Generates a version 4 (random) UUID
+  - name: v7
+    kind: export
+    about: Generates a version 7 (Unix Epoch time-based) UUID
+  - name: validate
+    kind: export
+    about: Tests a string to see if it is a valid UUID
+  - name: version
+    kind: export
+    about: Detects the RFC version of a UUID
+extension_points: []
+dependencies:
+  package: uuid
+  version: 14.0.2
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Uses modern crypto API for random values
+guarantees:
+  - claim: generates and validates v4 and v7
+    test:
+      file: contract.test.ts
+      title: generates and validates v4 and v7
+limits:
+  - Does not shorten ids for URLs
+example: |-
+  import { v4, v7, validate, version } from 'uuid';
+
+  const id = v4();
+  const timeId = v7();
+  const isValid = validate(id);
+  const ver = version(timeId);
+keywords:
+  - uuid
+  - data.ids
+  - data
+  - ids
+  - rfc9562
+  - v4
+  - v7
+  - validation
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

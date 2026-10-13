@@ -1,0 +1,85 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: email.transactional.resend
+does: Official Resend SDK for transactional email
+does_not: Does not provide templates or a local outbox
+use_cases:
+  - Sending transactional emails via the Resend API
+  - Integrating Resend SDK into Node.js environments
+when_to_use:
+  - When requiring the official Resend SDK for transactional email delivery
+when_not_to_use:
+  - instead: email.smtp.nodemailer
+    why: When SMTP protocol is required
+  - instead: email.transactional.turbineh
+    why: When using alternative transactional email services
+  - instead: a local outbox
+    why: The component does not provide a local outbox or templates
+tradeoffs:
+  - Does not provide templates or a local outbox mechanism
+inputs:
+  - name: pnpm add resend@6.30.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Resend
+    kind: export
+    about: Main client class for interacting with the Resend API
+extension_points: []
+dependencies:
+  package: resend
+  version: 6.30.0
+  runtime: node@>=20
+  peers:
+    "@react-email/render": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: @react-email/render@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Requires an API key for client instantiation
+guarantees:
+  - claim: builds a client and fails cleanly without network
+    test:
+      file: contract.test.ts
+      title: builds a client and fails cleanly without network
+limits:
+  - Does not provide templates
+  - Does not provide a local outbox
+example: |-
+  import { Resend } from "resend";
+  const r = new Resend("re_test_key");
+  await r.emails.send({ from: "a@example.com", to: "b@example.com", subject: "s", text: "t" });
+keywords:
+  - resend
+  - email.transactional
+  - email
+  - transactional
+  - transactional email
+  - sdk
+  - node.js
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

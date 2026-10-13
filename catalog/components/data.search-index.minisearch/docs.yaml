@@ -1,0 +1,89 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.search-index.minisearch
+does: In-memory full-text search with prefix and fuzzy matching for catalogs and docs
+does_not: Not for millions of records
+use_cases:
+  - Real-time 'as you type' search in web and mobile applications
+  - In-memory full-text search for catalogs and documents
+  - Offline search functionality without network latency
+when_to_use:
+  - When data fits locally in process memory
+  - When prefix or fuzzy matching is required
+  - When zero external dependencies are needed
+when_not_to_use:
+  - instead: data.fuzzy-search.fuse
+    why: If you need a different fuzzy search implementation
+  - instead: server-side search engine
+    why: Not for millions of records
+tradeoffs:
+  - In-memory storage allows for fast queries but is limited by available process memory
+inputs:
+  - name: pnpm add minisearch@7.2.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: MiniSearch
+    kind: export
+    about: An in-memory full-text search engine supporting prefix, fuzzy, and exact matches.
+extension_points: []
+dependencies:
+  package: minisearch
+  version: 7.2.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external dependencies or network access required
+guarantees:
+  - claim: finds documents with typos and prefixes
+    test:
+      file: contract.test.ts
+      title: finds documents with typos and prefixes
+limits:
+  - Not for millions of records
+example: |-
+  import { MiniSearch } from "minisearch";
+  const ms = new MiniSearch({ fields: ["name"], storeFields: ["name"] });
+  ms.addAll([{ id: 1, name: "Red running shoes" }]);
+  const results = ms.search("runing", { fuzzy: 0.2 });
+keywords:
+  - minisearch
+  - data.search-index
+  - data
+  - search
+  - index
+  - full-text search
+  - in-memory
+  - prefix search
+  - fuzzy matching
+  - browser
+  - node
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

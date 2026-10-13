@@ -7,6 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { closePool, embedderFromEnv, getPool, toVector } from "@turbineh/db";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
+import { decisionCard, readDocs } from "@turbineh/catalog";
 import { parse } from "yaml";
 
 interface Manifest {
@@ -27,9 +28,17 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../catalog/com
 const manifests = readdirSync(root, { withFileTypes: true })
   .filter((d) => d.isDirectory())
   .map((d) => parse(readFileSync(join(root, d.name, "component.yaml"), "utf8")) as Manifest);
-const cards = manifests.map(
-  (m) => `${m.id}: ${m.capability.does}. Provides ${m.relations.provides.join(", ")}.`,
-);
+// Documentation (docs.yaml) travels with the manifest: search, /v1/capabilities and the decider card use it.
+for (const m of manifests) {
+  const docs = readDocs(join(root, m.id));
+  if (docs) (m as Manifest & { docs?: unknown }).docs = docs;
+}
+const cards = manifests.map((m) => {
+  const docs = (m as Manifest & { docs?: Parameters<typeof decisionCard>[0] }).docs;
+  return docs
+    ? `${m.id}: ${decisionCard(docs, m.relations.provides)}`
+    : `${m.id}: ${m.capability.does}. Provides ${m.relations.provides.join(", ")}.`;
+});
 const vectors = await embedderFromEnv(env).embed(cards);
 for (const [i, m] of manifests.entries()) {
   await db.query(

@@ -18,7 +18,7 @@ export const componentDocsSchema = z.object({
   schema: z.literal(DOCS_SCHEMA),
   id: z.string(),
   /** What it does and what it does not (from the manifest, maintained by curators). */
-  does: text,
+  does: z.string().min(3).max(800),
   does_not: z.string().max(400).optional(),
   use_cases: list(2, 8),
   when_to_use: list(1, 6),
@@ -52,7 +52,7 @@ export const componentDocsSchema = z.object({
     requires: z.array(z.string()),
     conflicts: z.array(z.string()),
   }),
-  compatibility: list(1, 6),
+  compatibility: z.array(z.string().min(3).max(800)).min(1).max(6),
   security: list(1, 8),
   /** Each guarantee names the test that proves it (exact title in the component's tests). */
   guarantees: z

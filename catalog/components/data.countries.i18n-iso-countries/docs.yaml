@@ -1,0 +1,95 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.countries.i18n-iso-countries
+does: ISO 3166 country codes and localised country names for addresses and shipping
+does_not: Does not validate postal addresses
+use_cases:
+  - Mapping ISO 3166-1 Alpha-2, Alpha-3, or Numeric codes to localised country names
+  - Generating sorted lists of country name and code pairs for selection UI components
+  - Validating ISO 3166-1 alpha-2 country codes
+when_to_use:
+  - When you need to display country names in multiple languages based on ISO codes
+  - When you need to validate if a string is a valid ISO 3166-1 alpha-2 code
+when_not_to_use:
+  - instead: postal address validation logic
+    why: Does not validate postal addresses
+tradeoffs:
+  - Requires manual registration of locales in browser environments to manage bundle size
+inputs:
+  - name: pnpm add i18n-iso-countries@7.14.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: CountryLang
+    kind: type
+    about: Supported language codes (e.g., 'en', 'es')
+  - name: isCountryCode
+    kind: export
+    about: Validates if a string is a valid ISO 3166-1 alpha-2 code
+  - name: countryName
+    kind: export
+    about: Returns the localised country name for a given code, or null if unknown
+  - name: countryOptions
+    kind: export
+    about: Returns an array of {code, name} objects sorted by name in the specified language
+extension_points:
+  - registerLocale allows adding new language JSON files to the instance
+dependencies:
+  package: i18n-iso-countries
+  version: 7.14.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access required
+guarantees:
+  - claim: returns localised country names from ISO codes
+    test:
+      file: contract.test.ts
+      title: returns localised country names from ISO codes
+limits:
+  - Does not provide postal address validation
+example: |-
+  import { isCountryCode, countryName, countryOptions, CountryLang } from '@/integrations/data-countries';
+
+  const isValid: boolean = isCountryCode('ES');
+  const name: string | null = countryName('ES', 'en' as CountryLang);
+  const options = countryOptions('es' as CountryLang);
+keywords:
+  - i18n-iso-countries
+  - data.countries
+  - data
+  - countries
+  - iso 3166-1
+  - country codes
+  - i18n
+  - localisation
+  - country names
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

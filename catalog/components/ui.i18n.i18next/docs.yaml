@@ -1,0 +1,100 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.i18n.i18next
+does: Internationalisation with namespaces, interpolation and plurals
+does_not: Does not translate content automatically
+use_cases:
+  - Internationalisation with namespaces, interpolation and plurals
+  - Managing translation context and nesting in JavaScript environments
+when_to_use:
+  - When you need a framework for browser or Node.js/Deno environments that supports variable replacement and
+    pluralization
+when_not_to_use:
+  - instead: manual translation
+    why: Does not translate content automatically
+tradeoffs:
+  - Requires manual integration of translation keys and resources
+inputs:
+  - name: pnpm add i18next@26.4.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: i18next
+    kind: export
+    about: The main i18next instance or factory for creating instances.
+extension_points:
+  - Backends for loading translations via XHR
+  - Language detection plugins
+  - Post-processors like sprintf
+dependencies:
+  package: i18next
+  version: 26.4.2
+  runtime: node@>=20
+  peers:
+    typescript: ^5 || ^6 || ^7
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: typescript@^5 || ^6 || ^7."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database effects by default.
+guarantees:
+  - claim: translates with interpolation and plurals
+    test:
+      file: contract.test.ts
+      title: translates with interpolation and plurals
+limits:
+  - Does not translate content automatically
+example: |-
+  import { i18next } from "i18next";
+
+  const i = i18next.createInstance();
+  await i.init({
+    lng: "es",
+    resources: {
+      es: {
+        translation: {
+          hi: "Hola {{name}}",
+          item_one: "{{count}} elemento",
+          item_other: "{{count}} elementos",
+        },
+      },
+    },
+  });
+  const hi = i.t("hi", { name: "Ana" });
+  const item = i.t("item", { count: 3 });
+keywords:
+  - i18next
+  - ui.i18n
+  - ui
+  - i18n
+  - internationalization
+  - interpolation
+  - plurals
+  - namespaces
+  - translation
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

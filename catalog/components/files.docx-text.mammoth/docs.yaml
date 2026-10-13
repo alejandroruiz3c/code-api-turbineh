@@ -1,0 +1,100 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.docx-text.mammoth
+does: Extracts plain text or clean HTML from Word .docx documents
+does_not: Does not read legacy .doc files or keep complex layout
+use_cases:
+  - Extracting plain text from Word .docx files
+  - Converting .docx documents to clean, semantic HTML fragments
+  - Converting .docx documents to Markdown
+when_to_use:
+  - When you need to extract text or HTML from .docx files while ignoring complex layout and styling
+  - When you want to preserve semantic information like headings and lists
+when_not_to_use:
+  - instead: files.office-text.officeparser
+    why: If you need to read legacy .doc files
+  - instead: a manual layout parser
+    why: If you need to preserve complex document layouts and exact styling
+tradeoffs:
+  - Produces simple and clean HTML by ignoring non-semantic styling details
+  - Conversion is unlikely to be perfect for complicated documents due to structural mismatches between .docx
+    and HTML
+inputs:
+  - name: pnpm add mammoth@1.13.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: mammoth
+    kind: export
+    about: The core library for converting .docx to HTML or Markdown
+  - name: docxToText
+    kind: export
+    about: Extracts plain text from a Word .docx upload with a 20MB size limit
+extension_points:
+  - Customizable mapping from docx styles to HTML via style maps
+dependencies:
+  package: mammoth
+  version: 1.13.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence BSD-2-Clause; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - Performs no sanitisation of the source document; use with caution on untrusted input
+guarantees:
+  - claim: extracts raw text from a .docx
+    test:
+      file: contract.test.ts
+      title: extracts raw text from a .docx
+  - claim: rejects files that are not .docx
+    test:
+      file: contract.test.ts
+      title: rejects files that are not .docx
+limits:
+  - Does not read legacy .doc files
+  - Does not keep complex layout details
+  - Maximum file size is 20MB in the docxToText implementation
+example: |-
+  import { docxToText } from "@/integrations/files-docx-text";
+
+  async function run(buffer: Buffer) {
+    const text = await docxToText(buffer);
+    console.log(text);
+  }
+keywords:
+  - mammoth
+  - files.docx-text
+  - files
+  - docx
+  - text
+  - word
+  - extraction
+  - html
+  - markdown
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

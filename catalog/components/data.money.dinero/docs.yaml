@@ -1,0 +1,97 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.money.dinero
+does: Immutable money objects with currency, allocation and integer minor units
+does_not: Does not fetch exchange rates
+use_cases:
+  - Managing immutable money objects with integer minor units
+  - Performing arithmetic operations on currency amounts
+  - Allocating monetary values across multiple recipients
+when_to_use:
+  - When you need side-effect free money calculations using integer minor units
+when_not_to_use:
+  - instead: a manual approach
+    why: Does not fetch exchange rates
+tradeoffs:
+  - Functions are side-effect free and can be bundled individually
+inputs:
+  - name: pnpm add dinero.js@2.0.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: dinero
+    kind: export
+    about: Creates a money object with an amount and currency
+  - name: add
+    kind: export
+    about: Adds two money objects together
+  - name: allocate
+    kind: export
+    about: Distributes a money object amount into multiple parts based on provided ratios
+  - name: toSnapshot
+    kind: export
+    about: Converts a money object to a plain object snapshot
+  - name: EUR
+    kind: export
+    about: Currency object for Euro
+extension_points:
+  - Custom calculator implementation for third-party libraries or custom types
+dependencies:
+  package: dinero.js
+  version: 2.0.2
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Side-effect free functions allow for predictable calculations
+guarantees:
+  - claim: adds and allocates money in minor units
+    test:
+      file: contract.test.ts
+      title: adds and allocates money in minor units
+limits:
+  - Does not fetch exchange rates
+example: |-
+  import { dinero, add, allocate, toSnapshot, EUR } from 'dinero.js';
+  const d1 = dinero({ amount: 1000, currency: EUR });
+  const d2 = dinero({ amount: 99, currency: EUR });
+  const total = add(d1, d2);
+  const parts = allocate(dinero({ amount: 100, currency: EUR }), [1, 2]);
+keywords:
+  - dinero.js
+  - data.money
+  - data
+  - money
+  - currency
+  - immutable
+  - allocation
+  - integer
+  - minor-units
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

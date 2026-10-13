@@ -1,0 +1,92 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.dialog.radix-dialog
+does: Accessible modal dialog primitives (focus trap, aria)
+does_not: Does not style the dialog
+use_cases:
+  - Implementing accessible modal dialogs
+  - Creating focus-trapped overlays
+when_to_use:
+  - When you need unstyled accessible dialog primitives with aria support
+when_not_to_use:
+  - instead: ui.alert-dialog.radix
+    why: When a specialized alert dialog pattern is required
+  - instead: styling the component directly
+    why: The component does not provide any visual styles
+tradeoffs:
+  - Provides accessibility logic but requires manual CSS/styling implementation
+inputs:
+  - name: pnpm add @radix-ui/react-dialog@1.1.23
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Dialog
+    kind: export
+    about: Accessible modal dialog primitives including Root and Trigger
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-dialog"
+  version: 1.1.23
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access
+guarantees:
+  - claim: renders an accessible trigger
+    test:
+      file: contract.test.ts
+      title: renders an accessible trigger
+limits:
+  - Does not style the dialog
+example: |-
+  import { Dialog } from "@radix-ui/react-dialog";
+
+  const MyComponent = () => (
+    <Dialog.Root>
+      <Dialog.Trigger>Open</Dialog.Trigger>
+    </Dialog.Root>
+  );
+keywords:
+  - "@radix-ui/react-dialog"
+  - ui.dialog
+  - ui
+  - dialog
+  - modal
+  - accessibility
+  - radix-ui
+  - aria
+  - focus-trap
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

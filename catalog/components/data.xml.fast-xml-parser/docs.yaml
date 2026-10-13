@@ -1,0 +1,89 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.xml.fast-xml-parser
+does: Parses and builds XML (feeds, product imports, sitemaps)
+does_not: No XSLT
+use_cases:
+  - Parsing XML to JS objects
+  - Building XML from JS objects
+  - Processing feeds, product imports, and sitemaps
+when_to_use:
+  - When a pure JS implementation is required without C/C++ dependencies
+  - When handling large XML files up to 100mb
+when_not_to_use:
+  - instead: fast-xml-validator
+    why: If advanced business rule validation or tag exclusion is required
+  - instead: flexible-xml-parser
+    why: If maximum speed and low memory usage are required and tag order preservation is not needed
+tradeoffs:
+  - Faster than other pure JS implementations but slower than Flexible-XML-Parser when not preserving tag order
+inputs:
+  - name: pnpm add fast-xml-parser@5.11.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: XMLBuilder
+    kind: export
+    about: Converts JS objects into XML strings
+  - name: XMLParser
+    kind: export
+    about: Parses XML strings into JS objects
+extension_points: []
+dependencies:
+  package: fast-xml-parser
+  version: 5.11.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - parses and builds XML without external entities
+guarantees:
+  - claim: parses and builds XML without external entities
+    test:
+      file: contract.test.ts
+      title: parses and builds XML without external entities
+limits:
+  - No XSLT support
+example: |-
+  import { XMLBuilder, XMLParser } from "fast-xml-parser";
+  const parser = new XMLParser();
+  const data = parser.parse("<product><sku>A1</sku></product>");
+  const builder = new XMLBuilder();
+  const xml = builder.build({ a: { b: 1 } });
+keywords:
+  - fast-xml-parser
+  - data.xml
+  - data
+  - xml
+  - parser
+  - builder
+  - js
+  - pure-js
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

@@ -1,0 +1,95 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.ics-export.ical-generator
+does: Generates iCalendar (.ics) feeds and invitations
+does_not: Does not sync with external calendars
+use_cases:
+  - Generating iCalendar (.ics) feeds
+  - Creating calendar invitations
+when_to_use:
+  - When you need to generate a string representation of a calendar containing events
+when_not_to_use:
+  - instead: external calendar synchronization
+    why: The component does not sync with external calendars
+tradeoffs:
+  - Generates static files rather than maintaining live synchronization with external providers.
+inputs:
+  - name: pnpm add ical-generator@11.1.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: ical
+    kind: export
+    about: Generates iCalendar files and allows creation of calendar events.
+extension_points: []
+dependencies:
+  package: ical-generator
+  version: 11.1.1
+  runtime: node@>=20
+  peers:
+    dayjs: ">= 1.10.0"
+    luxon: ">= 1.26.0"
+    rrule: ">= 2.6.8"
+    moment: ">= 2.29.0"
+    "@types/luxon": ">= 1.26.0"
+    "@types/mocha": ">= 8.2.1"
+    moment-timezone: ">= 0.5.33"
+    "@touch4it/ical-timezones": ">=1.6.0"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: dayjs@>= 1.10.0, luxon@>= 1.26.0, rrule@>= 2.6.8, moment@>= 2.29.0, @types/luxon@>=
+    1.26.0, @types/mocha@>= 8.2.1, moment-timezone@>= 0.5.33, @touch4it/ical-timezones@>=1.6.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database side effects.
+guarantees:
+  - claim: renders a VEVENT
+    test:
+      file: contract.test.ts
+      title: renders a VEVENT
+limits:
+  - Does not sync with external calendars
+example: |-
+  import { ical } from "ical-generator";
+  const cal = ical({ name: "Bookings" });
+  cal.createEvent({
+    start: new Date(Date.UTC(2026, 9, 13, 9)),
+    end: new Date(Date.UTC(2026, 9, 13, 10)),
+    summary: "Physio session",
+  });
+  const out = cal.toString();
+keywords:
+  - ical-generator
+  - data.ics-export
+  - data
+  - ics
+  - export
+  - ical
+  - calendar
+  - event
+  - vcalendar
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

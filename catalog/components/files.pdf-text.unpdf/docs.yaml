@@ -1,0 +1,96 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.pdf-text.unpdf
+does: Extracts text and metadata from PDF files on the server (serverless PDF.js build)
+does_not: "Does not run OCR: scanned PDFs without a text layer return no text"
+use_cases:
+  - Extracting text and metadata from PDF files for AI applications
+  - Summarizing or analyzing PDF documents in serverless environments
+  - Processing PDFs across different runtimes like Node.js, Deno, Bun, or Cloudflare Workers
+when_to_use:
+  - When you need a serverless-optimized PDF.js build for edge environments
+  - When you need to extract text from PDFs in non-browser runtimes
+when_not_to_use:
+  - instead: OCR approach
+    why: Scanned PDFs without a text layer return no text
+  - instead: files.pdf.pdf-lib
+    why: If you need to manipulate or edit PDF structure rather than just extracting content
+tradeoffs:
+  - Uses a serverless build of PDF.js to ensure compatibility with edge environments at the cost of
+    potentially larger bundle sizes than minimal parsers
+inputs:
+  - name: pnpm add unpdf@1.8.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: extractText
+    kind: export
+    about: Extracts text and total pages from a PDF document proxy
+  - name: getDocumentProxy
+    kind: export
+    about: Creates a PDF document proxy from a Uint8Array
+  - name: pdfToText
+    kind: export
+    about: High-level function to convert PDF Uint8Array to an array of page strings with size and page limits
+extension_points:
+  - Custom PDF.js module via getResolvedPDFJS
+dependencies:
+  package: unpdf
+  version: 1.8.1
+  runtime: node@>=20
+  peers:
+    "@napi-rs/canvas": ^0.1.69 || ^1.0.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: @napi-rs/canvas@^0.1.69 || ^1.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access performed by the component
+guarantees:
+  - claim: extracts the text layer of a PDF
+    test:
+      file: contract.test.ts
+      title: extracts the text layer of a PDF
+limits:
+  - Does not perform OCR; scanned PDFs return no text
+  - Maximum file size is limited to 25MB in the pdfToText implementation
+example: |-
+  import { extractText, getDocumentProxy } from 'unpdf';
+
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const { totalPages, text } = await extractText(pdf, { mergePages: true });
+keywords:
+  - unpdf
+  - files.pdf-text
+  - files
+  - pdf
+  - text
+  - extraction
+  - serverless
+  - pdfjs
+  - metadata
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

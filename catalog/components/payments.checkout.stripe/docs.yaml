@@ -1,0 +1,79 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: payments.checkout.stripe
+does: "Official Stripe SDK: checkout sessions, subscriptions and signed webhooks"
+does_not: Does not hold card data; payments run on Stripe
+use_cases:
+  - Managing checkout sessions
+  - Handling subscriptions
+  - Processing signed webhooks
+when_to_use:
+  - When integrating official Stripe services for payments
+when_not_to_use:
+  - instead: payments.subscriptions.turbineh
+    why: When using TurbineH for subscription management
+tradeoffs:
+  - Payments run on Stripe rather than locally
+inputs:
+  - name: pnpm add stripe@22.6.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Stripe
+    kind: export
+    about: Official Stripe SDK for checkout sessions, subscriptions and signed webhooks
+extension_points: []
+dependencies:
+  package: stripe
+  version: 22.6.2
+  runtime: node@>=20
+  peers:
+    "@types/node": ">=18"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: @types/node@>=18."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Verifies webhook signatures and rejects forged ones
+guarantees:
+  - claim: verifies webhook signatures and rejects forged ones
+    test:
+      file: contract.test.ts
+      title: verifies webhook signatures and rejects forged ones
+limits:
+  - Does not hold card data
+example: |-
+  import { Stripe } from "stripe";
+  const stripe = new Stripe("sk_test_dummy");
+keywords:
+  - stripe
+  - payments.checkout
+  - payments
+  - checkout
+  - subscriptions
+  - webhooks
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

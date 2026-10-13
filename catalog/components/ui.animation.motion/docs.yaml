@@ -1,0 +1,84 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.animation.motion
+does: Declarative animations and transitions for React
+does_not: Not for canvas or 3D
+use_cases:
+  - Declarative animations and transitions for React
+  - GPU-accelerated animations using native browser APIs
+  - Gestures, springs, and layout transitions
+  - Scroll-linked effects and timelines
+when_to_use:
+  - When needing a hybrid engine combining JavaScript with native browser APIs for 120fps performance
+  - When building React, JavaScript, or Vue applications requiring complex animation sequences
+when_not_to_use:
+  - instead: canvas or 3D
+    why: Not for canvas or 3D
+tradeoffs:
+  - Provides a tiny footprint and tree-shakable package at the cost of being specific to UI animation rather
+    than general graphics
+inputs:
+  - name: pnpm add motion@13.4.4
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: motion
+    kind: export
+    about: The primary motion component for declarative animations
+extension_points: []
+dependencies:
+  package: motion
+  version: 13.4.4
+  runtime: node@>=20
+  peers:
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^18.0.0 || ^19.0.0, react-dom@^18.0.0 || ^19.0.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external services or network/fs/db access required per manifest.
+guarantees:
+  - claim: renders animated elements on the server
+    test:
+      file: contract.test.ts
+      title: renders animated elements on the server
+limits:
+  - Not for canvas or 3D
+example: import { motion } from "motion";
+keywords:
+  - motion
+  - ui.animation
+  - ui
+  - animation
+  - react
+  - declarative
+  - transitions
+  - gestures
+  - springs
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

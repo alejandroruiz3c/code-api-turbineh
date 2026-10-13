@@ -1,0 +1,94 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.image-processing.jimp
+does: Resizes, crops and converts images in pure JavaScript (thumbnails for products and galleries)
+does_not: Slower than native libraries for very large images
+use_cases:
+  - Resizing images for product galleries
+  - Creating thumbnails for product cards
+  - Converting images to JPEG format while dropping EXIF metadata
+when_to_use:
+  - When zero native dependencies are required
+  - When processing small to medium sized images in pure JavaScript
+when_not_to_use:
+  - instead: native libraries
+    why: Slower than native libraries for very large images
+tradeoffs:
+  - Pure JavaScript implementation avoids native dependency issues but results in slower performance for very
+    large images
+inputs:
+  - name: pnpm add jimp@1.6.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Jimp
+    kind: export
+    about: Main class for image manipulation including reading, resizing, and encoding.
+  - name: makeThumbnail
+    kind: export
+    about: Generates a JPEG thumbnail scaled to a maximum width while maintaining aspect ratio.
+extension_points: []
+dependencies:
+  package: jimp
+  version: 1.6.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Input buffers larger than 15MB are rejected before decoding to bound memory and CPU usage.
+guarantees:
+  - claim: creates, resizes and encodes an image
+    test:
+      file: contract.test.ts
+      title: creates, resizes and encodes an image
+limits:
+  - Maximum input buffer size is 15MB
+  - Maximum image dimension is 8000 pixels
+  - maxWidth must be between 16 and 2000
+example: |-
+  import { Jimp } from 'jimp';
+  import { makeThumbnail } from '@/integrations/files-image-processing';
+
+  const buffer = await makeThumbnail(inputBuffer, 400);
+  const img = await Jimp.read(inputBuffer);
+  img.resize({ w: 100 });
+keywords:
+  - jimp
+  - files.image-processing
+  - files
+  - image
+  - processing
+  - image-processing
+  - thumbnail
+  - resize
+  - jpeg
+  - pure-javascript
+  - no-native-dependencies
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

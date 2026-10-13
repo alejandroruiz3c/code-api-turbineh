@@ -1,9 +1,11 @@
 /** `pnpm catalog:validate` — validates every catalog/components/<id>/component.yaml. Exit 1 on any error. */
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guideErrors } from "./guide.js";
 import { checkComponents, checkRecipes } from "./agent-ready.js";
+import { buildIndex, INDEX_DIR } from "./catalog-index.js";
+import { docsIssues } from "./docs.js";
 import { validateManifestFile } from "./validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -43,4 +45,36 @@ console.log(
     ? "agent-ready: every recipe template and component passes"
     : `agent-ready: ${issues.length} issue(s)`,
 );
-if (dirs.length === 0 || failed > 0 || issues.length > 0) process.exit(1);
+
+// Documentation standard (ADR-0032): every component is documented (docs.yaml). Missing or incomplete docs are not a
+// rejection: the intake documentation step writes them (pnpm catalog:document).
+const undocumented = dirs.flatMap((d) =>
+  docsIssues(join(root, d.name), d.name).map((m) => `${d.name}: ${m}`),
+);
+for (const u of undocumented) console.log(`✗ [docs] ${u}`);
+console.log(
+  undocumented.length === 0
+    ? `docs: all ${dirs.length} components documented to the standard`
+    : `docs: ${undocumented.length} component(s) to document — run pnpm catalog:document`,
+);
+
+// The agent-readable index must match the manifests and docs.
+const { json, llms } = buildIndex(root);
+const indexDir = join(root, "../..", INDEX_DIR);
+const stale = [
+  ["index.json", json],
+  ["llms.txt", llms],
+].filter(([f, want]) => {
+  const p = join(indexDir, f as string);
+  return !existsSync(p) || readFileSync(p, "utf8") !== want;
+});
+if (stale.length) console.log(`✗ [index] ${INDEX_DIR} is out of date — run pnpm catalog:index`);
+
+if (
+  dirs.length === 0 ||
+  failed > 0 ||
+  issues.length > 0 ||
+  undocumented.length > 0 ||
+  stale.length > 0
+)
+  process.exit(1);

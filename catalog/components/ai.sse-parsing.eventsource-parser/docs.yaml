@@ -1,0 +1,99 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ai.sse-parsing.eventsource-parser
+does: Parses Server-Sent Events streams (streamed model answers, progress events)
+does_not: "Does not open connections: feed it the bytes of a fetch response"
+use_cases:
+  - Parsing Server-Sent Events (SSE) streams from model answers or progress events
+  - Processing streamed data chunks in environments like browsers, Node.js, or Deno
+  - Handling event IDs and retry intervals in SSE streams
+when_to_use:
+  - When you have raw bytes or chunks from a fetch response and need to extract structured SSE messages
+  - When you need a source-agnostic parser that does not manage the network connection itself
+when_not_to_use:
+  - instead: eventsource-client
+    why: If you require a modern, feature-rich client implementation that manages the connection for you
+tradeoffs:
+  - Does not open connections; requires manual feeding of bytes/chunks
+inputs:
+  - name: pnpm add eventsource-parser@4.1.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: createParser
+    kind: export
+    about: Creates a parser instance with callbacks for onEvent, onId, and onRetry
+  - name: EventSourceMessage
+    kind: export
+    about: The structure of a parsed SSE message
+  - name: readSseStream
+    kind: export
+    about: Reads a ReadableStream<Uint8Array> and calls onEvent for each parsed message
+extension_points:
+  - onEvent callback for receiving parsed messages
+  - onId callback for tracking event IDs for reconnection
+  - onRetry callback for handling server-requested retry intervals
+dependencies:
+  package: eventsource-parser
+  version: 4.1.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - No external network or filesystem access; operates purely on provided byte chunks
+guarantees:
+  - claim: parses a Server-Sent Events stream fed in arbitrary chunks
+    test:
+      file: contract.test.ts
+      title: parses a Server-Sent Events stream fed in arbitrary chunks
+limits:
+  - Does not handle network connectivity or opening connections
+example: |-
+  import { createParser, type EventSourceMessage } from 'eventsource-parser';
+  import { readSseStream } from '@/integrations/ai-sse-parsing';
+
+  const onEvent = (event: EventSourceMessage) => {
+    console.log(event.data);
+  };
+
+  const parser = createParser({ onEvent });
+  // Or use the glue function:
+  // await readSseStream(readableStream, onEvent);
+keywords:
+  - eventsource-parser
+  - ai.sse-parsing
+  - ai
+  - sse
+  - parsing
+  - parser
+  - streaming
+  - eventsource
+  - server-sent-events
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

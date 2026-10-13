@@ -1,0 +1,93 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.type-detection.file-type
+does: Detects real file type from magic bytes (not from the extension)
+does_not: Does not scan files for malware
+use_cases:
+  - Detecting real file types from binary buffers using magic bytes
+  - Validating file uploads against an allow-list of MIME types
+when_to_use:
+  - When you need to verify file identity independently of file extensions or browser claims
+when_not_to_use:
+  - instead: files.mime.mime
+    why: When you need to handle text-based formats like .txt, .csv, or .svg which are not supported
+  - instead: files.upload.busboy
+    why: When you need to parse multipart/form-data streams
+tradeoffs:
+  - Detection is a best-effort hint and does not guarantee the file is valid or not malformed
+inputs:
+  - name: pnpm add file-type@22.1.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: fileTypeFromBuffer
+    kind: export
+    about: Detects the file type of a Uint8Array or ArrayBuffer by checking magic numbers.
+  - name: detectFileType
+    kind: export
+    about: Returns the extension and MIME type from a Uint8Array, limited to the first 4100 bytes.
+  - name: isAllowedFileType
+    kind: export
+    about: Checks if the detected MIME type of a Uint8Array exists within a provided allow-list.
+extension_points: []
+dependencies:
+  package: file-type
+  version: 22.1.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Does not scan files for malware
+guarantees:
+  - claim: detects PNG and PDF by magic bytes
+    test:
+      file: contract.test.ts
+      title: detects PNG and PDF by magic bytes
+limits:
+  - Does not support text-based formats like .txt, .csv, or .svg
+  - Detection is limited to binary-based file formats
+example: |-
+  import { detectFileType, isAllowedFileType } from '@/integrations/files-type-detection';
+
+  const buffer = new Uint8Array([0x89, 0x50, 0x4E, 0x47]); // PNG header
+  const type = await detectFileType(buffer);
+  const allowed = await isAllowedFileType(buffer, ['image/png']);
+keywords:
+  - file-type
+  - files.type-detection
+  - files
+  - type
+  - detection
+  - file type detection
+  - magic bytes
+  - mime type
+  - binary formats
+  - buffer sniffing
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

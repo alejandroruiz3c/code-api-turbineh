@@ -1,0 +1,103 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.table.tanstack-table
+does: "Headless table state: sorting, filtering, pagination"
+does_not: Does not render markup or styles
+use_cases:
+  - Building powerful datagrids with full control over markup and styles
+  - Managing headless table state including sorting, filtering, and pagination
+  - Implementing virtualizable and server-side friendly tables
+when_to_use:
+  - When you need full control over the UI components and styles of a table
+  - When you require headless state management for sorting, filtering, or grouping
+when_not_to_use:
+  - instead: ui.charts.recharts
+    why: If you need to visualize data in charts rather than tabular formats
+  - instead: pre-built UI components
+    why: If you do not want to manage the markup and styles yourself as this component does not render them
+tradeoffs:
+  - Provides complete UI flexibility at the cost of having to write all markup and styling logic manually
+inputs:
+  - name: pnpm add @tanstack/react-table@8.21.3
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: createTable
+    kind: export
+    about: Creates a table instance with provided data, columns, and state models
+  - name: getCoreRowModel
+    kind: export
+    about: Provides the core row model for the table
+  - name: getSortedRowModel
+    kind: export
+    about: Provides the row model for sorting functionality
+extension_points:
+  - Custom column accessors
+  - Custom renderers for cell values
+dependencies:
+  package: "@tanstack/react-table"
+  version: 8.21.3
+  runtime: node@>=20
+  peers:
+    react: ">=16.8"
+    react-dom: ">=16.8"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@>=16.8, react-dom@>=16.8."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access required.
+guarantees:
+  - claim: sorts rows headlessly
+    test:
+      file: contract.test.ts
+      title: sorts rows headlessly
+limits:
+  - Does not render markup or styles
+example: |-
+  import { createTable, getCoreRowModel, getSortedRowModel } from "@tanstack/react-table";
+
+  const table = createTable({
+    data: [{ n: "b" }, { n: "a" }],
+    columns: [{ accessorKey: "n" }],
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { sorting: [{ id: "n", desc: false }] },
+    onStateChange: () => {},
+    renderFallbackValue: null,
+  });
+keywords:
+  - "@tanstack/react-table"
+  - ui.table
+  - ui
+  - table
+  - headless
+  - datagrid
+  - sorting
+  - filtering
+  - pagination
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

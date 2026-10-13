@@ -1,0 +1,86 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.mime.mime
+does: Maps file extensions to MIME types and back
+does_not: Does not inspect file contents
+use_cases:
+  - Mapping file extensions to MIME types
+  - Converting MIME types to file extensions
+  - Retrieving all extensions associated with a specific MIME type
+when_to_use:
+  - When you need to determine the content type of a file based on its name or extension
+  - When you need to suggest a file extension for a given MIME type
+when_not_to_use:
+  - instead: files.type-detection.file-type
+    why: When you need to inspect actual file contents rather than just the filename or extension
+tradeoffs:
+  - Provides a compact, dependency-free API but does not perform content sniffing
+inputs:
+  - name: pnpm add mime@4.1.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: mime
+    kind: export
+    about: The default immutable mime object providing type mapping functions
+extension_points: []
+dependencies:
+  package: mime
+  version: 4.1.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No security-sensitive operations performed
+guarantees:
+  - claim: maps extensions and types
+    test:
+      file: contract.test.ts
+      title: maps extensions and types
+limits:
+  - Does not inspect file contents
+example: |-
+  import mime from 'mime';
+
+  mime.getType('report.pdf');
+  mime.getExtension('text/csv');
+  mime.getAllExtensions('image/jpeg');
+keywords:
+  - mime
+  - files.type-detection
+  - files
+  - type
+  - detection
+  - mime-type
+  - extension
+  - mapping
+  - content-type
+  - file-info
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

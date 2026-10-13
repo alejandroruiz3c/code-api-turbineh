@@ -1,0 +1,89 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.popover.radix
+does: Accessible popovers
+does_not: Unstyled
+use_cases:
+  - Displaying contextual information in a floating container
+  - Triggering dialog-like content via a button or element
+when_to_use:
+  - When accessible popover functionality is required
+when_not_to_use:
+  - instead: ui.alert-dialog.radix
+    why: When a modal interruption is needed instead of a non-modal popover
+tradeoffs:
+  - Provides accessibility primitives but is unstyled
+inputs:
+  - name: pnpm add @radix-ui/react-popover@1.1.23
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Popover
+    kind: export
+    about: The main component namespace for popover functionality
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-popover"
+  version: 1.1.23
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No security guarantees provided in documentation
+guarantees:
+  - claim: renders a dialog trigger
+    test:
+      file: contract.test.ts
+      title: renders a dialog trigger
+limits:
+  - Does not provide default styling
+example: |-
+  import { Popover } from "@radix-ui/react-popover";
+
+  const Example = () => (
+    <Popover.Root>
+      <Popover.Trigger>Open</Popover.Trigger>
+    </Popover.Root>
+  );
+keywords:
+  - "@radix-ui/react-popover"
+  - ui.popover
+  - ui
+  - popover
+  - radix-ui
+  - accessible
+  - floating-ui
+  - dialog
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

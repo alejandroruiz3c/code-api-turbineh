@@ -1,0 +1,88 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: security.webhook-signature.standardwebhooks
+does: Signs and verifies webhooks following the Standard Webhooks spec
+does_not: Does not deliver or retry webhooks
+use_cases:
+  - Signing outgoing webhook payloads to comply with the Standard Webhooks specification
+  - Verifying incoming webhook payloads using a shared secret and signature headers
+when_to_use:
+  - When you need to implement the Standard Webhooks specification for payload integrity and authenticity
+when_not_to_use:
+  - instead: security.jwt.jose
+    why: If you require JSON Web Token standards instead of the Standard Webhooks spec
+  - instead: a webhook delivery service
+    why: This component does not deliver or retry webhooks
+tradeoffs:
+  - Focuses strictly on signing and verification without providing delivery mechanisms
+inputs:
+  - name: pnpm add standardwebhooks@1.1.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Webhook
+    kind: export
+    about: A class used to sign and verify webhook payloads using a base64 encoded secret.
+extension_points: []
+dependencies:
+  package: standardwebhooks
+  version: 1.1.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Provides signature verification to ensure payload integrity and authenticity
+guarantees:
+  - claim: verifies a signed payload and rejects tampering
+    test:
+      file: contract.test.ts
+      title: verifies a signed payload and rejects tampering
+limits:
+  - Does not handle network delivery or retry logic
+example: |-
+  import { Webhook } from "standardwebhooks";
+  const wh = new Webhook("YmFzZTY0LXNlY3JldA==");
+  const sig = wh.sign("id", new Date(), '{"a":1}');
+  const result = wh.verify('{"a":1}', {
+    "webhook-id": "id",
+    "webhook-timestamp": "1600000000",
+    "webhook-signature": sig
+  });
+keywords:
+  - standardwebhooks
+  - security.webhook-signature
+  - security
+  - webhook
+  - signature
+  - verification
+  - signing
+  - standard-webhooks
+  - payload-integrity
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

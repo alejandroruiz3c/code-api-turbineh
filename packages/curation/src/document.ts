@@ -148,6 +148,76 @@ async function readme(name: string): Promise<string> {
   }
 }
 
+/**
+ * Files named by a vendored component's install note (e.g. "Included in recipe templates at src/lib/csv.ts"), found
+ * in the recipe templates, and the template unit tests that import them.
+ */
+export function vendoredFiles(
+  componentsDir: string,
+  install: string,
+): { files: { abs: string; spec: string }[]; tests: { abs: string; rel: string }[] } {
+  const recipes = join(componentsDir, "../recipes");
+  if (!existsSync(recipes)) return { files: [], tests: [] };
+  const templates = readdirSync(recipes).map((r) => join(recipes, r, "template"));
+  const files: { abs: string; spec: string }[] = [];
+  for (const path of install.match(/\bsrc\/[\w./-]+/g) ?? []) {
+    const clean = path.replace(/\/$/, "");
+    for (const t of templates) {
+      const abs = join(t, clean);
+      if (!existsSync(abs)) continue;
+      const list = statSync(abs).isDirectory()
+        ? walk(abs).filter((x) => /\.(ts|tsx)$/.test(x))
+        : [abs];
+      for (const f of list) {
+        const spec = `@/${relative(join(t, "src"), f).replace(/\.(ts|tsx)$/, "")}`;
+        if (!files.some((x) => x.spec === spec)) files.push({ abs: f, spec });
+      }
+      break;
+    }
+  }
+  const specs = new Set(files.map((f) => f.spec));
+  const tests: { abs: string; rel: string }[] = [];
+  for (const t of templates) {
+    for (const f of walk(join(t, "tests/unit")).filter((x) => x.endsWith(".test.ts"))) {
+      const src = readFileSync(f, "utf8");
+      const imports = [...src.matchAll(/from\s+["'](@\/[^"']+)["']/g)].map((m) => m[1] as string);
+      if (imports.some((i) => specs.has(i)) && !tests.some((x) => x.rel.endsWith(relative(t, f))))
+        tests.push({ abs: f, rel: `recipe template ${relative(join(t, ".."), f)}` });
+    }
+  }
+  return { files, tests };
+}
+
+/** Bounds the model's draft (truncates over-long strings and lists) before validation. */
+export function boundDraft(raw: unknown): unknown {
+  const cut = (v: unknown, n: number): unknown => (typeof v === "string" ? v.slice(0, n) : v);
+  if (!raw || typeof raw !== "object") return raw;
+  const d = { ...(raw as Record<string, unknown>) };
+  const arr = (k: string, max: number, n = 300) => {
+    if (Array.isArray(d[k])) d[k] = (d[k] as unknown[]).slice(0, max).map((x) => cut(x, n));
+  };
+  arr("use_cases", 6);
+  arr("when_to_use", 4);
+  arr("tradeoffs", 4);
+  arr("extension_points", 4);
+  arr("security", 4);
+  arr("limits", 4);
+  if (Array.isArray(d.keywords))
+    d.keywords = (d.keywords as unknown[])
+      .filter((k) => typeof k === "string" && k.length <= 40)
+      .slice(0, 20);
+  for (const k of ["when_not_to_use", "interfaces", "guarantees"]) {
+    if (Array.isArray(d[k]))
+      d[k] = (d[k] as Record<string, unknown>[])
+        .slice(0, k === "interfaces" ? 8 : k === "guarantees" ? 6 : 4)
+        .map((o) =>
+          Object.fromEntries(Object.entries(o ?? {}).map(([kk, vv]) => [kk, cut(vv, 300)])),
+        );
+  }
+  d.example = cut(d.example, 1200);
+  return d;
+}
+
 /** Deterministic facts of one component. */
 export async function componentFacts(
   componentsDir: string,
@@ -161,13 +231,26 @@ export async function componentFacts(
     name: decodeURIComponent(purl?.[1] ?? `turbineh/${id}`),
     version: purl?.[2] ?? "0.0.0",
   };
-  const sources = walk(dir).filter((p) => /\.(ts|tsx|mjs)$/.test(p) || p.endsWith(".append"));
+  // Components vendored in the recipe templates ("Included in recipe templates at src/…"): their code and unit
+  // tests live in the templates.
+  const vendored = vendoredFiles(componentsDir, manifest.integration?.install ?? "");
+  const sources = [
+    ...walk(dir).filter((p) => /\.(ts|tsx|mjs)$/.test(p) || p.endsWith(".append")),
+    ...vendored.files.map((f) => f.abs),
+    ...vendored.tests.map((t) => t.abs),
+  ];
   const all = sources.map((p) => readFileSync(p, "utf8")).join("\n");
   const importable: Record<string, string[]> = {};
   const kinds: ComponentFacts["kinds"] = {};
   if (!pkg.name.startsWith("turbineh/")) {
     importable[pkg.name] = importsFrom(all, pkg.name);
     for (const n of importable[pkg.name] ?? []) kinds[n] = /^use[A-Z]/.test(n) ? "hook" : "export";
+  }
+  for (const f of vendored.files) {
+    const ex = exportsOf(readFileSync(f.abs, "utf8"), f.abs.endsWith(".tsx"));
+    if (ex.length === 0) continue;
+    importable[f.spec] = ex.map((e) => e.name);
+    for (const e of ex) kinds[e.name] = e.kind;
   }
   const glue = join(dir, "glue.ts");
   if (existsSync(glue)) {
@@ -204,7 +287,14 @@ export async function componentFacts(
     importable,
     kinds,
     env,
-    tests: testsOf(dir),
+    tests: [
+      ...testsOf(dir),
+      ...vendored.tests.flatMap((t) =>
+        [
+          ...readFileSync(t.abs, "utf8").matchAll(/\b(?:it|test)\(\s*["'`]([^"'`]{3,200})["'`]/g),
+        ].map((m) => ({ file: t.rel, title: m[1] as string })),
+      ),
+    ],
     code: excerpt,
     readme: fetchReadme ? await readme(pkg.name) : "",
     catalogIds: readdirSync(componentsDir),
@@ -494,7 +584,7 @@ export async function documentComponent(
     if (process.env.DOCUMENT_DEBUG)
       console.error(id, attempt, res.choices[0]?.finish_reason, content.length);
     try {
-      const draft = draftSchema.parse(JSON.parse(content));
+      const draft = draftSchema.parse(boundDraft(JSON.parse(content)));
       const { docs, dropped } = checkDraft(facts, draft, { by: model.model, at });
       const valid = componentDocsSchema.safeParse(docs);
       if (!valid.success) {

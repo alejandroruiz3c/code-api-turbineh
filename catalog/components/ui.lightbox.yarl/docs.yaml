@@ -1,0 +1,94 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.lightbox.yarl
+does: Accessible image lightbox and galleries for products and portfolios
+does_not: Not a carousel (see ui.carousel)
+use_cases:
+  - Accessible image galleries for products
+  - Portfolio image viewing
+  - Responsive image displays with automatic resolution switching
+when_to_use:
+  - When needing a lightbox that supports keyboard, mouse, touchpad, and touchscreen navigation
+  - When requiring support for RTL layouts
+  - When needing to preload images to prevent partial downloads
+when_not_to_use:
+  - instead: ui.carousel.embla
+    why: It is not a carousel component
+tradeoffs:
+  - Features like video and zoom are not bundled by default and must be added via plugins to avoid bloat
+inputs:
+  - name: pnpm add yet-another-react-lightbox@3.32.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Lightbox
+    kind: export
+    about: A modern React lightbox component for displaying images and video slides.
+extension_points:
+  - Plugins for video support
+  - Plugins for zoom functionality
+  - Custom UI elements
+  - Custom slides
+dependencies:
+  package: yet-another-react-lightbox
+  version: 3.32.2
+  runtime: node@>=20
+  peers:
+    "@types/react": ^16 || ^17 || ^18 || ^19
+    "@types/react-dom": ^16 || ^17 || ^18 || ^19
+    react: ^16.8.0 || ^17 || ^18 || ^19
+    react-dom: ^16.8.0 || ^17 || ^18 || ^19
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: @types/react@^16 || ^17 || ^18 || ^19, @types/react-dom@^16 || ^17 || ^18 || ^19,
+    react@^16.8.0 || ^17 || ^18 || ^19, react-dom@^16.8.0 || ^17 || ^18 || ^19."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external services are used
+guarantees:
+  - claim: renders nothing while closed and accepts slides
+    test:
+      file: contract.test.ts
+      title: renders nothing while closed and accepts slides
+limits:
+  - Does not include video or zoom functionality in the core bundle
+example: |-
+  import { Lightbox } from "yet-another-react-lightbox";
+
+  function App() {
+    return <Lightbox open={true} slides={[{ src: "/a.jpg" }]} />;
+  }
+keywords:
+  - yet-another-react-lightbox
+  - ui.lightbox
+  - ui
+  - lightbox
+  - react
+  - gallery
+  - responsive images
+  - accessible
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

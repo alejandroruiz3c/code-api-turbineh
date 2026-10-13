@@ -1,0 +1,92 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: content.markdown.react-markdown
+does: Renders Markdown as React elements without dangerouslySetInnerHTML
+does_not: Does not edit Markdown
+use_cases:
+  - Rendering Markdown strings as React elements
+  - Transforming Markdown content using remark and rehype plugins
+  - Customizing HTML element rendering by passing custom React components
+when_to_use:
+  - When you need to render markdown safely without using dangerouslySetInnerHTML
+  - When you need to swap standard HTML elements for custom React components
+when_not_to_use:
+  - instead: MDX
+    why: If you need to use JavaScript and JSX inside markdown files
+  - instead: react-remark or rehype-react
+    why: If you are already familiar with the unified ecosystem and want a manual hooks-based approach
+tradeoffs:
+  - Builds a virtual DOM from a syntax tree for efficient updates, but requires understanding of the
+    unified/remark/rehype ecosystem for advanced usage.
+inputs:
+  - name: pnpm add react-markdown@10.1.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Markdown
+    kind: export
+    about: A React component that renders a markdown string into React elements.
+extension_points:
+  - remark plugins for markdown transformation
+  - rehype plugins for HTML transformation
+  - custom components to replace standard HTML elements
+dependencies:
+  package: react-markdown
+  version: 10.1.0
+  runtime: node@>=20
+  peers:
+    "@types/react": ">=18"
+    react: ">=18"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: @types/react@>=18, react@>=18."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Safe by default; does not use dangerouslySetInnerHTML and prevents XSS attacks by not executing raw HTML.
+guarantees:
+  - claim: renders Markdown and does not execute raw HTML
+    test:
+      file: contract.test.ts
+      title: renders Markdown and does not execute raw HTML
+limits:
+  - Does not edit Markdown content
+example: |-
+  import { Markdown } from 'react-markdown';
+
+  function App() {
+    return <Markdown># Title</Markdown>;
+  }
+keywords:
+  - react-markdown
+  - ui.markdown
+  - ui
+  - markdown
+  - react
+  - rendering
+  - security
+  - unified
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

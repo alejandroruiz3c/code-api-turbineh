@@ -199,6 +199,9 @@ importers:
 
   ingest:
     dependencies:
+      '@turbineh/catalog':
+        specifier: workspace:*
+        version: link:../packages/catalog
       '@turbineh/db':
         specifier: workspace:*
         version: link:../packages/db

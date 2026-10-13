@@ -1,0 +1,90 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.dates.dayjs
+does: Small immutable date library for parsing, arithmetic and formatting
+does_not: Does not ship time-zone support without plugins
+use_cases:
+  - Parsing, validating, manipulating, and displaying dates and times
+  - Arithmetic operations like adding or subtracting time
+  - Formatting dates for display
+  - Internationalized date handling via plugins
+when_to_use:
+  - When a lightweight (2KB) immutable date library is required
+  - When a Moment.js-compatible API is preferred
+when_not_to_use:
+  - instead: data.dates.date-fns
+    why: If you require a different functional approach to date manipulation
+  - instead: moment.js
+    why: If you need built-in time-zone support without additional plugins
+tradeoffs:
+  - Minimalist size (2KB) vs limited core functionality without plugins
+inputs:
+  - name: pnpm add dayjs@1.11.23
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: dayjs
+    kind: export
+    about: Main function for parsing and creating dayjs objects
+extension_points:
+  - Plugins for extended functionality like advanced formatting or time-zone support
+dependencies:
+  package: dayjs
+  version: 1.11.23
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access
+guarantees:
+  - claim: The library is immutable and supports formatting
+    test:
+      file: contract.test.ts
+      title: is immutable and formats
+limits:
+  - Does not ship time-zone support without plugins
+example: |-
+  import { dayjs } from 'dayjs';
+
+  const date = dayjs('2018-08-08');
+  const nextMonth = date.add(1, 'month');
+  const formatted = nextMonth.format('YYYY-MM-DD');
+keywords:
+  - dayjs
+  - data.dates
+  - data
+  - dates
+  - date
+  - immutable
+  - parsing
+  - formatting
+  - manipulation
+  - lightweight
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

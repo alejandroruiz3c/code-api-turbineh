@@ -1,0 +1,82 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.animation.auto-animate
+does: Zero-config animations for lists when items are added, removed or moved
+does_not: Not for complex timelines
+use_cases:
+  - Adding smooth transitions to lists when items are added
+  - Adding smooth transitions to lists when items are removed
+  - Adding smooth transitions to lists when items are moved
+when_to_use:
+  - When zero-config animations for list changes are required
+  - When using Vue, React, Solid, or other JavaScript applications
+when_not_to_use:
+  - instead: ui.animation.motion
+    why: Not for complex timelines
+tradeoffs:
+  - Zero-config approach limits control over complex timelines
+inputs:
+  - name: pnpm add @formkit/auto-animate@0.10.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: autoAnimate
+    kind: export
+    about: A function that provides zero-config animations for lists.
+extension_points:
+  - Plugins
+dependencies:
+  package: "@formkit/auto-animate"
+  version: 0.10.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external services or network access required
+guarantees:
+  - claim: exposes the animate function
+    test:
+      file: contract.test.ts
+      title: exposes the animate function
+limits:
+  - Not for complex timelines
+example: import { autoAnimate } from "@formkit/auto-animate";
+keywords:
+  - "@formkit/auto-animate"
+  - ui.animation
+  - ui
+  - animation
+  - zero-config
+  - list transitions
+  - javascript
+  - vue
+  - react
+  - solid
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

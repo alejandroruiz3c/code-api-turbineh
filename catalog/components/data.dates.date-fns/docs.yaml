@@ -1,0 +1,96 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.dates.date-fns
+does: Pure date arithmetic, comparison and formatting functions
+does_not: Does not handle time zones by itself (see date-fns-tz)
+use_cases:
+  - Pure date arithmetic
+  - Date comparison
+  - Date formatting
+when_to_use:
+  - When performing date calculations or parsing ISO strings
+when_not_to_use:
+  - instead: date-fns-tz
+    why: Does not handle time zones by itself
+tradeoffs:
+  - Provides pure functions for date manipulation
+inputs:
+  - name: pnpm add date-fns@4.4.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: addDays
+    kind: export
+    about: Adds a specified number of days to a date
+  - name: differenceInCalendarDays
+    kind: export
+    about: Calculates the difference in calendar days between two dates
+  - name: format
+    kind: export
+    about: Formats a date according to a provided string
+  - name: isBefore
+    kind: export
+    about: Checks if one date is before another
+  - name: parseISO
+    kind: export
+    about: Parses an ISO-8601 string into a Date object
+extension_points: []
+dependencies:
+  package: date-fns
+  version: 4.4.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database effects
+guarantees:
+  - claim: adds, compares and formats dates
+    test:
+      file: contract.test.ts
+      title: adds, compares and formats dates
+limits:
+  - Does not handle time zones by itself
+example: |-
+  import { addDays, differenceInCalendarDays, format, isBefore, parseISO } from "date-fns";
+  const d = parseISO("2026-10-13T10:00:00Z");
+  const diff = differenceInCalendarDays(addDays(d, 7), d);
+  const formatted = format(new Date(2026, 9, 13), "yyyy-MM-dd");
+  const before = isBefore(d, addDays(d, 1));
+keywords:
+  - date-fns
+  - data.dates
+  - data
+  - dates
+  - date
+  - arithmetic
+  - formatting
+  - comparison
+  - parsing
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

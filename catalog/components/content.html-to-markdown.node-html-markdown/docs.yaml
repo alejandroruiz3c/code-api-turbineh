@@ -1,0 +1,92 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: content.html-to-markdown.node-html-markdown
+does: Converts HTML to Markdown fast and without a browser DOM (compact context for models, imports)
+does_not: Does not execute scripts or fetch pages
+use_cases:
+  - Converting HTML to compact Markdown for LLM context injection
+  - High-speed batch processing of large HTML datasets
+when_to_use:
+  - When you need to convert HTML to Markdown without a browser DOM
+  - When performance and speed are critical for large-scale conversions
+when_not_to_use:
+  - instead: content.html-dom.linkedom
+    why: If you need a full DOM environment
+  - instead: content.html-parse.cheerio
+    why: If you need to parse and manipulate the HTML structure before conversion
+tradeoffs:
+  - Faster than Turndown but requires careful management of instance reuse for maximum performance
+inputs:
+  - name: pnpm add node-html-markdown@2.0.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: NodeHtmlMarkdown
+    kind: export
+    about: Class providing static translate method or instance-based translation for HTML to Markdown conversion
+  - name: htmlToMarkdown
+    kind: export
+    about: Function that converts HTML strings to trimmed Markdown, throwing an error if the input exceeds
+      2,000,000 characters
+extension_points:
+  - customTranslators
+  - customCodeBlockTranslators
+  - customTransformers
+dependencies:
+  package: node-html-markdown
+  version: 2.0.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - Does not execute scripts or fetch pages
+guarantees:
+  - claim: converts HTML to compact Markdown
+    test:
+      file: contract.test.ts
+      title: converts HTML to compact Markdown
+limits:
+  - Input length is limited to 2,000,000 characters in the htmlToMarkdown wrapper
+example: |-
+  import { htmlToMarkdown } from '@/integrations/content-html-to-markdown';
+
+  const markdown = htmlToMarkdown('<h1>Title</h1><p>Text</p>');
+keywords:
+  - node-html-markdown
+  - content.html-to-markdown
+  - content
+  - html
+  - to
+  - markdown
+  - converter
+  - fast
+  - node
+  - browser
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

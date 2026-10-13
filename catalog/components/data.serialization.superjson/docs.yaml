@@ -1,0 +1,85 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.serialization.superjson
+does: Serialises Dates, Maps, Sets and BigInts across the network boundary
+does_not: Does not validate data
+use_cases:
+  - Serialising Dates, Maps, Sets and BigInts across the network boundary
+  - Bypassing Next.js serialization limitations in getServerSideProps and getInitialProps
+when_to_use:
+  - When you need to transmit complex JavaScript expressions like Dates or Maps via JSON-compatible interfaces
+when_not_to_use:
+  - instead: JSON.stringify
+    why: Superjson is a wrapper for JSON serialization; use standard JSON if you do not need to preserve complex
+      types.
+tradeoffs:
+  - Provides type safety and complex type support at the cost of adding a meta object to the serialized output.
+inputs:
+  - name: pnpm add superjson@2.2.6
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: superjson
+    kind: export
+    about: The main library interface providing serialization and deserialization functions.
+extension_points: []
+dependencies:
+  package: superjson
+  version: 2.2.6
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No security guarantees provided by the component.
+guarantees:
+  - claim: round-trips dates and maps
+    test:
+      file: contract.test.ts
+      title: round-trips dates and maps
+limits:
+  - Does not validate data
+example: |-
+  import superjson from 'superjson';
+
+  const v = { at: new Date("2026-10-13T00:00:00Z"), m: new Map([["a", 1]]) };
+  const jsonString = superjson.stringify(v);
+  const back = superjson.parse(jsonString);
+keywords:
+  - superjson
+  - data.serialization
+  - data
+  - serialization
+  - deserialization
+  - date
+  - map
+  - set
+  - bigint
+  - next.js
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

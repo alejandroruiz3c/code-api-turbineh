@@ -1,0 +1,105 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.otp-input.input-otp
+does: Accessible one-time-code input for two-factor and email codes
+does_not: Does not send codes
+use_cases:
+  - Two-factor authentication (2FA)
+  - Email verification codes
+  - SMS autofill integration
+when_to_use:
+  - When you need an accessible, unstyled one-time-code input that maintains native browser behaviors like SMS
+    autofill and screen reader support.
+when_not_to_use:
+  - instead: a standard text input
+    why: If you do not require specialized slot-based rendering for a multi-digit code.
+tradeoffs:
+  - Provides full control over UI via a render prop but requires manual implementation of the visual slots.
+inputs:
+  - name: pnpm add input-otp@1.5.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: OTPInput
+    kind: export
+    about: An accessible, unstyled component that renders a single invisible text input and provides slots for
+      custom UI.
+  - name: REGEXP_ONLY_DIGITS
+    kind: export
+    about: A regular expression pattern for digit-only validation.
+extension_points:
+  - The `render` prop allows custom markup for each character slot.
+dependencies:
+  package: input-otp
+  version: 1.5.0
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 ||
+    ^18.0 || ^19.0.0 || ^19.0.0-rc."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Does not send codes; it is purely a UI component.
+guarantees:
+  - claim: renders a one-time code input limited to digits
+    test:
+      file: contract.test.ts
+      title: renders a one-time code input limited to digits
+limits:
+  - Does not handle network requests or code transmission.
+example: |-
+  import { OTPInput, REGEXP_ONLY_DIGITS } from 'input-otp';
+
+  export function Example() {
+    return (
+      <OTPInput
+        maxLength={6}
+        pattern={REGEXP_ONLY_DIGITS}
+        render={(slots) => (
+          <div>
+            {slots.map((slot, idx) => (
+              <span key={idx}>{slot}</span>
+            ))}
+          </div>
+        )}
+      />
+    );
+  }
+keywords:
+  - input-otp
+  - ui.otp-input
+  - ui
+  - otp
+  - input
+  - 2fa
+  - accessible
+  - react
+  - verification
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

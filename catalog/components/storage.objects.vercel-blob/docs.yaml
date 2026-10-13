@@ -1,0 +1,84 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: storage.objects.vercel-blob
+does: Stores files in Vercel Blob storage
+does_not: Vercel-specific
+use_cases:
+  - Storing files in Vercel Blob storage
+  - Uploading files via server-side requests
+  - Uploading files up to 5 TB via client-side direct uploads
+when_to_use:
+  - When using Vercel infrastructure and requiring a JavaScript API for blob management
+when_not_to_use:
+  - instead: storage.objects.aws-s3
+    why: When you require non-Vercel specific storage solutions
+tradeoffs:
+  - Server uploads are limited to the request body size of the server (4.5 MB on Vercel)
+inputs:
+  - name: pnpm add @vercel/blob@2.8.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: put
+    kind: export
+    about: Uploads files to Vercel Blob storage
+  - name: del
+    kind: export
+    about: Deletes files from Vercel Blob storage
+  - name: list
+    kind: export
+    about: Lists files in Vercel Blob storage
+extension_points: []
+dependencies:
+  package: "@vercel/blob"
+  version: 2.8.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Client uploads allow secure direct-to-storage transfers from the browser
+guarantees:
+  - claim: exposes put, list and delete
+    test:
+      file: contract.test.ts
+      title: exposes put, list and delete
+limits:
+  - Server uploads on Vercel are limited to 4.5 MB per request
+example: import { put, del, list } from "@vercel/blob";
+keywords:
+  - "@vercel/blob"
+  - storage.objects
+  - storage
+  - objects
+  - blob
+  - vercel
+  - upload
+  - files
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

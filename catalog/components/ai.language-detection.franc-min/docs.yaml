@@ -1,0 +1,87 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ai.language-detection.franc-min
+does: Detects the language of a text offline (route to the right prompt or model, label documents)
+does_not: Short texts (a few words) are unreliable
+use_cases:
+  - Detecting the language of a text offline
+  - Routing text to the correct prompt or model
+  - Labeling documents by language
+when_to_use:
+  - When offline language detection is required for 82 supported languages
+when_not_to_use:
+  - instead: ai.text-chunking.sentence-splitter
+    why: Short texts (a few words) are unreliable
+tradeoffs:
+  - Offline operation avoids network latency but is limited to 82 supported languages
+inputs:
+  - name: pnpm add franc-min@6.2.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: franc
+    kind: export
+    about: Returns the ISO 639-3 language code of a text.
+  - name: detectLanguage
+    kind: export
+    about: Returns the ISO 639-3 language code or null if the text is too short or undetermined.
+extension_points: []
+dependencies:
+  package: franc-min
+  version: 6.2.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database access required.
+guarantees:
+  - claim: detects the language of a paragraph offline
+    test:
+      file: contract.test.ts
+      title: detects the language of a paragraph offline
+limits:
+  - Short texts are unreliable
+example: |-
+  import { detectLanguage } from "@/integrations/ai-language-detection";
+
+  const lang = detectLanguage("The customer asked for a refund because the parcel arrived damaged and late.");
+  // returns "eng"
+keywords:
+  - franc-min
+  - ai.language-detection
+  - ai
+  - language
+  - detection
+  - language detection
+  - offline
+  - iso 639-3
+  - text classification
+  - esm
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

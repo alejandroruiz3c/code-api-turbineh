@@ -1,0 +1,89 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.phone.libphonenumber-js
+does: Parses, validates and formats international phone numbers
+does_not: Does not verify that a number is reachable
+use_cases:
+  - Parsing personal phone numbers from strings
+  - Validating international phone number formats
+  - Formatting phone numbers into E.164 format
+when_to_use:
+  - When you need a small footprint for phone number parsing and formatting in JavaScript/TypeScript
+    environments
+when_not_to_use:
+  - instead: react-phone-number-input
+    why: If you are building a React component specifically
+  - instead: Google's official libphonenumber port
+    why: If you require support for emergency numbers, short codes, or alphabetic phone numbers
+tradeoffs:
+  - Smaller bundle size (approx 145 kB) compared to Google's original library (approx 550 kB) at the cost of
+    skipping special cases like emergency or short codes
+inputs:
+  - name: pnpm add libphonenumber-js@1.13.14
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: parsePhoneNumberFromString
+    kind: export
+    about: Parses a string into a phone number object for validation and formatting
+extension_points: []
+dependencies:
+  package: libphonenumber-js
+  version: 1.13.14
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database effects
+guarantees:
+  - claim: validates and formats E.164
+    test:
+      file: contract.test.ts
+      title: validates and formats E.164
+limits:
+  - Does not verify that a number is reachable
+  - Does not support emergency numbers, short codes, or alphabetic numbers
+example: |-
+  import { parsePhoneNumberFromString } from "libphonenumber-js";
+  const phoneNumber = parsePhoneNumberFromString("+34 612 34 56 78");
+  if (phoneNumber && phoneNumber.isValid()) {
+    console.log(phoneNumber.format("E.164"));
+  }
+keywords:
+  - libphonenumber-js
+  - data.phone
+  - data
+  - phone
+  - parsing
+  - formatting
+  - validation
+  - e.164
+  - international
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

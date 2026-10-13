@@ -1,0 +1,87 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.ids.cuid2
+does: Collision-resistant, unguessable ids
+does_not: Not sortable by time
+use_cases:
+  - Generating collision-resistant, unguessable IDs for horizontal scaling
+  - Generating offline-compatible, URL-friendly identifiers
+when_to_use:
+  - When you need secure IDs that do not reveal information about the data or the sequence
+  - When generating IDs across multiple machines without coordination
+when_not_to_use:
+  - instead: a simple counter
+    why: High performance tight loops like render loops where cross-host uniqueness and security are not required
+  - instead: sequential ids
+    why: The component is not sortable by time
+tradeoffs:
+  - Uses multiple entropy sources and Sha3 hashing to prevent guessing, which is slower than simple counters
+inputs:
+  - name: pnpm add @paralleldrive/cuid2@3.3.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: createId
+    kind: export
+    about: Generates a new collision-resistant, unguessable ID
+  - name: isCuid
+    kind: export
+    about: Validates if a string is a valid Cuid2
+extension_points: []
+dependencies:
+  package: "@paralleldrive/cuid2"
+  version: 3.3.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Uses NIST-standard cryptographically secure hashing (Sha3) to prevent guessing existing or next IDs
+guarantees:
+  - claim: creates unique, valid ids
+    test:
+      file: contract.test.ts
+      title: creates unique, valid ids
+limits:
+  - Not sortable by time
+example: |-
+  import { createId, isCuid } from "@paralleldrive/cuid2";
+  const id = createId();
+  const valid = isCuid(id);
+keywords:
+  - "@paralleldrive/cuid2"
+  - data.ids
+  - data
+  - ids
+  - cuid2
+  - collision-resistant
+  - secure-ids
+  - horizontal-scaling
+  - sha3
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

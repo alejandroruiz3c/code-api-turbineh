@@ -1,0 +1,119 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: jobs.queue.turbineh
+does: "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent
+  claiming, cron-triggered runner endpoint"
+does_not: Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner
+  endpoint from a scheduler)
+use_cases:
+  - Postgres-backed background job processing
+  - Executing tasks with exponential backoff
+  - Managing typed job payloads via Zod validation
+  - Triggering job runs via HTTP endpoints
+when_to_use:
+  - When you need a job queue that uses your existing Postgres database
+  - When you require typed jobs with schema validation at enqueue and run time
+when_not_to_use:
+  - instead: jobs.scheduler.cron-parser
+    why: If you need to handle the scheduling logic itself rather than just providing a runner endpoint
+  - instead: a long-lived worker process
+    why: This component does not run a worker process; it requires an external scheduler to call the runner
+      endpoint
+tradeoffs:
+  - Requires an external scheduler to call the runner endpoint to avoid idle resources
+  - Relies on Postgres for persistence and concurrency control
+inputs:
+  - name: "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts,
+      src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts"
+    kind: install
+    about: Exact version, added by TurbineH.
+  - name: JOBS_RUNNER_SECRET
+    kind: env
+    about: Read by the component's code.
+  - name: CRON_SECRET
+    kind: env
+    about: Read by the component's code.
+interfaces:
+  - name: defineJob
+    kind: export
+    about: Registers a job type with a Zod schema and a handler function
+  - name: isDefined
+    kind: export
+    about: Checks if a job type has been registered
+  - name: enqueue
+    kind: export
+    about: Adds a new job to the queue with optional run time and max attempts
+  - name: backoffMs
+    kind: export
+    about: Calculates exponential backoff duration in milliseconds
+  - name: runDueJobs
+    kind: export
+    about: Processes jobs that are due for execution
+extension_points:
+  - Custom handler functions provided via defineJob
+dependencies:
+  package: turbineh/jobs.queue.turbineh
+  version: 0.1.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database yes."
+  - Requires JOBS_RUNNER_SECRET for POST requests to the runner endpoint
+  - Supports CRON_SECRET for authentication
+guarantees:
+  - claim: The system registers typed jobs and rejects unsafe type names
+    test:
+      file: files/tests/unit/jobs.test.ts
+      title: registers typed jobs and rejects unsafe type names
+  - claim: Retries follow an exponential pattern capped at one hour
+    test:
+      file: files/tests/unit/jobs.test.ts
+      title: backs off exponentially and caps at one hour
+limits:
+  - Max attempts per job is capped at 20
+  - Backoff duration is capped at 1 hour
+example: |-
+  import { defineJob, enqueue } from '@/lib/jobs';
+
+  defineJob('test', { schema: {}, run: async () => {} }, async (p, ctx) => {});
+
+  enqueue('test', {}, { organizationId: '1' });
+keywords:
+  - jobs.queue.turbineh
+  - jobs.queue
+  - jobs
+  - queue
+  - postgres
+  - background-jobs
+  - retry
+  - exponential-backoff
+  - typed-jobs
+  - cron
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

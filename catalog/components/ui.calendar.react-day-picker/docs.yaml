@@ -1,0 +1,93 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.calendar.react-day-picker
+does: Accessible date picker and month calendar for React
+does_not: Does not manage availability or bookings
+use_cases:
+  - Creating date pickers, calendars, and date inputs for web applications
+  - Implementing single, multiple, or range day selections
+  - Building localized calendars with support for various time zones and calendar systems
+when_to_use:
+  - When an accessible month grid is required
+  - When building custom date selection interfaces that need to comply with WCAG 2.1 AA
+when_not_to_use:
+  - instead: a custom backend solution
+    why: Does not manage availability or bookings
+tradeoffs:
+  - Requires date-fns for date manipulation and formatting
+  - Minimal design requires manual styling via CSS or a CSS framework
+inputs:
+  - name: pnpm add react-day-picker@10.0.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: DayPicker
+    kind: export
+    about: A React component for creating date pickers, calendars, and date inputs.
+extension_points:
+  - Customizable components to extend rendered elements
+  - Extensive set of props for customization
+dependencies:
+  package: react-day-picker
+  version: 10.0.1
+  runtime: node@>=20
+  peers:
+    react: ">=16.8.0"
+    "@types/react": ">=16.8.0"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@>=16.8.0, @types/react@>=16.8.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Complies with WCAG 2.1 AA requirements for accessibility
+guarantees:
+  - claim: server-renders an accessible month grid
+    test:
+      file: contract.test.ts
+      title: server-renders an accessible month grid
+limits:
+  - Does not manage availability or bookings
+example: |-
+  import { DayPicker } from "react-day-picker";
+
+  function MyDatePicker() {
+    return <DayPicker mode="single" />;
+  }
+keywords:
+  - react-day-picker
+  - ui.calendar
+  - ui.date-picker
+  - ui
+  - calendar
+  - date
+  - picker
+  - date picker
+  - react
+  - accessibility
+  - wcag
+  - selection
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

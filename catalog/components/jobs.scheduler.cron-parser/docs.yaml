@@ -1,0 +1,88 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: jobs.scheduler.cron-parser
+does: Parses cron expressions and computes next run times
+does_not: Does not execute jobs
+use_cases:
+  - Parsing crontab instructions
+  - Computing next run times for scheduled tasks
+  - Handling timezone-aware cron schedules
+when_to_use:
+  - When you need to calculate future execution dates from cron expressions with DST support
+when_not_to_use:
+  - instead: jobs.queue.turbineh
+    why: When you need to execute jobs rather than just parse expressions
+  - instead: jobs.scheduler.croner
+    why: When looking for alternative scheduler implementations
+tradeoffs:
+  - Provides iterator capabilities and timezone support but does not handle job execution itself
+inputs:
+  - name: pnpm add cron-parser@5.10.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: CronExpressionParser
+    kind: export
+    about: Provides methods to parse cron expressions and compute next run times
+extension_points: []
+dependencies:
+  package: cron-parser
+  version: 5.10.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No security-specific features documented
+guarantees:
+  - claim: computes the next run in a time zone
+    test:
+      file: contract.test.ts
+      title: computes the next run in a time zone
+limits:
+  - Does not execute jobs
+example: |-
+  import { CronExpressionParser } from "cron-parser";
+
+  const parser = CronExpressionParser.parse("0 9 * * 1", {
+    currentDate: new Date("2026-10-13T00:00:00Z"),
+    tz: "UTC",
+  });
+  const nextRun = parser.next();
+keywords:
+  - cron-parser
+  - jobs.scheduler
+  - jobs
+  - scheduler
+  - cron
+  - parser
+  - timezone
+  - crontab
+  - iterator
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

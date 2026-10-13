@@ -1,0 +1,89 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.qr.qrcode
+does: Generates QR codes as SVG, PNG data URLs or strings
+does_not: Does not scan or decode QR codes
+use_cases:
+  - Generating QR codes as SVG, PNG data URLs, or strings
+  - Creating 2D barcodes for server-side or client-side use
+  - Generating QR codes containing multibyte characters like emojis
+when_to_use:
+  - When you need to generate QR codes in both Node.js and browser environments
+  - When you require specific output formats like SVG or PNG
+when_not_to_use:
+  - instead: files.qr.qrcode-react
+    why: If you specifically need a React component implementation
+  - instead: scanning or decoding
+    why: The component does not scan or decode QR codes
+tradeoffs:
+  - Supports multiple encoding modes (Numeric, Alphanumeric, Kanji, Byte) but requires manual configuration
+    for error correction levels
+inputs:
+  - name: pnpm add qrcode@1.5.4
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: QRCode
+    kind: export
+    about: Main interface for generating QR codes via canvas, strings, or files
+extension_points: []
+dependencies:
+  package: qrcode
+  version: 1.5.4
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No network, filesystem, or database effects are performed during generation.
+guarantees:
+  - claim: renders an SVG QR code
+    test:
+      file: contract.test.ts
+      title: renders an SVG QR code
+limits:
+  - Does not support scanning or decoding QR codes
+example: |-
+  import { QRCode } from "qrcode";
+
+  async function generate() {
+    const svg = await QRCode.toString("https://example.com", { type: "svg" });
+  }
+keywords:
+  - qrcode
+  - files.qr
+  - files
+  - qr
+  - qr code
+  - 2d barcode
+  - generator
+  - svg
+  - png
+  - canvas
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

@@ -1,0 +1,88 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.dropzone.react-dropzone
+does: Drag-and-drop file selection with type and size filters in the browser
+does_not: Client-side only; the server must still validate
+use_cases:
+  - Implementing HTML5 drag-and-drop file selection in React applications
+  - Filtering file uploads by specific MIME types and maximum file size
+when_to_use:
+  - When a React-based UI requires a dropzone for file selection
+  - When you need to restrict user uploads via client-side type and size filters
+when_not_to_use:
+  - instead: files.upload.busboy
+    why: This component is client-side only; the server must still validate files.
+tradeoffs:
+  - Provides easy integration with React via hooks but requires manual handling of file contents using the
+    FileReader API.
+inputs:
+  - name: pnpm add react-dropzone@20.1.2
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: useDropzone
+    kind: hook
+    about: A hook to create an HTML5-compliant drag'n'drop zone for files.
+extension_points: []
+dependencies:
+  package: react-dropzone
+  version: 20.1.2
+  runtime: node@>=20
+  peers:
+    react: ">= 18"
+    "@types/react": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@>= 18, @types/react@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Client-side validation of file types and sizes is not a substitute for server-side validation.
+guarantees:
+  - claim: renders a drop area with a file input
+    test:
+      file: contract.test.ts
+      title: renders a drop area with a file input
+limits:
+  - Client-side only; does not perform server-side validation.
+example: |-
+  import { useDropzone } from 'react-dropzone';
+
+  function MyComponent() {
+    const { getRootProps, getInputProps } = useDropzone({ onDrop: (files) => console.log(files) });
+    return <div {...getRootProps()}><input {...getInputProps()} /></div>;
+  }
+keywords:
+  - react-dropzone
+  - files.upload
+  - files
+  - upload
+  - react
+  - drag-and-drop
+  - file upload
+  - dropzone
+  - hook
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

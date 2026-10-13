@@ -1,0 +1,101 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: data.validation.valibot
+does: Modular schema validation with static type inference and small bundle size
+does_not: Does not persist data or sanitize HTML
+use_cases:
+  - Validating incoming server data
+  - Validating form inputs
+  - Validating configuration files
+  - Runtime type safety for unknown data
+when_to_use:
+  - When small bundle size is required
+  - When modularity and tree-shaking are needed
+  - When static type inference is required
+when_not_to_use:
+  - instead: data.validation.zod
+    why: The documentation suggests Zod as a comparison point for bundle size benefits.
+  - instead: HTML sanitization
+    why: Does not sanitize HTML.
+  - instead: Data persistence
+    why: Does not persist data.
+tradeoffs:
+  - Modular design allows for smaller bundles via tree-shaking but requires importing individual functions.
+inputs:
+  - name: pnpm add valibot@1.5.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: v
+    kind: export
+    about: Namespace containing modular validation functions, schemas, and parsing utilities.
+extension_points:
+  - Can be extended with external code due to its modular function-based design.
+dependencies:
+  package: valibot
+  version: 1.5.0
+  runtime: node@>=20
+  peers:
+    typescript: ">=5"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: typescript@>=5."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - Provides runtime guarantees for structural data safety.
+guarantees:
+  - claim: validates and reports issues
+    test:
+      file: contract.test.ts
+      title: validates and reports issues
+limits:
+  - Does not perform HTML sanitization or data persistence.
+example: |-
+  import * as v from 'valibot';
+
+  const LoginSchema = v.object({
+    email: v.pipe(v.string(), v.email()),
+    password: v.pipe(v.string(), v.minLength(8)),
+  });
+
+  type LoginData = v.InferOutput;
+
+  const output1 = v.parse(LoginSchema, { email: '', password: '' });
+  const output2 = v.parse(LoginSchema, {
+    email: 'jane@example.com',
+    password: '12345678',
+  });
+keywords:
+  - valibot
+  - data.validation
+  - data
+  - validation
+  - schema
+  - type-safe
+  - modular
+  - tree-shakable
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

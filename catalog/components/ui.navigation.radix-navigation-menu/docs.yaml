@@ -1,0 +1,93 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.navigation.radix-navigation-menu
+does: Accessible site navigation menus with submenus for websites
+does_not: Unstyled
+use_cases:
+  - Accessible site navigation menus
+  - Navigation menus with submenus
+when_to_use:
+  - When building accessible website navigation structures
+when_not_to_use:
+  - instead: ui.accordion.radix
+    why: When vertical collapsible content is required instead of a horizontal or dropdown menu
+tradeoffs:
+  - The component is unstyled and requires custom CSS for visual presentation
+inputs:
+  - name: pnpm add @radix-ui/react-navigation-menu@1.2.22
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Nav
+    kind: export
+    about: Namespace containing navigation menu primitives
+extension_points: []
+dependencies:
+  package: "@radix-ui/react-navigation-menu"
+  version: 1.2.22
+  runtime: node@>=20
+  peers:
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    "@types/react": "*"
+    "@types/react-dom": "*"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc, react-dom@^16.8 || ^17.0 || ^18.0
+    || ^19.0 || ^19.0.0-rc, @types/react@*, @types/react-dom@*."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access required
+guarantees:
+  - claim: renders site navigation
+    test:
+      file: contract.test.ts
+      title: renders site navigation
+limits:
+  - Unstyled
+example: |-
+  import { Nav } from "@radix-ui/react-navigation-menu";
+
+  const Menu = () => (
+    <Nav.Root>
+      <Nav.List>
+        <Nav.Item>
+          <Nav.Link href="/about">About</Nav.Link>
+        </Nav.Item>
+      </Nav.List>
+    </Nav.Root>
+  );
+keywords:
+  - "@radix-ui/react-navigation-menu"
+  - ui.navigation
+  - ui
+  - navigation
+  - menu
+  - accessible
+  - radix
+  - submenu
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

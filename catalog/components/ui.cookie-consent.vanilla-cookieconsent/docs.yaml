@@ -1,0 +1,83 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.cookie-consent.vanilla-cookieconsent
+does: GDPR cookie consent banner with categories, only needed when non-essential cookies are used
+does_not: Does not block third-party scripts by itself without configuration
+use_cases:
+  - GDPR compliant cookie consent banner implementation
+  - Managing user consent for multiple cookie categories
+when_to_use:
+  - When non-essential cookies are used in an application
+when_not_to_use:
+  - instead: manual script blocking configuration
+    why: Does not block third-party scripts by itself without configuration
+tradeoffs:
+  - Lightweight vanilla JS implementation vs manual configuration requirements for script blocking
+inputs:
+  - name: pnpm add vanilla-cookieconsent@3.1.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: CookieConsent
+    kind: export
+    about: The main plugin interface providing consent management functions.
+extension_points: []
+dependencies:
+  package: vanilla-cookieconsent
+  version: 3.1.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - Provides a mechanism for GDPR compliant consent management
+guarantees:
+  - claim: exposes the consent API
+    test:
+      file: contract.test.ts
+      title: exposes the consent API
+limits:
+  - Does not block third-party scripts by itself without configuration
+example: |-
+  import { CookieConsent } from "vanilla-cookieconsent";
+
+  CookieConsent.run();
+  const isAccepted = CookieConsent.acceptedCategory('analytics');
+keywords:
+  - vanilla-cookieconsent
+  - privacy.cookie-consent
+  - privacy
+  - cookie
+  - consent
+  - gdpr
+  - cookie-consent
+  - vanilla-js
+  - banner
+  - compliance
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

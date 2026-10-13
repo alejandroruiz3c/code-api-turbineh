@@ -1,0 +1,85 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.drag-drop.dnd-kit-sortable
+does: Sortable lists and kanban columns on top of dnd-kit
+does_not: Requires @dnd-kit/core
+use_cases:
+  - Sortable lists
+  - Kanban columns
+when_to_use:
+  - When building sortable interfaces on top of dnd-kit primitives
+when_not_to_use:
+  - instead: "@dnd-kit/core"
+    why: Requires @dnd-kit/core
+tradeoffs:
+  - Builds on top of @dnd-kit/core primitives
+inputs:
+  - name: pnpm add @dnd-kit/sortable@10.0.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: arrayMove
+    kind: export
+    about: Utility to reorder items in an array
+extension_points: []
+dependencies:
+  package: "@dnd-kit/sortable"
+  version: 10.0.0
+  runtime: node@>=20
+  peers:
+    react: ">=16.8.0"
+    "@dnd-kit/core": ^6.3.0
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@>=16.8.0, @dnd-kit/core@^6.3.0."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No security implications documented
+guarantees:
+  - claim: reorders items
+    test:
+      file: contract.test.ts
+      title: reorders items
+limits:
+  - Requires @dnd-kit/core
+example: |-
+  import { arrayMove } from "@dnd-kit/sortable";
+
+  const newItems = arrayMove(['a', 'b', 'c'], 0, 2);
+keywords:
+  - "@dnd-kit/sortable"
+  - ui.drag-drop
+  - ui
+  - drag
+  - drop
+  - sortable
+  - kanban
+  - drag-and-drop
+  - list
+  - reorder
+  - dnd-kit
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

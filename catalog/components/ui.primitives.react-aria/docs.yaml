@@ -1,0 +1,105 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ui.primitives.react-aria
+does: Accessible unstyled components (buttons, fields, dialogs, date fields) from Adobe
+does_not: Unstyled
+use_cases:
+  - Building custom design systems with unstyled components
+  - Implementing accessible forms and interactive elements
+  - Creating internationalized user interfaces with localized date and number formatting
+when_to_use:
+  - When you need unstyled components with built-in accessibility and adaptive interactions
+when_not_to_use:
+  - instead: ui.checkbox.radix
+    why: If you require specific pre-built Radix UI primitives instead of unstyled Adobe components
+tradeoffs:
+  - Requires manual styling as components are unstyled out of the box
+inputs:
+  - name: pnpm add react-aria-components@1.21.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Button
+    kind: export
+    about: Accessible button component
+  - name: Label
+    kind: export
+    about: Accessible label component
+  - name: TextField
+    kind: export
+    about: Accessible text field component
+  - name: Input
+    kind: export
+    about: Accessible input component
+extension_points:
+  - Individual parts with built-in states, render props, and slots for styling
+dependencies:
+  package: react-aria-components
+  version: 1.21.1
+  runtime: node@>=20
+  peers:
+    react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
+    react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: react@^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1, react-dom@^16.8.0 ||
+    ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-11.
+  - "Effects: network no, filesystem no, database no."
+  - No external network or filesystem access
+guarantees:
+  - claim: renders accessible fields and buttons
+    test:
+      file: contract.test.ts
+      title: renders accessible fields and buttons
+limits:
+  - Components are unstyled out of the box
+example: |-
+  import { Button, Label, TextField, Input } from "react-aria-components";
+
+  function MyForm() {
+    return (
+      <>
+        <TextField>
+          <Label>Email</Label>
+          <Input />
+        </TextField>
+        <Button>Save</Button>
+      </>
+    );
+  }
+keywords:
+  - react-aria-components
+  - ui.primitives
+  - ui
+  - primitives
+  - accessibility
+  - unstyled
+  - react-aria
+  - internationalization
+  - adaptive
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

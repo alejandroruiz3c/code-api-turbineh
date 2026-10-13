@@ -1,0 +1,95 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: ai.schema-validation.ajv
+does: Validates JSON against JSON Schema (structured model output, tool arguments, imported data)
+does_not: Does not repair invalid data
+use_cases:
+  - Validating structured model output from LLMs
+  - Validating tool arguments
+  - Validating imported JSON data against schemas
+when_to_use:
+  - When you need to ensure JSON data conforms to JSON Schema drafts 04/06/07/2019-09/2020-12 or RFC8927
+  - When high-performance validation is required in Node.js or the browser
+when_not_to_use:
+  - instead: ai.json-repair.jsonrepair
+    why: The component does not repair invalid data
+tradeoffs:
+  - Provides fast validation but requires a pre-defined schema
+inputs:
+  - name: pnpm add ajv@8.20.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: Ajv
+    kind: export
+    about: Constructor for the Ajv validator instance
+  - name: ErrorObject
+    kind: export
+    about: Type definition for Ajv error objects
+  - name: validateJson
+    kind: export
+    about: Validates a value against a JSON Schema; returns an object indicating success or a list of error strings
+extension_points:
+  - Standalone validation code generation via ajv-cli
+dependencies:
+  package: ajv
+  version: 8.20.0
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - Errors are designed to be safe to log by not echoing input values
+guarantees:
+  - claim: validates structured output against a JSON Schema
+    test:
+      file: contract.test.ts
+      title: validates structured output against a JSON Schema
+limits:
+  - Does not repair invalid data
+example: |-
+  import { validateJson } from '@/integrations/ai-schema-validation';
+
+  const schema = {
+    type: 'object',
+    properties: {
+      id: { type: 'integer' }
+    }
+  };
+  const result = validateJson(schema, { id: 1 });
+keywords:
+  - ajv
+  - ai.schema-validation
+  - ai
+  - schema
+  - validation
+  - json-schema
+  - structured-output
+  - json-type-definition
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

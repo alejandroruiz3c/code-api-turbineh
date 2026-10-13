@@ -1,0 +1,95 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.pdf.pdf-lib
+does: Creates and edits PDF documents in pure JavaScript
+does_not: Does not render HTML to PDF
+use_cases:
+  - Creating new PDF documents
+  - Modifying existing PDF documents
+  - Filling and flattening PDF forms
+  - Embedding fonts and images into PDFs
+  - Drawing vector graphics and SVG paths
+when_to_use:
+  - When you need to edit existing PDF files in a pure JavaScript environment
+  - When working in non-Node environments like Browsers, Deno, or React Native
+when_not_to_use:
+  - instead: files.pdf.react-pdf
+    why: If you need to render PDF content in a React application component
+  - instead: a different approach
+    why: If you need to render HTML content into a PDF format
+tradeoffs:
+  - Provides robust modification capabilities compared to libraries that only support creation
+inputs:
+  - name: pnpm add pdf-lib@1.17.1
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: PDFDocument
+    kind: export
+    about: Main class for creating, loading, and manipulating PDF documents
+  - name: StandardFonts
+    kind: export
+    about: Provides access to standard PDF fonts for embedding
+extension_points: []
+dependencies:
+  package: pdf-lib
+  version: 1.17.1
+  runtime: node@>=20
+  peers: {}
+  requires: []
+  conflicts: []
+compatibility:
+  - node@>=20.
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
+  - "Effects: network no, filesystem no, database no."
+  - No external network, filesystem, or database access is performed by the library.
+guarantees:
+  - claim: creates a one-page PDF
+    test:
+      file: contract.test.ts
+      title: creates a one-page PDF
+limits:
+  - Does not render HTML to PDF
+example: |-
+  import { PDFDocument, StandardFonts } from 'pdf-lib';
+
+  async function example() {
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const page = pdfDoc.addPage();
+    page.drawText('Hello World', { x: 50, y: 50, font });
+    const bytes = await pdfDoc.save();
+  }
+keywords:
+  - pdf-lib
+  - files.pdf
+  - files
+  - pdf
+  - manipulation
+  - modification
+  - javascript
+  - forms
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest

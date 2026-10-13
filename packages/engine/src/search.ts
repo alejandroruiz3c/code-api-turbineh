@@ -137,7 +137,21 @@ export function componentSummary(c: CatalogEntry): CapabilitySummary {
     components: 1,
     stacks: ["typescript"],
     requirements: requirementsFor(c.provides).filter((r) => r.kind !== "service"),
-    example: `Contract test and ${c.purl.startsWith("pkg:generic/turbineh") ? "TurbineH module" : "curated integration code"} for ${c.provides.join(", ")}.`,
+    example:
+      c.docs?.example ||
+      `Contract test and ${c.purl.startsWith("pkg:generic/turbineh") ? "TurbineH module" : "curated integration code"} for ${c.provides.join(", ")}.`,
+    ...(c.docs
+      ? {
+          docs: {
+            useWhen: c.docs.useWhen,
+            avoidWhen: c.docs.avoidWhen,
+            tradeoffs: c.docs.tradeoffs,
+            limits: c.docs.limits,
+            keywords: c.docs.keywords,
+            testedGuarantees: c.docs.guarantees,
+          },
+        }
+      : {}),
   };
 }
 
@@ -170,6 +184,9 @@ export function searchCapabilities(
         { text: c.provides.join(" ").replace(/[.-]/g, " "), weight: 2 },
         { text: c.does, weight: 1 },
         { text: c.id.replace(/[.-]/g, " "), weight: 1 },
+        // Documentation (docs.yaml): keywords and synonyms, use cases and when to use it.
+        { text: (c.docs?.keywords ?? []).join(" ").replace(/[.-]/g, " "), weight: 3 },
+        { text: [...(c.docs?.useCases ?? []), ...(c.docs?.useWhen ?? [])].join(" "), weight: 1 },
       ]),
     }))
     .filter((x) => q.length > 0 && x.score > 0);

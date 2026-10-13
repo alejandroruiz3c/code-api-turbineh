@@ -1,0 +1,97 @@
+# Component documentation (turbineh.component-docs/v1). Narrative sections drafted by gemma-4-26b-a4b-it from the
+# code, tests and README, then checked by code (see generated.checked). Edit freely; keep facts true.
+schema: turbineh.component-docs/v1
+id: files.office-text.officeparser
+does: Extracts text from PowerPoint, Excel and OpenDocument files for search and AI processing
+does_not: "Text only: no formatting, charts or images"
+use_cases:
+  - Extracting text from PowerPoint, Excel, and OpenDocument files for search indexing
+  - Processing office documents for AI/RAG pipelines
+  - Converting office files into various formats like Markdown, HTML, or LaTeX
+when_to_use:
+  - When you need to parse office files into a rich Abstract Syntax Tree (AST)
+  - When you need to generate high-fidelity outputs from office documents
+when_not_to_use:
+  - instead: files.docx-text.mammoth
+    why: When you only need to extract text from DOCX files and do not require AST or multi-format support
+  - instead: plain text extraction
+    why: When you need to preserve formatting, charts, or images as this component provides text only
+tradeoffs:
+  - Provides a rich AST and multiple output formats at the cost of being more complex than simple text
+    extractors
+inputs:
+  - name: pnpm add officeparser@8.0.0
+    kind: install
+    about: Exact version, added by TurbineH.
+interfaces:
+  - name: OfficeParser
+    kind: export
+    about: Main class for parsing office documents into an AST
+  - name: officeToText
+    kind: export
+    about: Helper function to convert an Office document buffer into plain text with a type label
+extension_points:
+  - Configurable options via `pdfParserConfig` such as `extractTextColor`, `ignoreNotes`, `ocr`, and
+    `newlineDelimiter`
+dependencies:
+  package: officeparser
+  version: 8.0.0
+  runtime: node@>=20
+  peers:
+    pdf-lib: ^1.17.1
+    puppeteer: ">=22"
+  requires: []
+  conflicts: []
+compatibility:
+  - "node@>=20; peers: pdf-lib@^1.17.1, puppeteer@>=22."
+  - "Verified with the TurbineH stack: Next.js (App Router), TypeScript strict, pnpm."
+security:
+  - Licence MIT; 0 known advisories (OSV) on 2026-10-12.
+  - "Effects: network no, filesystem no, database no."
+  - Supports password-protected encrypted PDF and OOXML documents
+guarantees:
+  - claim: parses an Office document buffer into an AST with plain text
+    test:
+      file: contract.test.ts
+      title: parses an Office document buffer into an AST with plain text
+limits:
+  - "Output is text only: no formatting, charts or images"
+example: |-
+  import { officeToText } from "@/integrations/files-office-text";
+
+  const buffer = Buffer.from("...");
+  const result = await officeToText(buffer);
+keywords:
+  - officeparser
+  - files.office-text
+  - files
+  - office
+  - text
+  - pptx
+  - xlsx
+  - docx
+  - odt
+  - pdf
+  - ast
+  - text-extraction
+generated:
+  by: gemma-4-26b-a4b-it
+  at: 2026-10-13
+  sections:
+    - use_cases
+    - when_to_use
+    - when_not_to_use
+    - tradeoffs
+    - interfaces
+    - extension_points
+    - security
+    - guarantees
+    - limits
+    - example
+    - keywords
+  checked:
+    - interfaces ⊂ code symbols
+    - guarantees → exact test titles
+    - alternatives ⊂ catalog
+    - example uses component symbols
+    - inputs, dependencies, compatibility, licence and effects from code/manifest
