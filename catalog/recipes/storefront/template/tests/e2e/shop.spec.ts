@@ -200,7 +200,7 @@ test.describe.serial("storefront", () => {
     }) => {
       await page.goto("/shop/linen-shirt");
       await page.getByRole("button", { name: "Add to cart" }).click();
-      await page.goto("/cart");
+      await expect(page).toHaveURL(/\/cart/);
       await expect(page.getByLabel("Quantity of Linen Shirt")).toHaveValue("1");
       await expect(page.getByTestId("cart-subtotal")).toContainText("49.90");
       await page.getByLabel("Quantity of Linen Shirt").fill("3");
