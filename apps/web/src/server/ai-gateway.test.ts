@@ -1,6 +1,12 @@
 import type { AiApp } from "@turbineh/db";
 import { describe, expect, it, vi } from "vitest";
-import { type GatewayDeps, gatewayConfig, handleGateway } from "./ai-gateway";
+import {
+  type GatewayDeps,
+  gatewayConfig,
+  handleGateway,
+  hedgeDelay,
+  hedgeModel,
+} from "./ai-gateway";
 
 const APP: AiApp = {
   id: "app-1",
@@ -19,6 +25,7 @@ function deps(over: Partial<GatewayDeps> = {}) {
     verifyToken: async (t) => (t === "tbh_ai_good" ? APP : null),
     admit: async () => ({ ok: true }),
     record: async (u) => void recorded.push(u),
+    reserveHedge: async () => true,
     fetch: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       calls.push({ url: String(url), init: init ?? {} });
       return Response.json({
@@ -206,5 +213,184 @@ describe("TurbineH AI gateway", () => {
     d.config = gatewayConfig({});
     expect((await handleGateway(req(chat()), "chat", d)).status).toBe(503);
     expect(calls).toHaveLength(0);
+  });
+
+  describe("hedged chat requests (ADR-0043)", () => {
+    /** Fake upstream: each call answers after its scripted delay (or status), unless it is aborted first. */
+    function upstream(script: { ms: number; status?: number; tokens?: number }[]) {
+      const seen: { model: string; aborted: () => boolean }[] = [];
+      const fetchFn = (async (_url: string | URL | Request, init?: RequestInit) => {
+        const step = script[seen.length] ?? { ms: 0 };
+        const signal = init?.signal ?? undefined;
+        const model = String((JSON.parse(String(init?.body)) as { model: string }).model);
+        seen.push({ model, aborted: () => Boolean(signal?.aborted) });
+        return new Promise<Response>((resolve, reject) => {
+          const timer = setTimeout(
+            () =>
+              resolve(
+                step.status
+                  ? new Response("upstream failure", { status: step.status })
+                  : Response.json({
+                      model,
+                      choices: [{ message: { content: `answer ${seen.length}` } }],
+                      usage: { prompt_tokens: step.tokens ?? 10, completion_tokens: 5 },
+                    }),
+              ),
+            step.ms,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        });
+      }) as unknown as typeof fetch;
+      return { fetchFn, seen };
+    }
+    const hedged = (
+      script: { ms: number; status?: number; tokens?: number }[],
+      env: Record<string, string> = {},
+      budget = true,
+    ) => {
+      const up = upstream(script);
+      const reserved: string[] = [];
+      const { d, recorded } = deps({
+        fetch: up.fetchFn,
+        reserveHedge: async (_app, model) => {
+          reserved.push(model);
+          return budget;
+        },
+      });
+      d.config = gatewayConfig({
+        AI_GATEWAY_UPSTREAM_KEY: UPSTREAM_KEY,
+        AI_GATEWAY_HEDGE_AFTER_MS: "40",
+        AI_GATEWAY_TIMEOUT_MS: "2000",
+        ...env,
+      });
+      return { d, recorded, reserved, seen: up.seen };
+    };
+
+    it("slow first answer: the hedge wins, the first request is cancelled, only the answer is billed", async () => {
+      const h = hedged([
+        { ms: 1500, tokens: 999 },
+        { ms: 10, tokens: 10 },
+      ]);
+      const t0 = Date.now();
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(200);
+      expect(Date.now() - t0).toBeLessThan(1000);
+      expect(res.headers.get("x-turbineh-hedge")).toBe("hedge-won");
+      expect(
+        ((await res.json()) as { choices: { message: { content: string } }[] }).choices[0]?.message
+          .content,
+      ).toBe("answer 2");
+      expect(h.seen).toHaveLength(2);
+      expect(h.seen[0]?.aborted()).toBe(true);
+      expect(h.reserved).toEqual(["gemma-4-26b-a4b-it"]);
+      expect(h.recorded).toEqual([
+        {
+          appId: "app-1",
+          endpoint: "chat",
+          model: "gemma-4-26b-a4b-it",
+          inputTokens: 10,
+          outputTokens: 5,
+          hedge: "hedge-won",
+        },
+      ]);
+    });
+
+    it("fast first answer: no hedge, no budget used", async () => {
+      const h = hedged([{ ms: 5 }]);
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-turbineh-hedge")).toBe("none");
+      expect(res.headers.get("server-timing")).toMatch(/^upstream;dur=\d+$/);
+      await new Promise((r) => setTimeout(r, 80));
+      expect(h.seen).toHaveLength(1);
+      expect(h.reserved).toEqual([]);
+      expect(h.recorded[0]).not.toHaveProperty("hedge");
+    });
+
+    it("both slow: a timeout error at the request deadline, both requests cancelled, nothing billed", async () => {
+      const h = hedged([{ ms: 5000 }, { ms: 5000 }], { AI_GATEWAY_TIMEOUT_MS: "200" });
+      const t0 = Date.now();
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(504);
+      expect(Date.now() - t0).toBeLessThan(1000);
+      expect(h.seen).toHaveLength(2);
+      expect(h.seen.every((s) => s.aborted())).toBe(true);
+      expect(h.recorded).toEqual([]);
+    });
+
+    it("the first answer wins when it arrives after the hedge was fired", async () => {
+      const h = hedged([{ ms: 80 }, { ms: 1500 }]);
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.headers.get("x-turbineh-hedge")).toBe("primary-won");
+      expect(h.seen[1]?.aborted()).toBe(true);
+      expect(h.recorded[0]).toMatchObject({ hedge: "primary-won" });
+    });
+
+    it("at most one hedge, and none when the app's hedge budget is spent", async () => {
+      const h = hedged([{ ms: 150 }, { ms: 10 }], {}, false);
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-turbineh-hedge")).toBe("budget");
+      expect(h.seen).toHaveLength(1);
+      const twice = hedged([{ ms: 200 }, { ms: 200, status: 500 }, { ms: 10 }]);
+      expect((await handleGateway(req(chat()), "chat", twice.d)).status).toBe(200);
+      expect(twice.seen).toHaveLength(2);
+    });
+
+    it("a fast server error of the first request is hedged at once; two failures are an error", async () => {
+      const h = hedged([{ ms: 5, status: 503 }, { ms: 5 }], { AI_GATEWAY_HEDGE_AFTER_MS: "5000" });
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-turbineh-hedge")).toBe("hedge-won");
+      const bad = hedged([
+        { ms: 5, status: 503 },
+        { ms: 5, status: 502 },
+      ]);
+      expect((await handleGateway(req(chat()), "chat", bad.d)).status).toBe(502);
+      // Client errors are not hedged.
+      const client = hedged([{ ms: 5, status: 400 }]);
+      expect((await handleGateway(req(chat()), "chat", client.d)).status).toBe(502);
+      expect(client.seen).toHaveLength(1);
+    });
+
+    it("hedges to the next allowed model when configured, billed on the model that answered", async () => {
+      const h = hedged([{ ms: 1500 }, { ms: 10 }], { AI_GATEWAY_HEDGE_TARGET: "next" });
+      const res = await handleGateway(req(chat()), "chat", h.d);
+      expect(res.status).toBe(200);
+      expect(h.seen.map((s) => s.model)).toEqual(["gemma-4-26b-a4b-it", "deepseek-v4-flash-0731"]);
+      expect(h.recorded[0]).toMatchObject({ model: "deepseek-v4-flash-0731", hedge: "hedge-won" });
+    });
+
+    it("is off with a zero delay, and never hedges the decider or embeddings", async () => {
+      const off = hedged([{ ms: 120 }, { ms: 5 }], { AI_GATEWAY_HEDGE_AFTER_MS: "0" });
+      expect((await handleGateway(req(chat()), "chat", off.d)).status).toBe(200);
+      expect(off.seen).toHaveLength(1);
+      const emb = hedged([{ ms: 120 }, { ms: 5 }]);
+      emb.d.config = { ...emb.d.config, AI_GATEWAY_TYPESAFE_KEY: JEV_KEY };
+      const r = await handleGateway(
+        req({ model: "qwen3-embedding-8b", input: "hello" }),
+        "embeddings",
+        emb.d,
+      );
+      expect(r.status).toBe(200);
+      expect(r.headers.get("x-turbineh-hedge")).toBeNull();
+      expect(emb.seen).toHaveLength(1);
+    });
+
+    it("reads per-model delays and the hedge target from the configuration", () => {
+      const cfg = gatewayConfig({
+        AI_GATEWAY_HEDGE_AFTER_MS_BY_MODEL: "glm-5.2=9000, deepseek-v4-flash-0731=2500",
+        AI_GATEWAY_HEDGE_TARGET: "next",
+      });
+      expect(hedgeDelay(cfg, "gemma-4-26b-a4b-it")).toBe(3800);
+      expect(hedgeDelay(cfg, "glm-5.2")).toBe(9000);
+      expect(hedgeDelay(cfg, "deepseek-v4-flash-0731")).toBe(2500);
+      expect(hedgeModel(cfg, "gemma-4-26b-a4b-it")).toBe("deepseek-v4-flash-0731");
+      expect(hedgeModel(cfg, "glm-5.2")).toBe("glm-5.2");
+      expect(hedgeModel(gatewayConfig({}), "glm-5.2")).toBe("glm-5.2");
+    });
   });
 });

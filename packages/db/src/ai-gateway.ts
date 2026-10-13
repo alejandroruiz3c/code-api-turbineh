@@ -133,23 +133,48 @@ export async function recordAiUsage(
     model: string;
     inputTokens: number;
     outputTokens: number;
+    /** Set when a hedge was fired for this request (ADR-0043); "hedge-won" counts a hedge win. */
+    hedge?: "primary-won" | "hedge-won";
   },
 ): Promise<void> {
   await db.query(
-    `INSERT INTO ai_gateway_usage (app_id, endpoint, model, calls, input_tokens, output_tokens)
-     VALUES ($1, $2, $3, 1, $4, $5)
+    `INSERT INTO ai_gateway_usage (app_id, endpoint, model, calls, input_tokens, output_tokens, hedge_wins)
+     VALUES ($1, $2, $3, 1, $4, $5, $6)
      ON CONFLICT (app_id, day, endpoint, model) DO UPDATE SET
        calls = ai_gateway_usage.calls + 1,
        input_tokens = ai_gateway_usage.input_tokens + EXCLUDED.input_tokens,
-       output_tokens = ai_gateway_usage.output_tokens + EXCLUDED.output_tokens`,
+       output_tokens = ai_gateway_usage.output_tokens + EXCLUDED.output_tokens,
+       hedge_wins = ai_gateway_usage.hedge_wins + EXCLUDED.hedge_wins`,
     [
       input.appId,
       input.endpoint,
       input.model.slice(0, 120),
       Math.max(0, Math.round(input.inputTokens)),
       Math.max(0, Math.round(input.outputTokens)),
+      input.hedge === "hedge-won" ? 1 : 0,
     ],
   );
+}
+
+/**
+ * Takes one hedge from the app's daily budget for a chat model (ADR-0043), atomically: allowed while today's hedges
+ * are below max(minPerDay, ratio × today's chat calls of that model). True when the hedge may be fired.
+ */
+export async function reserveAiHedge(
+  db: pg.Pool,
+  input: { appId: string; model: string; ratio: number; minPerDay: number },
+): Promise<boolean> {
+  const res = await db.query<{ hedges: number }>(
+    `INSERT INTO ai_gateway_usage AS u (app_id, endpoint, model, calls, hedges)
+     SELECT $1, 'chat', $2, 0, 1
+     WHERE $4::int >= 1 OR EXISTS (SELECT 1 FROM ai_gateway_usage
+       WHERE app_id = $1 AND day = current_date AND endpoint = 'chat' AND model = $2)
+     ON CONFLICT (app_id, day, endpoint, model) DO UPDATE SET hedges = u.hedges + 1
+       WHERE u.hedges < GREATEST($4::int, floor(u.calls * $3::float8))
+     RETURNING hedges`,
+    [input.appId, input.model.slice(0, 120), input.ratio, input.minPerDay],
+  );
+  return (res.rowCount ?? 0) > 0;
 }
 
 /** Housekeeping: minute counters older than a day. */
@@ -217,6 +242,9 @@ export async function aiUsageByApp(db: pg.Pool): Promise<
     calls: number;
     inputTokens: number;
     outputTokens: number;
+    /** Hedged chat requests and how many hedges answered first (internal, ADR-0043). */
+    hedges: number;
+    hedgeWins: number;
   }[]
 > {
   const res = await db.query<{
@@ -227,9 +255,12 @@ export async function aiUsageByApp(db: pg.Pool): Promise<
     calls: string;
     input: string;
     output: string;
+    hedges: string;
+    hedge_wins: string;
   }>(
     `SELECT u.app_id, a.name, a.owner_id, u.model, sum(u.calls) AS calls,
-            sum(u.input_tokens) AS input, sum(u.output_tokens) AS output
+            sum(u.input_tokens) AS input, sum(u.output_tokens) AS output,
+            sum(u.hedges) AS hedges, sum(u.hedge_wins) AS hedge_wins
      FROM ai_gateway_usage u JOIN ai_apps a ON a.id = u.app_id
      WHERE u.day > current_date - 7
      GROUP BY 1, 2, 3, 4 ORDER BY sum(u.input_tokens + u.output_tokens) DESC LIMIT 50`,
@@ -242,5 +273,7 @@ export async function aiUsageByApp(db: pg.Pool): Promise<
     calls: Number(r.calls),
     inputTokens: Number(r.input),
     outputTokens: Number(r.output),
+    hedges: Number(r.hedges),
+    hedgeWins: Number(r.hedge_wins),
   }));
 }
