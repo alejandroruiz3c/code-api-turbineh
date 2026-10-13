@@ -157,7 +157,7 @@ function evidenceOf(repoDir: string): string[] {
 }
 
 /**
- * ADR-0034: a criterion is proven only by a test shipped in the package — the acceptance.yaml rules matched at assembly
+ * ADR-0035: a criterion is proven only by a test shipped in the package — the acceptance.yaml rules matched at assembly
  * first (deterministic), then the report's mapping when it points at a test. Anything else (e.g. "strict type
  * checking") is not a proof: the criterion stays open, with where to implement and prove it.
  */
@@ -398,7 +398,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   };
   // AGENTS.md + turbineh.json: the verified gate results and, per acceptance criterion, the passing test that proves
   // it or where to implement and prove it — so a coding agent knows at once what is left. ACCEPTANCE.md is rewritten
-  // from the same result (ADR-0034); covered criteria become "met" only when the whole gate passed.
+  // from the same result (ADR-0035); covered criteria become "met" only when the whole gate passed.
   const guide = verifiedGuide(input.repoDir, {
     gate: {
       ok: result.ok,

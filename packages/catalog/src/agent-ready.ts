@@ -145,7 +145,7 @@ export const LOCAL_DB_DEPENDENCIES = [
 ];
 
 /**
- * Zero-friction package checks (ADR-0034) on the files the app will actually have: for each path, the first template
+ * Zero-friction package checks (ADR-0035) on the files the app will actually have: for each path, the first template
  * in the chain (recipe, then what it extends) that ships it.
  */
 export function checkPackage(label: string, chainDirs: string[]): AgentReadyIssue[] {
@@ -306,7 +306,7 @@ export function checkRecipes(recipesDir: string): AgentReadyIssue[] {
     }
     issues.push(...checkTree(`${label}/template`, join(recipesDir, id, "template"), chain));
     issues.push(...checkPackage(`${label}/template`, chain));
-    // Acceptance criteria → tests (ADR-0034): every recipe chain proves its common criteria with shipped tests.
+    // Acceptance criteria → tests (ADR-0035): every recipe chain proves its common criteria with shipped tests.
     const ymls = chainOf(id).map((d) => join(d, "..", "acceptance.yaml"));
     if (!ymls.some((f) => existsSync(f)))
       issues.push({

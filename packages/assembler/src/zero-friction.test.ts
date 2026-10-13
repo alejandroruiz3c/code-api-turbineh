@@ -7,7 +7,7 @@ import { acceptanceStatus } from "./acceptance.js";
 import { verifiedGuide } from "./agent-guide.js";
 import { assemble, coverageRules, entityCoverage } from "./assemble.js";
 
-/** Zero-friction packages (ADR-0034): acceptance criteria proven by shipped tests, local database, own URLs. */
+/** Zero-friction packages (ADR-0035): acceptance criteria proven by shipped tests, local database, own URLs. */
 const recipesDir = join(__dirname, "../../../catalog/recipes");
 
 // The criteria the compiler extracted from the Frontiers shop spec (bench/frontiers, Capability A, 2026-10-13 run).
@@ -49,7 +49,7 @@ function build(recipe: BuildSpec["recipe"], criteria: string[]): string {
   return outDir;
 }
 
-describe("zero-friction packages (ADR-0034)", () => {
+describe("zero-friction packages (ADR-0035)", () => {
   it("proves every criterion of the bench shop spec with a test the storefront ships", () => {
     const statuses = acceptanceStatus(
       SHOP_CRITERIA,

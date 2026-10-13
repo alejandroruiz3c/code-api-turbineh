@@ -7,7 +7,7 @@ import { onlyRequiredUnset } from "./verify.js";
 
 const STOREFRONT_ENV = join(__dirname, "../../../catalog/recipes/storefront/template/src/env.ts");
 
-describe("build and unit tests with only the required env (ADR-0034)", () => {
+describe("build and unit tests with only the required env (ADR-0035)", () => {
   it("reads the required variables from src/env.ts", () => {
     expect(requiredEnv(readFileSync(STOREFRONT_ENV, "utf8"))).toEqual([
       "DATABASE_URL",

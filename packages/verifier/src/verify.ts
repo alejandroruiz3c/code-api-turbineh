@@ -225,7 +225,7 @@ export function licenseBlocks(expression: string): boolean {
  *  - dependencies come pre-installed in a base image keyed by the lockfile hash (offline install as fallback);
  *  - strict typecheck, lint and unit tests run in parallel with the production build (no check removed);
  *  - read-only scans (secrets, static rules, advisories) run concurrently with the build;
- *  - build and unit tests see only the variables src/env.ts requires (ADR-0034): optional settings never block them.
+ *  - build and unit tests see only the variables src/env.ts requires (ADR-0035): optional settings never block them.
  * `localDb`: no Postgres container and no DATABASE_URL for migrations and E2E — the package must bring its own
  * zero-setup database (`scripts/local-db.ts`), exactly as a coding agent without PostgreSQL runs it.
  */

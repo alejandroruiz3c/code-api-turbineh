@@ -1,4 +1,4 @@
-# Acceptance criteria → tests (ADR-0033, ADR-0034) for every recipe (all extend saas-crud). Each rule: every regex in
+# Acceptance criteria → tests (ADR-0033, ADR-0035) for every recipe (all extend saas-crud). Each rule: every regex in
 # `covers` must match the criterion (case-insensitive). A criterion no rule matches is listed as open, with the files
 # and the spec where its test belongs. `pnpm catalog:validate` checks that every referenced test exists.
 - test: "tests/e2e/auth.spec.ts › dashboard requires sign-in"

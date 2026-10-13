@@ -53,7 +53,7 @@ export function missingSettings(cwd: string, names: string[]): string[] {
 }
 
 export function left(cwd: string, guide: PackageGuideFile): CommandResult {
-  // Packages with the zero-setup local database (ADR-0034) need no DATABASE_URL for dev, migrations and tests.
+  // Packages with the zero-setup local database (ADR-0035) need no DATABASE_URL for dev, migrations and tests.
   const localDb = existsSync(join(cwd, "scripts/local-db.ts"));
   const missing = missingSettings(
     cwd,

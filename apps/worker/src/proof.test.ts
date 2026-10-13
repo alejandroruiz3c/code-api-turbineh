@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { provenOnlyByTests } from "./finalize.js";
 
-describe("criteria are proven only by shipped tests (ADR-0034)", () => {
+describe("criteria are proven only by shipped tests (ADR-0035)", () => {
   it("prefers the deterministic acceptance proof and never counts non-test evidence as met", () => {
     const dir = mkdtempSync(join(tmpdir(), "proof-"));
     mkdirSync(join(dir, ".turbineh"));

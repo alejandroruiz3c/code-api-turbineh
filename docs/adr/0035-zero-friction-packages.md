@@ -1,4 +1,4 @@
-# ADR-0034 · Zero-friction packages: local database, required-only env, E2E-owned URLs, proven criteria
+# ADR-0035 · Zero-friction packages: local database, required-only env, E2E-owned URLs, proven criteria
 
 - Status: accepted (2026-10-13)
 - Context: Frontiers shop rerun after #75–#79 (`bench/frontiers/ANALYSIS.md` §8 on `wip/frontiers-bench`). With our

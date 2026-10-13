@@ -354,7 +354,7 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
 }
 
 /**
- * Coverage rules for the generated entities (ADR-0034): each generated spec proves create / edit / CSV export / CSV
+ * Coverage rules for the generated entities (ADR-0035): each generated spec proves create / edit / CSV export / CSV
  * import of its entity, so a criterion that names the entity and the action is proven by that test.
  */
 export function entityCoverage(outDir: string, entityNamesList: string[]): CoverageRule[] {

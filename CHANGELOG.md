@@ -11,7 +11,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
-- Zero-friction packages (ADR-0034, from the Frontiers shop rerun R2–R5), for every recipe and enforced by
+- Zero-friction packages (ADR-0035, from the Frontiers shop rerun R2–R5), for every recipe and enforced by
   `catalog:validate`: **zero-setup local database** — `pnpm db:local`, and `db:migrate`, `dev` and `test:e2e` use a
   local PostgreSQL when `DATABASE_URL` is unset (real PostgreSQL 17 binaries via `embedded-postgres`, PGlite with
   pgvector for `ai-agents`, root or unsupported platforms), one line says so, E2E gets a fresh database and builds when

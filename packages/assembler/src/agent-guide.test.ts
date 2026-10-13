@@ -54,7 +54,7 @@ describe("agent-ready package (S9/S10)", () => {
     expect(guide.env.required.map((e) => e.name)).toEqual(
       expect.arrayContaining(["DATABASE_URL", "BETTER_AUTH_SECRET"]),
     );
-    // Allow-lists are optional at build time and deny by default at runtime (ADR-0034).
+    // Allow-lists are optional at build time and deny by default at runtime (ADR-0035).
     expect(guide.env.required.map((e) => e.name)).not.toContain("ADMIN_EMAILS");
     expect(guide.env.optional.map((e) => e.name)).toEqual(
       expect.arrayContaining(["STRIPE_SECRET_KEY", "ADMIN_EMAILS"]),

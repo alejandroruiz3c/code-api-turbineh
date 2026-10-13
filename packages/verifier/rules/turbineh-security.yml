@@ -17,7 +17,7 @@ rules:
     languages: [typescript]
     severity: ERROR
     # Test setup (not shipped) may start processes; application code may not. scripts/local-db.ts is the template's
-    # zero-setup database for development and tests (ADR-0034): it starts PostgreSQL and the command it wraps.
+    # zero-setup database for development and tests (ADR-0035): it starts PostgreSQL and the command it wraps.
     paths:
       exclude:
         ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "playwright.config.ts", "scripts/local-db.ts"]
