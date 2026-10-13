@@ -167,8 +167,7 @@ export async function componentFacts(
   const kinds: ComponentFacts["kinds"] = {};
   if (!pkg.name.startsWith("turbineh/")) {
     importable[pkg.name] = importsFrom(all, pkg.name);
-    for (const n of importable[pkg.name] ?? [])
-      kinds[n] = /^use[A-Z]/.test(n) ? "hook" : "export";
+    for (const n of importable[pkg.name] ?? []) kinds[n] = /^use[A-Z]/.test(n) ? "hook" : "export";
   }
   const glue = join(dir, "glue.ts");
   if (existsSync(glue)) {
@@ -212,34 +211,36 @@ export async function componentFacts(
   };
 }
 
+/** Bounded strings keep a degenerate generation from running away (the JSON schema carries the limits). */
+const S = z.string().max(300);
 /** What the open model drafts (narrative only; facts are never taken from it). */
 export const draftSchema = z.object({
-  use_cases: z.array(z.string()).min(2).max(6),
-  when_to_use: z.array(z.string()).min(1).max(4),
+  use_cases: z.array(S).min(2).max(6),
+  when_to_use: z.array(S).min(1).max(4),
   when_not_to_use: z
-    .array(z.object({ instead: z.string(), why: z.string() }))
+    .array(z.object({ instead: S, why: S }))
     .min(1)
     .max(4),
-  tradeoffs: z.array(z.string()).min(1).max(4),
+  tradeoffs: z.array(S).min(1).max(4),
   interfaces: z
     .array(
       z.object({
-        name: z.string(),
+        name: S,
         kind: z.enum(["export", "route", "component", "hook", "type", "cli"]),
-        about: z.string(),
+        about: S,
       }),
     )
     .min(1)
     .max(8),
-  extension_points: z.array(z.string()).max(4),
-  security: z.array(z.string()).min(1).max(4),
+  extension_points: z.array(S).max(4),
+  security: z.array(S).min(1).max(4),
   guarantees: z
-    .array(z.object({ claim: z.string(), test_title: z.string() }))
+    .array(z.object({ claim: S, test_title: S }))
     .min(1)
     .max(6),
-  limits: z.array(z.string()).min(1).max(4),
-  example: z.string(),
-  keywords: z.array(z.string()).min(5).max(20),
+  limits: z.array(S).min(1).max(4),
+  example: z.string().max(1200),
+  keywords: z.array(z.string().max(40)).min(5).max(20),
 });
 export type Draft = z.infer<typeof draftSchema>;
 
@@ -470,21 +471,28 @@ export async function documentComponent(
   const schema = z.toJSONSchema(draftSchema, { target: "draft-7" }) as Record<string, unknown>;
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM },
-    { role: "user", content: draftPrompt(facts) },
+    {
+      role: "user",
+      content: `${draftPrompt(facts)}\n\nAnswer with one compact JSON object matching this JSON Schema:\n${JSON.stringify(schema)}`,
+    },
   ];
   let last = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await client.chat.completions.create({
       model: model.model,
-      temperature: 0,
-      max_tokens: 5000,
+      temperature: 0.2,
+      frequency_penalty: 0.3,
+      max_tokens: 3000,
       messages,
-      response_format: { type: "json_schema", json_schema: { name: "docs", schema, strict: true } },
+      // Plain JSON mode: grammar-constrained decoding let this model pad strings with endless whitespace.
+      response_format: { type: "json_object" },
       ...(model.reasoningEffort
         ? { reasoning_effort: model.reasoningEffort as OpenAI.ReasoningEffort }
         : {}),
     });
     const content = res.choices[0]?.message.content ?? "";
+    if (process.env.DOCUMENT_DEBUG)
+      console.error(id, attempt, res.choices[0]?.finish_reason, content.length);
     try {
       const draft = draftSchema.parse(JSON.parse(content));
       const { docs, dropped } = checkDraft(facts, draft, { by: model.model, at });

@@ -5,37 +5,35 @@ id: ops.retry.p-retry
 does: Retries failing async operations with exponential backoff
 does_not: Does not make operations idempotent
 use_cases:
-  - Retrying transient network errors or rate limits.
-  - Handling operations that can be safely repeated.
+  - Retrying transient network errors or rate limits
+  - Executing async operations with exponential backoff and jitter
 when_to_use:
-  - When an async operation fails due to transient issues and needs to be re-attempted with increasing delays.
+  - When an operation is expected to succeed after a certain number of failures
+  - When you need to implement exponential backoff for async functions
 when_not_to_use:
   - instead: ops.concurrency.p-limit
-    why: If you need to limit concurrency rather than retry failures.
-  - instead: ops.http-client.ky
-    why: If you need built-in retry logic within an HTTP client.
-  - instead: ops.queue-throttle.p-queue
-    why: If you need to manage a queue of tasks.
-  - instead: ops.rate-limit.rate-limiter-flexible
-    why: If you need to manage rate limiting across multiple requests.
+    why: If you need to limit concurrency rather than retry failures
+  - instead: making operations idempotent
+    why: The component does not make operations idempotent
 tradeoffs:
-  - Does not make operations idempotent
+  - Uses exponential backoff which increases delay between attempts
 inputs:
   - name: pnpm add p-retry@8.0.1
     kind: install
     about: Exact version, added by TurbineH.
 interfaces:
-  - name: AbortError
-    kind: type
-    about: Throws this error to abort retries for non-transient errors (e.g., validation, 4xx).
   - name: withRetry
-    kind: component
-    about: "Retries a transient operation with exponential backoff and jitter. Bounded: at most 10 retries."
+    kind: export
+    about: Retries a transient operation with exponential backoff and jitter, bounded to at most 10 retries.
   - name: pRetry
-    kind: component
-    about: The core retry function. Returns a promise that fulfills when the input function fulfills, or rejects
-      with the last error after max retries.
-extension_points: []
+    kind: export
+    about: Returns a promise that is fulfilled when the input function returns a fulfilled promise, retrying on
+      failure.
+  - name: AbortError
+    kind: export
+    about: Error type used to signal that retries should be aborted immediately.
+extension_points:
+  - onFailedAttempt callback for monitoring or custom delays
 dependencies:
   package: p-retry
   version: 8.0.1
@@ -49,32 +47,32 @@ compatibility:
 security:
   - Licence MIT; 0 known advisories (OSV) on 2026-10-10.
   - "Effects: network no, filesystem no, database no."
-  - No side effects on network, fs, or db.
+  - Non-network TypeErrors always abort retries to prevent infinite loops on logic errors.
 guarantees:
-  - claim: retries until success
+  - claim: The function retries until success if the operation eventually succeeds within the retry limit.
     test:
       file: contract.test.ts
       title: retries until success
 limits:
-  - Maximum of 10 retries regardless of input.
-  - Does not make operations idempotent.
-  - Non-network TypeErrors abort retries.
+  - Maximum of 10 retries allowed via withRetry regardless of input options
 example: |-
-  import { withRetry } from 'p-retry';
+  import { withRetry } from '@/integrations/ops-retry';
 
-  await withRetry(async (attempt) => {
-    if (attempt < 2) throw new Error('fail');
-    return 'success';
-  }, { retries: 3 });
+  async function task() {
+    return await withRetry(async (attempt) => {
+      if (attempt < 2) throw new Error('fail');
+      return 'success';
+    }, { retries: 5 });
+  }
 keywords:
   - p-retry
   - ops.retry
   - ops
   - retry
-  - backoff
-  - exponential
+  - exponential backoff
+  - async
   - jitter
-  - transient
+  - backoff
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
