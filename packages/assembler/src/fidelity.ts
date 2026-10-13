@@ -354,6 +354,42 @@ ${statusLines.join("\n")}
 `;
 }
 
+/**
+ * src/server/role-policy.ts when the app keeps owner/admin/member: the policy reads the request's matrix (with
+ * domain.membership-access the component's policy is used instead and permissions.ts delegates to it).
+ */
+export function rolePolicyFile(): string {
+  return `${GENERATED}
+import { allows, ROLE_MATRIX } from "@/server/permissions";
+
+/**
+ * Workspace role policy (Security Pack) from the request's role matrix (src/server/permissions.ts): stored roles are
+ * owner, admin and member with the request's labels and rights. Everything calls \`can()\` from src/server/authz.ts.
+ */
+export const ROLES: readonly string[] = Object.keys(ROLE_MATRIX);
+export type Role = string;
+export type Action =
+  "read" | "create" | "update" | "delete" | "manage_members" | "view_audit" | "see_all_scopes";
+
+/** Role given to a member whose stored role is unknown: the least privileged one (deny by default). */
+export const DEFAULT_ROLE: Role = "member";
+
+/** Role labels for screens (the request's names). */
+export const ROLE_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(ROLE_MATRIX).map(([key, r]) => [key, r.label]),
+);
+
+export function can(role: Role, action: Action): boolean {
+  return allows(role, action);
+}
+
+/** A stored role, or the least privileged role when it is unknown. */
+export function toRole(value: unknown): Role {
+  return typeof value === "string" && ROLES.includes(value) ? value : DEFAULT_ROLE;
+}
+`;
+}
+
 /** Every generated fidelity file. */
 export function fidelityFiles(
   a: FidelityAssembly,
@@ -362,6 +398,7 @@ export function fidelityFiles(
   const unit = permissionTests(a.fidelity, m);
   const files: GeneratedFile[] = [
     { path: "src/server/permissions.ts", content: permissionsFile(a.fidelity, m) },
+    ...(m.ownKeys ? [] : [{ path: "src/server/role-policy.ts", content: rolePolicyFile() }]),
     { path: "src/lib/spec-constraints.ts", content: specConstraintsFile(a.fidelity.constraints) },
     {
       path: "tests/unit/permissions.test.ts",
