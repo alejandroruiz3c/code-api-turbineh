@@ -152,6 +152,23 @@ export async function runContracts(
     "pnpm exec vitest run --reporter=json --outputFile=results.json > /dev/null 2>&1; echo exit=$?",
     { network: "none", env: {} },
   );
+  const results = existsSync(join(work, "results.json"))
+    ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
+        testResults: {
+          name: string;
+          status: string;
+          message?: string;
+          assertionResults?: { status: string; failureMessages?: string[] }[];
+        }[];
+      })
+    : { testResults: [] };
+  const tests = results.testResults.reduce(
+    (a, r) => a + (r.assertionResults ?? []).filter((x) => x.status === "passed").length,
+    0,
+  );
+  const contractOk =
+    results.testResults.length > 0 && results.testResults.every((r) => r.status === "passed");
+  await onStep?.({ name: "contract", state: "done", ok: contractOk, ms: run.ms, tests });
   await onStep?.({ name: "typecheck", state: "start" });
   const typecheck = await sandbox(
     work,
@@ -166,16 +183,6 @@ export async function runContracts(
       .split("\n")
       .filter((l) => l.startsWith(`tests/${id}.test.ts(`) || l.startsWith(`tests/${id}.glue.ts(`))
       .join(" | ");
-  const results = existsSync(join(work, "results.json"))
-    ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
-        testResults: {
-          name: string;
-          status: string;
-          message?: string;
-          assertionResults?: { status: string; failureMessages?: string[] }[];
-        }[];
-      })
-    : { testResults: [] };
   const components: ContractOutcome[] = ids.map((id) => {
     const file = results.testResults.find((r) => r.name.endsWith(`/tests/${id}.test.ts`));
     const tsErrors = typeErrors(id);
@@ -194,19 +201,12 @@ export async function runContracts(
       failure,
     };
   });
-  const tests = results.testResults.reduce(
-    (a, r) => a + (r.assertionResults ?? []).filter((x) => x.status === "passed").length,
-    0,
-  );
-  const contractOk =
-    results.testResults.length > 0 && results.testResults.every((r) => r.status === "passed");
   const typecheckOk = /exit=0\s*$/.test(typecheck.tail);
   const steps = [
     { name: "install" as const, ok: true, ms: install.ms },
     { name: "contract" as const, ok: contractOk, ms: run.ms, tests },
     { name: "typecheck" as const, ok: typecheckOk, ms: typecheck.ms },
   ];
-  await onStep?.({ name: "contract", state: "done", ok: contractOk, ms: run.ms, tests });
   await onStep?.({ name: "typecheck", state: "done", ok: typecheckOk, ms: typecheck.ms });
   return { components, steps, runTail: run.tail, typecheckTail: typecheck.tail, manifests };
 }
