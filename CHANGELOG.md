@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Flows (ADR-0051): the flow page always reaches an end state. A capability package for a repository (production flow
+  `470bc606`, finished in 1.5 s) stayed on "Assembling verified components · Packaging" because the page rendered a
+  result only for an app ZIP or a failure. It now shows "Package ready (not verified yet: it is verified inside your
+  project when you integrate it)" or "verified" with Open a pull request, Download ZIP, `turbineh apply` (and what it
+  does) and what is left. The page loads the row first (late subscribers), re-follows when `finished` races the row,
+  reconnects, and polls the API after 15 s without events.
+- Component plans (ADR-0051) select only what the need asks for: "HTTP client with retries and timeouts" no longer adds
+  a cart store, react-query, fuzzy search, email and a request queue; "generate", "model" or "extract" no longer pull
+  the AI orchestrator. Precision on 10 labelled single-capability needs: 22.2 % → 100 % (`bench:component-plan`).
+
 - Flows (ADR-0050): after "Generate & verify", the flow page no longer reports "A check did not pass, so nothing was
   delivered" while the app is still being built — the live trace ended at the plan's own `finished` event (production
   flow `0bfd9dff`, verified 11/11, shown as failed). Failures now say what happened, why, what to do, with one button
@@ -17,6 +27,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   where, instead of failing out of scope.
 
 ### Added
+
+- Live flow messages (ADR-0051): what runs now in plain words with live details (components by name, glue written,
+  the gate check running and its order, results, passed-test counts), elapsed time, typical duration per step
+  (`GET /v1/activity/timings`, medians of recent flows), steps done / now / next, and after 20 s of silence "Still
+  running…, keep this page open or come back later" with a link to Activity. New events: `assembling start`,
+  `integrating progress`, `verifying step` (every gate step and the security scans).
+- Capability packages run their components' contract tests together in the sandbox at generation (ADR-0051):
+  `verified` only when they pass. `FlowResult.outcome` and `/v1/builds/{id}` `state`/`outcome`/`package` say the same
+  as the badge and the CLI.
 
 - Product web: the home page ends with "Checks every package passes" — secrets, security rules, safe dependencies
   (known vulnerabilities and licence policy), the AI Safety Pack and tests in the sealed sandbox, as the gate runs
