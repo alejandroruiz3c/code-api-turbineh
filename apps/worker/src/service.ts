@@ -206,7 +206,10 @@ async function handle(build: BuildRow): Promise<void> {
     ...(outcome.spec ? { spec: outcome.spec } : {}),
     metrics: {
       ...outcome.metrics,
-      verify: outcome.verify?.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
+      // Capability packages record their own checks in metrics.verify (ADR-0051): keep them.
+      ...(outcome.verify
+        ? { verify: outcome.verify.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })) }
+        : {}),
     },
     ...(artifact ? { artifact } : {}),
     ...(outcome.reason ? { error: outcome.reason } : {}),

@@ -27,6 +27,17 @@ describe("component-only plans select what the need asks for (ADR-0051)", () => 
       expect(selected).not.toContain(unrelated);
   });
 
+  it("an HTTP client needs no database: no PostgreSQL in the plan's settings", () => {
+    const plan = componentPlan(
+      "t",
+      { need: "Small fetch-based HTTP client with retries and timeouts", stack: REPO_STACK },
+      dir,
+    );
+    expect(plan.config.map((c) => c.name)).not.toContain("PostgreSQL");
+    const orm = componentPlan("t", { need: "Typed SQL ORM for Postgres", stack: REPO_STACK }, dir);
+    expect(orm.config.map((c) => c.name)).toContain("PostgreSQL");
+  });
+
   it("labelled single-capability needs: every required component, nothing unrelated", () => {
     const r = scoreComponentPlans(dir, COMPONENT_PLAN_CASES);
     expect(r.rows.filter((x) => !x.hit).map((x) => x.need)).toEqual([]);

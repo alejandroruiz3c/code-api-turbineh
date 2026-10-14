@@ -52,6 +52,11 @@ export interface PlanInput {
   /** Plain-language names of capabilities (gaps are shown with them). */
   labels?: (capability: string) => string;
   envKeys?: string[];
+  /**
+   * Component-only plans: whether any selected component uses a database (manifest `effects.db`). When false, no
+   * PostgreSQL requirement is listed (an HTTP client needs none, ADR-0051). Complete flows always have one.
+   */
+  usesDatabase?: boolean;
   entities?: string[];
   preferences?: ProjectPreferences;
   /** Analysis of the connected repository (PLAN §16 P5): conventions, conflicts and adaptation decisions. */
@@ -174,7 +179,9 @@ export function buildPlan(input: PlanInput): Plan {
         why: "Setting documented in config/.env.example",
         satisfied: false,
       })),
-  ].filter((r, i, all) => all.findIndex((x) => x.name === r.name) === i);
+  ]
+    .filter((r, i, all) => all.findIndex((x) => x.name === r.name) === i)
+    .filter((r) => input.useCase || input.usesDatabase !== false || r.name !== "PostgreSQL");
   const envCount = config.filter((r) => r.kind === "env").length;
   const policy = input.preferences?.changePolicy;
   const needsApproval = [

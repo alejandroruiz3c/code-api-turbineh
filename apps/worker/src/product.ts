@@ -40,12 +40,13 @@ interface Manifest {
   capability: { does: string; use_cases?: string[] };
   license: { declared: string };
   relations: { provides: string[]; requires?: string[] };
+  effects?: { db?: boolean };
 }
 
 /** Approved catalog components as engine entries (from git manifests, the source of truth). */
 export function catalogEntries(
   componentsDir: string,
-): (CatalogEntry & { dir: string; requires: string[] })[] {
+): (CatalogEntry & { dir: string; requires: string[]; usesDatabase: boolean })[] {
   return readdirSync(componentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(join(componentsDir, d.name, "component.yaml")))
     .map((d) => ({
@@ -64,6 +65,7 @@ export function catalogEntries(
       does: m.capability.does,
       useCases: m.capability.use_cases ?? [],
       requires: m.relations.requires ?? [],
+      usesDatabase: m.effects?.db === true,
     }));
 }
 
@@ -250,6 +252,7 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
     dependencies: deps,
     ...(request.projectDependencies ? { projectDependencies: request.projectDependencies } : {}),
     envKeys: envKeysOf(env),
+    usesDatabase: [...picked.values()].some((c) => byId(c.id)?.usesDatabase),
     ...(request.preferences ? { preferences: request.preferences } : {}),
     ...(request.analysis ? { analysis: request.analysis } : {}),
   });
