@@ -194,3 +194,119 @@ export function searchCapabilities(
     .sort((a, b) => b.score - a.score || (a.kind === "use_case" ? -1 : 1))
     .slice(0, opts.limit ?? 20);
 }
+
+const WORD_STOP = new Set([
+  ...STOP,
+  "small",
+  "based",
+  "my",
+  "your",
+  "their",
+  "it",
+  "is",
+  "are",
+  "be",
+]);
+
+/**
+ * One stem per word, the same for every form: "parse", "parses", "parsing" → "pars"; "retries", "retry" → "retry";
+ * "formatting" → "format"; "dates", "date" → "dat". Only for matching a need against component descriptions.
+ */
+export function stem(word: string): string {
+  let w = word.toLowerCase();
+  if (w.length > 4 && w.endsWith("ies")) w = `${w.slice(0, -3)}y`;
+  else if (w.length > 4 && /(ss|x|z|ch|sh)es$/.test(w)) w = w.slice(0, -2);
+  else if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) w = w.slice(0, -1);
+  if (w.length > 5 && w.endsWith("ing")) w = w.slice(0, -3);
+  else if (w.length > 4 && w.endsWith("ed")) w = w.slice(0, -2);
+  if (w.length > 4 && /([bdfgklmnprt])\1$/.test(w)) w = w.slice(0, -1);
+  if (w.length > 3 && w.endsWith("e")) w = w.slice(0, -1);
+  return w;
+}
+
+function stems(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 1 && !WORD_STOP.has(w))
+      .map(stem),
+  );
+}
+
+/** One component chosen for a need, with the words of the need it covers. */
+export interface NeedMatch {
+  entry: CatalogEntry;
+  covers: string[];
+  score: number;
+}
+
+/**
+ * Components that cover a short need (component-only plans for an existing project, ADR-0051). Deterministic, never a
+ * model:
+ *  1. each word of the need weighs by how rare it is in the catalog (inverse document frequency), so "http", "retry"
+ *     or "qr" decide and "client" or "parse" barely count; a word in the component's capability name (id, provides)
+ *     counts double, one only in its description or keywords counts once;
+ *  2. the best component is taken first; another one only when it names, in its capability, a word of the need that
+ *     the chosen ones do not cover, and the uncovered words it covers are worth at least `minShare` of the best
+ *     component's score — a second capability of the need, never a component that merely shares a common word;
+ *  3. at most `limit` components. Declared dependencies (`requires`) are added by the caller.
+ */
+export function componentsForNeed(
+  need: string,
+  entries: CatalogEntry[],
+  opts: { limit?: number; minShare?: number } = {},
+): NeedMatch[] {
+  const q = [...stems(need)];
+  if (q.length === 0 || entries.length === 0) return [];
+  const docs = entries.map((e) => {
+    const name = stems(`${e.id} ${e.provides.join(" ")}`.replace(/[.-]/g, " "));
+    const text = stems(`${e.does} ${(e.docs?.keywords ?? []).join(" ")}`.replace(/[.-]/g, " "));
+    return { entry: e, name, all: new Set([...name, ...text]) };
+  });
+  const idf = new Map(
+    q.map((t) => {
+      const df = docs.filter((d) => d.all.has(t)).length;
+      return [t, df === 0 ? 0 : Math.log(1 + entries.length / df)] as const;
+    }),
+  );
+  const scored = docs
+    .map((d) => {
+      const covers = q.filter((t) => d.all.has(t));
+      const value = (ts: string[]) =>
+        ts.reduce((a, t) => a + (idf.get(t) ?? 0) * (d.name.has(t) ? 2 : 1), 0);
+      return { entry: d.entry, covers, score: value(covers), value, name: d.name };
+    })
+    .filter((m) => m.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.covers.length - a.covers.length ||
+        a.entry.id.localeCompare(b.entry.id),
+    );
+  const best = scored[0];
+  if (!best) return [];
+  const picked = [best];
+  const covered = new Set(best.covers);
+  const minGain = (opts.minShare ?? 0.5) * best.score;
+  while (picked.length < (opts.limit ?? 6)) {
+    let next: (typeof scored)[number] | null = null;
+    let nextGain = 0;
+    for (const m of scored) {
+      if (picked.includes(m)) continue;
+      const fresh = m.covers.filter((t) => !covered.has(t));
+      if (!fresh.some((t) => m.name.has(t))) continue;
+      const gain = m.value(fresh);
+      if (gain >= minGain && gain > nextGain) {
+        next = m;
+        nextGain = gain;
+      }
+    }
+    if (!next) break;
+    picked.push(next);
+    next.covers.forEach((t) => covered.add(t));
+  }
+  return picked.map((m) => ({ entry: m.entry, covers: m.covers, score: m.score }));
+}

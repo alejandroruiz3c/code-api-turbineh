@@ -62,6 +62,8 @@ export function run(
   args: string[],
   timeoutMs = 15 * 60_000,
   fullOutput = false,
+  /** Called with every complete output line as it arrives (live progress, e.g. `PROGRESS` markers). */
+  onLine?: (line: string) => void,
 ): Promise<RunResult> {
   const start = performance.now();
   return new Promise((resolve) => {
@@ -69,11 +71,30 @@ export function run(
     // forward it to the sandbox container and break a verification in progress.
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], detached: true });
     let out = "";
+    const partial = { stdout: "", stderr: "" };
+    const lines = (key: "stdout" | "stderr", d: Buffer) => {
+      if (!onLine) return;
+      const parts = (partial[key] + d.toString()).split("\n");
+      partial[key] = parts.pop() ?? "";
+      for (const l of parts) {
+        try {
+          onLine(l);
+        } catch {
+          // progress reporting never breaks a run
+        }
+      }
+    };
     const keep = (d: Buffer) => {
       out = fullOutput ? out + d.toString() : (out + d.toString()).slice(-12000);
     };
-    child.stdout.on("data", keep);
-    child.stderr.on("data", keep);
+    child.stdout.on("data", (d: Buffer) => {
+      keep(d);
+      lines("stdout", d);
+    });
+    child.stderr.on("data", (d: Buffer) => {
+      keep(d);
+      lines("stderr", d);
+    });
     const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
     child.on("close", (code) => {
       clearTimeout(timer);

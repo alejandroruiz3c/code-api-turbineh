@@ -1,21 +1,16 @@
 "use client";
-import type { FlowState } from "@turbineh/shared";
+import type { FlowOutcome, FlowState, Plan } from "@turbineh/shared";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { currentRun, RUNNING_STATUSES } from "@/lib/flow-events";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { currentRun, isWorking } from "@/lib/flow-events";
+import { followFlow, type FollowSnapshot } from "@/lib/flow-follow";
+import { describeProgress, duration, type RunKind } from "@/lib/flow-progress";
+import { FlowFinished, FlowSteps, LiveNow, PackageResult } from "./flow-live";
 import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
 import { DeployForMe } from "./deploy-for-me";
 import { RepoIntegration } from "./repo-integration";
 import { Panel, StateBadge, Stat, pct } from "./ui";
-
-interface BuildEvent {
-  id: number;
-  phase: string;
-  type: string;
-  data: Record<string, unknown>;
-  at: string;
-}
 
 interface BuildReport {
   headline: string;
@@ -59,8 +54,14 @@ interface FlowProblem {
   next: { label: string; kind: "generate_again" | "new_flow" | "open_package" | "wait" };
 }
 
-interface BuildResult {
+export interface BuildResult {
   status: string;
+  /** The same state as /v1/plans/{id} and the CLI (ADR-0051). */
+  state?: FlowState;
+  /** The end state in plain words with its next actions (ADR-0051). */
+  outcome?: FlowOutcome | null;
+  /** The capability package (component-only flows deliver only this). */
+  package?: { slug: string | null; zip_url: string; manifest_url: string | null } | null;
   prompt?: string;
   error: string | null;
   problem?: FlowProblem | null;
@@ -76,6 +77,7 @@ interface BuildResult {
   repo_url: string | null;
   improvement_build_id: string | null;
   metrics: {
+    plan?: Plan;
     reuse?: { reusedShare?: number; reusedLines?: number; generatedLines?: number };
     components?: (string | { id?: string })[];
     alerts?: { id: string; level: string; title: string; explain: string; where: string }[];
@@ -98,20 +100,6 @@ interface BuildResult {
 const notVerified = (r: BuildResult) =>
   r.status === "failed" && r.delivery?.kind === "unverified" && Boolean(r.artifact?.zip_url);
 
-/** Live trace, in the order the orchestration works: understand → decide → execute → verify. */
-const PHASES: { key: string; label: string; match: string[]; optional?: boolean }[] = [
-  { key: "understand", label: "Understanding intent", match: ["guarding", "compiling"] },
-  { key: "select", label: "Orchestrating decisions", match: ["selecting"] },
-  { key: "resolve", label: "Checking compatibility", match: ["resolving"] },
-  { key: "assemble", label: "Assembling verified components", match: ["assembling"] },
-  { key: "integrate", label: "Writing the glue", match: ["integrating"], optional: true },
-  { key: "verify", label: "Building, testing & scanning", match: ["verifying"] },
-  { key: "correct", label: "Correcting failed checks", match: ["correcting"], optional: true },
-  { key: "fix", label: "Fixing security findings", match: ["remediating"], optional: true },
-  { key: "report", label: "Writing the evidence", match: ["reporting"] },
-  { key: "deliver", label: "Packaging", match: ["delivering"] },
-];
-
 type Tab = "try" | "review" | "check" | "continue" | "revert";
 const TABS: { key: Tab; label: string }[] = [
   { key: "try", label: "Try" },
@@ -125,47 +113,58 @@ const ENV_NAME = /`([A-Z][A-Z0-9_]{2,})`/g;
 const SECRETLESS_DEFAULTS = new Set(["NODE_ENV", "PORT"]);
 
 export function FlowView({ id }: { id: string }) {
-  const [events, setEvents] = useState<BuildEvent[]>([]);
-  const [result, setResult] = useState<BuildResult | null>(null);
-  // Bumped to follow the flow again while it is still working (or after "Generate again").
-  const [follow, setFollow] = useState(0);
+  const [snap, setSnap] = useState<FollowSnapshot<BuildResult>>(() => ({
+    events: [],
+    result: null,
+    connection: "connecting",
+    lastEventAt: Date.now(),
+  }));
+  const [now, setNow] = useState(() => Date.now());
+  const [typical, setTypical] = useState<Partial<Record<RunKind, Record<string, number>>>>({});
+  const follower = useRef<ReturnType<typeof followFlow> | null>(null);
 
-  const loadResult = useCallback(async () => {
-    const res = await fetch(`/v1/builds/${id}`);
-    if (!res.ok) return;
-    const r = (await res.json()) as BuildResult;
-    setResult(r);
-    // Still working: never shown as finished — follow the live trace again.
-    if (RUNNING_STATUSES.has(r.status)) setTimeout(() => setFollow((n) => n + 1), 2000);
+  useEffect(() => {
+    // ADR-0051: the row first (late subscriber), live events, reconnects, and a safety net that polls the API when
+    // nothing arrives — the page always reaches an end state.
+    const f = followFlow<BuildResult>(id, {
+      open: (url) => new EventSource(url),
+      load: async () => {
+        const res = await fetch(`/v1/builds/${id}`, { cache: "no-store" });
+        return res.ok ? ((await res.json()) as BuildResult) : null;
+      },
+      onChange: (s) => {
+        setSnap(s);
+        setNow(Date.now());
+      },
+    });
+    follower.current = f;
+    return () => f.stop();
   }, [id]);
 
   useEffect(() => {
-    const es = new EventSource(`/v1/builds/${id}/events`);
-    const onEvent = (msg: MessageEvent<string>) => {
-      const e = JSON.parse(msg.data) as BuildEvent;
-      setEvents((prev) => (prev.some((p) => p.id === e.id) ? prev : [...prev, e]));
-    };
-    es.addEventListener("phase", onEvent as EventListener);
-    es.addEventListener("finished", ((msg: MessageEvent<string>) => {
-      onEvent(msg);
-      es.close();
-      void loadResult();
-    }) as EventListener);
-    return () => es.close();
-  }, [id, loadResult, follow]);
+    void fetch("/v1/activity/timings")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((t: Partial<Record<RunKind, Record<string, number>>>) => setTypical(t))
+      .catch(() => undefined);
+  }, []);
+
+  const { events, result } = snap;
+  const restart = useCallback(() => follower.current?.restart(), []);
+  const terminal = Boolean(result && !isWorking(result.status));
+  const kind: RunKind =
+    result?.metrics.plan?.capability?.kind === "component" ||
+    events.some((e) => e.phase === "assembling" && e.data.package === "components")
+      ? "component"
+      : "app";
+  const progress = describeProgress(events, {
+    kind,
+    now,
+    typical: typical[kind] ?? {},
+    finished: terminal,
+  });
 
   // One row carries the plan run and then the generation run: show the latest run only.
   const run = currentRun(events);
-  const finished =
-    result && RUNNING_STATUSES.has(result.status)
-      ? undefined
-      : run.find((e) => e.type === "finished");
-  const phaseState = (match: string[]) => {
-    const evs = run.filter((e) => match.includes(e.phase));
-    if (evs.some((e) => e.type === "done")) return "done";
-    if (evs.length > 0) return finished ? "done" : "running";
-    return "pending";
-  };
   const by = (phase: string, type = "done") =>
     run.find((e) => e.phase === phase && e.type === type)?.data;
   const selecting = by("selecting") as
@@ -179,72 +178,75 @@ export function FlowView({ id }: { id: string }) {
       }
     | undefined;
   const verifying = run.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)?.data as
-    { steps?: { name: string; ok: boolean; ms: number }[] } | undefined;
+    { steps?: { name: string; ok: boolean; ms: number }[]; package?: string } | undefined;
   const compiling = by("compiling") as
     { decisions?: { recipe?: { choice: string; confidence: number } } } | undefined;
   const scope = by("compiling", "scope") as { builtOn?: string } | undefined;
 
-  const state: FlowState = result
-    ? result.status === "done"
-      ? result.metrics.deployment
-        ? "deployed"
-        : "verified"
-      : result.status === "failed"
-        ? notVerified(result)
-          ? "generated"
-          : "failed"
-        : "generating"
-    : finished
-      ? finished.data.status === "done"
-        ? "verified"
-        : "failed"
+  // The API's state (same as /v1/plans and the CLI); before the row is loaded, "generating".
+  const state: FlowState =
+    terminal && result
+      ? (result.state ??
+        (result.status === "done"
+          ? result.metrics.deployment
+            ? "deployed"
+            : "verified"
+          : notVerified(result)
+            ? "generated"
+            : "failed"))
       : "generating";
+  const outcome = terminal ? (result?.outcome ?? null) : null;
+  const packageOnly =
+    terminal &&
+    result?.status === "done" &&
+    !result.artifact?.zip_url &&
+    (outcome?.kind === "package_verified" ||
+      outcome?.kind === "package_unverified" ||
+      Boolean(result.package?.zip_url));
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center gap-3" role="status" aria-live="polite">
-        <StateBadge state={state} />
-        {state === "generating" ? (
-          <span className="text-sm text-muted">
-            Live — every decision appears below as it is taken.
-          </span>
-        ) : null}
+        <StateBadge
+          state={state}
+          {...(outcome?.kind === "package_unverified"
+            ? { label: "Package ready · not verified yet", hint: outcome.title }
+            : outcome?.kind === "package_verified"
+              ? { label: "Package verified", hint: outcome.title }
+              : {})}
+        />
+        <span className="text-sm text-muted">
+          {terminal
+            ? `Finished${progress.elapsedMs > 0 ? ` in ${duration(progress.elapsedMs)}` : ""}.`
+            : `Live · ${duration(progress.elapsedMs)} so far — every step appears below as it happens.`}
+        </span>
       </div>
+
+      {!terminal ? <LiveNow progress={progress} connection={snap.connection} /> : null}
 
       {result && notVerified(result) && result.delivery ? (
         <NotVerifiedPanel delivery={result.delivery} />
       ) : null}
-      {result?.artifact?.zip_url ? (
-        <ResultScreen id={id} result={result} onReload={() => void loadResult()} />
+      {terminal && result?.artifact?.zip_url ? (
+        <ResultScreen id={id} result={result} onReload={restart} />
       ) : null}
-      {result && result.status === "failed" && !result.artifact?.zip_url ? (
-        <WhatHappened
+      {packageOnly && result && outcome ? (
+        <PackageResult
           id={id}
-          result={result}
-          onRetry={() => {
-            setResult(null);
-            setFollow((n) => n + 1);
-          }}
+          outcome={outcome}
+          zipUrl={result.package?.zip_url ?? null}
+          plan={(result.metrics.plan as Plan | undefined) ?? null}
         />
+      ) : null}
+      {terminal && result && result.status === "failed" && !result.artifact?.zip_url ? (
+        <WhatHappened id={id} result={result} onRetry={restart} />
+      ) : null}
+      {terminal && result?.status === "done" && !result.artifact?.zip_url && !packageOnly ? (
+        <FlowFinished id={id} outcome={outcome} />
       ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <ol className="flex flex-col gap-3" aria-label="Flow trace">
-          {PHASES.map((p) => {
-            const s = phaseState(p.match);
-            if (p.optional && s === "pending") return null;
-            return (
-              <li key={p.key} className="flex items-center gap-3 text-sm">
-                <span
-                  aria-hidden="true"
-                  className={`h-2.5 w-2.5 rounded-full ${s === "done" ? "bg-teal" : s === "running" ? "animate-pulse-dot bg-amber" : "bg-line"}`}
-                />
-                <span className={s === "pending" ? "text-muted" : "text-ice-2"}>{p.label}</span>
-                <span className="sr-only">{s}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <FlowSteps progress={progress} />
 
         <div className="flex flex-col gap-6">
           {compiling?.decisions?.recipe ? (
@@ -292,7 +294,13 @@ export function FlowView({ id }: { id: string }) {
             </Panel>
           ) : null}
           {verifying?.steps ? (
-            <Panel title="Verification · isolated sandbox, no network">
+            <Panel
+              title={
+                verifying.package
+                  ? "Verification · contract tests in an isolated sandbox"
+                  : "Verification · isolated sandbox, no network"
+              }
+            >
               <ul className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
                 {verifying.steps.map((s) => (
                   <li

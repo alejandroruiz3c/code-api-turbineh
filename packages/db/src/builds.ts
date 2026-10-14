@@ -185,6 +185,52 @@ export async function findImprovement(
   return res.rows[0] ?? null;
 }
 
+/** Typical duration of each phase in recent finished flows, per kind of run (ADR-0051, internal timings only). */
+export interface PhaseTiming {
+  kind: "app" | "component";
+  phase: string;
+  medianMs: number;
+  samples: number;
+}
+
+/**
+ * Median duration of each live-trace phase over the last finished runs (14 days, at most 300 builds). A phase lasts
+ * from the event before its first event to its last event, within one run (a row carries the plan run and then the
+ * generation run, each starting at a `queued` event). Component-only packages and complete apps are kept apart.
+ */
+export async function phaseTimings(db: pg.Pool): Promise<PhaseTiming[]> {
+  const res = await db.query<{
+    kind: "app" | "component";
+    phase: string;
+    median_ms: number;
+    samples: number;
+  }>(
+    `WITH recent AS (
+       SELECT id, CASE WHEN metrics->'plan'->'capability'->>'kind' = 'component' THEN 'component' ELSE 'app' END AS kind
+       FROM builds WHERE status = 'done' AND finished_at > now() - interval '14 days'
+       ORDER BY finished_at DESC LIMIT 300
+     ), runs AS (
+       SELECT e.build_id, e.id, e.phase, e.at, r.kind,
+              SUM(CASE WHEN e.type = 'queued' THEN 1 ELSE 0 END) OVER (PARTITION BY e.build_id ORDER BY e.id) AS run
+       FROM build_events e JOIN recent r ON r.id = e.build_id
+     ), ev AS (
+       SELECT build_id, run, kind, phase, at, lag(at) OVER (PARTITION BY build_id, run ORDER BY id) AS prev FROM runs
+     ), per AS (
+       SELECT kind, phase, EXTRACT(EPOCH FROM (max(at) - min(prev))) * 1000 AS ms
+       FROM ev WHERE prev IS NOT NULL AND phase NOT IN ('queued', 'done', 'failed')
+       GROUP BY build_id, run, kind, phase
+     )
+     SELECT kind, phase, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY ms))::int AS median_ms, count(*)::int AS samples
+     FROM per GROUP BY kind, phase`,
+  );
+  return res.rows.map((r) => ({
+    kind: r.kind,
+    phase: r.phase,
+    medianMs: Number(r.median_ms),
+    samples: Number(r.samples),
+  }));
+}
+
 export async function eventsSince(
   db: pg.Pool,
   buildId: string,

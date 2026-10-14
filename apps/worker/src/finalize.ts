@@ -230,7 +230,10 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   let lastVerifyMs = 0;
   const timedVerify = async () => {
     const v0 = performance.now();
-    const r = await verify(input.repoDir);
+    // Each gate step and the scans, live (ADR-0051): the flow page says which check is running.
+    const r = await verify(input.repoDir, {
+      onStep: (e) => void deps.emit("verifying", "step", { ...e }).catch(() => undefined),
+    });
     lastVerifyMs = Math.round(performance.now() - v0);
     return r;
   };

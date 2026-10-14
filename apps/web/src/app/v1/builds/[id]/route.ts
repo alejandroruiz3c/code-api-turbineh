@@ -1,5 +1,5 @@
 import { findImprovement, getBuild } from "@turbineh/db";
-import { explainFailure } from "@turbineh/engine";
+import { explainFailure, flowOutcome, flowState } from "@turbineh/engine";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { clientMetrics, isOps } from "@/server/ops";
@@ -39,6 +39,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       }
     | undefined;
   const verified = build.status === "done" && (d ? d.kind === "verified" : true);
+  // The capability package (component-only flows deliver only this, ADR-0051).
+  const pkg = (a as { package?: { slug?: string; zipKey?: string; manifestKey?: string } } | null)
+    ?.package;
+  const row = {
+    id: build.id,
+    status: build.status,
+    options: build.options,
+    metrics: build.metrics,
+    artifact: build.artifact,
+    error: build.error,
+  };
   return Response.json({
     id: build.id,
     status: build.status,
@@ -46,6 +57,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     created_at: build.created_at,
     finished_at: build.finished_at,
     error: build.error,
+    // The same state and end-state text as /v1/plans/{id} and the CLI (ADR-0051): never derived again by a client.
+    state: flowState(row),
+    outcome: flowOutcome(row),
+    package: pkg?.zipKey
+      ? {
+          slug: pkg.slug ?? null,
+          zip_url: await storage.url(pkg.zipKey),
+          manifest_url: pkg.manifestKey ? await storage.url(pkg.manifestKey) : null,
+        }
+      : null,
     // What happened, why, what to do and the next action, in plain words (ADR-0050): never only the raw reason.
     problem:
       build.status === "failed"

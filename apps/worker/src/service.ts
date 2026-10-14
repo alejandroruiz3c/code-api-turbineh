@@ -50,7 +50,9 @@ import {
   type PipelineDeps,
 } from "./pipeline.js";
 import { isGapNotice } from "@turbineh/engine";
-import { catalogEntries, storeCapabilityPackage, type PlanRequest } from "./product.js";
+import { storeCapabilityPackage, type PlanRequest } from "./product.js";
+import { generateComponentPackage } from "./component-package.js";
+import { runContracts } from "@turbineh/curation";
 import type { BuildSpec } from "@turbineh/compiler";
 import { trackedTokens } from "@turbineh/engine";
 import type { Plan } from "@turbineh/shared";
@@ -154,7 +156,12 @@ async function handle(build: BuildRow): Promise<void> {
   const componentOnly = mode === "generate" && plan?.capability.kind === "component";
   const outcome =
     componentOnly && plan
-      ? await generateComponentPackage(build, plan)
+      ? await generateComponentPackage(build.id, plan, {
+          repoRoot,
+          storage,
+          emit: (phase, type, data) => emitEvent(db, build.id, phase, type, data),
+          runContracts,
+        })
       : build.options.mode === "improve" && parentId
         ? await improveFromParent(build, parentId, pipelineDeps)
         : await runBuild(build.prompt, pipelineDeps, build.id, {
@@ -199,7 +206,10 @@ async function handle(build: BuildRow): Promise<void> {
     ...(outcome.spec ? { spec: outcome.spec } : {}),
     metrics: {
       ...outcome.metrics,
-      verify: outcome.verify?.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
+      // Capability packages record their own checks in metrics.verify (ADR-0051): keep them.
+      ...(outcome.verify
+        ? { verify: outcome.verify.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })) }
+        : {}),
     },
     ...(artifact ? { artifact } : {}),
     ...(outcome.reason ? { error: outcome.reason } : {}),
@@ -282,52 +292,6 @@ async function packageFlow(
     { appDir: outcome.repoDir ?? "" },
   );
   return pkg;
-}
-
-/** Component-only generation: certified components packaged as is (no app to build), verified at certification. */
-async function generateComponentPackage(build: BuildRow, plan: Plan): Promise<BuildOutcome> {
-  const t0 = performance.now();
-  await emitEvent(db, build.id, "assembling", "start", {
-    components: plan.components.map((c) => c.id),
-  });
-  const entries = catalogEntries(join(repoRoot, "catalog/components")).filter((c) =>
-    plan.components.some((p) => p.id === c.id),
-  );
-  const checks = [{ name: "certification", ok: true }];
-  const pkg = await storeCapabilityPackage(
-    build.id,
-    storage,
-    {
-      slug: plan.capability.id,
-      name: plan.capability.name,
-      need: plan.need,
-      planId: build.id,
-      state: "verified",
-      summary: plan.need,
-      components: entries.map((c) => ({
-        id: c.id,
-        version: c.version,
-        license: c.license,
-        purl: c.purl,
-        capability: c.provides[0] ?? c.category,
-        why: plan.components.find((p) => p.id === c.id)?.why ?? "",
-      })),
-      checks,
-      plan,
-    },
-    { components: entries },
-  );
-  await emitEvent(db, build.id, "delivering", "done", { channel: "package", package: true });
-  return {
-    buildId: build.id,
-    status: "done",
-    metrics: {
-      verify: checks,
-      timings: { total: Math.round(performance.now() - t0) },
-      reuse: { reusedShare: 1, generatedLines: 0 },
-      artifact: { slug: plan.capability.id, package: pkg },
-    },
-  };
 }
 
 /** Restores the parent build's repository from its git bundle and runs "improve and redeliver" on a copy. */

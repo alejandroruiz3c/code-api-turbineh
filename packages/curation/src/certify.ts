@@ -46,22 +46,42 @@ const TSCONFIG = {
   include: ["tests/*.ts"],
 };
 
+/** One step of a contract run, reported live (install → contract tests → strict type check). */
+export interface ContractStep {
+  name: "install" | "contract" | "typecheck";
+  state: "start" | "done";
+  ok?: boolean;
+  ms?: number;
+  /** Contract tests that passed (contract step only). */
+  tests?: number;
+}
+
+/** Per-component outcome of a contract run. */
+export interface ContractOutcome {
+  id: string;
+  passed: boolean;
+  /** No contract.test.ts for this component. */
+  missing: boolean;
+  failure: string;
+}
+
+export interface ContractRun {
+  components: ContractOutcome[];
+  steps: { name: ContractStep["name"]; ok: boolean; ms: number; tests?: number }[];
+  runTail: string;
+  typecheckTail: string;
+}
+
 /**
- * Certifies components with their contract tests:
- *  1. one workspace with every package under test + vitest (dependency install is the only networked step),
- *  2. contract tests run in the sandbox with --network none, and are type-checked with the apps' strict settings
- *     (libraries without bundled types must declare `integration.types`),
- *  3. a component becomes `approved` only if its contract passed, type-checked AND the deterministic approval gate passes
- *     (allowed licence, no unmitigated high/critical advisory, tested evidence).
+ * Runs the contract tests of components together, exactly as certification does (ADR-0002 harness): one workspace,
+ * install with network and no secrets, then the tests and the strict type check in the sandbox with --network none.
+ * No side effects on the catalog. Used by `certify` and, for capability packages, at generation (ADR-0051).
  */
-export async function certify(
+export async function runContracts(
   ids: string[],
   componentsDir: string,
-  evidencePath: string,
-  today: string,
-  /** How manifests cite the evidence (repo-relative path); defaults to `evidencePath`. */
-  evidenceRef: string = evidencePath,
-): Promise<CertifyResult[]> {
+  onStep?: (s: ContractStep) => void | Promise<void>,
+): Promise<ContractRun & { manifests: Map<string, ComponentManifest> }> {
   const work = mkdtempSync(join(tmpdir(), "turbineh-certify-"));
   const manifests = new Map<string, ComponentManifest>();
   const deps: Record<string, string> = {};
@@ -118,17 +138,38 @@ export async function certify(
 
   writeFileSync(join(work, "tsconfig.json"), JSON.stringify(TSCONFIG, null, 2));
 
+  await onStep?.({ name: "install", state: "start" });
   const install = await sandbox(
     work,
     "pnpm install --config.strict-peer-dependencies=false 2>&1 | tail -5",
     { network: "bridge", env: {} },
   );
+  await onStep?.({ name: "install", state: "done", ok: install.code === 0, ms: install.ms });
   if (install.code !== 0) throw new Error(`install failed: ${install.tail}`);
+  await onStep?.({ name: "contract", state: "start" });
   const run = await sandbox(
     work,
     "pnpm exec vitest run --reporter=json --outputFile=results.json > /dev/null 2>&1; echo exit=$?",
     { network: "none", env: {} },
   );
+  const results = existsSync(join(work, "results.json"))
+    ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
+        testResults: {
+          name: string;
+          status: string;
+          message?: string;
+          assertionResults?: { status: string; failureMessages?: string[] }[];
+        }[];
+      })
+    : { testResults: [] };
+  const tests = results.testResults.reduce(
+    (a, r) => a + (r.assertionResults ?? []).filter((x) => x.status === "passed").length,
+    0,
+  );
+  const contractOk =
+    results.testResults.length > 0 && results.testResults.every((r) => r.status === "passed");
+  await onStep?.({ name: "contract", state: "done", ok: contractOk, ms: run.ms, tests });
+  await onStep?.({ name: "typecheck", state: "start" });
   const typecheck = await sandbox(
     work,
     "pnpm exec tsc -p tsconfig.json --pretty false; echo exit=$?",
@@ -142,17 +183,54 @@ export async function certify(
       .split("\n")
       .filter((l) => l.startsWith(`tests/${id}.test.ts(`) || l.startsWith(`tests/${id}.glue.ts(`))
       .join(" | ");
-  const results = existsSync(join(work, "results.json"))
-    ? (JSON.parse(readFileSync(join(work, "results.json"), "utf8")) as {
-        testResults: {
-          name: string;
-          status: string;
-          message?: string;
-          assertionResults?: { status: string; failureMessages?: string[] }[];
-        }[];
-      })
-    : { testResults: [] };
+  const components: ContractOutcome[] = ids.map((id) => {
+    const file = results.testResults.find((r) => r.name.endsWith(`/tests/${id}.test.ts`));
+    const tsErrors = typeErrors(id);
+    const failure = [
+      tsErrors && `typecheck: ${tsErrors}`,
+      file?.message,
+      ...(file?.assertionResults ?? []).flatMap((a) => a.failureMessages ?? []),
+    ]
+      .filter(Boolean)
+      .join(" | ")
+      .slice(0, 800);
+    return {
+      id,
+      passed: file?.status === "passed" && tsErrors === "",
+      missing: !existsSync(join(componentsDir, id, "contract.test.ts")),
+      failure,
+    };
+  });
+  const typecheckOk = /exit=0\s*$/.test(typecheck.tail);
+  const steps = [
+    { name: "install" as const, ok: true, ms: install.ms },
+    { name: "contract" as const, ok: contractOk, ms: run.ms, tests },
+    { name: "typecheck" as const, ok: typecheckOk, ms: typecheck.ms },
+  ];
+  await onStep?.({ name: "typecheck", state: "done", ok: typecheckOk, ms: typecheck.ms });
+  return { components, steps, runTail: run.tail, typecheckTail: typecheck.tail, manifests };
+}
 
+/**
+ * Certifies components with their contract tests:
+ *  1. one workspace with every package under test + vitest (dependency install is the only networked step),
+ *  2. contract tests run in the sandbox with --network none, and are type-checked with the apps' strict settings
+ *     (libraries without bundled types must declare `integration.types`),
+ *  3. a component becomes `approved` only if its contract passed, type-checked AND the deterministic approval gate passes
+ *     (allowed licence, no unmitigated high/critical advisory, tested evidence).
+ */
+export async function certify(
+  ids: string[],
+  componentsDir: string,
+  evidencePath: string,
+  today: string,
+  /** How manifests cite the evidence (repo-relative path); defaults to `evidencePath`. */
+  evidenceRef: string = evidencePath,
+): Promise<CertifyResult[]> {
+  const contracts = await runContracts(ids, componentsDir);
+  const manifests = contracts.manifests;
+  const run = { tail: contracts.runTail };
+  const typecheck = { tail: contracts.typecheckTail };
   const out: CertifyResult[] = [];
   const evidence: Record<string, unknown> = {
     date: today,
@@ -163,17 +241,10 @@ export async function certify(
     components: {},
   };
   for (const [id, m] of manifests) {
-    const file = results.testResults.find((r) => r.name.endsWith(`/tests/${id}.test.ts`));
-    const tsErrors = typeErrors(id);
-    const passed = file?.status === "passed" && tsErrors === "";
-    const failure = [
-      tsErrors && `typecheck: ${tsErrors}`,
-      file?.message,
-      ...(file?.assertionResults ?? []).flatMap((a) => a.failureMessages ?? []),
-    ]
-      .filter(Boolean)
-      .join(" | ")
-      .slice(0, 800);
+    const c = contracts.components.find((x) => x.id === id);
+    const passed = c?.passed ?? false;
+    const failure = c?.failure ?? "";
+    const file = c && !c.missing;
     (evidence.components as Record<string, unknown>)[id] = {
       purl: (m.source as { purl: string }).purl,
       passed,

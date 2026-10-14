@@ -29,5 +29,11 @@ export function finalFinish<E extends TraceEvent>(events: E[]): E | undefined {
   return last?.type === "finished" ? last : undefined;
 }
 
-/** Statuses of a build row that are still working (the page keeps following them). */
-export const RUNNING_STATUSES = new Set(["queued", "running"]);
+export const FINAL_STATUSES: ReadonlySet<string> = new Set(["done", "failed"]);
+
+/**
+ * Still working: every status but done and failed. A row moves through queued, guarding, compiling, selecting,
+ * resolving, assembling, verifying and delivering (ADR-0051: checking only "queued"/"running" took a row in
+ * "verifying" for finished).
+ */
+export const isWorking = (status: string): boolean => !FINAL_STATUSES.has(status);

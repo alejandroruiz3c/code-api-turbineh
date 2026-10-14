@@ -1,5 +1,7 @@
 import type {
   CheckResult,
+  FlowOutcome,
+  FlowOutcomeAction,
   FlowResult,
   FlowState,
   Plan,
@@ -56,6 +58,7 @@ const CHECK_LABEL: Record<string, string> = {
   licenses: "Licences allowed",
   certification:
     "Components certified (contract tests, strict types, licences, known vulnerabilities)",
+  contract: "Contract tests of the package's components, together in the sandbox (no network)",
 };
 
 export const checkLabel = (name: string) => CHECK_LABEL[name] ?? name;
@@ -87,7 +90,163 @@ export function flowState(row: FlowRow): FlowState {
   if (row.status !== "done") return "generating";
   const checks = (row.metrics.verify as CheckResult[] | undefined) ?? [];
   if (checks.length === 0) return "generated";
+  // Packages generated before ADR-0051 recorded only the components' own certification: nothing ran for the package
+  // in the sandbox, so it is "generated" (verified inside the project when integrated), never "verified".
+  if (checks.every((c) => c.name === "certification")) return "generated";
   return checks.every((c) => c.ok) ? "verified" : "generated";
+}
+
+/** The not-verified-yet title of a capability package (ADR-0051). Shared by the web, the API and the CLI. */
+export const PACKAGE_NOT_VERIFIED_TITLE =
+  "Package ready (not verified yet: it is verified inside your project when you integrate it)";
+
+/**
+ * The end state in plain words and its next actions (ADR-0051), from the same row as `flowState`, so the badge, the
+ * API and the CLI say the same. Deterministic: no model.
+ */
+export function flowOutcome(row: FlowRow): FlowOutcome {
+  const state = flowState(row);
+  const plan = row.metrics.plan as Plan | undefined;
+  const pkg = row.artifact?.package as { slug?: string } | undefined;
+  const slug = String(pkg?.slug ?? plan?.capability.id ?? "capability");
+  const short = row.id.slice(0, 8);
+  const componentOnly = plan?.capability.kind === "component" && row.options.mode === "generate";
+  const pv = row.metrics.packageVerification as
+    | { ran?: boolean; ok?: boolean; summary?: string; failures?: { component: string }[] }
+    | undefined;
+  const needs = (plan?.config ?? [])
+    .filter((r) => !r.satisfied)
+    .map((r) => `Set ${r.name}: ${r.why}`);
+  const planLeft = (plan?.left ?? []).map((l) => (l.where ? `${l.part} — ${l.where}` : l.part));
+  const deps = (plan?.dependencies ?? []).map((d) => `${d.name}@${d.version}`);
+  const repo = plan?.repository?.repo;
+  const integrationActions: FlowOutcomeAction[] = [
+    {
+      id: "open_pull_request",
+      label: "Open a pull request",
+      detail: `${repo ? `Adds it to ${repo}` : "Adds it to your GitHub repository"} on a new branch (turbineh/${slug}), runs your project's checks with it in the sandbox and opens a draft pull request; it is marked ready only when every check passes. Needs GitHub connected; never merged for you.`,
+    },
+    {
+      id: "download_zip",
+      label: "Download ZIP",
+      detail: `The package: src/, tests/, config/.env.example, docs/ and agent/INTEGRATE.md for you or your coding agent.`,
+    },
+    {
+      id: "apply_cli",
+      label: `turbineh apply ${row.id}`,
+      command: `turbineh apply ${row.id}`,
+      detail: `Writes turbineh/${slug}/ into your project on a new branch turbineh/${slug}-${short} in one commit, adds only the missing dependencies${deps.length ? ` (${deps.join(", ")})` : ""} and the setting names to .env.example; your default branch is never touched. Then \`turbineh verify\` runs your project's checks with it and \`turbineh revert\` undoes only that commit.`,
+    },
+  ];
+  const working = (title: string, meaning: string): FlowOutcome => ({
+    kind: "working",
+    state,
+    title,
+    meaning,
+    verification: "",
+    actions: [],
+    left: [],
+  });
+  if (state === "planning")
+    return working("Preparing the plan", "Reading the need and choosing verified components.");
+  if (state === "generating")
+    return working("Generating", "Assembling and checking the package now.");
+  if (state === "planned")
+    return {
+      kind: "planned",
+      state,
+      title: "Plan ready",
+      meaning: plan
+        ? `${plan.components.length} verified component(s) selected. Review it, then generate.`
+        : "Review it, then generate.",
+      verification: "",
+      actions: [],
+      left: planLeft,
+    };
+  if (state === "failed") {
+    const p = explainFailure(row.error, {
+      id: row.id,
+      fromPlan: row.options.mode === "generate" && Boolean(plan),
+    });
+    return {
+      kind: "failed",
+      state,
+      title: p.title,
+      meaning: p.why,
+      verification: "",
+      actions: [
+        p.next.kind === "generate_again"
+          ? { id: "generate_again", label: p.next.label, detail: p.action }
+          : { id: "new_flow", label: p.next.label, detail: p.action },
+      ],
+      left: [p.action],
+    };
+  }
+  if (state === "deployed" || state === "integrated" || state === "integration_verified") {
+    return {
+      kind: state === "deployed" ? "deployed" : "integrated",
+      state,
+      title:
+        state === "deployed"
+          ? "Deployed in your own accounts"
+          : state === "integration_verified"
+            ? "Integrated and verified inside your project"
+            : "Integrated in your project, checks pending",
+      meaning:
+        state === "integrated"
+          ? "The changes are in your project; its checks have not all passed yet — run `turbineh verify` or see the pull request."
+          : "Nothing left to check on our side.",
+      verification: "",
+      actions: [],
+      left: [...needs, ...planLeft],
+    };
+  }
+  if (componentOnly) {
+    const verified = state === "verified";
+    const failed = pv?.ran === true && pv.ok === false;
+    return {
+      kind: verified ? "package_verified" : "package_unverified",
+      state,
+      title: verified
+        ? "Package ready and verified: its contract tests passed in the TurbineH sandbox"
+        : PACKAGE_NOT_VERIFIED_TITLE,
+      meaning: verified
+        ? "It is checked again inside your project when you integrate it (pull request or `turbineh apply` + `turbineh verify`)."
+        : failed
+          ? `A contract test did not pass in the sandbox (${(pv?.failures ?? []).map((f) => f.component).join(", ")}). The package is delivered so you can see why; fix or replace that component before integrating.`
+          : "Each component was certified on its own (contract tests, strict types, licences, known vulnerabilities). The package as a whole is checked inside your project, with your versions, when you integrate it.",
+      verification:
+        pv?.summary ??
+        (verified
+          ? "Components certified: contract tests, strict types, licences, known vulnerabilities."
+          : "Each component was certified on its own; nothing ran for this package yet."),
+      actions: integrationActions,
+      left: [
+        ...(verified
+          ? []
+          : ["Verify it inside your project: the pull request's checks or `turbineh verify`"]),
+        "Wire it where you use it: agent/INTEGRATE.md lists the entry points",
+        ...needs,
+        ...planLeft,
+      ],
+    };
+  }
+  const verified = state === "verified";
+  return {
+    kind: verified ? "app_verified" : "app_unverified",
+    state,
+    title: verified ? "App verified in the TurbineH sandbox" : "Delivered, not verified",
+    meaning: verified
+      ? "Every check passed: build, tests, end-to-end, secrets, security rules, vulnerabilities and licences."
+      : (deliveryLabel(row) ?? "Not every check passed; the failures are listed with the fix."),
+    verification: deliveryLabel(row) ?? "",
+    actions: [
+      { id: "try_example", label: "Try it", detail: "Run it locally with sample data." },
+      { id: "download_zip", label: "Download ZIP", detail: "The complete app and its evidence." },
+      ...(verified ? [integrationActions[0] as FlowOutcomeAction] : []),
+    ],
+    left: [...needs, ...planLeft],
+  };
 }
 
 export function agentInstructions(slug: string): string {
@@ -127,6 +286,12 @@ export function flowResult(
         row.error ?? deliveryLabel(row) ?? "Delivered, not verified",
       ),
     );
+  }
+  const pv = row.metrics.packageVerification as
+    { ran?: boolean; ok?: boolean; summary?: string } | undefined;
+  if (pv?.ran && !pv.ok && state === "generated") {
+    // A capability package whose contract tests did not pass together (ADR-0051): delivered, never "verified".
+    errors.push(ERRORS.verificationFailed(row.id, pv.summary ?? "Contract tests did not pass"));
   }
   if (state === "failed") {
     errors.push(
@@ -180,5 +345,6 @@ export function flowResult(
       newLines: reuse?.generatedLines ?? 0,
     },
     errors,
+    outcome: flowOutcome(row),
   };
 }

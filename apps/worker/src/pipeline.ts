@@ -477,6 +477,12 @@ export async function runBuild(
   const selected: SelectedComponent[] = Object.entries(resolution.selected).map(
     ([capability, component]) => ({ capability, component, why: whyOf(capability, component.id) }),
   );
+  // Live progress (ADR-0051): what is being assembled, before the work starts.
+  await deps.emit(buildId, "assembling", "start", {
+    components: selected.filter((x) => integrable(x.component)).map((x) => x.component.id),
+    later: external.map((e) => e.component),
+    recipe: recipeId,
+  });
   const assembled = assemble({
     buildId,
     recipesDir,
@@ -565,13 +571,25 @@ test("forced failure for the not-verified delivery test", () => {
         },
       ),
       Promise.all(
-        toFill.map((g) =>
+        toFill.map((g, i) =>
           fillGap(repoDir, g, deps.backupCoder, {
             buildId,
             summary: spec.summary,
             allowedImports: ["zod", ...Object.keys(pkg.dependencies)],
             gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
-          }).catch(() => null),
+          })
+            .catch(() => null)
+            .then(async (r) => {
+              await deps
+                .emit(buildId, "integrating", "progress", {
+                  gap: g.capability,
+                  ok: r !== null,
+                  index: i + 1,
+                  total: toFill.length,
+                })
+                .catch(() => undefined);
+              return r;
+            }),
         ),
       ),
     ]);
