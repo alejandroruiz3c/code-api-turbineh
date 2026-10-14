@@ -10,7 +10,7 @@
  *  5. safety net: if no event arrives for `silenceMs` while the row is in progress, the API state is polled every
  *     `pollMs` and a done or failed row is rendered even if the stream never says so.
  */
-import { RUNNING_STATUSES } from "./flow-events";
+import { isWorking } from "./flow-events";
 
 export interface FollowEvent {
   id: number;
@@ -65,7 +65,7 @@ export function followFlow<R extends { status: string }>(
   let stopped = false;
   let lastPoll = 0;
   let reopen: ReturnType<typeof setTimeout> | null = null;
-  const terminal = () => Boolean(state.result && !RUNNING_STATUSES.has(state.result.status));
+  const terminal = () => Boolean(state.result && !isWorking(state.result.status));
   const emit = () => deps.onChange({ ...state, events: [...state.events] });
 
   const add = (raw?: string) => {
@@ -112,7 +112,7 @@ export function followFlow<R extends { status: string }>(
       void refresh().then((r) => {
         if (stopped) return;
         // Still working (the plan's own finish, or the event raced the row update): keep following.
-        if (r && RUNNING_STATUSES.has(r.status)) scheduleOpen(refollowMs);
+        if (r && isWorking(r.status)) scheduleOpen(refollowMs);
         emit();
       });
     });
@@ -132,7 +132,7 @@ export function followFlow<R extends { status: string }>(
       state.connection = state.connection === "closed" ? "closed" : "polling";
       void refresh().then((r) => {
         if (stopped) return;
-        if (r && !RUNNING_STATUSES.has(r.status)) {
+        if (r && !isWorking(r.status)) {
           // Finished while the stream said nothing: render it, and take the trace's tail once.
           stream?.close();
           state.connection = "closed";

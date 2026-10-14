@@ -2,7 +2,7 @@
 import type { FlowOutcome, FlowState, Plan } from "@turbineh/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { currentRun, RUNNING_STATUSES } from "@/lib/flow-events";
+import { currentRun, isWorking } from "@/lib/flow-events";
 import { followFlow, type FollowSnapshot } from "@/lib/flow-follow";
 import { describeProgress, duration, type RunKind } from "@/lib/flow-progress";
 import { FlowFinished, FlowSteps, LiveNow, PackageResult } from "./flow-live";
@@ -150,7 +150,7 @@ export function FlowView({ id }: { id: string }) {
 
   const { events, result } = snap;
   const restart = useCallback(() => follower.current?.restart(), []);
-  const terminal = Boolean(result && !RUNNING_STATUSES.has(result.status));
+  const terminal = Boolean(result && !isWorking(result.status));
   const kind: RunKind =
     result?.metrics.plan?.capability?.kind === "component" ||
     events.some((e) => e.phase === "assembling" && e.data.package === "components")

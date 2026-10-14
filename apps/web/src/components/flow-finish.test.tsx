@@ -153,7 +153,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("flow page always reaches an end state (incident 2026-10-13)", () => {
   it("the exact production sequence ends on the package result, not on 'Packaging'", async () => {
-    let status = "running";
+    let status = "assembling";
     const h = harness(() => status);
     const es = FakeStream.all[0] as FakeStream;
     for (const e of [...PLAN_RUN, ...GENERATE_RUN.slice(0, 3)]) es.send(e);
@@ -212,13 +212,13 @@ describe("flow page always reaches an end state (incident 2026-10-13)", () => {
   });
 
   it("a finished event that races the row update keeps following, then renders the result", async () => {
-    let status = "running";
+    let status = "verifying";
     const h = harness(() => status);
     const es = FakeStream.all[0] as FakeStream;
     for (const e of GENERATE_RUN.slice(0, 3)) es.send(e);
     es.send(GENERATE_RUN[3] as FollowEvent, true);
     await flush();
-    expect(h.snap()?.result?.status).toBe("running");
+    expect(h.snap()?.result?.status).toBe("verifying");
     status = "done";
     await vi.advanceTimersByTimeAsync(2_100);
     const again = FakeStream.all[1] as FakeStream;
@@ -230,7 +230,7 @@ describe("flow page always reaches an end state (incident 2026-10-13)", () => {
   });
 
   it("reconnects when the stream drops", async () => {
-    const h = harness(() => "running");
+    const h = harness(() => "compiling");
     await flush();
     (FakeStream.all[0] as FakeStream).fail();
     expect(h.snap()?.connection).toBe("reconnecting");
@@ -240,7 +240,7 @@ describe("flow page always reaches an end state (incident 2026-10-13)", () => {
   });
 
   it("safety net: no events, the API says done → the result is rendered", async () => {
-    let status = "running";
+    let status = "delivering";
     const h = harness(() => status);
     await flush();
     status = "done";
