@@ -51,6 +51,13 @@ export function EngineFlow({ id }: { id: string }) {
         <StateBadge state={r?.state ?? flow.state} />
         <span className="text-sm text-muted">{flow.capability.name}</span>
       </div>
+      {r?.outcome && r.outcome.kind !== "working" ? (
+        <p className="text-sm text-cream" data-testid="flow-outcome">
+          {r.outcome.title}
+        </p>
+      ) : (
+        <p className="text-sm text-muted">Working on it: this page updates by itself.</p>
+      )}
       <Panel title={`Decisions · ${flow.decisions.length}`}>
         <ul className="grid gap-2 sm:grid-cols-2">
           {flow.decisions.map((d) => (

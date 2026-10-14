@@ -90,6 +90,9 @@ export function flowState(row: FlowRow): FlowState {
   if (row.status !== "done") return "generating";
   const checks = (row.metrics.verify as CheckResult[] | undefined) ?? [];
   if (checks.length === 0) return "generated";
+  // Packages generated before ADR-0051 recorded only the components' own certification: nothing ran for the package
+  // in the sandbox, so it is "generated" (verified inside the project when integrated), never "verified".
+  if (checks.every((c) => c.name === "certification")) return "generated";
   return checks.every((c) => c.ok) ? "verified" : "generated";
 }
 

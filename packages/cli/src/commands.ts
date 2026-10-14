@@ -791,6 +791,13 @@ export async function status(c: Ctx): Promise<CommandResult> {
       data: r,
       lines: [
         bold(`${r.need}`),
+        // The same end-state text as the web and the API (ADR-0051).
+        ...(r.result.outcome
+          ? [
+              r.result.outcome.title,
+              ...(r.result.outcome.verification ? [`  ${r.result.outcome.verification}`] : []),
+            ]
+          : []),
         ...(r.result.works.length
           ? ["Works:", ...r.result.works.map((w) => `  ${green("✔")} ${w}`)]
           : []),

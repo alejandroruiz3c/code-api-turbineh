@@ -69,15 +69,24 @@ export const STATE_LABEL: Record<FlowState, { label: string; hint: string; tone:
   },
 };
 
-export function StateBadge({ state }: { state: FlowState }) {
+/** `label`/`hint` override the generic wording, e.g. a capability package that is "ready, not verified yet". */
+export function StateBadge({
+  state,
+  label,
+  hint,
+}: {
+  state: FlowState;
+  label?: string;
+  hint?: string;
+}) {
   const s = STATE_LABEL[state];
   return (
     <span
-      title={s.hint}
+      title={hint ?? s.hint}
       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${s.tone}`}
     >
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
-      {s.label}
+      {label ?? s.label}
     </span>
   );
 }
