@@ -11,7 +11,7 @@ capability:
   does_not: "Does not replace content moderation by a dedicated model; cannot be switched off"
   use_cases: [ai-agents]
   pros: ["Maintained by TurbineH", "Deterministic checks (no model decides what is safe to skip)"]
-  cons: ["Heuristic injection patterns: new phrasings may pass; the decider adds a second check"]
+  cons: ["Heuristic injection patterns: new phrasings may pass; the TurbineH orchestration adds a second, server-side safety policy"]
   alternatives: []
 contract:
   inputs: ["guardInput(text, 'request' | 'document'); checkLimits({ organizationId, userId }); scanOutput(text); allowedTools(registry, enabled)"]

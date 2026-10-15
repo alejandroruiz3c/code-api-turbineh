@@ -265,7 +265,7 @@ describe("adaptation to the client's conventions", () => {
     // Exactly what is left for the reviewer: one required setting; the rest keep documented defaults.
     const setup = x.reviewerSetup.join("\n");
     expect(setup).toMatch(/Set this setting in each environment .*`TURBINEH_AI_TOKEN`/);
-    expect(setup).toMatch(/Optional, nothing to do .*`AI_ROUTES`/);
+    expect(setup).toMatch(/Optional, nothing to do .*`AI_EMBEDDING_MODEL`/);
     expect(setup).toMatch(
       /run `pnpm install` \(this pull request already updates `pnpm-lock.yaml`\)/,
     );

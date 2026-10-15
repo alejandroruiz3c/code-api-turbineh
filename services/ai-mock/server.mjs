@@ -1,6 +1,7 @@
 // Deterministic AI simulator for sandbox verification (no network, no model, no secrets).
 // Implements the subset client apps use through the TurbineH orchestrator (component ai.orchestrator.turbineh):
-//   POST /v1/chat/completions (OpenAI-compatible), POST /v1/embeddings, POST /v1/systemone (TypeSafe SDK shape),
+//   POST /v1/agent and /v1/orchestrate (TurbineH gateway orchestration protocol, ADR-0053),
+//   POST /v1/chat/completions (OpenAI-compatible), POST /v1/embeddings, POST /v1/systemone,
 //   GET /v1/models, GET /health. Same input → same output, so E2E assertions are stable.
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
@@ -129,6 +130,55 @@ function systemOne(body) {
   };
 }
 
+/**
+ * TurbineH gateway orchestration protocol (ADR-0053): one agent step answers like /v1/chat/completions (no tool
+ * calls); a confirmed action is answered with the tool's `message`, else "Done: <summary>.".
+ */
+function agentStep(body) {
+  const base = { route: "mock", model: "mock", flags: [], decision: "none", toolCalls: [] };
+  if (body.phase === "confirmed" && body.confirmed && body.confirmed.failed !== true) {
+    const r = body.confirmed.result ?? {};
+    const reply =
+      typeof r.message === "string" && r.message.trim()
+        ? r.message
+        : `Done: ${String(body.confirmed.summary ?? "").replace(/[.\s]+$/, "")}.`;
+    return { ...base, reply, usage: { calls: 0, inputTokens: 0, outputTokens: 0 } };
+  }
+  const out = chat({ messages: Array.isArray(body.messages) ? body.messages : [] });
+  return {
+    ...base,
+    reply: out.choices[0].message.content,
+    usage: {
+      calls: 1,
+      inputTokens: out.usage.prompt_tokens,
+      outputTokens: out.usage.completion_tokens,
+    },
+  };
+}
+
+function orchestrate(body) {
+  const messages = [
+    ...(body.schema
+      ? [{ role: "system", content: `JSON_SCHEMA: ${JSON.stringify(body.schema)}` }]
+      : []),
+    { role: "user", content: String(body.input ?? "") },
+  ];
+  const out = chat({ messages });
+  return {
+    text: out.choices[0].message.content,
+    route: "mock",
+    model: "mock",
+    tool: null,
+    flags: [],
+    usage: {
+      calls: 1,
+      inputTokens: out.usage.prompt_tokens,
+      outputTokens: out.usage.completion_tokens,
+    },
+    decision: "none",
+  };
+}
+
 createServer((req, res) => {
   const send = (status, obj) => {
     res.writeHead(status, { "content-type": "application/json" });
@@ -154,6 +204,8 @@ createServer((req, res) => {
     if (req.url === "/v1/chat/completions") return send(200, chat(body));
     if (req.url === "/v1/embeddings") return send(200, embeddings(body));
     if (req.url === "/v1/systemone") return send(200, systemOne(body));
+    if (req.url === "/v1/agent") return send(200, agentStep(body));
+    if (req.url === "/v1/orchestrate") return send(200, orchestrate(body));
     return send(404, { error: { message: "not found" } });
   });
 }).listen(PORT, "0.0.0.0", () => console.log(`ai-mock listening on ${PORT}`));

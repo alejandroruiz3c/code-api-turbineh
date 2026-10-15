@@ -474,7 +474,7 @@ import type { ${n.pascal}Rules } from "./schema";
 
 /**
  * Business rules for ${n.labelPlural.toLowerCase()}: none were requested for this app. When the request contains rules,
- * the Backup Coder (trigger T3) writes them here with their own unit tests.
+ * TurbineH writes them here with their own unit tests.
  */
 export const check${n.pascal}Rules: ${n.pascal}Rules = () => Promise.resolve(null);
 `;

@@ -11,3 +11,9 @@ node_modules
 **/.env*
 *.rtf
 /.claude
+# The private orchestration engine (ADR-0053) is git-ignored but MUST be uploaded with production web deploys.
+!/private
+!/private/orchestration/**
+/private/orchestration/.git
+/private/orchestration/node_modules
+/private/orchestration/bench

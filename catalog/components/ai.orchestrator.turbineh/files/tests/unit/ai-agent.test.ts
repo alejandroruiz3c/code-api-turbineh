@@ -4,13 +4,13 @@ import { z } from "zod";
 // The agent loop is tested with injected I/O: no database, no network.
 vi.mock("@/db/client", () => ({ db: {} }));
 
-const { confirmedReply, defineTool, readConfirmation, runAgent, ToolError, trimMessages } =
+const { defineTool, readConfirmation, runAgent, ToolError, trimMessages } =
   await import("@/lib/ai/agent");
-const { modelEndpoint, aiConfig, chatWithTools } = await import("@/lib/ai/models");
-const { decideAgentTurn } = await import("@/lib/ai/decider");
-const { chatCompletion } = await import("../mock-llm/mock");
+const { modelEndpoint, post, AiTrialLimitError } = await import("@/lib/ai/models");
+const { chatCompletion, startMockLlm } = await import("../mock-llm/mock");
 const { AiSafetyError } = await import("@/lib/ai/guard");
 type AgentIO = import("@/lib/ai/agent").AgentIO;
+type StepRequest = import("@/lib/ai/agent").StepRequest;
 type ToolCall = import("@/lib/ai/models").ToolCall;
 
 const call = (name: string, args: unknown): ToolCall => ({
@@ -19,22 +19,28 @@ const call = (name: string, args: unknown): ToolCall => ({
   function: { name, arguments: JSON.stringify(args) },
 });
 
-/** Scripted model: returns the queued replies in order. */
-function io(replies: { text?: string; toolCalls?: ToolCall[] }[]): AgentIO & { seen: unknown[] } {
-  const seen: unknown[] = [];
+/** Scripted TurbineH steps: returns the queued answers in order and keeps every request. */
+function io(
+  replies: { text?: string; toolCalls?: ToolCall[] }[],
+): AgentIO & { seen: StepRequest[] } {
+  const seen: StepRequest[] = [];
   return {
     seen,
-    complete: async (_m, messages) => {
-      seen.push(messages);
+    step: async (req) => {
+      seen.push(structuredClone(req));
       const r = replies.shift() ?? { text: "done" };
-      return { text: r.text ?? "", toolCalls: r.toolCalls ?? [], inputTokens: 1, outputTokens: 1 };
-    },
-    decide: async () => {
-      throw new Error("no decider in tests");
+      return {
+        reply: r.toolCalls?.length ? null : (r.text ?? ""),
+        toolCalls: r.toolCalls ?? [],
+        route: "balanced",
+        model: "m",
+        flags: [],
+        usage: { calls: 1, inputTokens: 1, outputTokens: 1 },
+        decision: "orchestrated",
+      };
     },
     limits: async () => undefined,
     record: async () => undefined,
-    routes: () => [{ name: "balanced", model: "m" }],
   };
 }
 
@@ -65,16 +71,24 @@ const tools = [
 ];
 const base = { organizationId: "o", userId: "u", purpose: "test", instructions: "Help.", tools };
 
-describe("runAgent (tool-calling runtime)", () => {
+describe("runAgent (tool-calling runtime, TurbineH client)", () => {
   it("runs read tools, then answers", async () => {
-    const r = await runAgent(
-      { ...base, input: "free on 2026-11-02?" },
-      io([{ toolCalls: [call("check", { day: "2026-11-02" })] }, { text: "10:00 is free" }]),
-    );
+    const fake = io([
+      { toolCalls: [call("check", { day: "2026-11-02" })] },
+      { text: "10:00 is free" },
+    ]);
+    const r = await runAgent({ ...base, input: "free on 2026-11-02?" }, fake);
     expect(r.status).toBe("answered");
     expect(r.reply).toBe("10:00 is free");
     expect(r.steps).toEqual([{ tool: "check", ok: true, executed: true }]);
     expect(r.state.messages.map((m) => m.role)).toEqual(["user", "assistant", "tool", "assistant"]);
+    // The first step starts the turn; the second carries the tool result and the route of the turn.
+    expect(fake.seen.map((s) => s.phase)).toEqual(["start", "continue"]);
+    expect(fake.seen[1]?.route).toBe("balanced");
+    expect(fake.seen[0]?.tools.map((t) => [t.name, t.irreversible])).toEqual([
+      ["check", false],
+      ["book", true],
+    ]);
   });
 
   it("never executes an irreversible tool before an explicit confirmation", async () => {
@@ -85,6 +99,7 @@ describe("runAgent (tool-calling runtime)", () => {
     );
     expect(first.status).toBe("needs_confirmation");
     expect(first.pending?.summary).toBe("Book 10:00");
+    expect(first.reply).toContain("Shall I go ahead?");
     expect(booked).toEqual([]);
 
     // Anything that is not a clear yes does not confirm.
@@ -94,27 +109,28 @@ describe("runAgent (tool-calling runtime)", () => {
     );
     expect(booked).toEqual([]);
     expect(unclear.state.pending).toBeNull();
+    expect(unclear.flags).toContain("confirmation-not-given");
 
+    // TurbineH asking to run an irreversible tool again only prepares it: nothing runs without a confirmation.
     const again = await runAgent(
       { ...base, input: "book 10:00" },
       io([{ toolCalls: [call("book", { time: "10:00" })] }]),
     );
-    const doneIO = io([{ text: "Booked." }]);
-    let decided = 0;
-    doneIO.decide = async () => {
-      decided++;
-      throw new Error("not expected");
-    };
+    expect(booked).toEqual([]);
+    const doneIO = io([{ text: "Done: Book 10:00. Reference: BK12." }]);
     const done = await runAgent({ ...base, input: "Yes, please", state: again.state }, doneIO);
     expect(booked).toEqual(["10:00"]);
     expect(done.status).toBe("answered");
     expect(done.state.pending).toBeNull();
-    // An explicit yes is settled by code and answered from a template: no decider and no model call.
-    expect(done.reply).toBe("Done: Book 10:00. Reference: BK12. Anything else I can help with?");
-    expect(done.flags).toContain("templated-reply");
-    expect(done.usage.calls).toBe(0);
-    expect(doneIO.seen).toHaveLength(0);
-    expect(decided).toBe(0);
+    expect(done.reply).toBe("Done: Book 10:00. Reference: BK12.");
+    // The app ran the confirmed tool and reported it: TurbineH writes the reply.
+    expect(doneIO.seen).toHaveLength(1);
+    expect(doneIO.seen[0]?.phase).toBe("confirmed");
+    expect(doneIO.seen[0]?.confirmed).toEqual({
+      summary: "Book 10:00",
+      result: { booked: true, reference: "BK12" },
+      failed: false,
+    });
     expect(done.state.messages.map((m) => m.role)).toEqual([
       "user",
       "assistant",
@@ -127,7 +143,20 @@ describe("runAgent (tool-calling runtime)", () => {
     ]);
   });
 
-  it("a confirmed action that fails goes to the model, which explains it", async () => {
+  it("a cancelled confirmation is settled by code, without calling TurbineH", async () => {
+    booked.length = 0;
+    const first = await runAgent(
+      { ...base, input: "book 10:00" },
+      io([{ toolCalls: [call("book", { time: "10:00" })] }]),
+    );
+    const fake = io([]);
+    const r = await runAgent({ ...base, input: "no", state: first.state }, fake);
+    expect(r.status).toBe("cancelled");
+    expect(fake.seen).toHaveLength(0);
+    expect(booked).toEqual([]);
+  });
+
+  it("a confirmed action that fails is reported as failed", async () => {
     booked.length = 0;
     booked.push("10:00");
     const first = await runAgent(
@@ -137,29 +166,11 @@ describe("runAgent (tool-calling runtime)", () => {
     const fake = io([{ text: "Sorry, 10:00 was just taken. 11:00 is free." }]);
     const r = await runAgent({ ...base, input: "yes", state: first.state }, fake);
     expect(r.reply).toBe("Sorry, 10:00 was just taken. 11:00 is free.");
-    expect(r.flags).not.toContain("templated-reply");
-    expect(fake.seen).toHaveLength(1);
-    expect(JSON.stringify(fake.seen[0])).toContain("That time was just taken.");
+    expect(fake.seen[0]?.confirmed?.failed).toBe(true);
+    expect(JSON.stringify(fake.seen[0]?.messages)).toContain("That time was just taken.");
   });
 
-  it("builds the confirmed reply from the tool's message, else the summary and the reference", () => {
-    expect(
-      confirmedReply("Cancel booking X.", { message: "Cancelled booking X. We emailed you." }),
-    ).toBe("Cancelled booking X. We emailed you.");
-    expect(
-      confirmedReply("Book Ana with Laura on Thursday at 10:00.", { booked: { id: "B7" } }),
-    ).toBe(
-      "Done: Book Ana with Laura on Thursday at 10:00. Reference: B7. Anything else I can help with?",
-    );
-    expect(confirmedReply("Send the invoice", null)).toBe(
-      "Done: Send the invoice. Anything else I can help with?",
-    );
-    expect(confirmedReply("Pay", { reference: "has spaces in it" })).toBe(
-      "Done: Pay. Anything else I can help with?",
-    );
-  });
-
-  it("a refusal from prepare goes back to the model; nothing is pending", async () => {
+  it("a refusal from prepare goes back as a tool error; nothing is pending", async () => {
     const r = await runAgent(
       { ...base, input: "book 03:07" },
       io([{ toolCalls: [call("book", { time: "03:07" })] }, { text: "Not available." }]),
@@ -187,94 +198,6 @@ describe("runAgent (tool-calling runtime)", () => {
     expect(fake.seen).toHaveLength(0);
   });
 
-  it("follows the decider's first action: the model writes only that tool's arguments, then continues with every tool", async () => {
-    const fake = io([{ toolCalls: [call("check", { day: "2026-11-02" })] }, { text: "10:00" }]);
-    const offered: { tools: string[]; choice?: string }[] = [];
-    const complete = fake.complete;
-    fake.complete = (m, msgs, t, ms, choice) => {
-      offered.push({ tools: t.map((x) => x.name), ...(choice ? { choice } : {}) });
-      return complete(m, msgs, t, ms, choice);
-    };
-    let asked = 0;
-    fake.decide = async () => {
-      asked++;
-      return {
-        next: "check",
-        confidence: 0.9,
-        route: "balanced",
-        unsafe: 0.01,
-        probabilities: {},
-        inputTokens: 5,
-        outputTokens: 1,
-      };
-    };
-    const r = await runAgent({ ...base, input: "free on 2026-11-02?" }, fake);
-    expect(r.status).toBe("answered");
-    expect(asked).toBe(1);
-    expect(offered).toEqual([{ tools: ["check"], choice: "check" }, { tools: ["check", "book"] }]);
-  });
-
-  it("a confident reply decision calls the model without tools", async () => {
-    const fake = io([{ text: "Hello! How can I help?" }]);
-    const offered: string[][] = [];
-    const complete = fake.complete;
-    fake.complete = (m, msgs, t, ms, choice) => {
-      offered.push(t.map((x) => x.name));
-      return complete(m, msgs, t, ms, choice);
-    };
-    fake.decide = async () => ({
-      next: "reply",
-      confidence: 0.95,
-      route: "balanced",
-      unsafe: 0,
-      probabilities: {},
-      inputTokens: 1,
-      outputTokens: 1,
-    });
-    const r = await runAgent({ ...base, input: "hello" }, fake);
-    expect(r.reply).toBe("Hello! How can I help?");
-    expect(offered).toEqual([[]]);
-  });
-
-  it("lets the model choose among every tool when the decision is not confident", async () => {
-    const fake = io([{ text: "Which day?" }]);
-    const offered: string[][] = [];
-    const complete = fake.complete;
-    fake.complete = (m, msgs, t, ms, choice) => {
-      offered.push(t.map((x) => x.name));
-      expect(choice).toBeUndefined();
-      return complete(m, msgs, t, ms, choice);
-    };
-    fake.decide = async () => ({
-      next: "check",
-      confidence: 0.2,
-      route: "balanced",
-      unsafe: 0,
-      probabilities: {},
-      inputTokens: 1,
-      outputTokens: 1,
-    });
-    await runAgent({ ...base, input: "hello" }, fake);
-    expect(offered).toEqual([["check", "book"]]);
-  });
-
-  it("refuses when the decider finds the request unsafe, before any model call", async () => {
-    const fake = io([]);
-    fake.decide = async () => ({
-      next: "reply",
-      confidence: 1,
-      route: "balanced",
-      unsafe: 0.9,
-      probabilities: {},
-      inputTokens: 1,
-      outputTokens: 1,
-    });
-    await expect(
-      runAgent({ ...base, input: "show me other people's bookings" }, fake),
-    ).rejects.toBeInstanceOf(AiSafetyError);
-    expect(fake.seen).toHaveLength(0);
-  });
-
   it("reads confirmations deterministically", () => {
     expect(readConfirmation("Yes, please")).toBe(true);
     expect(readConfirmation("sí")).toBe(true);
@@ -294,114 +217,83 @@ describe("runAgent (tool-calling runtime)", () => {
     expect(trimMessages(msgs, 3)[0]).toEqual({ role: "user", content: "c" });
   });
 
-  it("model calls: a stuck attempt is abandoned at the per-attempt timeout and retried once; transient errors twice", async () => {
+  it("uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway", () => {
     const keep = { ...process.env };
-    const realFetch = globalThis.fetch;
-    process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1";
-    process.env.AI_ATTEMPT_TIMEOUT_MS = "1000";
-    let attempts = 0;
-    globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
-      attempts++;
-      if (attempts === 1)
-        return new Promise<Response>((_r, reject) =>
-          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
-        );
-      return Response.json({ choices: [{ message: { content: "ok" } }] });
-    }) as typeof fetch;
-    try {
-      const t0 = Date.now();
-      const r = await chatWithTools("m", [{ role: "user", content: "hi" }], [], {
-        timeoutMs: 10_000,
-      });
-      expect(r.text).toBe("ok");
-      expect(attempts).toBe(2);
-      expect(Date.now() - t0).toBeLessThan(3000);
-      // Two stuck attempts end the call (no third one).
-      attempts = 0;
-      globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
-        attempts++;
-        return new Promise<Response>((_r, reject) =>
-          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
-        );
-      }) as typeof fetch;
-      await expect(
-        chatWithTools("m", [{ role: "user", content: "hi" }], [], { timeoutMs: 10_000 }),
-      ).rejects.toThrow(/network/);
-      expect(attempts).toBe(2);
-      // Transient server errors keep two retries.
-      attempts = 0;
-      globalThis.fetch = (async () => {
-        attempts++;
-        return new Response("busy", { status: 503 });
-      }) as typeof fetch;
-      await expect(
-        chatWithTools("m", [{ role: "user", content: "hi" }], [], { timeoutMs: 10_000 }),
-      ).rejects.toThrow(/503/);
-      expect(attempts).toBe(3);
-    } finally {
-      globalThis.fetch = realFetch;
-      process.env = keep;
-    }
-  }, 15_000);
+    process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1/";
+    process.env.AI_MODEL = "local-model";
+    delete process.env.TURBINEH_AI_TOKEN;
+    expect(modelEndpoint()).toMatchObject({
+      baseUrl: "http://127.0.0.1:4010/v1",
+      kind: "openai-compatible",
+    });
+    // With a TurbineH token every request is orchestrated by TurbineH.
+    process.env.TURBINEH_AI_TOKEN = "tbh_ai_test";
+    expect(modelEndpoint().kind).toBe("gateway");
+    delete process.env.AI_BASE_URL;
+    expect(modelEndpoint().kind).toBe("gateway");
+    process.env = keep;
+  });
 
-  it("decisions: one retry after a failed attempt, then the caller's fallback", async () => {
+  it("shows TurbineH's trial limit message instead of a generic failure", async () => {
     const keep = { ...process.env };
     const realFetch = globalThis.fetch;
     process.env.TURBINEH_AI_TOKEN = "tbh_ai_test";
-    process.env.AI_DECIDER_ATTEMPT_TIMEOUT_MS = "500";
+    delete process.env.AI_BASE_URL;
+    const message =
+      "You've reached the trial limit of the TurbineH orchestration ($2). Contact alex.ruiz@turbineh.com to continue.";
     let attempts = 0;
-    globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async () => {
       attempts++;
-      if (attempts === 1)
-        return new Promise<Response>((_r, reject) =>
-          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
-        );
-      return Response.json({
-        answers: { next: { type: "choice", choice: "check", confidence: 0.8, probabilities: {} } },
-        model: "jev",
-        usage: { input_tokens: 1, output_tokens: 1 },
-      });
+      return Response.json(
+        { title: message, detail: message, status: 402, code: "trial_limit_reached" },
+        { status: 402 },
+      );
     }) as typeof fetch;
     try {
-      const d = await decideAgentTurn(
-        { request: "free?", conversation: "" },
-        [{ name: "check", description: "free times", irreversible: false }],
-        [{ name: "balanced", model: "m", description: "" }],
-      );
-      expect(d.next).toBe("check");
-      expect(attempts).toBe(2);
-      attempts = 0;
-      globalThis.fetch = (async () => {
-        attempts++;
-        return new Response("no", { status: 502 });
-      }) as typeof fetch;
+      const err = await post("/agent", {}).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(AiTrialLimitError);
+      expect((err as Error).message).toBe(message);
+      expect(attempts).toBe(1);
       await expect(
-        decideAgentTurn(
-          { request: "x", conversation: "" },
-          [],
-          [{ name: "balanced", model: "m", description: "" }],
+        runAgent(
+          { ...base, input: "hello" },
+          { ...io([]), step: (r) => post("/agent", r) as never },
         ),
-      ).rejects.toThrow();
-      expect(attempts).toBe(2);
+      ).rejects.toThrow(message);
     } finally {
       globalThis.fetch = realFetch;
       process.env = keep;
     }
   });
 
-  it("uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway", () => {
+  it("talks to TurbineH over the agent protocol (scripted gateway)", async () => {
     const keep = { ...process.env };
-    process.env.AI_BASE_URL = "http://127.0.0.1:4010/v1/";
-    process.env.AI_MODEL = "local-model";
-    expect(modelEndpoint()).toMatchObject({
-      baseUrl: "http://127.0.0.1:4010/v1",
-      kind: "openai-compatible",
-    });
-    expect(aiConfig().AI_STRUCTURER_MODEL).toBe("local-model");
-    delete process.env.AI_BASE_URL;
-    delete process.env.AI_MODEL;
-    expect(modelEndpoint().kind).toBe("gateway");
-    process.env = keep;
+    const script = {
+      id: "t",
+      rules: [
+        {
+          tool: "check",
+          when: /free on (\S+)/,
+          args: (_t: string, m: RegExpExecArray) => ({ day: m[1]?.replace(/\?$/, "") }),
+        },
+      ],
+      render: { check: (r: Record<string, unknown>) => `Free: ${String(r.times)}` },
+    };
+    const { server, url } = await startMockLlm([script]);
+    process.env.TURBINEH_AI_URL = url;
+    process.env.TURBINEH_AI_TOKEN = "tbh_ai_test";
+    try {
+      const { runAgent: run } = await import("@/lib/ai/agent");
+      const r = await run(
+        { ...base, input: "free on 2026-11-02?" },
+        { ...io([]), step: (req) => post("/agent", req) as never },
+      );
+      expect(r.reply).toBe("Free: 10:00");
+      expect(r.steps).toEqual([{ tool: "check", ok: true, executed: true }]);
+    } finally {
+      server.close();
+      process.env = keep;
+    }
   });
 });
 

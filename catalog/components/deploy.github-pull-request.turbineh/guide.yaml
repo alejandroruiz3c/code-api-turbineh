@@ -85,7 +85,7 @@ interfaces:
 extension_points:
   - what: Adaptation model for non-derivable glue
     where: "apps/worker/src/models.ts adaptationCoderFromEnv"
-    how: "Backup Coder slots; GLM-5.2 first, ADAPTATION_MODEL_ORDER=primary-first reverses"
+    how: "TurbineH adaptation slots (internal order, ADAPTATION_MODEL_ORDER=primary-first reverses)"
   - what: Foundation modules copied when a package imports them
     where: catalog/recipes/saas-crud/template/src
     how: loadFoundation() reads them; only imported modules are copied

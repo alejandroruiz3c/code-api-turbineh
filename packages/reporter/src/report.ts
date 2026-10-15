@@ -464,7 +464,7 @@ ${metricsJson}
 
 </details>
 
-_Report written by ${r.writer.model}${r.writer.fallback ? " (some sections from deterministic templates)" : ""} from verified build facts only._
+_Report written by TurbineH${r.writer.fallback ? " (some sections from deterministic templates)" : ""} from verified build facts only._
 `;
 }
 

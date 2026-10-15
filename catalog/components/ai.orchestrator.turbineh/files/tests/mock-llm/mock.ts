@@ -7,7 +7,9 @@ import { createServer, type Server } from "node:http";
  *     message (and whose tool is offered) returns a tool call; after a tool result, the script's renderer (or a
  *     generic one) turns it into text. Without tools it behaves like the verification simulator: JSON_SCHEMA
  *     requests get the minimal valid instance, anything else "Mock answer: <start of the message>".
- *   - POST /v1/embeddings (hash-seeded unit vectors), POST /v1/systemone (first choice, low risk; runAgent's next action follows the script rules), GET /health.
+ *   - POST /v1/agent and POST /v1/orchestrate: the TurbineH gateway's orchestration protocol, answered by the same
+ *     script (a confirmed action is answered with the tool's `message`, else "Done: <summary>.");
+ *   - POST /v1/embeddings (hash-seeded unit vectors), GET /health.
  * Domain components add their own rules in tests/mock-llm/scripts/<domain>.ts (default export: MockScript).
  */
 export interface MockMessage {
@@ -186,54 +188,67 @@ function vector(text: string, dims: number): number[] {
   return out.map((v) => v / norm);
 }
 
-type Question = { type?: string; criteria?: Record<string, string> };
+type AgentTool = { name?: string };
 
-/**
- * runAgent's first action of a turn, decided the way the scripted model would act: the first script rule that
- * matches the latest message (and whose tool is an option), else reply.
- */
-export function scriptedNext(
-  state: Record<string, unknown>,
-  options: string[],
+/** One step of the gateway's agent protocol, scripted: the same answers as /chat/completions with every tool. */
+export function agentStep(
+  body: {
+    phase?: unknown;
+    tools?: unknown;
+    messages?: unknown;
+    confirmed?: { summary?: unknown; result?: unknown; failed?: unknown };
+  },
   scripts: MockScript[],
-): string {
-  const reply = options[0] ?? "reply";
-  const text = typeof state.latest_message === "string" ? state.latest_message : "";
-  for (const script of scripts)
-    for (const rule of script.rules) {
-      if (!options.includes(rule.tool)) continue;
-      rule.when.lastIndex = 0;
-      const m = rule.when.exec(text);
-      if (m && rule.args(text, m)) return rule.tool;
-    }
-  return reply;
+): unknown {
+  const usage = { calls: 1, inputTokens: 10, outputTokens: 5 };
+  const base = { route: "mock", model: "mock", flags: [] as string[], decision: "none" };
+  if (body.phase === "confirmed" && body.confirmed && body.confirmed.failed !== true) {
+    const r = (body.confirmed.result ?? {}) as Record<string, unknown>;
+    const reply =
+      typeof r.message === "string" && r.message.trim()
+        ? r.message
+        : `Done: ${String(body.confirmed.summary ?? "").replace(/[.\s]+$/, "")}.`;
+    return { ...base, reply, toolCalls: [], usage: { calls: 0, inputTokens: 0, outputTokens: 0 } };
+  }
+  const tools = (Array.isArray(body.tools) ? body.tools : []) as AgentTool[];
+  const out = chatCompletion(
+    {
+      model: "mock",
+      messages: body.messages,
+      tools: tools.map((t) => ({ function: { name: t.name } })),
+    },
+    scripts,
+  ) as { choices: { message: { content?: string | null; tool_calls?: unknown[] } }[] };
+  const message = out.choices[0]?.message ?? {};
+  return {
+    ...base,
+    reply: message.tool_calls ? null : (message.content ?? ""),
+    toolCalls: message.tool_calls ?? [],
+    usage,
+  };
 }
 
-function systemOne(
-  body: { model?: unknown; state?: unknown; questions?: unknown },
-  scripts: MockScript[],
-) {
-  const answers: Record<string, unknown> = {};
-  const questions = (body.questions ?? {}) as Record<string, Question>;
-  const state = (body.state ?? {}) as Record<string, unknown>;
-  for (const [name, q] of Object.entries(questions)) {
-    if (q.type === "noul") answers[name] = { type: "noul", noul: 0.05 };
-    else if (q.type === "choice") {
-      const labels = Object.keys(q.criteria ?? {});
-      const pick = name === "next" ? scriptedNext(state, labels, scripts) : labels[0];
-      const rest = 0.1 / Math.max(labels.length - 1, 1);
-      answers[name] = {
-        type: "choice",
-        choice: pick,
-        confidence: 0.9,
-        probabilities: Object.fromEntries(labels.map((l) => [l, l === pick ? 0.9 : rest])),
-      };
-    }
-  }
+/** One orchestrated request, scripted like /chat/completions (JSON_SCHEMA → minimal valid instance). */
+export function orchestrateRequest(body: { input?: unknown; schema?: unknown }): unknown {
+  const system = body.schema ? `JSON_SCHEMA: ${JSON.stringify(body.schema)}` : "";
+  const out = chatCompletion(
+    {
+      model: "mock",
+      messages: [
+        ...(system ? [{ role: "system", content: system }] : []),
+        { role: "user", content: String(body.input ?? "") },
+      ],
+    },
+    [],
+  ) as { choices: { message: { content: string } }[] };
   return {
-    model: typeof body.model === "string" ? body.model : "mock-decider",
-    answers,
-    usage: { input_tokens: 10, output_tokens: 1 },
+    text: out.choices[0]?.message.content ?? "",
+    route: "mock",
+    model: "mock",
+    tool: null,
+    flags: [],
+    usage: { calls: 1, inputTokens: 10, outputTokens: 5 },
+    decision: "none",
   };
 }
 
@@ -278,7 +293,8 @@ export function startMockLlm(
           usage: { prompt_tokens: Math.ceil(inputs.join(" ").length / 4) },
         });
       }
-      if (path.endsWith("/systemone")) return send(200, systemOne(body, scripts));
+      if (path.endsWith("/v1/agent")) return send(200, agentStep(body, scripts));
+      if (path.endsWith("/v1/orchestrate")) return send(200, orchestrateRequest(body));
       return send(404, { error: { message: "not found" } });
     });
   });

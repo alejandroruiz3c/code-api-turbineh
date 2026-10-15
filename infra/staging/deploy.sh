@@ -63,6 +63,15 @@ if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
 fi
 
 if [ "$WHAT" = web ] || [ "$WHAT" = all ]; then
+  # The AI gateway runs the private orchestration engine (ADR-0053, docs/PRIVATE_ORCHESTRATION.md): never deploy the
+  # open fallback. The Vercel build (VERCEL_ENV=production) also refuses to build without it.
+  if [ ! -f private/orchestration/src/index.ts ]; then
+    echo "refusing: private/orchestration is missing (clone the private orchestration repository there first)"; exit 1
+  fi
+  if [ -n "$(git -C private/orchestration status --porcelain 2>/dev/null)" ]; then
+    echo "refusing: private/orchestration has uncommitted changes"; exit 1
+  fi
+  echo "orchestration engine: private@$(git -C private/orchestration rev-parse --short HEAD 2>/dev/null || echo unknown)"
   TOKEN="$(grep '^VERCEL_TOKEN=' .env.local | cut -d= -f2-)"
   PID="$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.vercel.com/v9/projects/$PROJECT?teamId=$TEAM" \
     | python3 -I -c 'import sys,json; print(json.load(sys.stdin)["id"])')"

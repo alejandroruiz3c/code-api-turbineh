@@ -8,6 +8,7 @@ type Reply = {
   status?: string;
   pending?: { summary: string } | null;
   error?: string;
+  code?: string;
 };
 
 const KEY = "turbineh-assistant-session";
@@ -23,6 +24,8 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
+  // Set when the app's AI trial is used up: the message says who to contact; sending is disabled.
+  const [limit, setLimit] = useState<string | null>(null);
   // false while server-rendered, true once hydrated (tests wait for it before typing).
   const ready = useSyncExternalStore(
     noopSubscribe,
@@ -41,7 +44,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
   }, [lines]);
 
   async function send(message: string, confirm?: boolean) {
-    if (!message.trim() || busy) return;
+    if (!message.trim() || busy || limit) return;
     setBusy(true);
     setLines((l) => [...l, { role: "user", text: message }]);
     try {
@@ -55,6 +58,7 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
         session.current = data.sessionId;
         window.sessionStorage.setItem(KEY, data.sessionId);
       }
+      if (data.code === "trial_limit_reached" && data.error) setLimit(data.error);
       setPending(Boolean(data.pending));
       setLines((l) => [
         ...l,
@@ -105,7 +109,16 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
         ))}
         <li ref={end} aria-hidden="true" />
       </ol>
-      {pending ? (
+      {limit ? (
+        <p
+          role="alert"
+          data-testid="assistant-limit"
+          className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger"
+        >
+          {limit}
+        </p>
+      ) : null}
+      {pending && !limit ? (
         <div className="flex gap-2">
           <button
             type="button"
@@ -134,13 +147,14 @@ export function AssistantWidget({ title, greeting }: { title: string; greeting: 
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={1000}
+          disabled={Boolean(limit)}
           autoComplete="off"
           className="flex-1 rounded-md border border-field px-3 py-2 text-sm"
           placeholder="Type your message"
         />
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || Boolean(limit)}
           className="rounded-md bg-brand px-4 py-2 text-sm text-brand-contrast disabled:opacity-50"
         >
           {busy ? "…" : "Send"}

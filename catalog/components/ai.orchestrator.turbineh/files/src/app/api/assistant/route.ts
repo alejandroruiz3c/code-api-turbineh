@@ -7,6 +7,7 @@ import {
   publicAssistant,
   publicAssistantConfig,
 } from "@/lib/ai/assistant";
+import { AiTrialLimitError } from "@/lib/ai/models";
 import { loadAgentSession, newSessionId, saveAgentSession } from "@/lib/ai/sessions";
 import { toUserMessage, UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
@@ -75,6 +76,9 @@ export async function POST(req: Request) {
       pending: result.pending ? { summary: result.pending.summary } : null,
     });
   } catch (err) {
+    // The app's AI trial is used up: say so, with who to contact (not a generic failure).
+    if (err instanceof AiTrialLimitError)
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 402 });
     const status = err instanceof UserFacingError ? 400 : 500;
     return NextResponse.json({ error: toUserMessage(err) }, { status });
   }

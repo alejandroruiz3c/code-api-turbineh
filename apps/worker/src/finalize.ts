@@ -125,6 +125,18 @@ function restoreOrRemove(dir: string, commit: string, file: string): void {
   }
 }
 
+/** Internal trigger ids (T1–T6) and model names never reach delivered files (ADR-0053). */
+const INTERNAL_KEYS = new Set(["trigger", "model", "by", "slot"]);
+function withoutInternals(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(withoutInternals);
+  if (typeof v !== "object" || v === null) return v;
+  return Object.fromEntries(
+    Object.entries(v as Record<string, unknown>)
+      .filter(([k]) => !INTERNAL_KEYS.has(k))
+      .map(([k, x]) => [k, withoutInternals(x)]),
+  );
+}
+
 /**
  * Metrics shown in the delivered report: decisions are TurbineH orchestration, so no decider model or backend names
  * (PLAN §16 P8). The internal record keeps them.
@@ -135,7 +147,7 @@ export function publicMetrics(metrics: Record<string, unknown>): Record<string, 
   const t = { ...((tokens ?? {}) as Record<string, unknown>) };
   delete t.decider;
   return {
-    ...rest,
+    ...(withoutInternals(rest) as Record<string, unknown>),
     tokens: t,
     decisions: {
       questions: d.questions,

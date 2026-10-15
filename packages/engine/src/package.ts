@@ -292,7 +292,7 @@ decided before anything runs; components are selected (not generated) from an au
 |---|---|---|---|---|
 ${info.components.map((c) => `| ${c.capability} | \`${c.id}\` | ${c.version} | ${c.license} | ${productText(c.why ?? "Verified fit")} |`).join("\n")}
 
-${d.length ? `## Decisions\n\n${d.map((x) => `- **${x.topic}** → \`${x.choice}\` (confidence ${x.confidence}). ${productText(x.why)}${x.alternatives.length ? ` Alternatives: ${x.alternatives.join(", ")}.` : ""}`).join("\n")}\n` : ""}
+${d.length ? `## Decisions\n\n${d.map((x) => `- **${x.topic}** → \`${x.choice}\`. ${productText(x.why)}${x.alternatives.length ? ` Alternatives: ${x.alternatives.join(", ")}.` : ""}`).join("\n")}\n` : ""}
 ## Quality, safety, cost and time
 
 ${

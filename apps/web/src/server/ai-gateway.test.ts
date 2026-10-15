@@ -26,6 +26,8 @@ function deps(over: Partial<GatewayDeps> = {}) {
     admit: async () => ({ ok: true }),
     record: async (u) => void recorded.push(u),
     reserveHedge: async () => true,
+    trialSpent: async () => 0,
+    addSpend: async () => undefined,
     fetch: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       calls.push({ url: String(url), init: init ?? {} });
       return Response.json({

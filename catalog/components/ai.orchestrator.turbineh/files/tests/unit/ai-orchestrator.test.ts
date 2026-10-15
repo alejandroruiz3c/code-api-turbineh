@@ -1,44 +1,20 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { normalizeEmbedding, parseRoutes } from "@/lib/ai/models";
-import { contextBlock, extractJson, jsonInstruction, parsePlan } from "@/lib/ai/plan";
+import { normalizeEmbedding } from "@/lib/ai/models";
+import { contextBlock, extractJson, jsonInstruction, jsonSchemaOf } from "@/lib/ai/plan";
 
 describe("AI orchestrator (component #001)", () => {
-  it("reads routes from name=model pairs and ignores malformed entries", () => {
-    const routes = parseRoutes("fast=small-model, balanced=mid-model,bad,Nope=x");
-    expect(routes.map((r) => `${r.name}:${r.model}`)).toEqual([
-      "fast:small-model",
-      "balanced:mid-model",
-    ]);
-    expect(routes[0]?.description).toMatch(/simple/);
-    expect(() => parseRoutes("")).toThrow();
-  });
-
-  it("extracts JSON from wrapped replies and falls back to a safe plan", () => {
+  it("extracts JSON from wrapped replies", () => {
     expect(extractJson('Sure! ```json\n{"a":1}\n``` done')).toEqual({ a: 1 });
-    const good = parsePlan(
-      JSON.stringify({
-        intent: "classify",
-        subtasks: ["read", "label"],
-        output: "json",
-        needs_reasoning: false,
-        needs_long_context: false,
-      }),
-      "Classify",
-      true,
-    );
-    expect(good.fallback).toBe(false);
-    const bad = parsePlan("not json", "Summarise the ticket", false);
-    expect(bad).toMatchObject({
-      fallback: true,
-      plan: { output: "text", subtasks: ["Summarise the ticket"] },
-    });
+    expect(extractJson("not json")).toBeUndefined();
   });
 
   it("asks for structured output with an explicit JSON schema", () => {
-    const text = jsonInstruction(z.object({ label: z.enum(["billing", "bug"]) }));
+    const schema = z.object({ label: z.enum(["billing", "bug"]) });
+    const text = jsonInstruction(schema);
     expect(text).toContain("JSON_SCHEMA:");
     expect(text).toContain('"enum":["billing","bug"]');
+    expect(jsonSchemaOf(schema)).not.toHaveProperty("$schema");
   });
 
   it("keeps embeddings at the fixed size, unit length", () => {

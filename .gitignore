@@ -51,3 +51,6 @@ catalog/gaps/*.json
 # CLI bundle served by the web app (built by @turbineh/cli before the web build)
 apps/web/public/cli/
 bench/agent-decisions/.runtime/
+
+# Private orchestration engine (ADR-0053): its own private repository, never part of this public tree.
+/private/

@@ -1,13 +1,13 @@
 schema: turbineh.component/v0.1
 id: ai.orchestrator.turbineh
-version: 0.3.0
+version: 0.4.0
 status: approved
 category: ai
 source:
-  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.3.0
+  purl: pkg:generic/turbineh/ai.orchestrator.turbineh@0.4.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
-  does: "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace"
+  does: "TurbineH component #001: every AI call of the app is orchestrated by TurbineH (route, safety policy, next action) through a thin client; the app keeps its tools and runs them, structured output validated with zod, embeddings for knowledge bases, usage per workspace"
   does_not: "Does not host models or store prices; does not let app code call model providers directly (TurbineH rule turbineh.ai-direct-model-call)"
   use_cases: [ai-agents]
   pros:
@@ -16,14 +16,14 @@ capability:
       "Open models from any OpenAI-compatible provider (EU defaults)",
       "Decisions with calibrated probabilities instead of free-form routing",
     ]
-  cons: ["Needs network access to the TurbineH AI gateway (TURBINEH_AI_TOKEN per app); usage counts towards the app quota"]
+  cons: ["Needs network access to the TurbineH AI gateway (TURBINEH_AI_TOKEN per app); usage counts towards the app quota and the account's trial"]
   alternatives: []
 contract:
   inputs:
     [
       "orchestrate({ task, input, purpose, organizationId, userId, instructions?, context?, history?, schema?, tools? })",
       "embed(texts, { purpose, organizationId, userId })",
-      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime (ADR-0033); TurbineH orchestration decides the next action (tool or reply) at every step and the open model writes only its arguments or the reply (ADR-0039)",
+      "runAgent({ instructions, input, tools (defineTool: zod parameters, execute, irreversible?, prepare?), state?, confirm?, maxSteps?, timeoutMs?, organizationId, userId, purpose }) — tool-calling runtime; each step is orchestrated by TurbineH (POST {TURBINEH_AI_URL}/v1/agent), which returns a reply or tool calls the app runs",
       "Toolkit { id, title, audience: public|staff, instructions, tools } from domain components, listed in src/lib/ai/toolkits.ts",
     ]
   outputs:
@@ -35,12 +35,12 @@ contract:
     ]
   errors:
     [
-      "AiSafetyError (user-facing) when the AI Safety Pack refuses a request; UserFacingError 'not available' on provider failures (details never shown)",
+      "AiSafetyError (user-facing) when the AI Safety Pack refuses a request; AiTrialLimitError (user-facing, HTTP 402 from /api/assistant, code trial_limit_reached) when the account's TurbineH trial is used up — its message says who to contact; UserFacingError 'not available' on provider failures (details never shown)",
     ]
   limits:
     [
-      "decider unsafe threshold 0.5, tool threshold 0.5 and runAgent next-action threshold 0.5 (code; below it the model chooses among every tool); one transport retry per model call and per decision, runAgent model attempts 15 s and decision attempts 5 s (ADR-0046); one repair attempt for structured output; embeddings fixed at 1024 dimensions",
-      "runAgent: 6 steps (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages of state, confirmations expire after 30 min, a confirmed action that ran is answered from a template (tool `message`, else summary + reference) without a model call; public assistant: 1000 characters, 10 requests/min per IP, 60 turns per conversation",
+      "one transport retry per request to TurbineH; one repair attempt for structured output; embeddings fixed at 1024 dimensions",
+      "runAgent: 6 steps (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages of state, confirmations expire after 30 min, a confirmed action that ran is answered from its result (tool `message`, else summary + reference) without a model call; public assistant: 1000 characters, 10 requests/min per IP, 60 turns per conversation",
     ]
 compat:
   runtime: node@>=20
@@ -52,7 +52,7 @@ effects:
   external_services: [turbineh-ai-gateway]
 integration:
   strategy: vendored-with-provenance
-  install: "Copied by the assembler from files/ when selected (recipe ai-agents requires it, always with security.ai-safety.turbineh): src/lib/ai/{orchestrator,models,decider,plan,usage,agent,sessions,assistant,toolkits}.ts, src/app/api/assistant/route.ts, src/app/assistant/page.tsx, src/components/assistant-widget.tsx, src/db/component-ai-orchestrator.ts, tests/unit/ai-{orchestrator,agent}.test.ts, tests/mock-llm/ (scripted model; domain components add scripts). The assembler rewrites src/lib/ai/toolkits.ts with every installed src/<domain>/toolkit.ts. Decisions are a plain HTTPS request to the TurbineH AI gateway (no extra dependency)."
+  install: "Copied by the assembler from files/ when selected (recipe ai-agents requires it, always with security.ai-safety.turbineh): src/lib/ai/{orchestrator,models,plan,usage,agent,sessions,assistant,toolkits}.ts, src/app/api/assistant/route.ts, src/app/assistant/page.tsx, src/components/assistant-widget.tsx, src/db/component-ai-orchestrator.ts, tests/unit/ai-{orchestrator,agent}.test.ts, tests/mock-llm/ (scripted model; domain components add scripts). The assembler rewrites src/lib/ai/toolkits.ts with every installed src/<domain>/toolkit.ts. Thin client: orchestration is a plain HTTPS request to the TurbineH AI gateway (no extra dependency); tools always run in the app."
   config:
     [
       TURBINEH_AI_URL,
@@ -60,12 +60,8 @@ integration:
       AI_BASE_URL,
       AI_API_KEY,
       AI_MODEL,
-      AI_STRUCTURER_MODEL,
-      AI_ROUTES,
       AI_EMBEDDING_MODEL,
       AI_TIMEOUT_MS,
-      AI_ATTEMPT_TIMEOUT_MS,
-      AI_DECIDER_ATTEMPT_TIMEOUT_MS,
       AI_PUBLIC_MAX_INPUT_CHARS,
       AI_PUBLIC_REQUESTS_PER_MINUTE,
       AI_PUBLIC_TURNS_PER_CONVERSATION,
@@ -76,10 +72,10 @@ quality:
     {
       command: "unit tests in the app (routes, plan parsing, JSON extraction, embeddings) + full builds of recipe ai-agents with E2E against the deterministic simulator (services/ai-mock)",
       passed: true,
-      date: 2026-10-12,
+      date: 2026-10-15,
     }
 security:
-  scanned_at: 2026-10-12
+  scanned_at: 2026-10-15
   tools: [gitleaks, semgrep, review]
   findings: []
   scope: "First-party source reviewed: keys only from environment, provider responses never echoed, documents delimited as data, output scanned before returning, usage and audit recorded for blocked and failed calls too."
