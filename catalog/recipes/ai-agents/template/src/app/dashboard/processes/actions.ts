@@ -90,7 +90,7 @@ export async function addItems(formData: FormData): Promise<void> {
 export async function runNow(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to run processes.");
-  if (!rateLimit(`process-run:${ctx.userId}`, 6))
+  if (!(await rateLimit(`process-run:${ctx.userId}`, 6)))
     throw new UserFacingError("Too many runs. Try again later.");
   const proc = await ownProcess(ctx.organizationId, z.uuid().parse(formData.get("processId")));
   await runBatch(10, ctx.organizationId);

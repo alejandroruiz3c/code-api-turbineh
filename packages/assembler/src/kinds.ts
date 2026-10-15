@@ -1,13 +1,19 @@
 import type { BuildSpec, EntityModel } from "@turbineh/compiler";
 import {
-  column,
+  cellValue,
   fieldsOf,
   generateEntity,
   GENERATED,
   hasOptions,
+  inputLimits,
   inputType,
+  isStateField,
   sampleFor,
-  zodField,
+  tableFile,
+  timeZoneKey,
+  usesDateTime,
+  valueLines,
+  zodLines,
   type ChildLink,
   type EntityFeatures,
   type EntityOptions,
@@ -121,23 +127,6 @@ function eventShape(l: EventLink): Entity {
   };
 }
 
-function tableFile(e: Entity): string {
-  const n = entityNames(e.name);
-  const fields = fieldsOf(e);
-  const pg = new Set(["pgTable", "uuid", "varchar", "timestamp"]);
-  for (const f of fields) pg.add(column(f).split("(")[0] ?? "");
-  return `${GENERATED}
-import { ${[...pg].sort().join(", ")} } from "drizzle-orm/pg-core";
-
-export const ${n.variable} = pgTable("${n.table}", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: varchar("organization_id", { length: 64 }).notNull(),
-${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-`;
-}
-
 const appendOnlySql = (
   table: string,
   about: string,
@@ -164,15 +153,16 @@ export function generateEventEntity(l: EventLink, parent: Entity): GeneratedFile
     k ? fields.find((f) => camel(f.name) === k) : undefined;
   const when = shown(l.map.at);
   const record = `${GENERATED}
-import { db } from "@/db/client";
+import { db, type Executor } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 
 /**
  * Appends one entry to the ${n.labelPlural.toLowerCase()} history of a ${p.labelSingular.toLowerCase()}. Append-only: no code
- * updates or deletes an entry and the database refuses it (src/db/sql/*-${n.slug}-append-only.sql).
+ * updates or deletes an entry and the database refuses it (src/db/sql/*-${n.slug}-append-only.sql). Pass the
+ * transaction of the change it records, so both are written together or not at all.
  */
-export async function record${n.pascal}(values: typeof ${n.variable}.$inferInsert): Promise<void> {
-  await db.insert(${n.variable}).values(values);
+export async function record${n.pascal}(values: typeof ${n.variable}.$inferInsert, executor: Executor = db): Promise<void> {
+  await executor.insert(${n.variable}).values(values);
 }
 `;
   const cell = (k: string | undefined, fallback: string) =>
@@ -243,28 +233,29 @@ export function generateChildEntity(l: ChildLink, parent: Entity): GeneratedFile
   const p = entityNames(parent.name);
   const all = fieldsOf(e);
   const auto = all.filter((f) => camel(f.name) !== l.parentField && isUserRef(f));
-  const fields = all.filter((f) => camel(f.name) !== l.parentField && !auto.includes(f));
+  // Typed fields only: the parent and the author come from the server, workflow state is never typed (ADR-0054).
+  const fields = all.filter(
+    (f) => camel(f.name) !== l.parentField && !auto.includes(f) && !isStateField(f),
+  );
+  const state = all.filter((f) => isStateField(f) && !auto.includes(f));
+  const dt = usesDateTime(fields);
   const parentPath = `/dashboard/${p.slug}`;
   const schema = `${GENERATED}
 import { z } from "zod";
-
+${dt ? `import { localDateTime, timeZone } from "@/lib/datetime";\n` : ""}
 /** Input of a new ${n.labelSingular.toLowerCase()} (the ${p.labelSingular.toLowerCase()} and the author come from the server). */
 export const create${n.pascal}Schema = z.object({
-${fields.map((f) => `  ${camel(f.name)}: ${zodField(f)},`).join("\n")}
+${fields.flatMap((f) => zodLines(f)).join("\n")}
 });
 `;
-  const values = fields
-    .map((f) => {
-      const k = camel(f.name);
-      if (f.type === "decimal")
-        return f.required
-          ? `    ${k}: String(input.${k}),`
-          : `    ${k}: input.${k} === undefined ? null : String(input.${k}),`;
-      return f.type === "boolean" || f.required
-        ? `    ${k}: input.${k},`
-        : `    ${k}: input.${k} ?? null,`;
-    })
-    .join("\n");
+  const values = [
+    ...fields.flatMap((f) => valueLines(f)),
+    // Workflow state starts at its first value (set by the server).
+    ...state.map(
+      (f) =>
+        `    ${camel(f.name)}: ${hasOptions(f) ? JSON.stringify(f.options[0]) : f.type === "boolean" ? "false" : "null"},`,
+    ),
+  ].join("\n");
   const actions = `${GENERATED}
 "use server";
 import { and, eq } from "drizzle-orm";
@@ -273,7 +264,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { ${n.variable}, ${p.variable} } from "@/db/schema";
 import { audit } from "@/lib/audit";
-import { UserFacingError } from "@/security/errors";
+${dt ? `import { zonedToUtc } from "@/lib/datetime";\n` : ""}import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
 import { create${n.pascal}Schema } from "./schema";
@@ -293,7 +284,7 @@ async function parentOf(organizationId: string, id: string): Promise<string> {
 export async function add${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create", "${n.slug}")) throw new UserFacingError("You are not allowed to add ${n.labelPlural.toLowerCase()}.");
-  if (!rateLimit(\`create:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
+  if (!(await rateLimit(\`create:${n.table}:\${ctx.userId}\`))) throw new UserFacingError("Too many requests. Try again later.");
   const parentId = await parentOf(ctx.organizationId, z.uuid().parse(formData.get("parentId")));
   const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
   const values = {
@@ -302,8 +293,11 @@ export async function add${n.pascal}(formData: FormData): Promise<void> {
 ${auto.map((f) => `    ${camel(f.name)}: ctx.email,`).join("\n")}
 ${values}
   };
-  const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
-  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
+  // The record and its audit entry are written together or not at all.
+  await db.transaction(async (tx) => {
+    const [created] = await tx.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values }, tx);
+  });
   revalidatePath(\`${parentPath}/\${parentId}/edit\`);
 }
 
@@ -312,14 +306,16 @@ export async function remove${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "delete", "${n.slug}")) throw new UserFacingError("You are not allowed to remove ${n.labelPlural.toLowerCase()}.");
   const id = z.uuid().parse(formData.get("id"));
-  const removed = await db
-    .delete(${n.variable})
-    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
-    .returning();
-  for (const before of removed) {
-    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before });
-    revalidatePath(\`${parentPath}/\${before.${l.parentField}}/edit\`);
-  }
+  const removed = await db.transaction(async (tx) => {
+    const rows = await tx
+      .delete(${n.variable})
+      .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+      .returning();
+    for (const before of rows)
+      await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before }, tx);
+    return rows;
+  });
+  for (const before of removed) revalidatePath(\`${parentPath}/\${before.${l.parentField}}/edit\`);
 }
 `;
   const inputs = fields
@@ -337,22 +333,24 @@ export async function remove${n.pascal}(formData: FormData): Promise<void> {
 ${f.required ? "" : `              <option value="">—</option>\n`}${f.options.map((o) => `              <option value=${JSON.stringify(o)}>${o}</option>`).join("\n")}
             </select>
           </div>`;
+      const zone =
+        f.type === "datetime" ? `\n            <TimeZoneField name="${timeZoneKey(f)}" />` : "";
       return `          <div>
             <Label htmlFor="${id}">${label(f.name)}</Label>
-            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${f.type === "decimal" ? ` step="0.01"` : ""}${f.required ? " required" : ""} />
+            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${f.type === "decimal" ? ` step="0.01"` : ""}${inputLimits(f)}${f.required ? " required" : ""} />${zone}
           </div>`;
     })
     .join("\n");
-  const shownFields = [...fields, ...auto];
+  const shownFields = [...fields, ...state, ...auto];
   const section = `${GENERATED}
 import { and, asc, eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db } from "@/db/client";
+${dt ? `import { TimeZoneField } from "@/components/time-zone-field";\n` : ""}import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
-import { can, requireMember } from "@/server/authz";
+${usesDateTime(shownFields) ? `import { formatDateTime } from "@/lib/datetime";\n` : ""}import { can, requireMember } from "@/server/authz";
 import { add${n.pascal}, remove${n.pascal} } from "./actions";
 
 /** ${n.labelPlural} of one ${p.labelSingular.toLowerCase()}: listed and added on its page (no page of their own). */
@@ -374,7 +372,7 @@ export async function ${n.pascal}Section({ parentId }: { parentId: string }) {
           {rows.map((r) => (
             <li key={r.id} className="flex items-start justify-between gap-3 border-b border-line pb-2">
               <span>
-${shownFields.map((f) => `                <span className="mr-2">{${f.type === "boolean" ? `r.${camel(f.name)} ? "${label(f.name)}" : ""` : `String(r.${camel(f.name)} ?? "")`}}</span>`).join("\n")}
+${shownFields.map((f) => `                <span className="mr-2">{${f.type === "boolean" ? `r.${camel(f.name)} ? "${label(f.name)}" : ""` : cellValue(f, "r")}}</span>`).join("\n")}
               </span>
               {canRemove ? (
                 <form action={remove${n.pascal}}>
@@ -402,7 +400,11 @@ ${inputs}
 }
 `;
   return [
-    { path: `src/db/tables/${n.slug}.ts`, content: tableFile(e) },
+    // The parent column is the parent's id: a tenant-scoped foreign key, deleted with the parent.
+    {
+      path: `src/db/tables/${n.slug}.ts`,
+      content: tableFile(e, [], all, { field: l.parentField, t: p }),
+    },
     { path: `src/entities/${n.slug}/schema.ts`, content: schema },
     { path: `src/entities/${n.slug}/actions.ts`, content: actions },
     { path: `src/entities/${n.slug}/section.tsx`, content: section },
@@ -414,15 +416,16 @@ export function generateLogEntity(e: Entity): GeneratedFile[] {
   const n = entityNames(e.name);
   const shaped: Entity = { ...e, fields: e.fields.map((f) => ({ ...f, required: false })) };
   const record = `${GENERATED}
-import { db } from "@/db/client";
+import { db, type Executor } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 
 /**
  * Writes one ${n.labelSingular.toLowerCase()} (technical log, no page: the request did not ask to show it). Call it where the
- * app does the thing it logs, e.g. after sending an email in src/lib/email.ts.
+ * app does the thing it logs, e.g. after sending an email in src/lib/email.ts; pass the transaction of the change it
+ * logs when there is one. Never log secrets: secret fields are not columns (ADR-0054).
  */
-export async function record${n.pascal}(values: typeof ${n.variable}.$inferInsert): Promise<void> {
-  await db.insert(${n.variable}).values(values);
+export async function record${n.pascal}(values: typeof ${n.variable}.$inferInsert, executor: Executor = db): Promise<void> {
+  await executor.insert(${n.variable}).values(values);
 }
 `;
   return [
@@ -437,7 +440,9 @@ export function childFills(
 ): { label: string; value: string; select: boolean; check: boolean }[] {
   const e = l.child;
   return fieldsOf(e)
-    .filter((f) => camel(f.name) !== l.parentField && !isUserRef(f) && f.required)
+    .filter(
+      (f) => camel(f.name) !== l.parentField && !isUserRef(f) && !isStateField(f) && f.required,
+    )
     .map((f) => ({
       label: label(f.name),
       value: sampleFor(e, f, [e]),
@@ -590,6 +595,8 @@ export function generateByKind(input: KindPlanInput): KindPlan {
       scope: scopeField ? { field: scopeField.name, label: input.scope?.label ?? "Scope" } : null,
       auditLog: input.auditLog === true && !settings,
       ...(input.ownerLabel ? { ownerLabel: input.ownerLabel } : {}),
+      // References become tenant-scoped foreign keys only to entities with a table and a page of their own.
+      referenceable: generatedPages.map((x) => x.name),
     };
     own(e.name, generateEntity(shaped, input.features, input.entities, opts));
     const href = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;

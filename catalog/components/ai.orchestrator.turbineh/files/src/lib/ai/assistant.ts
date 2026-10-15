@@ -53,11 +53,8 @@ export function publicAssistant(all: readonly Toolkit[] = TOOLKITS): {
   };
 }
 
-/** Client IP for rate limiting (first X-Forwarded-For hop set by the platform), or "local". */
-export function clientIp(headers: Headers): string {
-  return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers.get("x-real-ip") ||
-    "local"
-  ).slice(0, 64);
-}
+/**
+ * Client IP for rate limiting: only the X-Forwarded-For entry of a trusted proxy (Security Pack,
+ * src/security/client-ip.ts, ADR-0054), never what the client prepends.
+ */
+export { clientIp } from "@/security/client-ip";

@@ -1,13 +1,25 @@
 import { z } from "zod";
 
 /** Validated environment. The app refuses to start with missing or weak configuration. */
-const schema = z.object({
+const settings = z.object({
   DATABASE_URL: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
   BETTER_AUTH_URL: z.url(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("App <onboarding@resend.dev>"),
+  /**
+   * Without RESEND_API_KEY in production the app refuses to start, unless EMAIL_DELIVERY=disabled says on purpose
+   * that it runs without email (nothing is sent; links are never logged). See src/lib/email.ts.
+   */
+  EMAIL_DELIVERY: z.enum(["provider", "disabled"]).optional(),
+  /** Local outbox file for emails when there is no provider (tests and development); never the console. */
+  EMAIL_OUTBOX_FILE: z.string().optional(),
+  /** Proxies in front of the app whose X-Forwarded-For is trusted (0 = none; Vercel: 1). See src/security/client-ip.ts. */
+  TRUSTED_PROXY_HOPS: z
+    .string()
+    .regex(/^[0-5]?$/, "TRUSTED_PROXY_HOPS must be 0 to 5")
+    .optional(),
   /** Comma-separated emails allowed to manage products and orders. Optional: empty = nobody (deny by default). */
   ADMIN_EMAILS: z.string().default(""),
   /** Stripe secret key (sk_test_… or sk_live_…). Without it the shop works as a catalog. */
@@ -44,6 +56,25 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+});
+
+/** Cross-setting rules, checked when the app starts (src/instrumentation.ts). */
+const schema = settings.superRefine((e, ctx) => {
+  // In production an email provider is required (verification links must reach people, never a log), unless the
+  // deployment says it runs without email, or a test run records emails in its outbox file (playwright.config.ts).
+  if (
+    e.NODE_ENV === "production" &&
+    !building &&
+    !e.RESEND_API_KEY &&
+    !e.EMAIL_OUTBOX_FILE &&
+    e.EMAIL_DELIVERY !== "disabled"
+  )
+    ctx.addIssue({
+      code: "custom",
+      path: ["RESEND_API_KEY"],
+      message:
+        "RESEND_API_KEY is required in production (verification and invitation emails must be delivered, never logged). Set it, or set EMAIL_DELIVERY=disabled to run without email on purpose.",
+    });
 });
 
 /**

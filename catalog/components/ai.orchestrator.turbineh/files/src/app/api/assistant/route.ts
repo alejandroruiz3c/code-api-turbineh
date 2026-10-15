@@ -33,7 +33,9 @@ export async function POST(req: Request) {
   const cfg = publicAssistantConfig();
   if (Number(req.headers.get("content-length") ?? 0) > 16_000)
     return NextResponse.json({ error: "Request too large." }, { status: 413 });
-  if (!rateLimit(`assistant:ip:${clientIp(req.headers)}`, cfg.AI_PUBLIC_REQUESTS_PER_MINUTE))
+  if (
+    !(await rateLimit(`assistant:ip:${clientIp(req.headers)}`, cfg.AI_PUBLIC_REQUESTS_PER_MINUTE))
+  )
     return NextResponse.json(
       { error: "Too many messages. Please wait a minute." },
       { status: 429 },

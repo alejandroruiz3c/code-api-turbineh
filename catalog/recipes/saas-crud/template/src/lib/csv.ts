@@ -24,6 +24,23 @@ export function toCsv(rows: Record<string, unknown>[], columns: string[]): strin
 
 export const CSV_LIMITS = { maxBytes: 1_000_000, maxRows: 1_000 } as const;
 
+/**
+ * Largest CSV export. An export is never silently cut (ADR-0054): above this many rows it is refused with a message
+ * asking to narrow the filters, so a downloaded file always holds the whole filtered list.
+ */
+export const EXPORT_MAX_ROWS = 50_000;
+
+/** The explicit refusal of an export that would exceed EXPORT_MAX_ROWS. */
+export function exportTooLarge(max: number = EXPORT_MAX_ROWS): Response {
+  return new Response(
+    `This export has more than ${max.toLocaleString("en-US")} rows. Narrow the filters (search, tag, dates) and export again.`,
+    {
+      status: 413,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    },
+  );
+}
+
 /** RFC 4180 parser returning objects keyed by the header row. */
 export function parseCsv(
   text: string,

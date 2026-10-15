@@ -51,7 +51,7 @@ async function tokensToday(where: ReturnType<typeof and>): Promise<number> {
 /** Refuses the call before any model runs when the user or the workspace is over its limits. */
 export async function checkLimits(caller: AiCaller): Promise<void> {
   const cfg = limitsConfig();
-  if (!rateLimit(`ai:${caller.userId}`, cfg.AI_REQUESTS_PER_MINUTE_PER_USER)) {
+  if (!(await rateLimit(`ai:${caller.userId}`, cfg.AI_REQUESTS_PER_MINUTE_PER_USER))) {
     throw new AiSafetyError("Too many AI requests. Please wait a minute.");
   }
   const since = startOfDayUtc();

@@ -21,4 +21,4 @@ guide:
       how: "Same pattern as bookSlot in src/app/book/actions.ts: `publicAction(name, { rateLimit, schema, refuse }, handler)`."
     - what: "Change how booking emails are sent"
       where: "src/lib/email.ts"
-      how: "Without RESEND_API_KEY emails are logged (E2E reads them through EMAIL_OUTBOX_FILE); the texts are in src/bookings/service.ts."
+      how: "Without RESEND_API_KEY emails are recorded in a local outbox file, never the console (E2E reads them through EMAIL_OUTBOX_FILE); production needs the key or EMAIL_DELIVERY=disabled; the texts are in src/bookings/service.ts."

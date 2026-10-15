@@ -62,10 +62,16 @@ describe("role policy", () => {
     expect(canWith(fieldnote, "intruder", "read")).toBe(false);
   });
 
-  it("gives an unknown stored role the least privilege (deny by default)", async () => {
+  it("denies a missing or unknown stored role instead of giving it another role (deny by default)", async () => {
     const { toRole, can } = await import("@/server/role-policy");
-    expect(toRole("superuser")).toBe(cfg.defaultRole);
-    expect(can(toRole("superuser"), "manage_members")).toBe(false);
+    expect(toRole("superuser")).toBeNull();
+    expect(toRole(undefined)).toBeNull();
+    expect(toRole("owner")).toBe("owner");
+    expect(can("superuser", "read")).toBe(false);
+    // Approving, exporting and changing settings are never implied by the params' read/update rights.
+    for (const role of cfg.roles.filter((r) => r.key !== "owner"))
+      for (const action of ["approve", "export", "configure"] as const)
+        expect(can(role.key, action), `${role.key} ${action}`).toBe(false);
   });
 
   it("staff allow-list denies by default and matches whole emails only", async () => {

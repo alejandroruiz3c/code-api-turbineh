@@ -4,6 +4,25 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Security
+
+- Generated apps (ADR-0054, external audit of a `saas-crud` app; catalogue-wide):
+  - Secrets (token, secret, password, API key, refresh token, credential, private key…) are never generated as a
+    column, form field, list cell, CSV column, prop or log value; each is reported as not covered (`SEC-…` id).
+  - Roles: invited members never inherit an admin-like role (a single named role is owner/admin; members get read and
+    create); approve, export and configure are separate privileges; unknown or missing roles and failed membership
+    lookups are denied.
+  - Permission tests use fixed expectations written at assembly time plus fixed negatives for members; every repair
+    loop (corrections, Backup Coder T4, post-remediation repairs) deterministically reverts changes that delete, skip
+    or weaken a test or edit an assertion of a fixed oracle.
+  - Every rule of the request is code, a listed limitation or a blocked item with an id in TURBINEH_REPORT.md. Status
+    and lifecycle fields are no longer typed in forms: role-gated transitions change them.
+  - References are tenant-scoped foreign keys resolved by the server; no editable tenant ids; one source of length and
+    range limits (non-negative numbers, enum checks in the database); date-times stored in UTC with their IANA zone; a
+    change and its audit entry share one transaction; exports refuse instead of truncating; production requires an
+    email provider (or `EMAIL_DELIVERY=disabled`) and links are never logged; the rate limiter is shared (PostgreSQL,
+    TTL) and trusts `X-Forwarded-For` only through `TRUSTED_PROXY_HOPS`.
+
 ### Changed
 
 - Scope gate (ADR-0052, supersedes ADR-0050 §4, owner rule): TurbineH only operates requests whose use case the library

@@ -75,16 +75,20 @@ export async function createItem(
       actorId: ctx.userId,
       actorEmail: ctx.email.toLowerCase(),
     });
+    // The item, its first history entry and its audit entry are written together (ADR-0054).
+    await audit(
+      {
+        organizationId: ctx.organizationId,
+        actorId: ctx.userId,
+        actorEmail: ctx.email,
+        action: `${wf.key}.created`,
+        subjectType: wf.label,
+        subjectId: row.id,
+        summary: `Created ${wf.label.toLowerCase()} "${input.title.trim().slice(0, 120)}" (${stateLabel(wf, wf.initial)})`,
+      },
+      tx,
+    );
     return row.id;
-  });
-  await audit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.userId,
-    actorEmail: ctx.email,
-    action: `${wf.key}.created`,
-    subjectType: wf.label,
-    subjectId: id,
-    summary: `Created ${wf.label.toLowerCase()} "${input.title.trim().slice(0, 120)}" (${stateLabel(wf, wf.initial)})`,
   });
   return id;
 }
@@ -109,7 +113,7 @@ export async function transition(
 ): Promise<string> {
   const item = await getItem(ctx, id);
   const wf = requireWorkflow(item.workflow);
-  const from = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const [locked] = await tx
       .select()
       .from(workflowItems)
@@ -135,18 +139,22 @@ export async function transition(
       actorEmail: ctx.email.toLowerCase(),
       note: note?.trim().slice(0, 500) || null,
     });
+    // The move, its history entry and its audit entry are written together (ADR-0054).
+    await audit(
+      {
+        organizationId: ctx.organizationId,
+        actorId: ctx.userId,
+        actorEmail: ctx.email,
+        action: `${wf.key}.state_changed`,
+        subjectType: wf.label,
+        subjectId: item.id,
+        summary: `"${item.title}": ${stateLabel(wf, locked.state)} → ${stateLabel(wf, to)}`,
+        before: { state: locked.state },
+        after: { state: to },
+      },
+      tx,
+    );
     return locked.state;
-  });
-  await audit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.userId,
-    actorEmail: ctx.email,
-    action: `${wf.key}.state_changed`,
-    subjectType: wf.label,
-    subjectId: item.id,
-    summary: `"${item.title}": ${stateLabel(wf, from)} → ${stateLabel(wf, to)}`,
-    before: { state: from },
-    after: { state: to },
   });
   return to;
 }

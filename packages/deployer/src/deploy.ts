@@ -94,6 +94,14 @@ export async function deployToClient(input: DeployInput): Promise<DeployResult> 
   if (keys.includes("ADMIN_EMAILS") && input.adminEmail) {
     env.push({ key: "ADMIN_EMAILS", value: input.adminEmail, sensitive: false });
   }
+  // No email provider yet: the app runs without email on purpose (nothing is sent, links are never logged) until the
+  // client adds RESEND_API_KEY; production refuses to start in any other email-less state (ADR-0054).
+  if (
+    keys.includes("RESEND_API_KEY") &&
+    !(input.extraEnv ?? []).some((e) => e.key === "RESEND_API_KEY")
+  ) {
+    env.push({ key: "EMAIL_DELIVERY", value: "disabled", sensitive: false });
+  }
   // Shop configuration chosen at build time (currencies from the request, tax mode): plain settings, never secrets.
   for (const [key, value] of shopSettings(
     readFileSync(join(input.repoDir, ".env.example"), "utf8"),

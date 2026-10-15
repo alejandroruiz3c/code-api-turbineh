@@ -64,14 +64,18 @@ export async function importCsv(
         })),
       );
     }
-  });
-  await audit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.userId,
-    actorEmail: ctx.email,
-    action: "analytics.imported",
-    subjectType: ds.entity,
-    summary: `Imported ${rows.length} rows from "${fileName.slice(0, 120)}"`,
+    // The rows and their audit entry are written together or not at all (ADR-0054).
+    await audit(
+      {
+        organizationId: ctx.organizationId,
+        actorId: ctx.userId,
+        actorEmail: ctx.email,
+        action: "analytics.imported",
+        subjectType: ds.entity,
+        summary: `Imported ${rows.length} rows from "${fileName.slice(0, 120)}"`,
+      },
+      tx,
+    );
   });
   return { ok: true, rows: rows.length };
 }

@@ -142,6 +142,10 @@ export async function writeRules(
         : "") +
       "The create schema already rejects missing required values and wrong value types before the rules run: no code " +
       "for that (a rule that only says a field is required needs nothing). " +
+      "`input` holds only what people type: workflow state (status, stage, approvedAt…) is changed by role-gated " +
+      "transitions and secrets are never stored, so never read them from `input` (they may be read from " +
+      "`ctx.previous` and `ctx.existing()` rows); a date-and-time field of `input` is the local " +
+      '"YYYY-MM-DDTHH:mm" string typed in `<field>TimeZone`, while rows hold UTC Dates. ' +
       "Treat missing optional values (undefined or null) as not matching. Compare text case-insensitively and trimmed. " +
       '"After", "before", "more than" and "less than" are strict (equal values break the rule); "from", "until", ' +
       '"at least" and "at most" include the boundary. ' +

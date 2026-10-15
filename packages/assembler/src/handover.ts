@@ -25,7 +25,11 @@ const EXPLAIN: Record<string, string> = {
   BETTER_AUTH_URL: "The public address of the app, for example `https://app.yourcompany.com`.",
   ADMIN_EMAILS: "Comma-separated emails allowed to open the admin panel.",
   RESEND_API_KEY:
-    "Resend API key to send real emails. Without it, emails are only written to the server log.",
+    "Resend API key to send emails (verification, invitations). Required in production: without it the app refuses to start, unless you set `EMAIL_DELIVERY=disabled` to run without email on purpose. Email links are never written to logs.",
+  EMAIL_DELIVERY:
+    "`disabled` runs the app without sending any email (no verification or invitation emails) until you add `RESEND_API_KEY`.",
+  TRUSTED_PROXY_HOPS:
+    "How many proxies in front of the app add the visitor's address to `X-Forwarded-For` (Vercel: leave empty; behind one Nginx/Caddy: `1`). Without it, per-visitor limits do not trust that header.",
   EMAIL_FROM:
     'Sender, for example `"Your App <hello@yourcompany.com>"` (domain verified in Resend).',
   JOBS_RUNNER_SECRET:
@@ -188,8 +192,9 @@ ${live.cron ? "| Background jobs | Vercel Cron calls `/api/jobs/run` daily (Hobb
 2. **Invite your team** and give each person the right role.
 3. **Your domain (optional):** Vercel → your project → Settings → Domains. Then set \`BETTER_AUTH_URL\` to the new
    address (Settings → Environment Variables) and redeploy.
-4. **Real emails (optional):** create a Resend account, verify your domain and add \`RESEND_API_KEY\` and \`EMAIL_FROM\`
-   in the same place. Until then, emails are written to the logs instead of being sent.
+4. **Emails:** create a Resend account, verify your domain and add \`RESEND_API_KEY\` and \`EMAIL_FROM\` in the same
+   place, then remove \`EMAIL_DELIVERY\` and redeploy. Until then the app runs without email (\`EMAIL_DELIVERY=disabled\`):
+   no verification or invitation emails are sent, and links are never written to the logs.
 5. **Backups:** ${live.database.provider === "neon" ? "Neon keeps point-in-time history; check the retention of your plan." : "turn on daily backups in your database provider."}
 
 ## Changing the app later

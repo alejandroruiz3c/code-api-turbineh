@@ -81,7 +81,7 @@ export type ChatState = { error: string | null };
 export async function sendMessage(_prev: ChatState, formData: FormData): Promise<ChatState> {
   const ctx = await requireMember();
   try {
-    if (!rateLimit(`chat:${ctx.userId}`, 30))
+    if (!(await rateLimit(`chat:${ctx.userId}`, 30)))
       return { error: "Too many messages. Try again later." };
     const agentId = z.uuid().parse(formData.get("agentId"));
     const text = z.string().trim().min(1).max(8000).parse(formData.get("text"));

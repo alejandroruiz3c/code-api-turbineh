@@ -24,7 +24,10 @@ export const CODE_RULES =
   "Tests: import every vitest helper you use (describe, it, expect, vi). " +
   "Never write literals that look like API keys, tokens, passwords or long random strings, not even in tests: " +
   "use short obvious fakes such as 'key-1' or 'test-token'. " +
-  "ESLint: typescript-eslint recommended + Next.js core-web-vitals + react-hooks.";
+  "ESLint: typescript-eslint recommended + Next.js core-web-vitals + react-hooks. " +
+  'Security Pack (ADR-0054): the rate limiter is async — always `if (!(await rateLimit("key"))) …`; pass the ' +
+  "transaction to audit (`audit(entry, tx)`) when a change and its audit entry are written; never store, show, " +
+  "export or log tokens, secrets, passwords or API keys.";
 
 /** One small task → one whole file. JSON output keeps the reply machine-checkable (ADR-0010). */
 export async function askFile(

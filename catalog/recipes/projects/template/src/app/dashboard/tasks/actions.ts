@@ -57,7 +57,7 @@ export async function deleteTask(formData: FormData): Promise<void> {
 
 export async function addComment(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!rateLimit(`comment:${ctx.userId}`))
+  if (!(await rateLimit(`comment:${ctx.userId}`)))
     throw new UserFacingError("Too many comments. Try again later.");
   const id = z.uuid().parse(formData.get("taskId"));
   const body = z.string().trim().min(1).max(5000).parse(formData.get("body"));

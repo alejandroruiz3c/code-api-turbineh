@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { dirname, extname, join, relative } from "node:path";
 import { guideMarkdown, readGuides } from "@turbineh/catalog";
-import type { BuildSpec } from "@turbineh/compiler";
+import { excludedSensitiveFields, stateField, type BuildSpec } from "@turbineh/compiler";
 import type { Candidate } from "@turbineh/resolver";
 import {
   actorAliases,
@@ -369,6 +369,12 @@ export function assemble(input: AssembleInput): AssembleResult {
             how: p.how,
           })),
         ...(kinds?.left ?? []),
+        // Secret fields are never generated as CRUD (ADR-0054): each is a not-covered item with an id.
+        ...notCoveredSecrets(spec).map((x) => ({
+          what: `${x.id}: field "${x.field}" of ${x.entity} is not stored (secret or credential)`,
+          where: "—",
+          how: x.note,
+        })),
       ],
     }),
   );
@@ -445,7 +451,20 @@ ${
         .map((a) => `- ${a}`)
         .join("\n")}\n\n`
     : ""
-}## Acceptance criteria
+}${
+    notCoveredSecrets(spec).length
+      ? `## Not covered by this build
+
+Secrets and credentials are never stored by generated forms, lists, CSV files or logs. These fields of the request
+are not part of the app; storing them needs encryption at rest with a write-only input:
+
+${notCoveredSecrets(spec)
+  .map((x) => `- **${x.id}** — ${x.entity}.${x.field}: ${x.note}`)
+  .join("\n")}
+
+`
+      : ""
+  }## Acceptance criteria
 
 ${spec.acceptance_criteria.length} criteria from the request. Which test proves each one, or where to implement and prove
 it: [ACCEPTANCE.md](ACCEPTANCE.md) (the same facts as AGENTS.md, updated after verification).
@@ -662,8 +681,26 @@ function planByKind(
   // Per-record scope of domain.membership-access (company, project, shop).
   const membership = selected("membership-access");
   const scope = membership?.params.scope as { kind: string; label: string } | null | undefined;
+  // Status values the request lists ("statuses (pending, received, approved)") become the allowed values of the
+  // matching state field, so its transition is a select checked by the database (ADR-0054).
+  const lists = fid.fidelity.constraints.statusLists;
+  const withStatuses = entities.map((e) => ({
+    ...e,
+    fields: e.fields.map((f) => {
+      if (f.options?.length || stateField(f.name) !== "state") return f;
+      const last = f.name
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .toLowerCase()
+        .split(/[\s_]+/)
+        .at(-1);
+      const of = (x: { of: string | null }) =>
+        !x.of || e.name.toLowerCase().includes(x.of.replace(/s$/, "").split(" ").at(-1) ?? "");
+      const list = lists.find((x) => x.field === last && x.values.length >= 2 && of(x));
+      return list ? { ...f, type: "enum" as const, options: [...list.values] } : f;
+    }),
+  }));
   return generateByKind({
-    entities,
+    entities: withStatuses,
     models: fid.fidelity.entities,
     features,
     sort: fid.fidelity.constraints.sort,
@@ -704,6 +741,14 @@ function writeFidelityReport(
   };
   mkdirSync(join(outDir, ".turbineh"), { recursive: true });
   writeFileSync(join(outDir, ".turbineh/fidelity.json"), `${JSON.stringify(report, null, 2)}\n`);
+}
+
+/**
+ * Secret fields of the request that the app does not store (ADR-0054), each with an id: never generated as CRUD.
+ * Passwords are not listed: sign-in already handles them (hashed by the auth component).
+ */
+export function notCoveredSecrets(spec: Pick<BuildSpec, "entities">) {
+  return excludedSensitiveFields(spec.entities).filter((x) => x.reason !== "password");
 }
 
 export function hasTemplate(dir: string): boolean {

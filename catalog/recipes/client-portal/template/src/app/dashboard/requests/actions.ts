@@ -26,7 +26,7 @@ export async function createRequest(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create"))
     throw new UserFacingError("You are not allowed to create requests.");
-  if (!rateLimit(`create:requests:${ctx.userId}`))
+  if (!(await rateLimit(`create:requests:${ctx.userId}`)))
     throw new UserFacingError("Too many requests. Try again later.");
   const input = createSchema.parse(Object.fromEntries(formData));
   const [row] = await db
@@ -54,7 +54,7 @@ export async function uploadFile(formData: FormData): Promise<void> {
   const id = z.uuid().parse(formData.get("requestId"));
   const { row } = await visibleRequest(id);
   if (row.status === "completed") throw new UserFacingError("This request is completed.");
-  if (!rateLimit(`upload:${ctx.userId}`, 20))
+  if (!(await rateLimit(`upload:${ctx.userId}`, 20)))
     throw new UserFacingError("Too many uploads. Try again later.");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) throw new UserFacingError("Choose a file.");

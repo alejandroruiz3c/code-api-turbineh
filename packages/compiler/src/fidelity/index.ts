@@ -18,6 +18,7 @@ import {
 
 export * from "./constraints.js";
 export * from "./entity-kinds.js";
+export * from "./field-policy.js";
 export * from "./permissions.js";
 export * from "./patterns.js";
 export * from "./wiring.js";

@@ -14,3 +14,5 @@ playwright/.auth/
 .turbineh/local-db/
 # Private uploads stored on local disk (storage.private-uploads.turbineh, outside public/)
 .data/
+# Emails recorded locally when no provider is configured (development; never committed)
+.turbineh/email-outbox.jsonl

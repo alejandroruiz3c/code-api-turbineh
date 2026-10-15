@@ -1,6 +1,13 @@
 import type { Answer } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
-import { mentionedEntities, ruleQuestions, selectRules, T3_POLICY } from "./business-rules.js";
+import {
+  mentionedEntities,
+  ruleQuestions,
+  rulesWithoutCode,
+  selectRules,
+  T3_POLICY,
+  type RuleCandidate,
+} from "./business-rules.js";
 
 const noul = (p: number): Answer => ({ type: "noul", noul: p }) as Answer;
 const pick = (c: string, confidence = 0.9): Answer =>
@@ -174,5 +181,47 @@ describe("T3 business-rule policy", () => {
       "Student",
     ]);
     expect(mentionedEntities("Room names are unique", "Room", ["Room", "Student"])).toEqual([]);
+  });
+});
+
+describe("rules of the request never vanish (ADR-0054)", () => {
+  const c = (criterion: string, reason: string, selected = false): RuleCandidate => ({
+    criterion,
+    isRule: 0.9,
+    covered: 0,
+    entity: "Request",
+    entityConfidence: 0.9,
+    complexity: 1,
+    operations: ["create", "update"],
+    related: [],
+    selected,
+    reason,
+  });
+
+  it("lists every rule without code as a limitation (not chosen) or blocked (chosen, not written)", () => {
+    const out = rulesWithoutCode(
+      [
+        c("Amounts over 500 need a second approval", "needs users, roles or an external service"),
+        c("No two requests share a title", "selected", true),
+        c("Titles are at most 80 characters", "selected", true),
+        c("A request has a title", "covered by the generated form"),
+        c("Owners see a dashboard", "not a business rule"),
+      ],
+      ["Titles are at most 80 characters"],
+    );
+    expect(out).toEqual([
+      {
+        criterion: "Amounts over 500 need a second approval",
+        entity: "Request",
+        reason: "needs users, roles or an external service",
+        blocked: false,
+      },
+      {
+        criterion: "No two requests share a title",
+        entity: "Request",
+        reason: "the backup code model could not write it safely",
+        blocked: true,
+      },
+    ]);
   });
 });

@@ -64,7 +64,7 @@ export async function addPoint(formData: FormData): Promise<void> {
 export async function importPoints(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to import data.");
-  if (!rateLimit(`import:analytics:${ctx.userId}`, 5))
+  if (!(await rateLimit(`import:analytics:${ctx.userId}`, 5)))
     throw new UserFacingError("Too many imports. Try again later.");
   const { ds } = await ownDataset(z.uuid().parse(formData.get("datasetId")));
   const file = formData.get("file");

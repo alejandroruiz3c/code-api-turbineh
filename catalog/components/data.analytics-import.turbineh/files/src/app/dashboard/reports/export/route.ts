@@ -2,7 +2,7 @@ import { dataset as ds } from "@/analytics-import/config";
 import { parseFilters } from "@/analytics-import/filters";
 import { byDimension, lastDay, series } from "@/analytics-import/service";
 import { toCsv } from "@/lib/csv";
-import { requireMember } from "@/server/authz";
+import { can, requireMember } from "@/server/authz";
 
 /**
  * GET /dashboard/reports/export?chart=series|compare|top-<dimension>&from&to&period&scope — the numbers of one chart
@@ -11,6 +11,8 @@ import { requireMember } from "@/server/authz";
 export async function GET(req: Request): Promise<Response> {
   const ctx = await requireMember();
   if (!ds.exportCsv) return new Response("Not found", { status: 404 });
+  // Exporting is a privilege of its own (ADR-0054): roles that may read the dashboard cannot necessarily export.
+  if (!can(ctx.role, "export")) return new Response("Forbidden", { status: 403 });
   const q = Object.fromEntries(new URL(req.url).searchParams);
   const f = parseFilters(q, await lastDay(ctx));
   const chart = q.chart ?? "series";

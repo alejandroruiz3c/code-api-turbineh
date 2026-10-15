@@ -31,7 +31,7 @@ export async function inviteMember(_prev: MembersState, formData: FormData): Pro
   const ctx = await requireMember();
   if (!can(ctx.role, "manage_members"))
     return { ok: false, message: "You are not allowed to invite people." };
-  if (!rateLimit(`invite:${ctx.userId}`, 20))
+  if (!(await rateLimit(`invite:${ctx.userId}`, 20)))
     return { ok: false, message: "Too many invitations. Try again later." };
   const parsed = inviteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, message: "Enter a valid email and choose a role." };

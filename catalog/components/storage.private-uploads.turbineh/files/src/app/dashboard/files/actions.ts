@@ -19,7 +19,7 @@ const target = z.object({
 
 export async function uploadFile(_prev: UploadState, formData: FormData): Promise<UploadState> {
   const ctx = await requireMember();
-  if (!rateLimit(`uploads:${ctx.userId}`, 30))
+  if (!(await rateLimit(`uploads:${ctx.userId}`, 30)))
     return { ok: false, message: "Too many uploads. Try again in a minute." };
   const parsed = target.safeParse({
     subjectType: formData.get("subjectType"),

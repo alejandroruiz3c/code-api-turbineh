@@ -1,8 +1,8 @@
 import { and, asc, between, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { dataPoints, datasets } from "@/db/schema";
-import { toCsv } from "@/lib/csv";
-import { requireMember } from "@/server/authz";
+import { EXPORT_MAX_ROWS, exportTooLarge, toCsv } from "@/lib/csv";
+import { can, requireMember } from "@/server/authz";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -12,6 +12,8 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const member = await requireMember();
+  // Exporting is a privilege of its own (ADR-0054): roles that may read cannot necessarily export.
+  if (!can(member.role, "export")) return new Response("Forbidden", { status: 403 });
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return new Response("Not found", { status: 404 });
   const [ds] = await db
@@ -34,7 +36,9 @@ export async function GET(
       ),
     )
     .orderBy(asc(dataPoints.day))
-    .limit(50_000);
+    .limit(EXPORT_MAX_ROWS + 1);
+  // Never silently truncated (ADR-0054): over the limit the export is refused with a message.
+  if (rows.length > EXPORT_MAX_ROWS) return exportTooLarge();
   return new Response(toCsv(rows, ["date", "category", "value"]), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

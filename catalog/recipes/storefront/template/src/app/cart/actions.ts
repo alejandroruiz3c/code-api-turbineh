@@ -18,6 +18,7 @@ import { env } from "@/env";
 import { isCountry } from "@/lib/countries";
 import { COUPON_CODE, couponDiscount, formatRate, MAX_QTY, normalizeCode } from "@/lib/shop";
 import { UserFacingError } from "@/security/errors";
+import { clientIp } from "@/security/client-ip";
 import { rateLimit } from "@/security/rate-limit";
 import {
   cartCoupon,
@@ -35,8 +36,9 @@ import { createCheckoutSession } from "@/server/stripe";
 
 async function guard(kind: string, perMinute = 30): Promise<void> {
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0]?.trim() ?? "local";
-  if (!rateLimit(`${kind}:${ip}`, perMinute))
+  // Behind trusted proxies only: a client cannot choose its own bucket (src/security/client-ip.ts).
+  const ip = clientIp(h);
+  if (!(await rateLimit(`${kind}:${ip}`, perMinute)))
     throw new UserFacingError("Too many requests. Try again in a minute.");
 }
 

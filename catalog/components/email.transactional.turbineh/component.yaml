@@ -7,7 +7,7 @@ source:
   purl: pkg:generic/turbineh/email.transactional.turbineh@0.1.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
-  does: "Transactional email through the Resend HTTP API, with a local outbox log when no API key is configured"
+  does: "Transactional email through the Resend HTTP API; production requires the key (or EMAIL_DELIVERY=disabled), development and tests use a local outbox file, links are never logged"
   does_not: "Does not provide email templates, bounce handling or bulk sending"
   use_cases: [landing-waitlist]
   pros: ["Maintained by TurbineH", "No third-party runtime dependency"]

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isStaff, isStaffEmail } from "@/lib/staff";
 import { allows, type Permission } from "@/server/permissions";
 import { toRole, type Action, type Role } from "@/server/role-policy";
+import { clientIp } from "@/security/client-ip";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 
@@ -44,8 +45,25 @@ export async function requireMember(): Promise<{
     }
     organizationId = first.id;
   }
-  const member = await auth.api.getActiveMember({ headers: h }).catch(() => null);
-  const role = toRole(member?.role);
+  // Deny by default (ADR-0054): a failed lookup is an error (never a guess), a non-member gets no workspace access,
+  // and a role this app does not know is refused instead of being treated as a member.
+  let member: { role?: unknown; organizationId?: unknown } | null;
+  try {
+    member = await auth.api.getActiveMember({ headers: h });
+  } catch (err) {
+    // The auth API answers "not a member" with a 4xx error; anything else (database down…) must not grant access.
+    const status = (err as { statusCode?: unknown }).statusCode;
+    if (typeof status !== "number" || status < 400 || status >= 500)
+      throw new Error("Could not verify workspace membership", { cause: err });
+    member = null;
+  }
+  if (!member || (member.organizationId !== undefined && member.organizationId !== organizationId))
+    redirect("/sign-up?step=organization");
+  const role = toRole(member.role);
+  if (!role)
+    throw new UserFacingError(
+      "Your role in this workspace is not recognised. Ask the workspace owner to set your role again.",
+    );
   return { userId: session.user.id, email: session.user.email, organizationId, role };
 }
 
@@ -66,10 +84,8 @@ export async function requireSession(): Promise<{
   return { userId: id, email: email.toLowerCase(), name, emailVerified: Boolean(emailVerified) };
 }
 
-/** Client address for per-IP limits: the first X-Forwarded-For hop (set by the hosting proxy), else X-Real-IP. */
-export function clientIp(h: Headers): string {
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || "local";
-}
+/** Client address for per-IP limits, behind trusted proxies only (src/security/client-ip.ts). */
+export { clientIp, trustedProxyHops } from "@/security/client-ip";
 
 /** Why a public action refused a request before running: invalid input or too many attempts from one address. */
 export type PublicRefusal = "invalid" | "rate-limited";
@@ -107,7 +123,7 @@ export function publicAction<S extends z.ZodType, R>(
   return async (...args: unknown[]): Promise<R> => {
     const ip = clientIp(await headers());
     const { limit, windowMs = 60_000 } = options.rateLimit;
-    if (!rateLimit(`public:${name}:${ip}`, limit, windowMs)) return refuse("rate-limited");
+    if (!(await rateLimit(`public:${name}:${ip}`, limit, windowMs))) return refuse("rate-limited");
     const raw = args.at(-1);
     const parsed = options.schema.safeParse(
       raw instanceof FormData ? Object.fromEntries(raw) : (raw ?? {}),

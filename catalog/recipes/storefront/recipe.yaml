@@ -31,4 +31,4 @@ guide:
       how: "The only place an order becomes paid (signed, idempotent, one transaction): stock, coupon count, emails."
     - what: "Change the order emails"
       where: "src/app/api/stripe/webhook/route.ts (sendEmail calls), src/lib/email.ts"
-      how: "Without RESEND_API_KEY emails are logged; E2E asserts them through EMAIL_OUTBOX_FILE."
+      how: "Without RESEND_API_KEY emails are recorded in a local outbox file, never the console; E2E asserts them through EMAIL_OUTBOX_FILE; production needs the key or EMAIL_DELIVERY=disabled."

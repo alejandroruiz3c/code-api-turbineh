@@ -22,7 +22,7 @@ export async function addKnowledge(
   try {
     if (!can(ctx.role, "create"))
       throw new UserFacingError("You are not allowed to add documents.");
-    if (!rateLimit(`knowledge:${ctx.userId}`, 10))
+    if (!(await rateLimit(`knowledge:${ctx.userId}`, 10)))
       throw new UserFacingError("Too many uploads. Try again later.");
     const title = z.string().trim().min(2).max(160).parse(formData.get("title"));
     let text = String(formData.get("text") ?? "");

@@ -35,6 +35,15 @@ export default tseslint.config(
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
       ...reactHooks.configs.recommended.rules,
+      // Security Pack: the shared rate limiter is async; without await its Promise is always truthy and never blocks.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='rateLimit']:not(AwaitExpression > CallExpression)",
+          message:
+            "Await the rate limiter: `if (!(await rateLimit(key))) …` (src/security/rate-limit.ts).",
+        },
+      ],
     },
   },
 );
