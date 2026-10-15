@@ -125,8 +125,8 @@ export async function post(path: string, body: unknown, timeoutMs?: number): Pro
   const endpoint = modelEndpoint(cfg);
   const deadline = Date.now() + (timeoutMs ?? cfg.AI_TIMEOUT_MS);
   for (let attempt = 0; ; attempt++) {
-    // 0 = network failure, timeout or an unreadable body.
-    let status = 0;
+    // 0 = network failure, timeout or an unreadable body (set in the catch below).
+    let status: number;
     try {
       const res = await fetch(`${endpoint.baseUrl}${path}`, {
         method: "POST",
