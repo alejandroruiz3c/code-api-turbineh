@@ -6,6 +6,7 @@ import { EngineFlow } from "@/components/engine-flow";
 import { FlowView } from "@/components/flow-view";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
+import { confirmDemandLater } from "@/server/demand-email";
 
 export const metadata: Metadata = { title: "Flow · YES IF for Builders" };
 
@@ -30,6 +31,8 @@ export default async function FlowPage({ params }: { params: Promise<{ id: strin
   }
   const build = await getBuild(db, id, caller.ownerId);
   if (!build) notFound();
+  // ADR-0056: a refused request gets its priority-list email after this page is sent.
+  confirmDemandLater(build);
   return (
     <main className="mx-auto max-w-6xl px-6 pt-8">
       <p className="eyebrow">Flow</p>

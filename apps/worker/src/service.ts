@@ -30,12 +30,13 @@ import {
   putCachedSelection,
   recordDemand,
   requeueForGeneration,
+  sendDemandEmails,
   requeueStale,
   requeueStaleRepoIntegrations,
   type BuildRow,
 } from "@turbineh/db";
 import { deciderFromEnv } from "@turbineh/decider";
-import { createLogger, loadLocalEnv, readEnv } from "@turbineh/shared";
+import { createLogger, loadLocalEnv, mailerFromEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
 import { buildCost } from "./cost.js";
 import { processDeployment } from "./deploy-job.js";
@@ -65,6 +66,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const db = getPool(env.DATABASE_URL);
 const storage = storageFromEnv(process.env, join(repoRoot, "artifacts"));
 const decider = deciderFromEnv(env);
+/** Platform email (ADR-0056); null without RESEND_API_KEY (one warning, emails skipped). */
+const mailer = mailerFromEnv();
 const workerId = `${hostname()}-${process.pid}`;
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 2);
 const DAILY_CAP_EUR = Number(process.env.DAILY_COST_CAP_EUR ?? 100);
@@ -208,6 +211,29 @@ async function handle(build: BuildRow): Promise<void> {
       package: Boolean(artifact.package),
     });
   }
+  // ADR-0052: a request the library does not cover (fully or in part) is demand: recorded for the owner, and the
+  // person is subscribed to a priority notification. Recorded before the flow is marked finished, so the web, which
+  // sends the confirmation email when it sees the refused flow (ADR-0056), always finds the row.
+  const gate = outcome.metrics.scopeGate as ScopeVerdict | undefined;
+  const demand =
+    gate && gate.status !== "covered"
+      ? await recordDemand(db, {
+          buildId: build.id,
+          ownerId: build.owner_id,
+          email:
+            typeof build.options.contact_email === "string" ? build.options.contact_email : null,
+          request: build.prompt,
+          status: gate.status,
+          useCase: gate.useCase,
+          missing: gate.notCovered.map((r) => ({ requirement: r.requirement, why: r.why })),
+        }).then(
+          () => true,
+          (err: unknown) => {
+            log.error("demand not recorded", { error: String(err) });
+            return false;
+          },
+        )
+      : false;
   const cost = buildCost(outcome.metrics, env.COMPILER_MODEL, COST_OVERHEAD_EUR);
   outcome.metrics.cost = cost;
   await addCost(db, cost.totalEur);
@@ -229,20 +255,9 @@ async function handle(build: BuildRow): Promise<void> {
     reason: outcome.reason ?? null,
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
-  // ADR-0052: a request the library does not cover (fully or in part) is demand: recorded for the owner, and the
-  // person is subscribed to a priority notification.
-  const gate = outcome.metrics.scopeGate as ScopeVerdict | undefined;
-  if (gate && gate.status !== "covered") {
-    await recordDemand(db, {
-      buildId: build.id,
-      ownerId: build.owner_id,
-      email: typeof build.options.contact_email === "string" ? build.options.contact_email : null,
-      request: build.prompt,
-      status: gate.status,
-      useCase: gate.useCase,
-      missing: gate.notCovered.map((r) => ({ requirement: r.requirement, why: r.why })),
-    }).catch((err: unknown) => log.error("demand not recorded", { error: String(err) }));
-  }
+  // ADR-0056: priority-list confirmation + owner alert, once per row (the web may send them first). Not awaited: the
+  // next build never waits for an email.
+  if (demand) void sendDemandEmails(db, mailer, build.id, log);
   // `turbineh build` (ADR-0036): a plan asked to continue straight into generation goes back to the queue at once
   // when nobody has to decide anything (TurbineH writing an uncovered part is what the build asked for) — no second
   // request, no client poll interval in between.

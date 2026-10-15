@@ -20,6 +20,7 @@ import {
 import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
+import { confirmDemandLater } from "@/server/demand-email";
 import { env } from "@/server/env";
 import { catalog, productProblem, requireCaller, resultOf } from "@/server/product";
 import { workspaceGitHub } from "@/server/github";
@@ -211,6 +212,8 @@ export async function POST(req: Request): Promise<Response> {
   for (const until = Date.now() + waitMs; Date.now() < until;) {
     await new Promise((r) => setTimeout(r, 1000));
     const row = await getBuild(db, id, caller.ownerId);
+    // ADR-0056: a refused request gets its priority-list email after this response.
+    if (row && (row.status === "failed" || row.status === "done")) confirmDemandLater(row);
     if (row?.status === "failed") {
       const result = await resultOf(row);
       return productProblem(

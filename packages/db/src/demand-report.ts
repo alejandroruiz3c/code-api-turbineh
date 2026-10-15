@@ -21,7 +21,7 @@ if (args.includes("--json")) {
 } else {
   for (const r of rows) {
     console.log(
-      `${new Date(r.created_at).toISOString()} · ${r.status} · ${r.owner_id ?? "—"} · ${r.email ?? "no email"}${r.subscribed ? " · subscribed" : ""}`,
+      `#${r.id} · ${new Date(r.created_at).toISOString()} · ${r.status} · ${r.owner_id ?? "—"} · ${r.email ?? "no email"}${r.subscribed ? " · subscribed" : ""}${r.confirmation_sent_at ? " · confirmed by email" : ""}${r.available_notified_at ? " · told available" : ""}`,
     );
     console.log(`  request: ${r.request.replace(/\s+/g, " ").slice(0, 200)}`);
     for (const m of r.missing) console.log(`  - ${m.requirement} (${m.why})`);

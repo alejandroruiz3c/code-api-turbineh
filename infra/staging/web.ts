@@ -29,6 +29,11 @@ const optional = (name: string): Record<string, string> => {
   const v = process.env[STAGING ? `STG_${name}` : name];
   return v ? { [name]: v } : {};
 };
+/** Optional value shared by both environments; staging may override it with STG_<name>. */
+const sharedOptional = (name: string): Record<string, string> => {
+  const v = (STAGING ? process.env[`STG_${name}`] : undefined) || process.env[name];
+  return v ? { [name]: v } : {};
+};
 const IONOS_ZONE = "5df240aa-e57f-11f0-8802-0a5864440b1b";
 
 async function vercel<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -101,6 +106,11 @@ async function env(): Promise<void> {
     ...optional("VERCEL_INTEGRATION_SLUG"),
     ...optional("VERCEL_INTEGRATION_CLIENT_ID"),
     ...optional("VERCEL_INTEGRATION_CLIENT_SECRET"),
+    // Platform email via Resend (ADR-0056): priority-list confirmations and the owner's demand alerts. Without the
+    // key the web skips them (one warning).
+    ...sharedOptional("RESEND_API_KEY"),
+    EMAIL_FROM: process.env.EMAIL_FROM || "TurbineH <support@turbineh.com>",
+    ...sharedOptional("DEMAND_ALERT_EMAIL"),
   };
   const body = Object.entries(vars).map(([key, value]) => ({
     key,

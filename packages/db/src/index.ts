@@ -7,3 +7,4 @@ export * from "./ai-gateway.js";
 export * from "./product.js";
 export * from "./github.js";
 export * from "./demand.js";
+export * from "./demand-email.js";

@@ -61,6 +61,13 @@ export const envSchema = z.object({
   BACKUP_CODER_SECONDARY: modelRef,
   BACKUP_CODER_SECONDARY_BASE_URL: optionalUrl,
   BACKUP_CODER_SECONDARY_API_KEY: optionalString,
+
+  /** Platform email via Resend (ADR-0056). Optional: without it, priority-list and demand emails are skipped. */
+  RESEND_API_KEY: optionalString,
+  /** Sender of platform emails; default `TurbineH <support@turbineh.com>`. */
+  EMAIL_FROM: optionalString,
+  /** Owner alert for each uncovered request (ADR-0052 demand); default alex.ruiz@turbineh.com. */
+  DEMAND_ALERT_EMAIL: optionalString,
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -73,6 +73,11 @@ requirements with why, timestamp; one row per flow) and `priority_notifications`
 `pnpm --filter @turbineh/db demand [limit] [--json]`. No confirmation email is sent: the platform has no outbound email
 infrastructure today and this ADR adds no vendor.
 
+**Addendum (ADR-0056):** email is now enabled through Resend. Each demand row gets one priority-list confirmation to the
+person (when their email is known) and one alert to the owner (`DEMAND_ALERT_EMAIL`), sent after the response and never
+blocking it; `pnpm --filter @turbineh/db notify-available` sends the "it's available now" notice and marks the rows
+notified.
+
 ### 5 · Explicit components
 
 `POST /v1/plans` accepts `components: [ids]` (validated against the approved catalogue, 422 `unknown_component`);
@@ -106,7 +111,7 @@ specs need the user's approval for the covered part; explicit components via `tu
 - Requests that ADR-0050 built "on the closest template" with a long "what is left" are now refused or reduced with
   consent. Expect more `use_case_not_covered` outcomes; `use_case_demand` is the input for what the library covers next.
 - Open: the code lists (platforms, autonomy, AI words) and the decider threshold need calibration on a labelled set in
-  `bench/`; confirmation emails wait for an approved email channel.
+  `bench/`. Confirmation emails: ADR-0056.
 - Tests: `packages/engine/src/scope-gate.test.ts` (covered recipe, explicit components, the audit's uncovered request,
   partial, decider fallback, false-positive guards, message mapping, F18 badge, F20 quickstart),
   `apps/worker/src/scope.test.ts` (against the real catalogue), `apps/web/src/components/scope-gate.test.tsx`.

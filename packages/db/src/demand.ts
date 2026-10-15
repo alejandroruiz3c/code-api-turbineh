@@ -51,13 +51,18 @@ export interface DemandRow {
   missing: { requirement: string; why: string }[];
   created_at: string;
   subscribed: boolean;
+  /** ADR-0056: when the priority-list confirmation and the owner alert were emailed, and the "available" notice. */
+  confirmation_sent_at: string | null;
+  owner_alerted_at: string | null;
+  available_notified_at: string | null;
 }
 
 /** Newest first, with whether the owner is subscribed to the priority notification. */
 export async function listDemand(db: pg.Pool, limit = 100): Promise<DemandRow[]> {
   const res = await db.query<DemandRow>(
     `SELECT d.id, d.build_id, d.owner_id, coalesce(d.email, p.email) AS email, d.request, d.status, d.use_case,
-            d.missing, d.created_at, (p.owner_id IS NOT NULL AND p.notified_at IS NULL) AS subscribed
+            d.missing, d.created_at, d.confirmation_sent_at, d.owner_alerted_at, d.available_notified_at,
+            (p.owner_id IS NOT NULL AND p.notified_at IS NULL) AS subscribed
      FROM use_case_demand d LEFT JOIN priority_notifications p ON p.owner_id = d.owner_id
      ORDER BY d.created_at DESC LIMIT $1`,
     [Math.min(Math.max(limit, 1), 1000)],

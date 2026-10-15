@@ -23,6 +23,18 @@ All notable changes to this project are documented here. Format: [Keep a Changel
     email provider (or `EMAIL_DELIVERY=disabled`) and links are never logged; the rate limiter is shared (PostgreSQL,
     TTL) and trusts `X-Forwarded-For` only through `TRUSTED_PROXY_HOPS`.
 
+### Added
+
+- Platform email (ADR-0056, amends ADR-0052 §4): a request the scope gate refuses (or covers only in part) now gets one
+  email to the person who asked — "We don't cover this use case yet. You're on the priority list and we'll email you
+  as soon as it's available", with the requirements not covered — and one short alert to the owner
+  (`DEMAND_ALERT_EMAIL`, default alex.ruiz@turbineh.com). Sent through Resend's API with plain `fetch` from
+  `TurbineH <support@turbineh.com>` (`RESEND_API_KEY`, `EMAIL_FROM`; without the key: one warning, nothing sent), after
+  the response and once per demand row (migration `0013_demand_email.sql`: `confirmation_sent_at`, `owner_alerted_at`,
+  `available_notified_at`).
+- `pnpm --filter @turbineh/db notify-available <ids…> | --capability <text> [--message <text>] [--send]`: the owner
+  tells everyone whose request is now covered (one email per address, rows marked notified, dry run by default).
+
 ### Changed
 
 - Scope gate (ADR-0052, supersedes ADR-0050 §4, owner rule): TurbineH only operates requests whose use case the library
