@@ -5,9 +5,18 @@ interface Summary {
   active: { prefix: string; createdAt: string; dailyTokenQuota: number } | null;
   last30d: { calls: number; inputTokens: number; outputTokens: number };
   today: { calls: number; tokens: number };
+  /** Trial of the TurbineH orchestration for this account, across all its AI apps (null = no cap). */
+  trial?: {
+    spentUsd: number;
+    capUsd: number;
+    remainingUsd: number;
+    reached: boolean;
+    contact: string;
+  } | null;
 }
 
 const fmt = (n: number) => n.toLocaleString("en");
+const usd = (n: number) => `$${n.toFixed(2)}`;
 
 /**
  * AI access for apps built with the orchestrator (ADR-0029): the app uses TurbineH's AI through a per-app token, so the
@@ -90,6 +99,28 @@ export function AiAccess({ id }: { id: string }) {
           </span>
         ) : null}
       </div>
+      {summary?.trial ? (
+        summary.trial.reached ? (
+          <p role="status" data-testid="ai-trial" className="text-amber">
+            You&apos;ve reached the trial limit of the TurbineH orchestration (
+            {usd(summary.trial.capUsd)}) for all your AI apps. Contact{" "}
+            <a
+              className="underline"
+              href={`mailto:${summary.trial.contact}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {summary.trial.contact}
+            </a>{" "}
+            to continue.
+          </p>
+        ) : (
+          <p data-testid="ai-trial" className="text-xs text-muted">
+            Trial balance: {usd(summary.trial.remainingUsd)} of {usd(summary.trial.capUsd)} left for
+            all your AI apps.
+          </p>
+        )
+      ) : null}
       {error ? (
         <p role="alert" className="text-bad">
           {error}

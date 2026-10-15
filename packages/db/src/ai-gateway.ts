@@ -177,6 +177,50 @@ export async function reserveAiHedge(
   return (res.rowCount ?? 0) > 0;
 }
 
+/** Trial spend of one TurbineH account across all of its AI apps (ADR-0053). */
+export interface AiTrialStatus {
+  spentUsd: number;
+  capUsd: number;
+  remainingUsd: number;
+  reached: boolean;
+}
+
+/** Cumulative USD spend of an account (0 when it never used the gateway). */
+export async function aiOwnerSpend(db: pg.Pool, ownerId: string): Promise<number> {
+  const res = await db.query<{ spent_usd: string }>(
+    "SELECT spent_usd FROM ai_owner_spend WHERE owner_id = $1",
+    [ownerId],
+  );
+  return Number(res.rows[0]?.spent_usd ?? 0);
+}
+
+/** Trial status for a spend and a cap (cap ≤ 0 = no cap). */
+export function trialStatus(spentUsd: number, capUsd: number): AiTrialStatus {
+  const capped = capUsd > 0;
+  return {
+    spentUsd,
+    capUsd,
+    remainingUsd: capped ? Math.max(0, capUsd - spentUsd) : Number.POSITIVE_INFINITY,
+    reached: capped && spentUsd >= capUsd,
+  };
+}
+
+/**
+ * Adds the cost of one gateway call to the account's spend, atomically (one upsert, safe under concurrent calls).
+ * Returns the new total.
+ */
+export async function addAiOwnerSpend(db: pg.Pool, ownerId: string, usd: number): Promise<number> {
+  const add = Number.isFinite(usd) && usd > 0 ? usd : 0;
+  const res = await db.query<{ spent_usd: string }>(
+    `INSERT INTO ai_owner_spend (owner_id, spent_usd) VALUES ($1, $2)
+     ON CONFLICT (owner_id) DO UPDATE SET spent_usd = ai_owner_spend.spent_usd + EXCLUDED.spent_usd,
+       updated_at = now()
+     RETURNING spent_usd`,
+    [ownerId, add.toFixed(8)],
+  );
+  return Number(res.rows[0]?.spent_usd ?? 0);
+}
+
 /** Housekeeping: minute counters older than a day. */
 export async function pruneAiMinuteCounters(db: pg.Pool): Promise<void> {
   await db.query("DELETE FROM ai_gateway_minute WHERE minute < now() - interval '1 day'");

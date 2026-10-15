@@ -1086,10 +1086,8 @@ function appendComponentsDoc(
           .join("\n")}\n`
       : "",
     filled.length
-      ? `## Written by the Backup Coder — NOT catalogue-verified\n\nNo approved catalogue component provides these capabilities, so a model wrote them. They are **not catalogue-verified**: no contract tests, security review or audit beyond this build's own gate. The code carries \`// turbineh:generated-backup\` and its own unit tests; review it before relying on it.\n\n${filled
-          .map(
-            (f) => `- \`${f.capability}\` (${f.trigger}) → \`${f.module}\` · tests \`${f.test}\``,
-          )
+      ? `## Written by TurbineH — NOT catalogue-verified\n\nNo approved catalogue component provides these capabilities, so a model wrote them. They are **not catalogue-verified**: no contract tests, security review or audit beyond this build's own gate. The code carries \`// turbineh:generated-backup\` and its own unit tests; review it before relying on it.\n\n${filled
+          .map((f) => `- \`${f.capability}\` → \`${f.module}\` · tests \`${f.test}\``)
           .join("\n")}\n`
       : "",
   ].filter(Boolean);

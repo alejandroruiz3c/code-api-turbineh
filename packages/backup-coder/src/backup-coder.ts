@@ -141,7 +141,8 @@ export class BackupCoder {
     const body = stripFences(res.choices[0]?.message.content ?? "");
     if (!body) throw new Error(`${name} returned empty output`);
     return {
-      code: `${GENERATED_BACKUP_HEADER} trigger=${req.trigger} model=${slot.ref}\n${body}\n`,
+      // No trigger ids or model names in delivered code (ADR-0053): the marker alone identifies generated code.
+      code: `${GENERATED_BACKUP_HEADER}\n${body}\n`,
       slot: name,
       model: res.model,
       usage: {

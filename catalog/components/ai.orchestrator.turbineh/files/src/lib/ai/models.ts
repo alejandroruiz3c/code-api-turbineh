@@ -1,14 +1,16 @@
 import { z } from "zod";
+import { UserFacingError } from "@/security/errors";
 
 /**
- * Orchestrator transport to open models (component ai.orchestrator.turbineh, ADR-0028/ADR-0029/ADR-0033). With
- * decider.ts, the only place in the app allowed to call a model (TurbineH rule turbineh.ai-direct-model-call).
+ * Transport of the TurbineH orchestrator client (component ai.orchestrator.turbineh). The only place in the app
+ * allowed to talk to a model endpoint (TurbineH rule turbineh.ai-direct-model-call).
  *
- * Model endpoint, chosen by configuration only:
- *  - default: the TurbineH AI gateway with this app's token (no model-provider or decider keys live in the app);
- *  - AI_BASE_URL (+ AI_API_KEY, AI_MODEL): any OpenAI-compatible endpoint, e.g. a self-hosted open model or the local
- *    mock used by the E2E tests. Safety, limits, usage and audit still run in the orchestrator.
- * Defaults are documented open models served in the EU.
+ * Two modes, chosen by configuration only:
+ *  - default: the TurbineH AI gateway with this app's token. TurbineH orchestrates every request on its side (route,
+ *    safety policy, next action); the app keeps its tools and runs them. No provider keys live in the app.
+ *  - local: AI_BASE_URL (+ AI_API_KEY, AI_MODEL) and no TURBINEH_AI_TOKEN — any OpenAI-compatible endpoint, e.g. a
+ *    self-hosted open model. A plain tool-calling loop without TurbineH orchestration. Safety, limits, usage and audit
+ *    still run in the app.
  */
 const empty = (v: unknown) => (v === "" ? undefined : v);
 const Env = z.object({
@@ -16,48 +18,29 @@ const Env = z.object({
   TURBINEH_AI_URL: z.preprocess(empty, z.url().default("https://software.turbineh.com/v1/ai")),
   /** This app's gateway token (tbh_ai_…): from the build page, or set by "Deploy for me". */
   TURBINEH_AI_TOKEN: z.preprocess(empty, z.string().min(1).optional()),
-  /** Small open model that decomposes each request into a plan for the decider. */
-  AI_STRUCTURER_MODEL: z.preprocess(empty, z.string().min(1).default("gemma-4-26b-a4b-it")),
-  /** Routes the decider can choose: name=model pairs, from cheapest to most capable. */
-  AI_ROUTES: z.preprocess(
-    empty,
-    z.string().default("fast=gemma-4-26b-a4b-it,balanced=deepseek-v4-flash-0731,frontier=glm-5.2"),
-  ),
   AI_EMBEDDING_MODEL: z.preprocess(empty, z.string().min(1).default("qwen3-embedding-8b")),
   /** Any OpenAI-compatible endpoint (base URL including its version path, e.g. https://host/v1). Optional. */
   AI_BASE_URL: z.preprocess(empty, z.url().optional()),
   /** Bearer key for AI_BASE_URL (never logged). */
   AI_API_KEY: z.preprocess(empty, z.string().min(1).optional()),
-  /** Model served by AI_BASE_URL; when set, every route and the planner use it. */
-  AI_MODEL: z.preprocess(empty, z.string().min(1).max(120).optional()),
+  /** Model served by AI_BASE_URL (local mode). */
+  AI_MODEL: z.preprocess(empty, z.string().min(1).max(120).default("default")),
   AI_TIMEOUT_MS: z.preprocess(
     empty,
     z.coerce.number().int().min(1000).max(290_000).default(60_000),
   ),
-  /**
-   * One attempt of a tool-calling model call (runAgent; short outputs), ms: a stuck request is abandoned and retried
-   * once instead of using the whole budget (ADR-0046). The TurbineH gateway hedges slow chat requests itself after
-   * ~4 s. Plain chat and embeddings (possibly long outputs) keep the whole budget per attempt.
-   */
-  AI_ATTEMPT_TIMEOUT_MS: z.preprocess(
-    empty,
-    z.coerce.number().int().min(1000).max(290_000).default(15_000),
-  ),
 });
 export type AiConfig = z.infer<typeof Env>;
 /** Parsed on every call (cheap), so tests and long-running servers always see the current environment. */
-export const aiConfig = (): AiConfig => {
-  const cfg = Env.parse(process.env);
-  return cfg.AI_MODEL ? { ...cfg, AI_STRUCTURER_MODEL: cfg.AI_MODEL } : cfg;
-};
+export const aiConfig = (): AiConfig => Env.parse(process.env);
 
-/** Where model calls go: an OpenAI-compatible endpoint from AI_BASE_URL, or the TurbineH AI gateway. */
+/** Where AI calls go: the TurbineH AI gateway, or an OpenAI-compatible endpoint (local mode). */
 export function modelEndpoint(cfg: AiConfig = aiConfig()): {
   baseUrl: string;
   key: string | undefined;
   kind: "gateway" | "openai-compatible";
 } {
-  if (cfg.AI_BASE_URL)
+  if (cfg.AI_BASE_URL && !cfg.TURBINEH_AI_TOKEN)
     return {
       baseUrl: cfg.AI_BASE_URL.replace(/\/$/, ""),
       key: cfg.AI_API_KEY,
@@ -73,45 +56,29 @@ export function modelEndpoint(cfg: AiConfig = aiConfig()): {
 /** Fixed vector size of the knowledge base (pgvector column); models with more dimensions are truncated (MRL). */
 export const EMBEDDING_DIMENSIONS = 1024;
 
-export interface Route {
-  name: string;
-  model: string;
-  description: string;
-}
-
-const ROUTE_DESCRIPTIONS: Record<string, string> = {
-  fast: "Short, simple or routine tasks: classification, extraction, short factual answers.",
-  balanced: "Most tasks: explanations, summaries, answers that combine several facts.",
-  frontier: "Hard tasks: long documents, careful multi-step reasoning, high-stakes answers.",
-};
-
-/** "fast=model-a,balanced=model-b" → routes (invalid entries are ignored; at least one is required). */
-export function parseRoutes(spec: string): Route[] {
-  const routes = spec
-    .split(",")
-    .map((pair) => pair.trim().split("="))
-    .filter(
-      (p): p is [string, string] =>
-        p.length === 2 && /^[a-z][a-z0-9-]{0,31}$/.test(p[0] ?? "") && Boolean(p[1]),
-    )
-    .map(([name, model]) => ({
-      name,
-      model: model.trim(),
-      description: ROUTE_DESCRIPTIONS[name] ?? name,
-    }));
-  if (routes.length === 0) throw new Error("AI_ROUTES has no valid name=model pair");
-  return routes;
-}
-
-/** Routes the decider can choose; with AI_MODEL every route uses that one model. */
-export const routes = (): Route[] => {
-  const cfg = aiConfig();
-  const all = parseRoutes(cfg.AI_ROUTES);
-  return cfg.AI_MODEL ? all.map((r) => ({ ...r, model: cfg.AI_MODEL as string })) : all;
-};
-
 /** Transport failure. The message is safe to log; provider responses are never echoed. */
-export class AiTransportError extends Error {}
+export class AiTransportError extends Error {
+  constructor(
+    message: string,
+    readonly status = 0,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The account behind this app's TurbineH AI token reached its trial limit. The message comes from TurbineH and is
+ * meant for the person using the app (who to contact to continue).
+ */
+export class AiTrialLimitError extends UserFacingError {
+  readonly code = "trial_limit_reached";
+}
+
+/** TurbineH refused the request as unsafe (its message is safe to show). */
+export class AiRefusedError extends UserFacingError {}
+
+const TRIAL_FALLBACK =
+  "You've reached the trial limit of the TurbineH orchestration. Contact alex.ruiz@turbineh.com to continue.";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -146,33 +113,20 @@ export interface ModelReply {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * Attempts per model call (ADR-0046): up to 3 for transient failures (network errors, rate limits, server errors), as
- * before; an attempt that hits its per-attempt timeout is retried once (a second stuck attempt ends the call).
- * Transient failures keep the retries they had; the per-attempt timeout is the new bound.
- */
-export const MODEL_ATTEMPTS = 3;
-export const MODEL_TIMEOUT_ATTEMPTS = 2;
+/** Attempts per request for transient transport failures (network errors, rate limits, server errors). */
+export const TRANSPORT_ATTEMPTS = 2;
 
 /**
- * POST with a per-attempt timeout (`attemptMs`, default the whole budget) and retries (see MODEL_ATTEMPTS), all
- * within the call's overall budget (`timeoutMs`, default AI_TIMEOUT_MS).
+ * POST to the configured endpoint within `timeoutMs` (default AI_TIMEOUT_MS). Transient failures are retried once;
+ * a trial limit or a refusal is raised at once with the message TurbineH sent for the person.
  */
-async function post(
-  path: string,
-  body: unknown,
-  timeoutMs?: number,
-  attemptMs?: number,
-): Promise<unknown> {
+export async function post(path: string, body: unknown, timeoutMs?: number): Promise<unknown> {
   const cfg = aiConfig();
   const endpoint = modelEndpoint(cfg);
   const deadline = Date.now() + (timeoutMs ?? cfg.AI_TIMEOUT_MS);
-  const perAttempt = attemptMs ?? Number.POSITIVE_INFINITY;
-  let timeouts = 0;
   for (let attempt = 0; ; attempt++) {
     // 0 = network failure, timeout or an unreadable body.
-    let status: number;
-    const signal = AbortSignal.timeout(Math.max(1, Math.min(perAttempt, deadline - Date.now())));
+    let status = 0;
     try {
       const res = await fetch(`${endpoint.baseUrl}${path}`, {
         method: "POST",
@@ -181,55 +135,33 @@ async function post(
           ...(endpoint.key ? { Authorization: `Bearer ${endpoint.key}` } : {}),
         },
         body: JSON.stringify(body),
-        signal,
+        signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
       });
       status = res.status;
       if (res.ok) return (await res.json()) as unknown;
-    } catch {
+      if (endpoint.kind === "gateway" && (status === 402 || status === 422)) {
+        const problem = (await res.json().catch(() => ({}))) as {
+          code?: unknown;
+          detail?: unknown;
+          title?: unknown;
+        };
+        const message = typeof problem.detail === "string" ? problem.detail : problem.title;
+        if (status === 402 || problem.code === "trial_limit_reached")
+          throw new AiTrialLimitError(
+            typeof message === "string" && message.includes("@") ? message : TRIAL_FALLBACK,
+          );
+        throw new AiRefusedError("This request can't be processed. Please rephrase it.");
+      }
+    } catch (err) {
+      if (err instanceof UserFacingError) throw err;
       status = 0;
-      if (signal.aborted) timeouts++;
     }
     const retryable = status === 0 || status === 429 || status >= 500;
-    const backoff = status === 429 ? 1000 * (attempt + 1) : 500 * 2 ** attempt;
-    if (
-      !retryable ||
-      attempt + 1 >= MODEL_ATTEMPTS ||
-      timeouts >= MODEL_TIMEOUT_ATTEMPTS ||
-      deadline - Date.now() < backoff + 1000
-    )
-      throw new AiTransportError(`model endpoint failed (${status || "network"})`);
+    const backoff = status === 429 ? 1000 : 400;
+    if (!retryable || attempt + 1 >= TRANSPORT_ATTEMPTS || deadline - Date.now() < backoff + 1000)
+      throw new AiTransportError(`AI endpoint failed (${status || "network"})`, status);
     await sleep(backoff);
   }
-}
-
-const ChatResponse = z.object({
-  choices: z.array(z.object({ message: z.object({ content: z.string().nullable() }) })).min(1),
-  usage: z
-    .object({ prompt_tokens: z.number(), completion_tokens: z.number() })
-    .partial()
-    .optional(),
-});
-
-export async function chat(
-  model: string,
-  messages: ChatMessage[],
-  opts: { json?: boolean; maxTokens?: number } = {},
-): Promise<ModelReply> {
-  const data = ChatResponse.safeParse(
-    await post("/chat/completions", {
-      model,
-      messages,
-      temperature: 0.2,
-      max_tokens: opts.maxTokens ?? 1200,
-      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
-    }),
-  );
-  if (!data.success) throw new AiTransportError("model endpoint returned an unexpected response");
-  return {
-    text: data.data.choices[0]?.message.content ?? "",
-    inputTokens: Math.round(data.data.usage?.prompt_tokens ?? 0),
-    outputTokens: Math.round(data.data.usage?.completion_tokens ?? 0),
-  };
 }
 
 const ToolCallSchema = z.object({
@@ -237,7 +169,7 @@ const ToolCallSchema = z.object({
   type: z.literal("function").default("function"),
   function: z.object({ name: z.string().min(1).max(64), arguments: z.string().max(20_000) }),
 });
-const ToolChatResponse = z.object({
+const ChatResponse = z.object({
   choices: z
     .array(
       z.object({
@@ -258,36 +190,32 @@ export interface ToolModelReply extends ModelReply {
   toolCalls: ToolCall[];
 }
 
-/** One step of a tool-calling conversation (used only by runAgent in agent.ts). */
+/** One model call on the OpenAI-compatible endpoint (local mode only). */
 export async function chatWithTools(
-  model: string,
   messages: AgentChatMessage[],
   tools: ModelTool[],
-  /** `toolChoice`: a tool name forces that call (the decider chose it); default "auto". */
-  opts: { maxTokens?: number; timeoutMs?: number; toolChoice?: string } = {},
+  opts: { json?: boolean; maxTokens?: number; timeoutMs?: number } = {},
 ): Promise<ToolModelReply> {
-  const data = ToolChatResponse.safeParse(
+  const data = ChatResponse.safeParse(
     await post(
       "/chat/completions",
       {
-        model,
+        model: aiConfig().AI_MODEL,
         messages,
         temperature: 0.1,
-        max_tokens: opts.maxTokens ?? 800,
+        max_tokens: opts.maxTokens ?? 1200,
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         ...(tools.length > 0
           ? {
               tools: tools.map((t) => ({
                 type: "function",
                 function: { name: t.name, description: t.description, parameters: t.parameters },
               })),
-              tool_choice: opts.toolChoice
-                ? { type: "function", function: { name: opts.toolChoice } }
-                : "auto",
+              tool_choice: "auto",
             }
           : {}),
       },
       opts.timeoutMs,
-      aiConfig().AI_ATTEMPT_TIMEOUT_MS,
     ),
   );
   if (!data.success) throw new AiTransportError("model endpoint returned an unexpected response");

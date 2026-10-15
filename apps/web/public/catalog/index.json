@@ -327,18 +327,18 @@
     },
     {
       "id": "ai.orchestrator.turbineh",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "status": "approved",
       "category": "ai",
-      "package": "pkg:generic/turbineh/ai.orchestrator.turbineh@0.3.0",
+      "package": "pkg:generic/turbineh/ai.orchestrator.turbineh@0.4.0",
       "license": "Apache-2.0",
       "provides": [
         "ai.orchestrator"
       ],
-      "does": "TurbineH component #001: every AI call of the app is orchestrated — a small open model plans the request, TurbineH orchestration decides the route (which open model), whether it is acceptable and which tool to use, and the chosen open model answers; structured output validated with zod, embeddings for knowledge bases, usage per workspace",
+      "does": "TurbineH component #001: every AI call of the app is orchestrated by TurbineH (route, safety policy, next action) through a thin client; the app keeps its tools and runs them, structured output validated with zod, embeddings for knowledge bases, usage per workspace",
       "doesNot": "Does not host models or store prices; does not let app code call model providers directly (TurbineH rule turbineh.ai-direct-model-call)",
       "title": "TurbineH AI orchestrator and agent runtime (orchestrate, embed, runAgent)",
-      "summary": "Every AI call of the app goes through here. orchestrate() answers or returns structured output; embed() builds knowledge-base vectors; runAgent() is the tool-calling runtime: the model may only act through typed tools, irreversible tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. TurbineH orchestration decides each turn's first action (which tool, or a reply) and the model writes only its arguments or the reply. The model endpoint is the TurbineH AI gateway or any OpenAI-compatible endpoint configured by environment variables.",
+      "summary": "Every AI call of the app goes through here. orchestrate() answers or returns structured output; embed() builds knowledge-base vectors; runAgent() is the tool-calling runtime: the model may only act through typed tools, irreversible tools wait for the person's explicit confirmation, and safety, limits, usage and audit apply to every step. The app ships a thin client: TurbineH orchestrates every step on its side (route, safety policy, next action) and returns a reply or tool calls, which the app runs itself. Without a TurbineH token, any OpenAI-compatible endpoint configured by environment variables can be used instead (plain tool loop).",
       "useCases": [
         "Booking/appointment assistant that checks availability and books, moves or cancels (with domain.bookings.turbineh)",
         "Support assistant that looks up orders or tickets and escalates to a person",
@@ -368,14 +368,14 @@
           "cost": "One extra turn before create/move/cancel/send"
         },
         {
-          "choice": "Reply to a confirmed action from a template (the tool's `message`, else the summary + reference), no decider or model call (ADR-0046)",
-          "gain": "The confirmation turn costs no model call and answers in tool time",
+          "choice": "Reply to a confirmed action from the tool's result (its `message`, else the summary + reference), no model call",
+          "gain": "The confirmation turn answers in tool time",
           "cost": "The reply is the tool's text (return a person-facing `message` in the person's language); failures still go to the model"
         },
         {
-          "choice": "One decision per turn (route + unsafe) instead of per step",
-          "gain": "Lower latency and cost",
-          "cost": "The route does not change inside a turn"
+          "choice": "Orchestration runs at TurbineH; the app runs its tools",
+          "gain": "Tools, data and confirmations stay in the app; no provider keys in the app",
+          "cost": "Needs the TurbineH AI gateway (or AI_BASE_URL for a plain local loop)"
         },
         {
           "choice": "No SDK, plain fetch through models.ts",
@@ -392,12 +392,12 @@
         {
           "name": "TURBINEH_AI_TOKEN",
           "default": "",
-          "description": "Per-app gateway token (tbh_ai_…); also enables routing decisions"
+          "description": "Per-app gateway token (tbh_ai_…); every request is orchestrated by TurbineH"
         },
         {
           "name": "AI_BASE_URL",
           "default": "",
-          "description": "Any OpenAI-compatible endpoint (base URL with /v1); replaces the gateway for model calls"
+          "description": "Any OpenAI-compatible endpoint (base URL with /v1); used only when TURBINEH_AI_TOKEN is empty"
         },
         {
           "name": "AI_API_KEY",
@@ -407,27 +407,12 @@
         {
           "name": "AI_MODEL",
           "default": "",
-          "description": "Model served by AI_BASE_URL; used by every route"
-        },
-        {
-          "name": "AI_ROUTES",
-          "default": "fast=…,balanced=…,frontier=…",
-          "description": "Open models per route (gateway names)"
+          "description": "Model served by AI_BASE_URL"
         },
         {
           "name": "AI_TIMEOUT_MS",
           "default": "60000",
-          "description": "Per model call (whole budget, one retry included)"
-        },
-        {
-          "name": "AI_ATTEMPT_TIMEOUT_MS",
-          "default": "15000",
-          "description": "Per attempt of a runAgent model call; a stuck attempt is retried once (ADR-0046)"
-        },
-        {
-          "name": "AI_DECIDER_ATTEMPT_TIMEOUT_MS",
-          "default": "5000",
-          "description": "Per attempt of a decision; retried once, then the default route (ADR-0046)"
+          "description": "Per orchestrated request (one transport retry included)"
         },
         {
           "name": "AI_PUBLIC_MAX_INPUT_CHARS",
@@ -523,7 +508,8 @@
         "Tool arguments validated with Zod; unknown tools refused; errors shown to people never contain internals",
         "Per-user rate limit and daily token allowances per user/workspace; public assistant adds per-IP limits and message size",
         "Answers scanned for secrets (and PII when AI_REDACT_PII=true); usage and an audit row (content hashed) for every call",
-        "Keys only from the environment; the Semgrep rule turbineh.ai-direct-model-call flags any model call outside src/lib/ai/{models,decider}.ts"
+        "Keys only from the environment; the Semgrep rule turbineh.ai-direct-model-call flags any model call outside src/lib/ai/models.ts",
+        "When the TurbineH trial of the account is used up, the gateway answers 402 and the person sees its message (who to contact), never a generic failure"
       ],
       "guarantees": [
         {
@@ -531,8 +517,12 @@
           "test": "tests/unit/ai-agent.test.ts › never executes an irreversible tool before an explicit confirmation"
         },
         {
-          "claim": "A confirmed action that ran is answered from a template without a model call; a failed one goes to the model",
-          "test": "tests/unit/ai-agent.test.ts › a confirmed action that fails goes to the model, which explains it"
+          "claim": "A confirmed action is run by the app and reported to TurbineH, failed or not",
+          "test": "tests/unit/ai-agent.test.ts › a confirmed action that fails is reported as failed"
+        },
+        {
+          "claim": "The trial limit message reaches the person instead of a generic failure",
+          "test": "tests/unit/ai-agent.test.ts › shows TurbineH's trial limit message instead of a generic failure"
         },
         {
           "claim": "Invalid arguments and unknown tools are refused; runs stop at the step limit",
@@ -543,7 +533,7 @@
           "test": "tests/unit/ai-agent.test.ts › refuses prompt injection before any model call"
         },
         {
-          "claim": "AI_BASE_URL selects an OpenAI-compatible endpoint, otherwise the gateway",
+          "claim": "AI_BASE_URL without a TurbineH token selects an OpenAI-compatible endpoint, otherwise the gateway",
           "test": "tests/unit/ai-agent.test.ts › uses an OpenAI-compatible endpoint from the environment, else the TurbineH gateway"
         }
       ],
@@ -6828,7 +6818,7 @@
         {
           "what": "Adaptation model for non-derivable glue",
           "where": "apps/worker/src/models.ts adaptationCoderFromEnv",
-          "how": "Backup Coder slots; GLM-5.2 first, ADAPTATION_MODEL_ORDER=primary-first reverses"
+          "how": "TurbineH adaptation slots (internal order, ADAPTATION_MODEL_ORDER=primary-first reverses)"
         },
         {
           "what": "Foundation modules copied when a package imports them",

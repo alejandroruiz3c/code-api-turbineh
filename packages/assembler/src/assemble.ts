@@ -457,18 +457,18 @@ PostgreSQL (\`pnpm db:local\`).
 # Components
 
 Every component below comes from the TurbineH catalog (status \`approved\`), resolved deterministically for this
-stack. "Decider" columns are the probabilities returned by the decision model for this build.
+stack.
 
-| Capability | Component | Package | License | Decider: best | covers | risk |
-|---|---|---|---|---|---|---|
+| Capability | Component | Package | License |
+|---|---|---|---|
 ${selected
   .map(
     (s) =>
-      `| ${s.capability} | ${s.component.id} | ${s.component.pkg.name}@${s.component.pkg.version} | ${s.component.license.detected} | ${s.why.pBest.toFixed(2)} | ${s.why.covers.toFixed(2)} | ${s.why.risk.toFixed(2)} |`,
+      `| ${s.capability} | ${s.component.id} | ${s.component.pkg.name}@${s.component.pkg.version} | ${s.component.license.detected} |`,
   )
   .join("\n")}
 
-${gaps.length ? `## Not covered by a catalog component\n\n${gaps.map((g) => `- \`${g.capability}\` (trigger ${g.trigger})`).join("\n")}\n` : ""}`;
+${gaps.length ? `## Not covered by a catalog component\n\n${gaps.map((g) => `- \`${g.capability}\``).join("\n")}\n` : ""}`;
   const architecture = `${MD}
 # Architecture
 

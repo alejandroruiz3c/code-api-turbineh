@@ -639,7 +639,8 @@ export function initialGuide(input: {
     criteria: input.criteria.map((text) => ({ text, status: "unverified" as const })),
     gaps: input.gaps.map((g) => ({
       capability: g.capability,
-      reason: `No verified catalog component was integrated (${g.trigger}). Add it yourself or ask for it in a new build.`,
+      reason:
+        "No verified catalog component was integrated. Add it yourself or ask for it in a new build.",
     })),
     gate: null,
     files,

@@ -1,11 +1,14 @@
 import {
   aiAppSummary,
+  aiOwnerSpend,
   type BuildRow,
   createAiAppToken,
   getBuild,
   revokeAiAppToken,
+  trialStatus,
 } from "@turbineh/db";
-import { appTokenDefaults } from "@/server/ai-gateway";
+import { appTokenDefaults, TRIAL_CONTACT, trialExempt } from "@/server/ai-gateway";
+import { gatewayEnvConfig } from "@/server/ai-gateway-deps";
 import { type Caller, getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
@@ -63,14 +66,26 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   );
 }
 
-/** GET /v1/builds/{id}/ai-token — token prefix and usage (calls and tokens; never the token, never prices). */
+/**
+ * GET /v1/builds/{id}/ai-token — token prefix and usage (calls and tokens; never the token, never prices), plus the
+ * account's remaining trial balance of the TurbineH orchestration (ADR-0053; null when the account has no cap).
+ */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await ctx.params;
   const r = await ownedAiBuild(id);
   if (!r.ok) return r.error;
-  return Response.json(await aiAppSummary(db, r.caller.ownerId, id), {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const cfg = gatewayEnvConfig();
+  const ownerId = r.caller.ownerId;
+  const trial = trialExempt(cfg, ownerId)
+    ? null
+    : {
+        ...trialStatus(await aiOwnerSpend(db, ownerId), cfg.AI_TRIAL_CAP_USD),
+        contact: TRIAL_CONTACT,
+      };
+  return Response.json(
+    { ...(await aiAppSummary(db, ownerId, id)), trial },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 /** DELETE /v1/builds/{id}/ai-token — revokes the token (the app's AI stops until a new one is created). */

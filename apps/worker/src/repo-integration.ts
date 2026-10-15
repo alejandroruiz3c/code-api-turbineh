@@ -391,7 +391,7 @@ async function writeGlue(
     });
     // Drop the model reference from the header (no provider names in client repositories).
     const body = r.code.split("\n").slice(1).join("\n").trim();
-    const code = `// turbineh:generated-backup trigger=T3 (TurbineH adaptation model)\n${body.startsWith(GENERATED_HEADER) ? "" : `${GENERATED_HEADER}\n`}${body}\n`;
+    const code = `// turbineh:generated-backup\n${body.startsWith(GENERATED_HEADER) ? "" : `${GENERATED_HEADER}\n`}${body}\n`;
     const looksSecret = /(sk_live|ghp_|gho_|github_pat_|-----BEGIN)/.test(code);
     if (!new RegExp(req.mustMatch).test(code) || looksSecret || code.length > 8000)
       return { content: req.fallback, by: "fallback" };

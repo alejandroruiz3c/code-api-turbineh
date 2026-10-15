@@ -18,6 +18,19 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   instead of being built as a CRUD app.
 - Agent instructions (`turbineh init` block, Claude Code skill, MCP instructions) and `/use` state the rule and how to
   pick explicit components.
+- AI orchestration (ADR-0053): a $2 trial per TurbineH account across all its AI apps (`AI_TRIAL_CAP_USD`). Every
+  gateway call adds its internal cost to the account (atomic); once the cap is reached the gateway answers 402
+  `trial_limit_reached` — "You've reached the trial limit of the TurbineH orchestration ($2). Contact
+  alex.ruiz@turbineh.com to continue." — and generated apps show that message (assistant widget, `/api/assistant`
+  402). The build page shows the remaining trial balance.
+- Component `ai.orchestrator.turbineh` 0.4.0 (ADR-0053) is a thin client: each agent step and each orchestrated request
+  is one call to the gateway (`/v1/ai/v1/agent`, `/v1/ai/v1/orchestrate`), which orchestrates it; tools, confirmations,
+  safety guards, usage and audit stay in the app. `AI_BASE_URL` without a TurbineH token runs a plain local tool loop.
+- The orchestration engine is private (`private/orchestration`, git-ignored; see `docs/PRIVATE_ORCHESTRATION.md`); the
+  public repo keeps its interface and an open minimal fallback (`packages/orchestration`). Production web builds and
+  `infra/staging/deploy.sh` refuse to ship without the private engine.
+- Delivered apps no longer contain trigger ids, model names or decision probabilities (Backup Coder header,
+  COMPONENTS.md, report metrics and footer, capability package docs, handover gaps).
 
 ### Added
 
