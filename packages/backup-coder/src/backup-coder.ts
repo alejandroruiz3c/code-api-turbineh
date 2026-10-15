@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import OpenAI from "openai";
+import { BackupPolicyError, checkBackupCode } from "./policy.js";
 
 /** Triggers from PLAN §2.4. The policy that fires them lives in the calling module, in code. */
 export const TRIGGERS = {
@@ -65,12 +66,23 @@ export class BackupCoder {
     private readonly opts: { timeoutMs?: number; reasoningEffort?: string } = {},
   ) {}
 
-  /** Generates the gap with the primary model; on any error the secondary takes over automatically. */
+  /**
+   * Generates the gap with the primary model; on any error the secondary takes over automatically. Output that
+   * breaks the deterministic policy (ADR-0055: non-cryptographic hashes, demo/placeholder code) counts as an error:
+   * the secondary gets one try, then the gap fails and the caller reports it as not covered.
+   */
   async fill(req: GapRequest): Promise<GapResult> {
+    const baseline = [...(req.context.contracts ?? [])].join("\n");
+    const checked = async (slot: CoderSlot, name: "primary" | "secondary") => {
+      const res = await this.#run(slot, name, req);
+      const violations = checkBackupCode(res.code, baseline);
+      if (violations.length > 0) throw new BackupPolicyError(violations);
+      return res;
+    };
     try {
-      return await this.#run(this.primary, "primary", req);
+      return await checked(this.primary, "primary");
     } catch (err) {
-      const res = await this.#run(this.secondary, "secondary", req);
+      const res = await checked(this.secondary, "secondary");
       return { ...res, failedOver: true, primaryError: (err as Error).message };
     }
   }

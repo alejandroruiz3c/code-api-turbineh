@@ -2,6 +2,7 @@ import type { Decider } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
+  backupCodeMarkdown,
   businessRulesMarkdown,
   improvementText,
   reportMarkdown,
@@ -143,5 +144,16 @@ describe("business rules section (T3)", () => {
       "⬜ **Loan**: At most 2 open loans per borrower (on create) — not implemented",
     );
     expect(businessRulesMarkdown({ businessRules: [] })).toBe("");
+  });
+});
+
+describe("Backup Coder section (ADR-0055)", () => {
+  it("labels every Backup Coder file as not catalogue-verified", () => {
+    const md = backupCodeMarkdown({
+      backupCode: [{ capability: "data.money", label: "money", file: "src/backup/data-money.ts" }],
+    });
+    expect(md).toContain("not catalogue-verified");
+    expect(md).toContain("`src/backup/data-money.ts`");
+    expect(backupCodeMarkdown({})).toBe("");
   });
 });

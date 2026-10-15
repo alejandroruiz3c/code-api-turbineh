@@ -9866,7 +9866,7 @@
       "provides": [
         "jobs.queue"
       ],
-      "does": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, cron-triggered runner endpoint",
+      "does": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, cron-triggered runner endpoint",
       "doesNot": "Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler)",
       "title": "turbineh jobs.queue",
       "summary": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, cron-triggered runner endpoint. Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler). Postgres-backed background job queue featuring typed jobs, exponential backoff retries, and safe concurrent claiming via a runner endpoint.",
@@ -9957,11 +9957,24 @@
         {
           "claim": "The system registers typed jobs and rejects unsafe type names",
           "test": "files/tests/unit/jobs.test.ts › registers typed jobs and rejects unsafe type names"
+        },
+        {
+          "claim": "A job left running by a crashed runner is recovered when its lease expires",
+          "test": "files/tests/unit/jobs.test.ts › recovers a running job whose lease expired: claimed again with a new fencing token"
+        },
+        {
+          "claim": "A heartbeat renews the lease while the handler runs",
+          "test": "files/tests/unit/jobs.test.ts › renews the lease with a heartbeat while the handler runs"
+        },
+        {
+          "claim": "A runner whose lease was taken over never writes its result (fencing token)",
+          "test": "files/tests/unit/jobs.test.ts › fences a runner whose lease was taken over: its result is not written and the handler is aborted"
         }
       ],
       "limits": [
         "Max attempts per job is capped at 20",
-        "Backoff delay is capped at 1 hour"
+        "Backoff delay is capped at 1 hour",
+        "Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)"
       ],
       "example": "import { defineJob, enqueue } from '@/lib/jobs';\n\ndefineJob('email', { schema: {}, run: async (p, ctx) => {} }, async (p, ctx) => {});\n\nenqueue('email', {}, { organizationId: '123' });",
       "keywords": [

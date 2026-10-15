@@ -27,6 +27,8 @@ const config: NextConfig = {
     "@turbineh/storage",
   ],
   serverExternalPackages: ["pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
+  // install.sh pins the published CLI version and SHA-256 (ADR-0055): its release.json travels with the function.
+  outputFileTracingIncludes: { "/install.sh": ["./public/cli/release.json"] },
   // /cli and /docs were merged into /use (how to use: people, coding agents, API); old links land on their section.
   async redirects() {
     return [

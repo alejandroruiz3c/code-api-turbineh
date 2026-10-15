@@ -4,13 +4,22 @@ import { join } from "node:path";
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readEnv } from "@turbineh/shared";
-import { BackupCoder, GENERATED_BACKUP_HEADER, backupCoderFromEnv, recordGap } from "./index.js";
+import {
+  BackupCoder,
+  BackupPolicyError,
+  GENERATED_BACKUP_HEADER,
+  backupCoderFromEnv,
+  recordGap,
+} from "./index.js";
 
 let server: Server;
 let base = "";
 
 beforeAll(async () => {
-  server = createServer((_req, res) => {
+  server = createServer((incoming, res) => {
+    const content = incoming.url?.includes("/bad/")
+      ? "```ts\nexport function hashResult(s: string): number {\n  let h = 0;\n  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;\n  return h;\n}\n```"
+      : "```ts\nexport const x = 1;\n```";
     res.writeHead(200, { "content-type": "application/json" });
     res.end(
       JSON.stringify({
@@ -22,7 +31,7 @@ beforeAll(async () => {
           {
             index: 0,
             finish_reason: "stop",
-            message: { role: "assistant", content: "```ts\nexport const x = 1;\n```" },
+            message: { role: "assistant", content },
           },
         ],
         usage: { prompt_tokens: 12, completion_tokens: 5, total_tokens: 17 },
@@ -77,6 +86,22 @@ describe("BackupCoder", () => {
     const file = recordGap(dir, req, await coder.fill(req));
     const rec = JSON.parse(readFileSync(file, "utf8"));
     expect(rec).toMatchObject({ capability: "data.csv-import", trigger: "T1", build_id: "b1" });
+  });
+
+  it("refuses output that breaks the policy from both slots (ADR-0055)", async () => {
+    const coder = new BackupCoder(
+      { ref: "p:m", baseURL: `${base}/bad`, apiKey: "k" },
+      { ref: "s:m", baseURL: `${base}/bad`, apiKey: "k" },
+    );
+    await expect(coder.fill(req)).rejects.toBeInstanceOf(BackupPolicyError);
+    // The secondary takes over when only the primary's output is refused.
+    const mixed = new BackupCoder(
+      { ref: "p:m", baseURL: `${base}/bad`, apiKey: "k" },
+      { ref: "s:m", baseURL: base, apiKey: "k" },
+    );
+    const res = await mixed.fill(req);
+    expect(res.slot).toBe("secondary");
+    expect(res.primaryError).toMatch(/non-cryptographic-hash/);
   });
 
   it("refuses to start without both slots configured", () => {

@@ -6,6 +6,7 @@ import { readZip } from "@turbineh/engine";
 import type { CapabilitySummary, FlowResult, Plan } from "@turbineh/shared";
 import { api, sleep } from "./api.js";
 import { applyPullRequest } from "./github.js";
+import { readHidden, readStdin } from "./secret-input.js";
 import {
   baseUrl,
   ensureProject,
@@ -46,6 +47,13 @@ export interface Ctx {
   confirm: (question: string) => Promise<boolean>;
   /** Progress events for agents (`--json` prints one per line before the result; MCP sends them as progress). */
   emit?: (event: Record<string, unknown>) => void;
+  /** Secret input (login): stdin and a hidden terminal prompt. Defaults to the process's; replaced in tests. */
+  secrets?: {
+    interactive: boolean;
+    stdin: () => Promise<string>;
+    hidden: (prompt: string) => Promise<string>;
+    warn: (message: string) => void;
+  };
 }
 
 interface PlanResponse {
@@ -60,21 +68,55 @@ const workspaceOf = (cwd: string) => readProject(cwd)?.workspace;
 
 // ── login / init ──────────────────────────────────────────────────────────────────────────────────────────
 
-export async function login(c: Ctx): Promise<CommandResult> {
-  const t = c.args[0] ?? process.env.TURBINEH_TOKEN;
-  if (!t)
-    fail(
-      "usage",
-      "No token given.",
-      "Run `turbineh login <token>` with the token from your invitation.",
+export const LOGIN_HOW =
+  "Run `turbineh login` and paste the token from your invitation (it is not shown), pipe it with " +
+  "`turbineh login --with-token < token.txt`, or set TURBINEH_TOKEN.";
+
+/**
+ * Where the token comes from (ADR-0055), never the shell history: `--with-token` (stdin), TURBINEH_TOKEN, else a
+ * hidden prompt on a terminal. A positional token still works for now, with a deprecation warning.
+ */
+async function loginToken(c: Ctx): Promise<{ token: string; source: string }> {
+  const io = c.secrets ?? {
+    interactive: Boolean(process.stdin.isTTY),
+    stdin: () => readStdin(),
+    hidden: (prompt: string) => readHidden(prompt),
+    warn: (m: string) => process.stderr.write(`${m}\n`),
+  };
+  if (c.flags["with-token"] === true) {
+    if (io.interactive)
+      fail(
+        "usage",
+        "Pipe the token on stdin with --with-token (or run `turbineh login` to type it without echo).",
+        "Run `turbineh login --with-token < token.txt` or `printenv TURBINEH_TOKEN | turbineh login --with-token`.",
+      );
+    return { token: await io.stdin(), source: "stdin" };
+  }
+  const positional = c.args[0];
+  if (positional) {
+    io.warn(
+      `${yellow("Deprecated:")} \`turbineh login <token>\` leaves the token in your shell history and the process ` +
+        "list. Run `turbineh login` (hidden prompt), `turbineh login --with-token < token.txt`, or set TURBINEH_TOKEN.",
     );
+    return { token: positional, source: "argument (deprecated)" };
+  }
+  if (process.env.TURBINEH_TOKEN)
+    return { token: process.env.TURBINEH_TOKEN, source: "TURBINEH_TOKEN" };
+  if (io.interactive && !c.json)
+    return { token: await io.hidden("Access token (input hidden): "), source: "prompt" };
+  return fail("usage", "No token given.", LOGIN_HOW);
+}
+
+export async function login(c: Ctx): Promise<CommandResult> {
+  const { token: t, source } = await loginToken(c);
+  if (!t) fail("usage", "No token given.", LOGIN_HOW);
   const url = typeof c.flags.url === "string" ? c.flags.url : readUserConfig().url;
   const path = writeUserConfig({ token: t as string, ...(url ? { url } : {}) });
   await api("/v1/capabilities?q=&limit=1");
   return {
     ok: true,
     command: "login",
-    data: { configured: path, url: baseUrl() },
+    data: { configured: path, url: baseUrl(), source },
     lines: [
       `${green("✔")} Token saved in ${path} (only readable by you) and accepted by ${baseUrl()}.`,
     ],

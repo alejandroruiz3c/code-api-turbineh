@@ -57,7 +57,7 @@ Exit codes: 0 green · 2 usage · 3 a decision for the user (re-run with \`--app
 running → \`turbineh resume <id> --json\` (also after an interrupted call) · 5 generation failed (rephrase the spec) ·
 6 committed but the gate is not green · 7 local conflict (the message names the files).
 
-Not installed: \`curl -fsSL ${url}/install.sh | sh\` (token in \`TURBINEH_TOKEN\`).
+Not installed: \`curl -fsSL ${url}/install.sh -o install.sh && sh install.sh\` (pinned version, SHA-256 verified; token in \`TURBINEH_TOKEN\`).
 `;
 }
 

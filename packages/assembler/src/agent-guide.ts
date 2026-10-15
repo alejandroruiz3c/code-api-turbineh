@@ -80,9 +80,19 @@ export interface PackageGuide {
     ok: boolean;
     verifiedAt: string;
     environment: string;
-    steps: { name: string; ok: boolean; ms: number }[];
+    /** `note`: why a step shows no or a shared duration (ADR-0055), e.g. scans run concurrently with the build. */
+    steps: { name: string; ok: boolean; ms: number; note?: string }[];
+    /** Gate steps that did not run, each with the reason (ADR-0055). */
+    skipped?: { name: string; reason: string }[];
+    /** Gate reports shipped in this package (`.turbineh/reports/`: gate.json, SARIF, dependency list, JUnit). */
+    reports?: string[];
     findings: GuideGateFinding[];
   } | null;
+  /**
+   * Code written by the Backup Coder (a model) because no approved component provides it: NOT catalogue-verified
+   * (ADR-0055). Only this build's gate checked it.
+   */
+  backup?: { capability: string; file: string; catalogueVerified: false; note: string }[];
   files: { area: string; files: GuideFile[] }[];
   extend: { what: string; where: string; how: string }[];
   theme: { file: string; tokens: Record<string, string> };
@@ -494,7 +504,7 @@ Recipe \`${g.recipe.id}\`: ${g.recipe.description}. Build \`${g.buildId}\`. ${st
 Read this file instead of the whole repository. The same facts are machine-readable in \`turbineh.json\`
 (TurbineH CLI: \`turbineh left\` prints what is left, \`turbineh verify\` runs the cheap checks with file:line and fix,
 before handing over \`turbineh verify --full\` runs the gate's security and policy checks here;
-install: \`curl -fsSL https://software.turbineh.com/install.sh | sh\`).
+install: \`curl -fsSL https://software.turbineh.com/install.sh -o install.sh && sh install.sh\`, pinned and SHA-256 verified).
 
 ## What is left
 
@@ -511,6 +521,18 @@ ${crit || "| (none) | |"}
 ${
   g.gate
     ? `${g.gate.steps.map((s) => `${s.ok ? "pass" : "FAIL"} ${s.name}${s.ms ? ` (${(s.ms / 1000).toFixed(1)} s)` : ""}`).join(" · ")}
+${[
+  ...g.gate.steps.filter((s) => s.note).map((s) => `\n- ${s.name}: ${s.note}`),
+  ...(g.gate.skipped ?? []).map((s) => `\n- ${s.name}: ${s.reason}`),
+  ...(g.gate.reports?.length
+    ? [`\n- Reports: ${g.gate.reports.map((r) => `\`${r}\``).join(", ")}`]
+    : []),
+].join("")}
+${
+  g.backup?.length
+    ? `\n**Written by the Backup Coder — not catalogue-verified:** ${g.backup.map((b) => `\`${b.file}\` (${b.capability})`).join(", ")}. A model wrote this code because no approved component provides it; only this build's gate checked it. Review it before relying on it.\n`
+    : ""
+}
 
 ${
   g.gate.findings.length
@@ -645,6 +667,8 @@ export function verifiedGuide(
     gaps?: string[];
     /** Exact failures with owner and fix when the gate failed (ADR-0037 §D1). */
     failures?: GuideFailure[];
+    /** Backup Coder files kept in the package: labelled not catalogue-verified (ADR-0055). */
+    backup?: { capability: string; file: string }[];
   },
 ): PackageGuide | null {
   const path = join(outDir, GUIDE_FILE);
@@ -726,6 +750,16 @@ export function verifiedGuide(
     criteria,
     gaps,
     gate: input.gate,
+    ...(input.backup?.length
+      ? {
+          backup: input.backup.map((b) => ({
+            capability: b.capability,
+            file: b.file,
+            catalogueVerified: false as const,
+            note: "Written by the Backup Coder (a model) because no approved catalogue component provides it; not catalogue-verified, only this build's gate checked it.",
+          })),
+        }
+      : {}),
     files,
     theme: themeOf(outDir),
     env: envOf(outDir),

@@ -7,6 +7,14 @@ import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 import { advisoryFix, findingFix } from "./fixes.js";
 import {
+  dependencyList,
+  skippedSteps,
+  stepNote,
+  writeGateReports,
+  type DependencyEntry,
+  type SkippedStep,
+} from "./reports.js";
+import {
   PNPM_STORE_VOLUME,
   POSTGRES_IMAGE,
   run,
@@ -69,6 +77,8 @@ export interface StepResult {
   ok: boolean;
   ms: number;
   detail: string;
+  /** Why the step shows no (or a shared) duration (ADR-0055): never an unexplained 0 ms. */
+  note?: string;
 }
 
 export interface VerifyResult {
@@ -86,6 +96,8 @@ export interface VerifyResult {
     static: StaticFinding[];
   };
   scannedAt: string;
+  /** Gate steps that did not run, with the reason (ADR-0055). */
+  skipped?: SkippedStep[];
 }
 
 /** Files that are never shipped to users: test code, test configuration and examples. */
@@ -367,15 +379,13 @@ export async function verify(
   }
   progress({ name: "scans", state: "start" });
   const scanStart = performance.now();
+  let scanMs = 0;
   const scans = Promise.all([secretsScan(dir), staticScan(dir), osvScan(dir)]);
   scans.then(
-    ([sec]) =>
-      progress({
-        name: "scans",
-        state: "done",
-        ok: sec.ok,
-        ms: Math.round(performance.now() - scanStart),
-      }),
+    ([sec]) => {
+      scanMs = Math.round(performance.now() - scanStart);
+      progress({ name: "scans", state: "done", ok: sec.ok, ms: scanMs });
+    },
     () => undefined,
   );
   // Awaited later: mark it handled now so a failure surfaces at the await instead of crashing the process.
@@ -453,7 +463,7 @@ export async function verify(
   steps.push({
     name: "static",
     ok: staticFindings !== null && !staticFindings.some((f) => f.severity === "ERROR"),
-    ms: 0,
+    ms: scanMs,
     detail:
       staticFindings === null
         ? "static scanner gave no result (retried once)"
@@ -466,7 +476,7 @@ export async function verify(
     ok: !advisories.some(
       (a) => a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH"),
     ),
-    ms: 0,
+    ms: scanMs,
     detail: advisories.map((a) => `${a.id} ${a.pkg} ${a.severity} ${a.scope}`).join("\n"),
   });
   steps.push({
@@ -475,9 +485,14 @@ export async function verify(
     ms: 0,
     detail: blockingLicenses.join("\n"),
   });
-  return {
-    ok: steps.every((x) => x.ok),
-    steps,
+  const installFromBase = main.tail.split("\n").some((l) => l.trim() === "INSTALL_FROM_BASE");
+  const explained = steps.map((x) => {
+    const note = stepNote(x, { installFromBase });
+    return note ? { ...x, note } : x;
+  });
+  const result: VerifyResult = {
+    ok: explained.every((x) => x.ok),
+    steps: explained,
     findings: {
       secrets: secrets.ok ? 0 : 1,
       advisories,
@@ -485,7 +500,33 @@ export async function verify(
       static: staticFindings ?? [],
     },
     scannedAt: new Date().toISOString(),
+    skipped: skippedSteps(explained),
   };
+  try {
+    writeGateReports(dir, {
+      ok: result.ok,
+      scannedAt: result.scannedAt,
+      steps: explained.map(({ name, ok, ms, note }) => ({
+        name,
+        ok,
+        ms,
+        ...(note ? { note } : {}),
+      })),
+      skipped: result.skipped ?? [],
+      findings: result.findings,
+      dependencies: lockDependencies(dir),
+      semgrepVersion: SEMGREP_VERSION,
+    });
+  } catch {
+    // Reports never change a verification.
+  }
+  return result;
+}
+
+/** Every lockfile package with its scope (the package's dependency list, ADR-0055). */
+export function lockDependencies(dir: string): DependencyEntry[] {
+  const lock = parse(readFileSync(join(dir, "pnpm-lock.yaml"), "utf8")) as Lock;
+  return dependencyList(Object.keys(lock.packages ?? {}), productionClosure(lock));
 }
 
 /**
@@ -570,28 +611,30 @@ step() { n=$1; shift; s=$(now); echo "PROGRESS begin $n" >&2; "$@" > /tmp/$n.log
 failed_lines() { grep -E '^ +[0-9]+\) |^ *(Error|AssertionError|TypeError|ReferenceError)|^ *FAIL |❯ (tests|src)/|error TS[0-9]+|^ +[0-9]+:[0-9]+ +error ' /tmp/$1.log | head -12 | cut -c1-220 | sed "s/^/FAILED_LINE $1 /"; }
 only_required() { env $(for v in $ONLY_REQUIRED_UNSET; do printf -- '-u %s ' "$v"; done) "$@"; }
 if [ -d /opt/base/node_modules ] && [ "$(sha256sum /src/pnpm-lock.yaml | cut -c1-12)" = "$BASE_HASH" ]; then
-  W=/opt/base; s=$(now); (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -); echo "STEP install 0 $(( $(now) - s ))"
+  W=/opt/base; s=$(now); (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -); echo "STEP install 0 $(( $(now) - s ))"; echo "INSTALL_FROM_BASE"
 else
   W=/tmp/app; mkdir -p $W; (cd /src && tar --exclude=./node_modules --exclude=./.next -cf - .) | (cd $W && tar -xf -)
   cd $W && step install pnpm install --offline --frozen-lockfile || exit 1
 fi
 cd $W
+# Gate reports shipped in the package (ADR-0055): JUnit from the test runners, next to gate.json written by the gate.
+R=/src/.turbineh/reports; mkdir -p $R 2>/dev/null; rm -f $R/unit.junit.xml $R/e2e.junit.xml 2>/dev/null
 step migrations pnpm -s db:generate || exit 1
 [ -d drizzle ] && cp -r drizzle /src/ 2>/dev/null
 node -e "const fs=require('fs'),p=require('path');const r='node_modules/.pnpm';const re=/\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-NC|UNLICENSED)\b/i;let t=0;for(const d of fs.readdirSync(r)){const nm=p.join(r,d,'node_modules');if(!fs.existsSync(nm))continue;for(const a of fs.readdirSync(nm)){const ns=a.startsWith('@')?fs.readdirSync(p.join(nm,a)).map(b=>a+'/'+b):[a];for(const n of ns){try{const j=JSON.parse(fs.readFileSync(p.join(nm,n,'package.json'),'utf8'));t++;const l=typeof j.license==='string'?j.license:(j.license&&j.license.type)||'UNKNOWN';if(re.test(l))console.log('LICENSE_BAD '+j.name+'@'+j.version+' '+l)}catch{}}}}console.log('LICENSE_TOTAL '+t)" > /tmp/licenses.txt 2>/dev/null
 ( step lint pnpm -s lint > /tmp/out.lint ) &
 ( step typecheck pnpm -s typecheck > /tmp/out.typecheck ) &
-( step unit only_required pnpm -s test > /tmp/out.unit ) &
+( step unit only_required pnpm -s test --reporter=default --reporter=junit --outputFile.junit=$R/unit.junit.xml > /tmp/out.unit ) &
 ( step build only_required pnpm -s build > /tmp/out.build ) &
 wait
 cat /tmp/out.lint /tmp/out.typecheck /tmp/out.unit /tmp/out.build
 grep -q "STEP lint 0" /tmp/out.lint && grep -q "STEP typecheck 0" /tmp/out.typecheck && grep -q "STEP unit 0" /tmp/out.unit && grep -q "STEP build 0" /tmp/out.build || exit 1
 if [ -n "$LOCAL_DB" ]; then
   # Zero-setup database: exactly what a coding agent without PostgreSQL runs.
-  step e2e env -u DATABASE_URL sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+  step e2e env -u DATABASE_URL PLAYWRIGHT_JUNIT_OUTPUT_NAME=$R/e2e.junit.xml sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line,junit" || exit 1
 else
   for i in $(seq 1 40); do node -e "require('net').connect(5432,process.env.DB_HOST).on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" && break; sleep 0.5; done
-  step e2e sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line" || exit 1
+  step e2e env PLAYWRIGHT_JUNIT_OUTPUT_NAME=$R/e2e.junit.xml sh -c "pnpm -s db:migrate && pnpm -s test:e2e --reporter=line,junit" || exit 1
 fi
 # Screen previews for the result page (best effort: never changes the verification outcome).
 if [ -f playwright/.auth/owner.json ]; then

@@ -39,7 +39,7 @@ export async function api<T>(
         message: body?.detail ?? body?.title ?? `Request failed (${res.status}).`,
         action:
           res.status === 401
-            ? "Run `turbineh login <token>` with the token from your invitation."
+            ? "Run `turbineh login` (the token from your invitation, typed without echo) or set TURBINEH_TOKEN."
             : "Run the same command again; if it keeps failing, check `turbineh status`.",
       },
     );

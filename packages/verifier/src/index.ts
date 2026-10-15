@@ -4,3 +4,4 @@ export * from "./secrets.js";
 export * from "./failures.js";
 export * from "./fixes.js";
 export * from "./local-gate.js";
+export * from "./reports.js";

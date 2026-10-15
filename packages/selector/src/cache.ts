@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { SelectionInput } from "./select.js";
 
 /** Bump when the selection questions or policy change: older cache entries stop matching. */
-const SELECTION_CACHE_VERSION = 1;
+const SELECTION_CACHE_VERSION = 2; // 2: catalogue fallback for approved providers (ADR-0055)
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { readStdin } from "./secret-input.js";
 import { api, sleep } from "./api.js";
 import { ensureProject, fail } from "./context.js";
 import type { Ctx } from "./commands.js";
@@ -42,12 +43,6 @@ function openBrowser(url: string): void {
   } catch {
     // The URL is printed anyway.
   }
-}
-
-async function readStdin(): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const c of process.stdin) chunks.push(c as Buffer);
-  return Buffer.concat(chunks).toString("utf8").trim();
 }
 
 export async function connect(c: Ctx): Promise<CommandResult> {

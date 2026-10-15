@@ -6,6 +6,26 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Backup Coder limits (ADR-0055, audit F09/F08): the Backup Coder never reimplements a capability an approved
+  catalogue component provides (a hand-written cron scheduler shipped next to `jobs.scheduler.croner`): the selector
+  keeps approved providers the decider judged as not covering unless they are risky, and `fillGap` refuses catalogued
+  capabilities in code. Its output is refused deterministically when it contains a non-cryptographic hash (a 32-bit
+  string hash was used for idempotency keys) or demo/placeholder code; idempotency and deduplication need persistence
+  and a unique constraint, so they are reported as not covered instead of generated. Backup Coder code is labelled
+  "not catalogue-verified" in COMPONENTS.md, TURBINEH_REPORT.md, AGENTS.md and `turbineh.json`.
+- `jobs.queue.turbineh` (ADR-0055, audit F07): leases with expiry, heartbeat and a fencing token; jobs left `running`
+  by a crashed runner are reclaimed or failed (`LeaseExpired`); a runner whose lease was taken over never writes its
+  result. Behaviour contract in the component's `acceptance.yaml`, tested with an in-memory store.
+- CLI login and installer (ADR-0055, audit F22): `turbineh login` asks for the token without echo, `--with-token`
+  reads stdin, or `TURBINEH_TOKEN`; the positional token is deprecated (warning). `install.sh` installs a pinned version
+  and verifies its SHA-256 before installing; the CLI build publishes `turbineh-<version>.mjs`, `SHA256SUMS` and
+  `release.json`. /use shows download, then run, then `turbineh login`.
+- Gate reports in the delivered package (ADR-0055, audit F19): `.turbineh/reports/` with `gate.json` (every step's
+  time, a note for steps without their own duration, skipped steps with the reason), `static.sarif`, a lockfile
+  dependency list with scopes and JUnit files from vitest and Playwright. `turbineh.json` and AGENTS.md carry the same
+  notes. The `braces` advisory GHSA-vfj7-8cjw-p6xm has no fixed version yet (3.0.3 is the latest and last affected);
+  it stays a development-only, non-blocking alert.
+
 - Flows (ADR-0051): the flow page always reaches an end state. A capability package for a repository (production flow
   `470bc606`, finished in 1.5 s) stayed on "Assembling verified components · Packaging" because the page rendered a
   result only for an app ZIP or a failure. It now shows "Package ready (not verified yet: it is verified inside your

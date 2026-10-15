@@ -44,8 +44,10 @@ const STATE_ORDER: FlowState[] = [
 
 // ── Coding agents ────────────────────────────────────────────────────────────────────────────────────────────────
 
-const INSTALL = `export TURBINEH_TOKEN=…   # the token from your invitation: keep it in the environment, never commit or print it
-curl -fsSL ${SITE}/install.sh | sh`;
+const INSTALL = `curl -fsSL ${SITE}/install.sh -o install.sh   # read it first if you like
+sh install.sh     # pinned CLI version; its SHA-256 is verified before anything is installed (${SITE}/cli/SHA256SUMS)
+turbineh login    # paste the token from your invitation: not shown, never in your shell history
+# coding agents without a terminal prompt: set TURBINEH_TOKEN in their environment (never commit or print it)`;
 
 const INIT = `cd your-project
 turbineh init --agent claude    # or: --agent codex · --agent cursor
@@ -86,8 +88,8 @@ const MORE: [cmd: string, what: string][] = [
   ["turbineh inspect <id>", "What a capability includes, needs and was verified with"],
   ["turbineh status", "Flows, states, pending build and integrations"],
   [
-    "turbineh login <token>",
-    "Save the token instead of TURBINEH_TOKEN (it stays in your shell history)",
+    "turbineh login --with-token < token.txt",
+    "Save the token from stdin instead of TURBINEH_TOKEN (never pass it as an argument)",
   ],
 ];
 

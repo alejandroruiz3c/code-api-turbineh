@@ -1,14 +1,38 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { recordGap, type BackupCoder, type Trigger } from "@turbineh/backup-coder";
+import {
+  needsPersistence,
+  recordGap,
+  type BackupCoder,
+  type Trigger,
+} from "@turbineh/backup-coder";
 import { CODE_RULES, type Usage } from "./model.js";
 
 /**
  * Policy (code): the Backup Coder only fills self-contained helper capabilities. Sign-in, authorization, security,
- * payments, email and UI gaps are never generated — they are reported to the user instead.
+ * payments, email and UI gaps are never generated — they are reported to the user instead. Capabilities whose
+ * guarantee needs persistence and a unique constraint (idempotency, deduplication) are never a pure helper either
+ * (ADR-0055, audit F08): they are reported as not covered.
  */
 const FILLABLE = ["data.", "files.", "ops.", "jobs."];
-export const isFillable = (capability: string) => FILLABLE.some((p) => capability.startsWith(p));
+export const isFillable = (capability: string) =>
+  FILLABLE.some((p) => capability.startsWith(p)) && !needsPersistence(capability);
+
+/**
+ * Policy (code, ADR-0055, audit F09): the Backup Coder never reimplements a capability an approved catalogue
+ * component provides. `catalogued` = every capability in `relations.provides` of an approved manifest.
+ */
+export const backupMayFill = (capability: string, catalogued: ReadonlySet<string>) =>
+  isFillable(capability) && !catalogued.has(capability);
+
+export class CataloguedCapabilityError extends Error {
+  constructor(readonly capability: string) {
+    super(
+      `${capability} is provided by an approved catalogue component: the Backup Coder never reimplements it`,
+    );
+    this.name = "CataloguedCapabilityError";
+  }
+}
 
 export interface GapToFill {
   capability: string;
@@ -39,8 +63,18 @@ export async function fillGap(
   dir: string,
   gap: GapToFill,
   coder: BackupCoder,
-  ctx: { buildId: string; summary: string; allowedImports: string[]; gapsDir: string },
+  ctx: {
+    buildId: string;
+    summary: string;
+    allowedImports: string[];
+    gapsDir: string;
+    /** Capabilities approved catalogue components provide (ADR-0055): never filled by the Backup Coder. */
+    catalogued: ReadonlySet<string>;
+  },
 ): Promise<FilledGap> {
+  if (ctx.catalogued.has(gap.capability)) throw new CataloguedCapabilityError(gap.capability);
+  if (!isFillable(gap.capability))
+    throw new Error(`${gap.capability} is not a capability the Backup Coder may fill`);
   const moduleRel = backupFile(gap.capability);
   const request = {
     buildId: ctx.buildId,

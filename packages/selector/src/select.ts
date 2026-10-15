@@ -22,6 +22,12 @@ export interface CapabilityDecision {
   risk: Record<string, number>;
   /** Backup Coder triggers (PLAN §2.4): T1 no candidate, T2 none covers the capability. */
   trigger: "T1" | "T2" | null;
+  /**
+   * ADR-0055: the decider judged no candidate as covering, but approved catalogue components declare the capability
+   * (`relations.provides`, proven by their contract tests) and none is risky — they are ranked anyway, so the Backup
+   * Coder never rewrites what the catalogue already covers (audit F09: a hand-written cron scheduler next to croner).
+   */
+  catalogueFallback?: boolean;
 }
 
 export interface SelectionResult {
@@ -118,7 +124,14 @@ export async function selectComponents(
     const eligible = cs.filter(
       (c) => (covers[c.id] ?? 0) >= POLICY.coversMin && (risk[c.id] ?? 1) <= POLICY.riskMax,
     );
-    const ranked = [...eligible].sort(
+    // Policy (code, ADR-0055): coverage of a capability is declared by the approved manifest; the decider's
+    // "covers" only orders the candidates. Only a risk answer can keep an approved provider out.
+    const safeApproved = cs.filter(
+      (c) =>
+        c.status === "approved" && c.provides.includes(cap) && (risk[c.id] ?? 1) <= POLICY.riskMax,
+    );
+    const catalogueFallback = eligible.length === 0 && safeApproved.length > 0;
+    const ranked = [...(catalogueFallback ? safeApproved : eligible)].sort(
       (a, b) =>
         (pBest[b.id] ?? 0) - (pBest[a.id] ?? 0) || (covers[b.id] ?? 0) - (covers[a.id] ?? 0),
     );
@@ -130,6 +143,7 @@ export async function selectComponents(
       covers,
       risk,
       trigger: ranked.length === 0 ? "T2" : null,
+      ...(catalogueFallback ? { catalogueFallback: true } : {}),
     });
   }
   return {
