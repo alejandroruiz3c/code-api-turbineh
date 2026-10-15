@@ -6,7 +6,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { deciderFromEnv } from "@turbineh/decider";
+import { decisionIO } from "@turbineh/decider";
+import { engine as decisionEngine } from "@turbineh/decider/engine";
 import { selectComponents } from "@turbineh/selector";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
 import { candidatesFor, loadCatalog, type CardMode } from "./catalog-source.js";
@@ -126,7 +127,7 @@ const label = process.argv[2] ?? "run";
 const cardsAt = process.argv.indexOf("--cards");
 const cards = (cardsAt > 0 ? process.argv[cardsAt + 1] : "compact") as CardMode;
 loadLocalEnv(repoRoot);
-const decider = deciderFromEnv(readEnv());
+const decider = decisionEngine.fromEnv(readEnv(), decisionIO);
 const catalog = loadCatalog(join(repoRoot, "catalog/components"), { cards });
 const rows = [];
 for (const c of CASES) {

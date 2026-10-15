@@ -1,4 +1,4 @@
-import { choice, type Decider } from "@turbineh/decider";
+import type { Decider } from "@turbineh/decider";
 import type { BuildSpec } from "../build-spec.js";
 import { mentions, nameWords, nounPattern, plural, sentences, singular } from "./text.js";
 
@@ -14,8 +14,8 @@ import { mentions, nameWords, nounPattern, plural, sentences, singular } from ".
  * | configuration  | limits, thresholds, settings                      | a settings page (no list of records to delete)  |
  * | log            | technical records (emails sent, deliveries)       | none, unless the request asks to show it        |
  *
- * Deterministic first; only entities the rules mark `unsure` go to the decider (one Choice each, one batched request),
- * accepted at `ENTITY_KIND_CONFIDENCE`; below it the code's default stands.
+ * Deterministic first; only entities the rules mark `unsure` go to the resource decision engine (ADR-0058); an entity
+ * it does not answer with confidence keeps the code's default.
  */
 export type EntityKind = "business" | "relationship" | "event" | "configuration" | "log";
 export type RelationshipShape = "tags" | "join" | "membership" | "child";
@@ -40,9 +40,6 @@ export interface EntityModel {
 
 type Entity = BuildSpec["entities"][number];
 type Field = Entity["fields"][number];
-
-/** Calibration v1 (2026-10-13, `bench/fidelity/entity-kinds.ts`): a decider answer below this keeps the code default. */
-export const ENTITY_KIND_CONFIDENCE = 0.7;
 
 const LOG_SUBJECTS = new Set([
   "email",
@@ -371,70 +368,54 @@ function classifyOne(
   };
 }
 
-const KIND_OPTIONS: Record<EntityKind, string> = {
-  business: "records people create, list, edit and work on (their own page)",
-  relationship:
-    "a tag, a link between two records, a membership or a child list managed from its parent",
-  event: "an append-only history of changes to another record",
-  configuration: "settings, limits or thresholds that configure the app",
-  log: "a technical record of something the app did (emails sent, deliveries)",
+/** The UI each kind gets. */
+const UI_OF_KIND: Record<EntityKind, EntityUi> = {
+  business: "crud",
+  relationship: "parent",
+  event: "timeline",
+  configuration: "settings",
+  log: "none",
 };
 
 /**
- * Asks the decider about the entities the rules were unsure of (one batched request, one Choice each). Answers below
- * `ENTITY_KIND_CONFIDENCE`, unknown answers and decider errors keep the code's classification.
+ * Asks the decision engine about the entities the rules were unsure of. Entities it does not answer, unknown kinds
+ * and engine errors keep the code's classification.
  */
 export async function decideUnsureKinds(
   models: EntityModel[],
   spec: Pick<BuildSpec, "entities">,
   prompt: string,
-  decider: Decider | null | undefined,
+  decider: Pick<Decider, "entityKinds"> | null | undefined,
 ): Promise<{ models: EntityModel[]; asked: number; latencyMs: number }> {
   const unsure = models.filter((m) => m.unsure);
   if (!decider || unsure.length === 0) return { models, asked: 0, latencyMs: 0 };
-  const questions = Object.fromEntries(
-    unsure.map((m, i) => [
-      `kind_${i}`,
-      choice(
-        `In the app described in \`prompt\`, what is the data entity \`entities.${m.name}\`?`,
-        KIND_OPTIONS,
-        { includeNone: false },
-      ),
-    ]),
-  );
-  const state = {
-    prompt,
-    entities: Object.fromEntries(
-      spec.entities.map((e) => [e.name, e.fields.map((f) => `${f.name}: ${f.type}`).join(", ")]),
-    ),
-  };
   try {
-    const d = await decider.ask(state, questions);
+    const v = await decider.entityKinds({
+      prompt,
+      entities: Object.fromEntries(
+        spec.entities.map((e) => [e.name, e.fields.map((f) => `${f.name}: ${f.type}`).join(", ")]),
+      ),
+      unsure: unsure.map((m) => m.name),
+    });
+    if (!v) return { models, asked: 0, latencyMs: 0 };
     const byName = new Map<string, EntityModel>();
-    unsure.forEach((m, i) => {
-      const a = d.answers[`kind_${i}`];
-      if (a?.type !== "choice" || a.confidence < ENTITY_KIND_CONFIDENCE) return;
-      const kind = a.choice as EntityKind;
-      if (!(kind in KIND_OPTIONS)) return;
+    for (const m of unsure) {
+      const a = v.kinds[m.name];
+      if (!a || !(a.kind in UI_OF_KIND)) continue;
+      const kind = a.kind as EntityKind;
       byName.set(m.name, {
         ...m,
         kind,
-        ui: {
-          business: "crud",
-          relationship: "parent",
-          event: "timeline",
-          configuration: "settings",
-          log: "none",
-        }[kind] as EntityUi,
+        ui: UI_OF_KIND[kind],
         decidedBy: "decider",
         confidence: a.confidence,
-        reason: `decider: ${KIND_OPTIONS[kind]} (confidence ${a.confidence.toFixed(2)})`,
+        reason: a.reason,
       });
-    });
+    }
     return {
       models: models.map((m) => byName.get(m.name) ?? m),
       asked: unsure.length,
-      latencyMs: d.meta.latencyMs,
+      latencyMs: v.latencyMs,
     };
   } catch {
     return { models, asked: unsure.length, latencyMs: 0 };

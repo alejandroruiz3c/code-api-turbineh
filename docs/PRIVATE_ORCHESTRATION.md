@@ -1,18 +1,24 @@
-# Private packages (orchestration engine)
+# Private packages (orchestration engines)
 
 TurbineH's orchestration (the server side of component #001, `ai.orchestrator.turbineh`) is proprietary and lives
 outside this public repository (ADR-0053), in its own private repository, consumed at a pinned release (ADR-0057). This
 repository contains its interface and an open minimal fallback in `packages/orchestration`; everything builds, tests
 and runs without the private engine.
 
+The resource decision engine (which recipe, capabilities, components, app, scope, rules and evidence a build uses, and
+the AI gateway's hedging policy) follows the same mechanism (ADR-0058): interface, public decision API client and open
+minimal fallback in `packages/decider` (`@turbineh/decider`), the engine in the private package `resource-decider`.
+
 ## Layout
 
 ```
 code-api-turbineh/                    public repository
 ├── packages/orchestration/           @turbineh/orchestration: interface + open fallback (public)
+├── packages/decider/                 @turbineh/decider: decision interface + SDK client + open fallback (public)
 ├── infra/private/versions.json       pins: { repo, tag, commit } per private package (no code)
 ├── infra/private/sync.sh             checks the pins out into private/<name>
-└── private/agent-orchestrator/       checkout of the private agent orchestrator, git-ignored here (proprietary)
+├── private/agent-orchestrator/       checkout of the private agent orchestrator, git-ignored here (proprietary)
+└── private/resource-decider/         checkout of the private resource decision engine, git-ignored (proprietary)
 ```
 
 `infra/private/versions.json` is a map of private packages (`packages.<name>`), each checked out at `private/<name>`:
@@ -27,7 +33,10 @@ code-api-turbineh/                    public repository
 
 The web app picks the engine at build time (`apps/web/orchestration.config.mjs`): when
 `private/agent-orchestrator/src/index.ts` exists, `@turbineh/orchestration/engine` is aliased to it (Turbopack and
-Vitest); otherwise the open fallback is used.
+Vitest); otherwise the open fallback is used. Likewise `apps/web/resource-decider.config.mjs` aliases
+`@turbineh/decider/engine` to `private/resource-decider/src/index.ts` (else to the open fallback). The worker resolves
+`@turbineh/decider/engine` at startup (Node loader: the private entry by path when present) and logs which edition
+decides.
 
 ## Setup (operators)
 
@@ -64,13 +73,20 @@ a new release, then the pin: deploys refuse an engine whose vendored contract di
   deploy otherwise.
 - Vercel production builds (`VERCEL_ENV=production`) and any build with `TURBINEH_REQUIRE_PRIVATE_ORCHESTRATION=1`
   fail when the private engine is missing. `TURBINEH_ALLOW_OPEN_ORCHESTRATION=1` builds the open fallback on purpose.
-- `.vercelignore` uploads `private/<name>` without `.git`, `node_modules`, `bench` and `coverage` (the legacy
-  `private/orchestration` location is never uploaded). Workers do not need the agent orchestrator.
+- `.vercelignore` uploads `private/<name>` without `.git`, `node_modules`, `bench`, `coverage`, `services` and
+  `integration` (the legacy `private/orchestration` location is never uploaded). Workers do not need the agent
+  orchestrator; they need the resource decision engine (`requiredBy: web, worker`): the rsync ships
+  `private/resource-decider`, and the systemd units set `TURBINEH_REQUIRE_PRIVATE_ORCHESTRATION=1`, so a worker
+  without it refuses to start.
 
 ## Rules
 
 - Never copy private sources into the public tree, issues, PRs, docs or generated apps; only pins live here.
-- The engine has no runtime dependencies and imports only types from `packages/orchestration/src/types.ts`; a change
-  to that interface is made in the public repository first, then in the private engine.
+- The engines have no runtime dependencies and import only types from the public interfaces
+  (`packages/orchestration/src/types.ts`, `packages/decider/src/contract.ts`); a change to an interface is made in the
+  public repository first, then in the private engine.
+- The resource decision engine decides only choices among discrete options; deterministic questions (compatibility,
+  licences, permissions, test results) stay public code. Its own checks: `pnpm check` in its repository, and
+  `pnpm test:integration` inside `private/resource-decider` (the decision tests through the public sources).
 - The gateway (public) keeps authentication, the trial cap, limits, the model allow-list, billing and error mapping;
   the engine only decides and calls models through `EngineIO`.

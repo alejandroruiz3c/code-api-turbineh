@@ -35,7 +35,8 @@ import {
   requeueStaleRepoIntegrations,
   type BuildRow,
 } from "@turbineh/db";
-import { deciderFromEnv } from "@turbineh/decider";
+import { decisionIO } from "@turbineh/decider";
+import { engine as decisionEngine } from "@turbineh/decider/engine";
 import { createLogger, loadLocalEnv, mailerFromEnv, readEnv } from "@turbineh/shared";
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
 import { buildCost } from "./cost.js";
@@ -65,7 +66,9 @@ const log = createLogger("worker");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const db = getPool(env.DATABASE_URL);
 const storage = storageFromEnv(process.env, join(repoRoot, "artifacts"));
-const decider = deciderFromEnv(env);
+const decider = decisionEngine.fromEnv(env, decisionIO);
+// Which resource decision engine decides (ADR-0058): production refuses to start without the private one.
+log.info("decision engine", { edition: decisionEngine.edition, version: decisionEngine.version });
 /** Platform email (ADR-0056); null without RESEND_API_KEY (one warning, emails skipped). */
 const mailer = mailerFromEnv();
 const workerId = `${hostname()}-${process.pid}`;

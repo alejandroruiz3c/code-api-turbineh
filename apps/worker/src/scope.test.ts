@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BuildSpec } from "@turbineh/compiler";
-import type { Answer, Decider } from "@turbineh/decider";
+import { openDecider, type Decider } from "@turbineh/decider";
 import { detectStack, isGapNotice } from "@turbineh/engine";
 import { describe, expect, it } from "vitest";
 import { componentPlan, flowPlan } from "./product.js";
@@ -9,17 +9,13 @@ import { coveredPart, gateRequest, withScope } from "./scope.js";
 
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
 
-const decider = (outside = 0.1): Decider =>
-  ({
-    id: "open",
-    capabilities: { maxChoiceOptions: 10, maxScoreLevels: 10, maxStateTokens: 32_000 },
-    ask: async (_state: unknown, questions: Record<string, unknown>) => ({
-      answers: Object.fromEntries(
-        Object.keys(questions).map((k) => [k, { type: "noul", noul: outside } as Answer]),
-      ),
-      meta: { backend: "open", model: "fake", latencyMs: 1, requests: 1, usage: {} },
-    }),
-  }) as unknown as Decider;
+const decider = (outside = false): Decider => ({
+  ...openDecider,
+  scopeOutside: async (input) => ({
+    outside: Object.fromEntries(input.requirements.map((r) => [r.index, outside])),
+    meta: { model: "fake", latencyMs: 1 },
+  }),
+});
 
 const spec = (over: Partial<BuildSpec>): BuildSpec =>
   ({
@@ -138,7 +134,7 @@ describe("scope gate in the worker (ADR-0052), against the real catalogue", () =
       prompt: "autonomous social media publisher",
       spec: spec({ recipe: "out_of_scope" }),
       componentsDir,
-      decider: decider(1),
+      decider: decider(true),
       explicit: ids,
     });
     expect(v.status).toBe("covered");

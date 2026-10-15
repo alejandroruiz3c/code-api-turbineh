@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSpecSchema } from "./build-spec.js";
-import { CAPABILITY_QUESTIONS, PARTS } from "./parts.js";
+import { PARTS } from "./parts.js";
 
 const valid = {
   recipe: "saas-crud",
@@ -52,11 +52,6 @@ describe("BuildSpec", () => {
 
   it("requires a reason when out of scope", () => {
     expect(buildSpecSchema.safeParse({ ...valid, recipe: "out_of_scope" }).success).toBe(false);
-  });
-
-  it("asks one atomic decider question per optional capability", () => {
-    expect(Object.keys(CAPABILITY_QUESTIONS).length).toBeGreaterThan(10);
-    expect(Object.keys(CAPABILITY_QUESTIONS)).not.toContain("security.headers");
   });
 
   it("keeps every generated part small and bounded", () => {

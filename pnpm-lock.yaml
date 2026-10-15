@@ -191,9 +191,6 @@ importers:
 
   bench:
     dependencies:
-      '@turbineh/decider':
-        specifier: workspace:*
-        version: link:../packages/decider
       '@turbineh/engine':
         specifier: workspace:*
         version: link:../packages/engine
@@ -357,9 +354,6 @@ importers:
 
   packages/decider:
     dependencies:
-      '@turbineh/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@typesafe-ai/sdk':
         specifier: 0.6.0
         version: 0.6.0

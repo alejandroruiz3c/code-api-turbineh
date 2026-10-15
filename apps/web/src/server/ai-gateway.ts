@@ -1,4 +1,6 @@
 import type { AdmitResult, AiApp } from "@turbineh/db";
+import type { HedgeConfig, HedgeOutcome, HedgingPolicy } from "@turbineh/decider";
+import { engine } from "@turbineh/decider/engine";
 import { z } from "zod";
 import { callCostUsd } from "./ai-cost";
 
@@ -8,11 +10,10 @@ import { callCostUsd } from "./ai-cost";
  * limits, a per-app rate limit and daily token quota, and records usage per app for billing. Prompts, outputs and
  * keys are never logged, and provider errors are never echoed.
  *
- * Chat completions can be hedged (ADR-0046; off by default: measured no gain on the agent bench, see the ADR). When
- * AI_GATEWAY_HEDGE_AFTER_MS is set and the provider has not answered after the model's hedge delay (about its
- * p90), or failed fast, one duplicate request goes to the same model (or to the next allowed one); the first valid
- * answer wins and the other request is cancelled. At most one hedge per request, within a per-app daily budget; the
- * app is billed only for the answer it receives, and hedges are recorded in the usage metrics (cost stays internal).
+ * Chat completions can be hedged (ADR-0046; off by default): when and where a duplicate request goes is the hedging
+ * policy of the resource decision engine (ADR-0058; the open fallback never hedges). At most one hedge per request,
+ * within a per-app daily budget; the app is billed only for the answer it receives, and hedges are recorded in the
+ * usage metrics (cost stays internal).
  */
 
 export type GatewayKind = "chat" | "embeddings" | "decider";
@@ -196,7 +197,7 @@ export function usageOf(
 }
 
 /** Which request answered when a hedge was fired. */
-export type HedgeOutcome = "primary-won" | "hedge-won";
+export type { HedgeOutcome };
 
 export interface GatewayDeps {
   verifyToken: (token: string) => Promise<AiApp | null>;
@@ -218,6 +219,8 @@ export interface GatewayDeps {
   addSpend: (ownerId: string, usd: number) => Promise<void>;
   fetch: typeof fetch;
   config: GatewayConfig;
+  /** Hedging policy (the installed decision engine's by default). */
+  hedging?: HedgingPolicy;
 }
 
 export const problem = (status: number, title: string, extra: Record<string, unknown> = {}) =>
@@ -338,7 +341,14 @@ export async function forward(
   );
   const result =
     kind === "chat"
-      ? await forwardHedged(app, body, target, deps, ms)
+      ? await (deps.hedging ?? engine.hedging).run({
+          model: String(body.model),
+          config: hedgeConfig(cfg),
+          timeoutMs: ms,
+          attempt: (model, signals) =>
+            forwardOnce(deps.fetch, target, { ...body, model }, signals, validChat),
+          reserve: () => deps.reserveHedge(app, String(body.model)),
+        })
       : await forwardOnce(deps.fetch, target, body, [AbortSignal.timeout(ms)]);
   if (result.ok) {
     // Billed: only the tokens of the answer the app receives, on the model that wrote it.
@@ -450,117 +460,10 @@ async function forwardOnce(
   return { ok: false, status: signals.some((x) => x.aborted) ? 0 : 502, model, hedge: "none" };
 }
 
-/** Hedge delay of a model (ms; 0 = no hedging). */
-export function hedgeDelay(cfg: GatewayConfig, model: string): number {
-  for (const pair of list(cfg.AI_GATEWAY_HEDGE_AFTER_MS_BY_MODEL)) {
-    const [m, ms] = pair.split("=");
-    if (m?.trim() === model && ms !== undefined && /^\d+$/.test(ms.trim())) return Number(ms);
-  }
-  return cfg.AI_GATEWAY_HEDGE_AFTER_MS;
-}
-
-/** The model a hedge goes to: the same one, or the next allowed chat model when configured. */
-export function hedgeModel(cfg: GatewayConfig, model: string): string {
-  if (cfg.AI_GATEWAY_HEDGE_TARGET === "same") return model;
-  const models = list(cfg.AI_GATEWAY_CHAT_MODELS);
-  return models[models.indexOf(model) + 1] ?? model;
-}
-
-/**
- * Chat request with at most one hedge. The hedge fires when no answer arrived within the model's hedge delay, or
- * when the first request failed with a network error or a server error before that; it needs a unit of the app's
- * hedge budget. The first valid answer wins and the other request is aborted. Both requests carry the same validated
- * body (same tools, same output cap); a hedge to the next model only changes `model`.
- */
-async function forwardHedged(
-  app: AiApp,
-  body: Record<string, unknown>,
-  upstream: { url: string; key: string },
-  deps: GatewayDeps,
-  timeoutMs: number = deps.config.AI_GATEWAY_TIMEOUT_MS,
-): Promise<Forwarded> {
-  const cfg = deps.config;
-  const model = String(body.model);
-  const delay = hedgeDelay(cfg, model);
-  // One deadline for the whole request: a hedge never extends it.
-  const deadline = AbortSignal.timeout(timeoutMs);
-  const primaryCancel = new AbortController();
-  const hedgeCancel = new AbortController();
-  const primary = forwardOnce(
-    deps.fetch,
-    upstream,
-    body,
-    [deadline, primaryCancel.signal],
-    validChat,
-  );
-  if (delay <= 0) return primary;
-
-  return new Promise<Forwarded>((resolve) => {
-    let settled = false;
-    let hedge: "none" | "pending" | "budget" | "fired" = "none";
-    let inFlight = 1;
-    let lastFailure: Forwarded | null = null;
-    const outcome = (winner: "primary" | "hedge"): Forwarded["hedge"] =>
-      hedge === "fired"
-        ? winner === "primary"
-          ? "primary-won"
-          : "hedge-won"
-        : hedge === "budget"
-          ? "budget"
-          : "none";
-    const settle = (r: Forwarded) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(r);
-    };
-    const finishIfIdle = () => {
-      if (inFlight === 0 && hedge !== "pending" && lastFailure)
-        settle({ ...lastFailure, hedge: outcome("primary") });
-    };
-    const onResult = (r: Forwarded, who: "primary" | "hedge") => {
-      inFlight--;
-      if (settled) return;
-      if (r.ok) {
-        (who === "primary" ? hedgeCancel : primaryCancel).abort();
-        settle({ ...r, hedge: outcome(who) });
-        return;
-      }
-      lastFailure = r;
-      // A fast failure of the first request (network or server error) is hedged at once instead of waiting.
-      if (
-        who === "primary" &&
-        hedge === "none" &&
-        !deadline.aborted &&
-        (r.status === 0 || r.status >= 500)
-      ) {
-        clearTimeout(timer);
-        void fire();
-        return;
-      }
-      finishIfIdle();
-    };
-    const fire = async () => {
-      if (settled || hedge !== "none" || deadline.aborted) return;
-      hedge = "pending";
-      const granted = await deps.reserveHedge(app, model).catch(() => false);
-      if (settled) return;
-      if (!granted || deadline.aborted) {
-        hedge = "budget";
-        finishIfIdle();
-        return;
-      }
-      hedge = "fired";
-      inFlight++;
-      void forwardOnce(
-        deps.fetch,
-        upstream,
-        { ...body, model: hedgeModel(cfg, model) },
-        [deadline, hedgeCancel.signal],
-        validChat,
-      ).then((r) => onResult(r, "hedge"));
-    };
-    const timer = setTimeout(() => void fire(), delay);
-    void primary.then((r) => onResult(r, "primary"));
-  });
-}
+/** The hedging settings of the gateway's configuration. */
+export const hedgeConfig = (cfg: GatewayConfig): HedgeConfig => ({
+  afterMs: cfg.AI_GATEWAY_HEDGE_AFTER_MS,
+  afterMsByModel: cfg.AI_GATEWAY_HEDGE_AFTER_MS_BY_MODEL,
+  target: cfg.AI_GATEWAY_HEDGE_TARGET,
+  chatModels: list(cfg.AI_GATEWAY_CHAT_MODELS),
+});

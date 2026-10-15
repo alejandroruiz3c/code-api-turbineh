@@ -97,7 +97,7 @@ pnpm build:local "<prompt>"     # full pipeline locally (Docker required)
 pnpm bench                      # benchmark against staging
 ```
 
-Smoke tests: `pnpm smoke:decider` · `pnpm smoke:compiler` · `pnpm smoke:backup-coder`. Staging runbook:
+Smoke tests: `pnpm smoke:compiler` · `pnpm smoke:backup-coder`. Staging runbook:
 [docs/STAGING.md](docs/STAGING.md).
 
 ## Documentation

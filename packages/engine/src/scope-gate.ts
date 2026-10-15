@@ -1,4 +1,4 @@
-import { noul, type Decider } from "@turbineh/decider";
+import type { Decider } from "@turbineh/decider";
 import type { PlanScope, ScopeRequirement } from "@turbineh/shared";
 
 /**
@@ -11,7 +11,7 @@ import type { PlanScope, ScopeRequirement } from "@turbineh/shared";
  *  1. Code first (deterministic): integrations with external platforms no verified component connects to, autonomous
  *     actions on external accounts, native mobile apps or hardware, and AI generation in a use case without AI.
  *  2. Code: a requirement a shipped test proves is covered.
- *  3. The decider (ADR-0039) for the rest: one atomic Noul per requirement, in one batched request.
+ *  3. The decider (ADR-0039) for the rest, through the resource decision engine (ADR-0058).
  */
 
 /** The person-facing sentence (owner wording). */
@@ -23,8 +23,6 @@ export const NOT_COVERED_ACTION =
 /** Raw reason stored on the build row (`builds.error`); `explainFailure` maps it back. */
 export const NOT_COVERED_REASON = "Use case not covered by the library";
 
-/** Decider: a requirement needs something outside the covered scope at p ≥ this (calibrate with bench/). */
-export const OUTSIDE_SCOPE_THRESHOLD = 0.6;
 /** A covered use case may offer its covered part only when at least this share of the requirements is covered. */
 export const PARTIAL_MIN_SHARE = 0.5;
 
@@ -152,7 +150,10 @@ const NOT_ASKED =
 
 /** The gate. `decider` is optional: without it, code decides and a requirement code cannot place is not covered
  * unless the use case itself is covered. */
-export async function scopeGate(input: ScopeGateInput, decider?: Decider): Promise<ScopeVerdict> {
+export async function scopeGate(
+  input: ScopeGateInput,
+  decider?: Pick<Decider, "scopeOutside"> | null,
+): Promise<ScopeVerdict> {
   const known = new Set(input.catalog.map((c) => c.id));
   const explicit = (input.explicitComponents ?? []).filter((id) => known.has(id));
   if (explicit.length > 0) {
@@ -200,17 +201,25 @@ export async function scopeGate(input: ScopeGateInput, decider?: Decider): Promi
   const open = results.flatMap((r, i) => (r === null ? [i] : []));
   let deciderMeta: ScopeVerdict["decider"] = null;
   if (open.length > 0) {
-    const answers = decider ? await askDecider(input, open, decider).catch(() => null) : null;
+    const answers = decider
+      ? await decider
+          .scopeOutside({
+            useCase: input.useCase,
+            catalog: input.catalog,
+            requirements: open.map((i) => ({ index: i, text: input.requirements[i] as string })),
+          })
+          .catch(() => null)
+      : null;
     if (answers) deciderMeta = answers.meta;
     for (const i of open) {
       const requirement = input.requirements[i] as string;
-      const p = answers?.outside[i];
+      const outside = answers?.outside[i];
       results[i] =
-        p === undefined
+        outside === undefined
           ? input.useCase
             ? { requirement, covered: true, why: `Part of the ${input.useCase.id} use case` }
             : { requirement, covered: false, why: "No verified use case or component covers it" }
-          : p >= OUTSIDE_SCOPE_THRESHOLD
+          : outside
             ? {
                 requirement,
                 covered: false,
@@ -245,36 +254,6 @@ export async function scopeGate(input: ScopeGateInput, decider?: Decider): Promi
     notCovered,
     decider: deciderMeta,
   };
-}
-
-async function askDecider(
-  input: ScopeGateInput,
-  open: number[],
-  decider: Decider,
-): Promise<{ outside: Record<number, number>; meta: { model: string; latencyMs: number } }> {
-  const state: Record<string, string> = {
-    use_case: input.useCase
-      ? input.useCase.description
-      : "No verified product family matches; only the listed components are available.",
-    components: input.catalog
-      .slice(0, 60)
-      .map((c) => `${c.id}: ${c.does}`)
-      .join("\n"),
-  };
-  const questions: Record<string, ReturnType<typeof noul>> = {};
-  for (const i of open) {
-    state[`r${i}`] = input.requirements[i] as string;
-    questions[`r${i}`] = noul(
-      `Does \`r${i}\` need a capability that neither \`use_case\` nor \`components\` provides — for example an integration with an external platform or service, AI generation, actions taken autonomously on external accounts, a native mobile app or hardware?`,
-    );
-  }
-  const d = await decider.ask(state, questions);
-  const outside: Record<number, number> = {};
-  for (const i of open) {
-    const a = d.answers[`r${i}`];
-    if (a?.type === "noul") outside[i] = a.noul;
-  }
-  return { outside, meta: { model: d.meta.model, latencyMs: d.meta.latencyMs } };
 }
 
 /** Explicit name of the covered part (never the original name, which promises the uncovered parts). */

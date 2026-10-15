@@ -1,4 +1,4 @@
-import type { Decider } from "@turbineh/decider";
+import { openDecider, type CriteriaInput, type Decider } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
@@ -28,40 +28,44 @@ const facts: ReportFacts = {
 // Writer endpoint that refuses connections: every text section must fall back to deterministic templates.
 const offline = { baseURL: "http://127.0.0.1:9/v1", apiKey: "test", model: "writer-test" };
 
-const decider = (answers: Record<string, { choice: string; confidence: number }>) =>
-  ({
-    ask: async () => ({
-      answers: Object.fromEntries(
-        Object.entries(answers).map(([k, v]) => [k, { type: "choice", ...v }]),
-      ),
-    }),
-  }) as unknown as Decider;
+/** A decider whose engine matches criterion index → test (null evidence = open, with its confidence). */
+const decider = (
+  matches: Record<number, { evidence: string | null; confidence: number }>,
+): Decider => ({
+  ...openDecider,
+  matchCriteria: async () => matches,
+});
 
 describe("buildReport", () => {
-  it("marks a criterion verified only with a high-confidence decider match", async () => {
-    const high = await buildReport(
+  it("marks a criterion verified only when the engine matches a test", async () => {
+    const matched = await buildReport(
       facts,
-      decider({ c0: { choice: "End-to-end test: owner creates a course", confidence: 0.95 } }),
+      decider({ 0: { evidence: "End-to-end test: owner creates a course", confidence: 0.95 } }),
       offline,
     );
-    expect(high.criteria.map((c) => c.verified)).toEqual([true, false]);
-    expect(high.criteria[1]?.evidence).toBe("Not verified automatically");
+    expect(matched.criteria.map((c) => c.verified)).toEqual([true, false]);
+    expect(matched.criteria[0]?.confidence).toBe(0.95);
+    expect(matched.criteria[1]?.evidence).toBe("Not verified automatically");
     const unsure = await buildReport(
       facts,
-      decider({ c0: { choice: "End-to-end test: owner creates a course", confidence: 0.6 } }),
+      decider({ 0: { evidence: null, confidence: 0.6 } }),
       offline,
     );
     expect(unsure.criteria.map((c) => c.verified)).toEqual([false, false]);
+    expect(unsure.criteria[0]?.confidence).toBe(0.6);
+    const open = await buildReport(facts, openDecider, offline);
+    expect(open.criteria.map((c) => c.verified)).toEqual([false, false]);
   });
 
   it("never offers the decider a test that ignores the criterion's actor or refusal", async () => {
-    let asked: Record<string, unknown> = {};
-    const spy = {
-      ask: async (_s: unknown, q: Record<string, unknown>) => {
-        asked = q;
-        return { answers: {} };
+    let asked: CriteriaInput["items"] = [];
+    const spy: Decider = {
+      ...openDecider,
+      matchCriteria: async (input) => {
+        asked = input.items;
+        return {};
       },
-    } as unknown as Decider;
+    };
     const r = await buildReport(
       {
         ...facts,
@@ -70,7 +74,7 @@ describe("buildReport", () => {
       spy,
       offline,
     );
-    expect(Object.keys(asked)).toEqual([]);
+    expect(asked).toEqual([]);
     expect(r.criteria.map((c) => c.verified)).toEqual([false, false]);
   });
 

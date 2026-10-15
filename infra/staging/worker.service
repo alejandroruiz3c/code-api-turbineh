@@ -7,6 +7,8 @@ Wants=network-online.target
 User=turbineh
 WorkingDirectory=/opt/code-api-turbineh/apps/worker
 EnvironmentFile=/etc/turbineh/worker.env
+# The worker decides with TurbineH's private resource decision engine (ADR-0058): it refuses to start without it.
+Environment=TURBINEH_REQUIRE_PRIVATE_ORCHESTRATION=1
 # The worker is the main process (no pnpm wrapper): SIGTERM reaches it and only it.
 ExecStart=/opt/code-api-turbineh/node_modules/.bin/tsx src/service.ts
 Restart=always
