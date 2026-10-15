@@ -1,0 +1,5 @@
+{
+  "id": "analytics-01",
+  "expected_recipe": "analytics-dashboard",
+  "prompt": "A sales analytics dashboard for a small retail chain: import monthly sales per channel from CSV, see totals, trends over time, comparison with the previous period and a breakdown by channel, with filters and export."
+}

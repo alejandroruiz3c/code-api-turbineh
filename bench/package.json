@@ -1,0 +1,17 @@
+{
+  "name": "@turbineh/bench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Benchmark runners: our pipeline against staging (run.ts) and the closed frontier baseline (baseline/run.ts, ADR-0009)",
+  "type": "module",
+  "scripts": {
+    "baseline": "tsx baseline/run.ts"
+  },
+  "dependencies": {
+    "@turbineh/engine": "workspace:*",
+    "@turbineh/reporter": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "@turbineh/verifier": "workspace:*",
+    "zod": "4.6.5"
+  }
+}

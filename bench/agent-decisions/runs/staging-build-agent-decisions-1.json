@@ -1,0 +1,16 @@
+{
+  "buildId": "60d18ea3-531a-458a-8731-96bd5173a11c",
+  "status": "done",
+  "recipe": "ai-agents",
+  "wallS": 146,
+  "checks": "11/11",
+  "timings": {
+    "total": 140164,
+    "select": 883,
+    "verify": 104944,
+    "compile": 3298,
+    "resolve": 8,
+    "assemble": 291,
+    "integrate": 30612
+  }
+}

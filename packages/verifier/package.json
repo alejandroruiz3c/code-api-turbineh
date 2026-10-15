@@ -1,0 +1,26 @@
+{
+  "name": "@turbineh/verifier",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Verifier: sandboxed install/build/test (no network, no secrets), E2E on an internal network, scans",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "files": [
+    "dist",
+    "rules"
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "prompt": "A SaaS for a dental clinic network: clinics as workspaces with admins and staff roles; manage patients (name, email, phone, birth date) and treatments (patient name, procedure, cost, date, paid).",
+  "buildId": "5589bee4-7c07-4ae2-99bf-002904960577",
+  "status": "failed",
+  "repoDir": "builds/5589bee4-7c07-4ae2-99bf-002904960577/dentalflow-saas",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6705
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 438
+    },
+    {
+      "name": "typecheck",
+      "ok": false,
+      "ms": 2130,
+      "detail": "STEP install 0 6705\nSTEP migrations 0 438\nSTEP typecheck 2 2130\nsrc/entities/treatments/actions.ts(17,31): error TS2769: No overload matches this call.\n  Overload 1 of 2, '(value: { date: string | SQL<unknown> | Placeholder<string, any>; organizationId: string | SQL<unknown> | Placeholder<string, any>; clinicId: string | SQL<unknown> | Placeholder<...>; ... 5 more ...; isPaid?: boolean | ... 2 more ... | undefined; }): PgInsertBase<...>', gave the following error.\n    Type 'string | null' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.\n      Type 'null' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.\n  Overload 2 of 2, '(values: { date: string | SQL<unknown> | Placeholder<string, any>; organizationId: string | SQL<unknown> | Placeholder<string, any>; clinicId: string | SQL<unknown> | Placeholder<...>; ... 5 more ...; isPaid?: boolean | ... 2 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.\n    Object literal may only specify known properties, and 'organizationId' does not exist in type '{ date: string | SQL<unknown> | Placeholder<string, any>; organizationId: string | SQL<unknown> | Placeholder<string, any>; clinicId: string | SQL<unknown> | Placeholder<...>; ... 5 more ...; isPaid?: boolean | ... 2 more ... | undefined; }[]'.\n"
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 92
+    },
+    {
+      "name": "dependencies",
+      "ok": false,
+      "ms": 0,
+      "detail": "GHSA-vfj7-8cjw-p6xm braces@3.0.3 HIGH\nGHSA-67mh-4wv8-2f99 esbuild@0.18.20 MODERATE\nGHSA-39w2-rjm5-chcv next@16.3.6 LOW\nGHSA-3w37-wq28-93x7 next@16.3.6 MODERATE\nGHSA-4jqv-mc3x-m676 next@16.3.6 MODERATE\nGHSA-cjq9-62q9-8jv4 next@16.3.6 HIGH\nGHSA-f87g-xv8r-7p7x next@16.3.6 MODERATE\nGHSA-mcj8-r9mp-w47p next@16.3.6 MODERATE"
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2824,
+      "select": 110,
+      "resolve": 5,
+      "assemble": 120,
+      "verify": 11284,
+      "total": 14367
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 463,
+        "output_tokens": 1000
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 95,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 493,
+      "reusedLines": 536,
+      "reusedShare": 0.521
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "authz.roles",
+        "trigger": "T2"
+      },
+      {
+        "capability": "authz.organizations",
+        "trigger": "T2"
+      },
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ui.form",
+        "trigger": "T2"
+      },
+      {
+        "capability": "ops.rate-limit",
+        "trigger": "T2"
+      },
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

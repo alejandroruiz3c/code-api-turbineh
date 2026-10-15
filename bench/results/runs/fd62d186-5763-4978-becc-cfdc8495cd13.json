@@ -1,0 +1,142 @@
+{
+  "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, phone, level, enrolled on) and courses (title, teacher, weekly hours, price) and send enrolment emails.",
+  "buildId": "fd62d186-5763-4978-becc-cfdc8495cd13",
+  "status": "done",
+  "repoDir": "builds/fd62d186-5763-4978-becc-cfdc8495cd13/linguistflow",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6788
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 492
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2988
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1982
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 828
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 9415
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 4055
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 111
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2217,
+      "select": 170,
+      "resolve": 5,
+      "assemble": 120,
+      "verify": 30149,
+      "total": 32697
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 475,
+        "output_tokens": 936
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 102,
+      "requests": 1,
+      "questions": 78
+    },
+    "reuse": {
+      "generatedLines": 539,
+      "reusedLines": 747,
+      "reusedShare": 0.581
+    },
+    "recipe": {
+      "requested": "saas-crud",
+      "built": "saas-crud"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "ui.primitives.turbineh",
+      "email.transactional.turbineh"
+    ],
+    "pendingIntegration": [
+      {
+        "capability": "data.recurrence",
+        "component": "data.recurrence.rrule"
+      },
+      {
+        "capability": "data.ids",
+        "component": "data.ids.nanoid"
+      },
+      {
+        "capability": "data.money",
+        "component": "data.money.decimal-js"
+      },
+      {
+        "capability": "data.phone",
+        "component": "data.phone.libphonenumber-js"
+      },
+      {
+        "capability": "data.serialization",
+        "component": "data.serialization.superjson"
+      },
+      {
+        "capability": "security.password-hash",
+        "component": "security.password-hash.bcryptjs"
+      },
+      {
+        "capability": "ui.notifications",
+        "component": "ui.notifications.sonner"
+      },
+      {
+        "capability": "security.html-escape",
+        "component": "security.html-escape.he"
+      }
+    ],
+    "gaps": [
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+# Acceptance criteria → tests (ADR-0033, ADR-0035) for every recipe (all extend saas-crud). Each rule: every regex in
+# `covers` must match the criterion (case-insensitive). A criterion no rule matches is listed as open, with the files
+# and the spec where its test belongs. `pnpm catalog:validate` checks that every referenced test exists.
+- test: "tests/e2e/auth.spec.ts › a user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page"
+  covers:
+    - "anonymous|unauthenticated|not authenticated|signed[- ]out|not signed in|not logged in|without (signing|logging) in|visitors? (are|is|get)"
+    - "sign[- ]?in|log[- ]?in|redirect|denied|blocked|protected"
+- test: "tests/e2e/auth.spec.ts › the stored owner session reaches the dashboard as owner"
+  covers:
+    - "^(?!.*\\b(stock|price|product|order|booking|appointment|ticket|request|invoice|post|message|task|project|record|habit|report|chart)s?\\b).*\\b(sign|log)s?[- ]?in\\b"
+    - "dashboard|admin (area|panel)|back[- ]?office|workspace"
+- test: "tests/e2e/auth.spec.ts › a returning user signs out, signs in again and resumes their workspace"
+  covers:
+    - "sign[- ]?out|log[- ]?out|returning|again"
+    - "sign[- ]?in|log[- ]?in|resume|workspace"
+- test: "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+  covers:
+    - "verif"
+    - "e-?mail|address"
+- test: "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+  covers:
+    - "sign[- ]?s? ?up|regist|new (user|account)"
+    - "workspace|owner"
+- test: "tests/e2e/auth.spec.ts › sign-up follows the app's policy (staff-only apps refuse other emails)"
+  covers:
+    - "sign[- ]?up|regist|create an account"
+    - "only|restrict|allow|invite|reserved|refus|staff|admin"
+- test: "tests/e2e/theme.spec.ts › the app shows the requested colours: page background, accent colour and call-to-action buttons"
+  covers:
+    - "colou?rs?\\b|palette|theme|visual identity|#[0-9a-f]{3,6}\\b|brand (colou?r|identity)"
+- test: "tests/unit/access.test.ts › refuses a signed-in user whose membership cannot be verified, or who is not a member"
+  covers:
+    - "workspace|organi[sz]ation|tenant|role|member"
+    - "check|isolat|scope|only|authori[sz]|permission|cannot"
+- test: "tests/unit/permissions.test.ts › a member cannot approve, export, change settings, manage members or read the audit log"
+  covers:
+    - "member|role|permission"
+    - "approv|export|settings|invite|manage|audit|cannot|only"
+- test: "tests/unit/env.test.ts › builds and runs with only the required variables; an empty staff allow-list denies everyone"
+  covers:
+    - "environment|env var|configuration|settings"
+    - "required|missing|valid|default"

@@ -1,0 +1,5 @@
+{
+  "id": "portal-03",
+  "expected_recipe": "client-portal",
+  "prompt": "A customer support portal for a web agency: clients open change requests with screenshots attached, the agency team moves them through review to completed, and clients only see their own requests."
+}

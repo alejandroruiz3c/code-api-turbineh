@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: security.password-hash.bcryptjs
+version: 0.1.0
+status: approved
+category: security
+source:
+  purl: pkg:npm/bcryptjs@3.0.3
+  repo: https://github.com/dcodeIO/bcrypt.js
+  integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==
+capability:
+  does: bcrypt password hashing in pure JavaScript
+  does_not: Does not enforce password policies
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add bcryptjs@3.0.3
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: BSD-3-Clause
+  detected: BSD-3-Clause
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License BSD-3-Clause
+    origin: maintainer
+    ref: npm registry metadata bcryptjs@3.0.3
+  - claim: 0 OSV advisories for bcryptjs@3.0.3 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - security.password-hash
+  conflicts: []
+  tested_with:
+    - contract-harness

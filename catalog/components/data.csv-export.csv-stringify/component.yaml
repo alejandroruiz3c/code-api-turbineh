@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: data.csv-export.csv-stringify
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:npm/csv-stringify@6.9.0
+  repo: https://github.com/adaltas/node-csv
+  integrity: sha512-6b3e29CILFfSQ2nDRuZMRROzQOpPuJ+s8zPB5H7eK5ncXBbFOyVuRLU5Sx/zAUmVri3Ly49GyC8NEme4SVSAbA==
+capability:
+  does: Streaming and sync CSV serialisation with quoting
+  does_not: Does not neutralise spreadsheet formulas by default
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add csv-stringify@6.9.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata csv-stringify@6.9.0
+  - claim: 0 OSV advisories for csv-stringify@6.9.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - data.csv-export
+  conflicts: []
+  tested_with:
+    - contract-harness

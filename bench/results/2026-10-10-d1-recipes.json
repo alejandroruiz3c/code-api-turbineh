@@ -1,0 +1,330 @@
+{
+  "description": "Recipes saas-crud, internal-tool and landing-waitlist verified end-to-end through the pipeline (10 checks each). Evidence for components tested_with these recipes.",
+  "date": "2026-10-10",
+  "runs": {
+    "saas-crud": {
+      "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, level, enrolled on) and courses (title, teacher, weekly hours, price).",
+      "buildId": "456af441-6e6a-4b8c-b552-0ac1c55527a5",
+      "status": "done",
+      "repoDir": "builds/456af441-6e6a-4b8c-b552-0ac1c55527a5/linguistflow",
+      "steps": [
+        {
+          "name": "install",
+          "ok": true,
+          "ms": 6366
+        },
+        {
+          "name": "migrations",
+          "ok": true,
+          "ms": 426
+        },
+        {
+          "name": "typecheck",
+          "ok": true,
+          "ms": 2112
+        },
+        {
+          "name": "lint",
+          "ok": true,
+          "ms": 1286
+        },
+        {
+          "name": "unit",
+          "ok": true,
+          "ms": 566
+        },
+        {
+          "name": "build",
+          "ok": true,
+          "ms": 7960
+        },
+        {
+          "name": "e2e",
+          "ok": true,
+          "ms": 3908
+        },
+        {
+          "name": "secrets",
+          "ok": true,
+          "ms": 67
+        },
+        {
+          "name": "dependencies",
+          "ok": true,
+          "ms": 0
+        },
+        {
+          "name": "licenses",
+          "ok": true,
+          "ms": 0
+        }
+      ],
+      "metrics": {
+        "timings": {
+          "compile": 2078,
+          "select": 119,
+          "resolve": 7,
+          "assemble": 129,
+          "verify": 26022,
+          "total": 28390
+        },
+        "tokens": {
+          "compiler": {
+            "input_tokens": 447,
+            "output_tokens": 965
+          },
+          "decider": "input-only, counted by the provider"
+        },
+        "decider": {
+          "backend": "jev",
+          "model": "jev-1.13.0",
+          "latencyMs": 95,
+          "requests": 1,
+          "questions": 33
+        },
+        "reuse": {
+          "generatedLines": 531,
+          "reusedLines": 747,
+          "reusedShare": 0.585
+        },
+        "recipe": {
+          "requested": "saas-crud",
+          "built": "saas-crud"
+        },
+        "components": [
+          "security.pack.turbineh",
+          "data.validation.zod",
+          "auth.session.better-auth",
+          "authz.roles.turbineh",
+          "authz.organizations.better-auth",
+          "data.orm.drizzle",
+          "data.pagination.turbineh",
+          "ui.primitives.turbineh"
+        ],
+        "gaps": [
+          {
+            "capability": "payments.checkout",
+            "trigger": "T1"
+          }
+        ]
+      }
+    },
+    "internal-tool": {
+      "prompt": "An internal tool for our warehouse team to track inventory items (sku, name, quantity, location, reorder level) with search, CSV import of stock and CSV export.",
+      "buildId": "bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f",
+      "status": "done",
+      "repoDir": "builds/bf3b2aa0-7ff7-4b59-82ce-b5f4a0963d5f/warehouse-inventory-tracker",
+      "steps": [
+        {
+          "name": "install",
+          "ok": true,
+          "ms": 6207
+        },
+        {
+          "name": "migrations",
+          "ok": true,
+          "ms": 396
+        },
+        {
+          "name": "typecheck",
+          "ok": true,
+          "ms": 2022
+        },
+        {
+          "name": "lint",
+          "ok": true,
+          "ms": 1180
+        },
+        {
+          "name": "unit",
+          "ok": true,
+          "ms": 565
+        },
+        {
+          "name": "build",
+          "ok": true,
+          "ms": 8354
+        },
+        {
+          "name": "e2e",
+          "ok": true,
+          "ms": 3704
+        },
+        {
+          "name": "secrets",
+          "ok": true,
+          "ms": 86
+        },
+        {
+          "name": "dependencies",
+          "ok": true,
+          "ms": 0
+        },
+        {
+          "name": "licenses",
+          "ok": true,
+          "ms": 0
+        }
+      ],
+      "metrics": {
+        "timings": {
+          "compile": 1474,
+          "select": 108,
+          "resolve": 6,
+          "assemble": 131,
+          "verify": 25885,
+          "total": 27644
+        },
+        "tokens": {
+          "compiler": {
+            "input_tokens": 431,
+            "output_tokens": 611
+          },
+          "decider": "input-only, counted by the provider"
+        },
+        "decider": {
+          "backend": "jev",
+          "model": "jev-1.13.0",
+          "latencyMs": 93,
+          "requests": 1,
+          "questions": 39
+        },
+        "reuse": {
+          "generatedLines": 271,
+          "reusedLines": 735,
+          "reusedShare": 0.731
+        },
+        "recipe": {
+          "requested": "internal-tool",
+          "built": "internal-tool"
+        },
+        "components": [
+          "security.pack.turbineh",
+          "data.validation.zod",
+          "data.orm.drizzle",
+          "data.pagination.turbineh",
+          "data.csv-import.turbineh",
+          "data.csv-export.turbineh",
+          "ui.primitives.turbineh",
+          "auth.session.better-auth",
+          "authz.organizations.better-auth",
+          "authz.roles.turbineh"
+        ],
+        "gaps": [
+          {
+            "capability": "files.upload",
+            "trigger": "T1"
+          }
+        ]
+      }
+    },
+    "landing-waitlist": {
+      "prompt": "A landing page for my coffee subscription startup BeanBox with a waitlist form, confirmation email and an admin panel to see signups.",
+      "buildId": "271104a5-7ea2-46dd-bb63-32c4fcd16e19",
+      "status": "done",
+      "repoDir": "builds/271104a5-7ea2-46dd-bb63-32c4fcd16e19/beanbox-landing",
+      "steps": [
+        {
+          "name": "install",
+          "ok": true,
+          "ms": 6640
+        },
+        {
+          "name": "migrations",
+          "ok": true,
+          "ms": 423
+        },
+        {
+          "name": "typecheck",
+          "ok": true,
+          "ms": 2103
+        },
+        {
+          "name": "lint",
+          "ok": true,
+          "ms": 1323
+        },
+        {
+          "name": "unit",
+          "ok": true,
+          "ms": 540
+        },
+        {
+          "name": "build",
+          "ok": true,
+          "ms": 7880
+        },
+        {
+          "name": "e2e",
+          "ok": true,
+          "ms": 3994
+        },
+        {
+          "name": "secrets",
+          "ok": true,
+          "ms": 66
+        },
+        {
+          "name": "dependencies",
+          "ok": true,
+          "ms": 0
+        },
+        {
+          "name": "licenses",
+          "ok": true,
+          "ms": 0
+        }
+      ],
+      "metrics": {
+        "timings": {
+          "compile": 1596,
+          "select": 143,
+          "resolve": 4,
+          "assemble": 119,
+          "verify": 26222,
+          "total": 28121
+        },
+        "tokens": {
+          "compiler": {
+            "input_tokens": 399,
+            "output_tokens": 652
+          },
+          "decider": "input-only, counted by the provider"
+        },
+        "decider": {
+          "backend": "jev",
+          "model": "jev-1.13.0",
+          "latencyMs": 130,
+          "requests": 1,
+          "questions": 36
+        },
+        "reuse": {
+          "generatedLines": 190,
+          "reusedLines": 928,
+          "reusedShare": 0.83
+        },
+        "recipe": {
+          "requested": "landing-waitlist",
+          "built": "landing-waitlist"
+        },
+        "components": [
+          "security.pack.turbineh",
+          "data.validation.zod",
+          "authz.roles.turbineh",
+          "data.orm.drizzle",
+          "ui.primitives.turbineh",
+          "email.transactional.turbineh",
+          "auth.session.better-auth",
+          "authz.organizations.better-auth",
+          "data.pagination.turbineh"
+        ],
+        "gaps": [
+          {
+            "capability": "jobs.queue",
+            "trigger": "T1"
+          }
+        ]
+      }
+    }
+  }
+}

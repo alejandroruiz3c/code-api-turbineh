@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "domain.audit-log.turbineh params (src/audit/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pageSize", "redactFields", "ignoreFields", "exportLimit"],
+  "properties": {
+    "pageSize": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 200,
+      "default": 50,
+      "description": "Entries per page."
+    },
+    "redactFields": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "string", "minLength": 1, "maxLength": 60 },
+      "default": ["password", "secret", "token", "hash"],
+      "description": "Field-name fragments whose values are never stored (case-insensitive)."
+    },
+    "ignoreFields": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "string", "minLength": 1, "maxLength": 60 },
+      "default": ["id", "organizationId", "createdAt", "updatedAt"],
+      "description": "Fields that are not recorded as changes."
+    },
+    "exportLimit": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 50000,
+      "default": 5000,
+      "description": "Maximum rows in one CSV export."
+    }
+  }
+}

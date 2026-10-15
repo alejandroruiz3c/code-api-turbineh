@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ui.icons.lucide-react
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/lucide-react@1.48.0
+  repo: https://github.com/lucide-icons/lucide
+  integrity: sha512-R0CIKY/fXiC6y9xRBADgsK+VW2p/pcTJOMhLZf1T+uG+vJUvyUR02nGOgmIIC7MPkiNK4Ox8QDnbqF8rJYWPZQ==
+capability:
+  does: Consistent open-source SVG icon set for React
+  does_not: Does not include brand logos
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add lucide-react@1.48.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: ISC
+  detected: ISC
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License ISC
+    origin: maintainer
+    ref: npm registry metadata lucide-react@1.48.0
+  - claim: 0 OSV advisories for lucide-react@1.48.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - ui.icons
+  conflicts: []
+  tested_with:
+    - contract-harness

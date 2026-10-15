@@ -1,0 +1,25 @@
+{
+  "name": "@turbineh/resolver",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic resolver: status, licenses, version compatibility, conflicts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "semver": "7.8.5"
+  },
+  "devDependencies": {
+    "@types/semver": "7.8.0"
+  }
+}

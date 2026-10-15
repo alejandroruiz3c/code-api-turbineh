@@ -1,0 +1,18 @@
+{
+  "business": "Our business",
+  "timeZone": "UTC",
+  "resource": { "singular": "Staff member", "plural": "Staff", "count": 1, "names": [] },
+  "customer": { "singular": "customer", "plural": "customers" },
+  "services": [{ "name": "Appointment", "minutes": 30, "price": null, "currency": null }],
+  "slotMinutes": 30,
+  "hours": [
+    { "weekday": 1, "open": "09:00", "close": "17:00" },
+    { "weekday": 2, "open": "09:00", "close": "17:00" },
+    { "weekday": 3, "open": "09:00", "close": "17:00" },
+    { "weekday": 4, "open": "09:00", "close": "17:00" },
+    { "weekday": 5, "open": "09:00", "close": "17:00" }
+  ],
+  "policy": { "cancelNoticeHours": 24, "bookingNoticeMinutes": 0, "horizonDays": 60 },
+  "faq": [],
+  "askPhone": false
+}

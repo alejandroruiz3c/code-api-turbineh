@@ -1,0 +1,49 @@
+schema: turbineh.component/v0.1
+id: data.csv-import.turbineh
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:generic/turbineh/data.csv-import.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "CSV import with size and row limits where every row is validated before insert"
+  does_not: "Does not map arbitrary column names or merge duplicates"
+  use_cases: [internal-tool, saas-crud]
+  pros: ["Maintained by TurbineH", "No third-party runtime dependency"]
+  cons: ["Feature scope intentionally small"]
+  alternatives: []
+contract:
+  inputs: ["see source"]
+  outputs: ["see source"]
+  errors: ["see source"]
+  limits: ["see source"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: false, fs: false, db: true, external_services: [] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Included in recipe templates at src/lib/csv.ts + generated import actions"
+  config: []
+  migrations: false
+quality:
+  tests: { command: "recipes saas-crud, internal-tool, landing-waitlist: typecheck, lint, unit, build, e2e (sandbox)", passed: true, date: 2026-10-10 }
+security:
+  scanned_at: 2026-10-10
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed; no third-party dependencies of its own."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "CSV upload imports valid rows and reports rejected ones (E2E, recipe internal-tool); RFC 4180 parsing and limits (unit)"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipes.json"
+relations:
+  requires: []
+  provides: [data.csv-import]
+  conflicts: []
+  tested_with: [recipe.internal-tool, recipe.saas-crud]

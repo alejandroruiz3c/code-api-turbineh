@@ -1,0 +1,8 @@
+title = "CODE-API-TURBINEH gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example env file only contains empty placeholders"
+paths = ['''\.env\.example$''']

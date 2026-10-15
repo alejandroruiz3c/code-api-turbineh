@@ -1,0 +1,239 @@
+# TurbineH security rules (own rules, run with the Semgrep OSS engine). ERROR = blocks delivery, WARNING = alert.
+# `explain` metadata is shown to the user in plain language.
+rules:
+  - id: turbineh.no-eval
+    languages: [typescript]
+    severity: ERROR
+    message: Dynamic code execution (eval / new Function) allows code injection.
+    metadata:
+      {
+        explain: "The app executes text as code. If that text can be influenced by a user, an attacker can run arbitrary code on your server.",
+      }
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: turbineh.no-child-process
+    languages: [typescript]
+    severity: ERROR
+    # Test setup (not shipped) may start processes; application code may not. scripts/local-db.ts is the template's
+    # zero-setup database for development and tests (ADR-0035): it starts PostgreSQL and the command it wraps.
+    paths:
+      exclude:
+        ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "playwright.config.ts", "scripts/local-db.ts"]
+    message: Spawning operating-system processes from app code is not allowed.
+    metadata:
+      {
+        explain: "The app starts operating-system commands. A web app should not need this, and it can lead to command injection.",
+      }
+    pattern-either:
+      - pattern: require("child_process")
+      - pattern: import $X from "node:child_process"
+      - pattern: import $X from "child_process"
+      - pattern: import { $Y } from "node:child_process"
+      - pattern: import { $Y } from "child_process"
+
+  - id: turbineh.raw-sql-injection
+    languages: [typescript]
+    severity: ERROR
+    message: Raw SQL built from a template string can be injected; use Drizzle query builders or parameters.
+    metadata:
+      {
+        explain: "A database query is built by pasting text together. A crafted value could read or delete other customers' data.",
+      }
+    pattern-either:
+      - pattern: sql.raw(`...${$X}...`)
+      - pattern: $DB.execute(`...${$X}...`)
+      - pattern: $DB.query(`...${$X}...`)
+
+  - id: turbineh.server-action-without-authz
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Exported server action does not check who is calling it (no authorization call before doing work). Start it with
+      `await requireMember()` / `await requireAdmin()` (workspace data) or `await requireSession()` (signed in, not a
+      member yet: accept an invitation, onboarding); for anonymous visitors (public booking, contact, waitlist) export
+      it as `publicAction(name, { rateLimit, schema }, handler)`. All in src/server/authz.ts; your own authorization
+      helpers count when named require*/assert*/ensure* (e.g. `await requireEditableTask(id)`).
+    metadata:
+      {
+        explain: "A server function that changes data can be called without checking who the user is or what workspace they belong to.",
+      }
+    match:
+      any:
+        # Function declarations and async function expressions: an authorization call must come first.
+        - all:
+            - inside: |
+                "use server";
+                ...
+            - any:
+                - |
+                  export async function $F(...) { ... }
+                - |
+                  export const $F = async (...) => { ... }
+                - |
+                  export const $F = async function (...) { ... }
+            # Signing in, out or up needs no prior authorization (the action itself establishes or ends the session).
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... }
+                      - |
+                        export const $F = async (...) => { ... }
+                      - |
+                        export const $F = async function (...) { ... }
+                where:
+                  - metavariable: $F
+                    regex: (?i)^(handle|do|submit)?(sign_?(in|out|up)|log_?(in|out)|logon|logoff)(_?action)?$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... await $G(...); ... }
+                      - |
+                        export const $F = async (...) => { ... await $G(...); ... }
+                      - |
+                        export const $F = async function (...) { ... await $G(...); ... }
+                where:
+                  - metavariable: $G
+                    regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect|with)\w*$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... await $O.$M(...); ... }
+                      - |
+                        export const $F = async (...) => { ... await $O.$M(...); ... }
+                      - |
+                        export const $F = async function (...) { ... await $O.$M(...); ... }
+                where:
+                  - metavariable: $M
+                    regex: (?i)^(require|authori[sz]e|assert|ensure|check|verify|guard|protect)\w*$
+            - not:
+                all:
+                  - any:
+                      - |
+                        export async function $F(...) { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
+                      - |
+                        export const $F = async (...) => { ... $S = await $G(...); ... if (<... !$S ...>) $BODY; ... }
+                where:
+                  - metavariable: $G
+                    regex: (?i)^(get(Server)?Session|getCurrent(User|Member|Session)|auth)$
+        # Anonymous visitors only through publicAction(), and only with its per-IP rate limit and Zod schema.
+        - all:
+            - inside: |
+                "use server";
+                ...
+            - |
+              export const $F = publicAction(...)
+            - not:
+                all:
+                  - |
+                    export const $F = publicAction($N, { ..., rateLimit: $R, ... }, ...)
+                  - |
+                    export const $F = publicAction($N, { ..., schema: $Z, ... }, ...)
+
+  - id: turbineh.hardcoded-secret
+    languages: [typescript]
+    severity: ERROR
+    # Test fixtures are not shipped; gitleaks still scans the whole history, tests included.
+    paths:
+      exclude: ["tests/", "e2e/", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx"]
+    message: A secret-looking value is hardcoded; read it from validated environment variables.
+    metadata:
+      {
+        explain: "A password, key or token is written directly in the code, so anyone with access to the repository can use it.",
+      }
+    patterns:
+      - pattern-either:
+          - pattern: const $K = "$V"
+          - pattern: '$K: "$V"'
+      - metavariable-regex:
+          metavariable: $K
+          regex: "(?i).*(secret|password|passwd|api_?key|token|private_?key).*"
+      - metavariable-regex:
+          metavariable: $V
+          regex: "^[A-Za-z0-9_+/=-]{16,}$"
+
+  - id: turbineh.unsanitized-html
+    languages: [typescript]
+    severity: WARNING
+    message: dangerouslySetInnerHTML renders raw HTML; sanitize it first (component security.sanitize-html).
+    metadata:
+      {
+        explain: "Raw HTML is shown on a page. If it comes from users, it could run scripts in other visitors' browsers (XSS).",
+      }
+    patterns:
+      - pattern: "<$EL dangerouslySetInnerHTML={{__html: $H}} />"
+      - pattern-not: "<$EL dangerouslySetInnerHTML={{__html: sanitizeHtml(...)}} />"
+
+  - id: turbineh.sensitive-logging
+    languages: [typescript]
+    severity: WARNING
+    message: Logging values named like passwords or tokens can leak secrets into logs.
+    metadata:
+      {
+        explain: "The app may write passwords or tokens into its logs, where more people and tools can read them.",
+      }
+    patterns:
+      - pattern-either:
+          - pattern: console.$M(..., $X, ...)
+      - metavariable-regex:
+          metavariable: $X
+          regex: "(?i).*(password|token|secret|apikey|api_key).*"
+
+  - id: turbineh.open-redirect
+    languages: [typescript]
+    severity: WARNING
+    message: Redirecting to a URL taken from the request allows phishing redirects; allow-list destinations.
+    metadata:
+      {
+        explain: "The app sends users to an address taken from the link itself. Attackers can use your domain to redirect people to a fake site.",
+      }
+    pattern-either:
+      - pattern: redirect($P.get(...))
+      - pattern: redirect(searchParams.$K)
+      - pattern: redirect((await searchParams).$K)
+
+  # ADR-0028: every model or decider call in a client app goes through the TurbineH orchestrator (component #001,
+  # ai.orchestrator.turbineh) and its AI Safety Pack. Only the orchestrator's own transport files may talk to models.
+  - id: turbineh.ai-direct-model-call
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      exclude:
+        [
+          "src/lib/ai/models.ts",
+          "src/lib/ai/decider.ts",
+          "tests/",
+          "e2e/",
+          "*.test.ts",
+          "*.spec.ts",
+        ]
+    message: Model or decider called directly; it is rerouted through orchestrate()/embed() from src/lib/ai/orchestrator (AI Safety Pack, gateway, usage and audit).
+    metadata:
+      {
+        explain: "This code talks to an AI model without going through the orchestrator, so its safety checks, budgets, usage records and audit log are skipped.",
+      }
+    pattern-either:
+      - pattern-regex: (from\s+|import\s*\(\s*|require\s*\(\s*)["'](openai|@anthropic-ai/[\w.-]+|@ai-sdk/[\w.-]+|ai|@google/generative-ai|@google/genai|@mistralai/[\w.-]+|cohere-ai|groq-sdk|ollama|@huggingface/inference|replicate|together-ai|langchain|@langchain/[\w.-]+|llamaindex|@typesafe-ai/sdk)(/[\w./-]*)?["']
+      - pattern-regex: (?i)["'`][^"'`\n]*(/chat/completions|/v1/completions|/v1/embeddings|/v1/systemone|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.mistral\.ai|api\.groq\.com|api\.together\.xyz|api\.scaleway\.ai|api\.typesafe\.ai)
+      # Hand-written OpenAI-compatible clients: fetch(`${BASE_URL}/chat/completions`) and similar (ADR-0033).
+      - pattern-regex: (?i)fetch\s*\(\s*`[^`]*/(chat/completions|completions|embeddings)`
+      # OpenAI-compatible endpoint built from a configurable base: `${base.replace(…)}/chat/completions`.
+      - pattern-regex: (?i)\}[^"'`\n]*/(chat/completions|completions|embeddings)\b
+      # OpenAI-compatible endpoint configured by environment variables (LLM_BASE_URL, OPENAI_API_BASE, MODEL_ENDPOINT…).
+      - pattern-regex: \b[A-Z0-9_]*(OPENAI|LLM|MODEL|OLLAMA|GROQ|MISTRAL|ANTHROPIC|GEMINI)[A-Z0-9_]*_(BASE_URL|API_BASE|BASE|ENDPOINT|API_URL)\b
+
+  - id: turbineh.ai-sdk-dependency
+    languages: [generic]
+    severity: WARNING
+    paths:
+      include: ["package.json"]
+    message: A model SDK is declared as a dependency; AI goes only through the orchestrator, which needs no SDK (plain requests to the TurbineH AI gateway).
+    metadata:
+      {
+        explain: "The app depends on an AI provider's SDK, which would let code bypass the orchestrator's safety checks and usage records.",
+      }
+    pattern-regex: '"(openai|@anthropic-ai/[\w.-]+|@ai-sdk/[\w.-]+|ai|@google/generative-ai|@google/genai|@mistralai/[\w.-]+|cohere-ai|groq-sdk|ollama|@huggingface/inference|replicate|together-ai|langchain|@langchain/[\w.-]+|llamaindex|@typesafe-ai/sdk)"\s*:'

@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: ai.partial-json.partial-json
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:npm/partial-json@0.1.7
+  repo: https://github.com/promplate/partial-json-parser-js
+  integrity: sha512-Njv/59hHaokb/hRUjce3Hdv12wd60MtM9Z5Olmn+nehe0QDAsRtRbJPvJ0Z91TusF0SuZRIvnM+S4l6EIP8leA==
+capability:
+  does: Parses incomplete JSON while it is still streaming, to show structured results progressively
+  does_not: The final value still needs full validation once the stream ends
+  use_cases:
+    - ai-agents
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add partial-json@0.1.7
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata partial-json@0.1.7
+  - claim: 0 OSV advisories for partial-json@0.1.7 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - ai.partial-json
+  conflicts: []
+  tested_with:
+    - contract-harness

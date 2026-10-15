@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ui.kanban.turbineh params (src/kanban/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workflows", "dragAndDrop", "highlightOverdue"],
+  "properties": {
+    "workflows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "pattern": "^(\\*|[a-z][a-z0-9_]{0,39})$"
+      },
+      "description": "Workflow keys shown as kanban boards (domain.workflow.turbineh); [\"*\"] = every workflow."
+    },
+    "dragAndDrop": {
+      "type": "boolean",
+      "description": "Cards move between status columns by drag and drop and by keyboard; false = read-only board."
+    },
+    "highlightOverdue": {
+      "type": "boolean",
+      "description": "Overdue and stuck cards are highlighted on the board."
+    },
+    "entity": {
+      "type": ["string", "null"],
+      "description": "Record kind of the board in the request (informative; boards are workflows)."
+    },
+    "field": {
+      "type": ["string", "null"],
+      "description": "Status field in the request (informative; columns are the workflow's states)."
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Columns stated in the request (informative; columns are the workflow's states)."
+    },
+    "groupBy": {
+      "type": ["string", "null"],
+      "description": "Grouping stated in the request, e.g. per project (informative; with membership scopes each person sees only their scopes' cards)."
+    }
+  }
+}

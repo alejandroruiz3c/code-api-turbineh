@@ -1,0 +1,57 @@
+schema: turbineh.component/v0.1
+id: jobs.queue.turbineh
+version: 0.1.0
+status: approved
+category: jobs
+source:
+  purl: pkg:generic/turbineh/jobs.queue.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, cron-triggered runner endpoint"
+  does_not: "Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler)"
+  use_cases: [saas-crud, internal-tool, landing-waitlist, bookings, client-portal]
+  pros: ["Maintained by TurbineH", "No third-party runtime dependency", "Uses the app's own Postgres"]
+  cons: ["Polling via the runner endpoint; not for sub-second latency"]
+  alternatives: []
+contract:
+  inputs: ["defineJob(type, zodSchema, handler); enqueue(type, payload, { organizationId, runAt?, maxAttempts? })"]
+  outputs:
+    [
+      "runDueJobs(limit) → { done, retried, failed, lost }; POST /api/jobs/run with Bearer JOBS_RUNNER_SECRET",
+      "handlers receive ctx.signal, aborted when the job's lease is lost",
+    ]
+  errors: ["unknown or invalid job type throws; payloads failing the schema throw on enqueue and on run"]
+  limits:
+    [
+      "max 50 jobs per run, maxAttempts 1–20, backoff capped at 1 h, stored error = error name only",
+      "lease 60 s renewed by a heartbeat every 20 s; a running job whose lease expired is reclaimed (token + 1) or failed with LeaseExpired when no attempts are left; writes from an older token are ignored",
+    ]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: false, fs: false, db: true, external_services: [] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts, src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts"
+  config: [JOBS_RUNNER_SECRET]
+  migrations: true
+quality:
+  tests: { command: "unit tests in the app (backoff, typed registry, lease recovery, heartbeat, fencing) + pipeline builds of every recipe (sandbox)", passed: true, date: 2026-10-15 }
+security:
+  scanned_at: 2026-10-11
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: parameterized SQL only, constant-time secret comparison, runner disabled without a secret, no user data in stored errors."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Builds that need background work select this component and pass the full verification without corrections"
+    origin: tested
+    ref: "bench/results (WP16 re-run after G2)"
+relations:
+  requires: []
+  provides: [jobs.queue]
+  conflicts: []
+  tested_with: [recipe.saas-crud, recipe.landing-waitlist, recipe.bookings, recipe.client-portal]

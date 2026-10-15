@@ -1,0 +1,13 @@
+id: internal-tool
+description: Internal back-office tool with tables, search, CSV import and export
+extends: saas-crud
+providedEntities: []
+defaultCapabilities: [data.csv-import, data.csv-export, data.pagination]
+nav: []
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a CSV column"
+      where: "src/entities/<entity>/schema.ts and src/lib/csv.ts"
+      how: "Add the field to the Zod schema; CSV import/export follow the schema."

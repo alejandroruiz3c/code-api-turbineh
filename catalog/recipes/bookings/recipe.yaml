@@ -1,0 +1,24 @@
+id: bookings
+description: Online booking site for an appointment business — public booking page (service, team member or any, real free times, no account), confirmation email with a cancel link and a notice policy, no double bookings, staff calendar per team member (day and week), time off, move and cancel with customer emails
+extends: saas-crud
+providedEntities:
+  [Booking, Appointment, Reservation, Visit, Session, Availability, AvailabilitySlot, Slot, TimeSlot, Schedule,
+   OpeningHour, OpeningHours, WorkingHour, WorkingHours, BusinessHour, BusinessHours, Calendar, CalendarEvent,
+   TimeOff, Absence, Holiday, BlockedTime, Stylist, Service, Customer]
+defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
+# The booking domain (public page, cancel link, staff calendar, time off) is the component domain.bookings.turbineh
+# (ADR-0033, ADR-0048): code selects it in every bookings build and writes its params from the request.
+requiredComponents:
+  domain.bookings: domain.bookings.turbineh
+nav: []
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe. The booking domain's own extension
+# points (params, rules, public page, cancel link, calendar, time off) come from domain.bookings.turbineh's guide.
+guide:
+  extend:
+    - what: "Add another public form (waiting list, gift voucher request…)"
+      where: "src/app/<route>/actions.ts, src/server/authz.ts (publicAction)"
+      how: "Same pattern as bookSlot in src/app/book/actions.ts: `publicAction(name, { rateLimit, schema, refuse }, handler)`."
+    - what: "Change how booking emails are sent"
+      where: "src/lib/email.ts"
+      how: "Without RESEND_API_KEY emails are recorded in a local outbox file, never the console (E2E reads them through EMAIL_OUTBOX_FILE); production needs the key or EMAIL_DELIVERY=disabled; the texts are in src/bookings/service.ts."

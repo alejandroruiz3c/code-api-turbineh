@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: data.fuzzy-search.fuse
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:npm/fuse.js@7.5.0
+  repo: https://github.com/krisk/Fuse
+  integrity: sha512-sQtrEfA+ez/3G0cCZecF70oqpCRttCexYUG4mUrtWL49ULUzUyxokt5kyqwtKzj1270RaKih+hcP3qLcumccow==
+capability:
+  does: Client-side fuzzy search over small collections
+  does_not: Does not replace database full-text search for large datasets
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add fuse.js@7.5.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License Apache-2.0
+    origin: maintainer
+    ref: npm registry metadata fuse.js@7.5.0
+  - claim: 0 OSV advisories for fuse.js@7.5.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - data.fuzzy-search
+  conflicts: []
+  tested_with:
+    - contract-harness

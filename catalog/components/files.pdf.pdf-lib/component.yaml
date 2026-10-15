@@ -1,0 +1,73 @@
+schema: turbineh.component/v0.1
+id: files.pdf.pdf-lib
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/pdf-lib@1.17.1
+  repo: https://github.com/Hopding/pdf-lib
+  integrity: sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==
+capability:
+  does: Creates and edits PDF documents in pure JavaScript
+  does_not: Does not render HTML to PDF
+  use_cases:
+    - client-portal
+    - saas-crud
+    - internal-tool
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add pdf-lib@1.17.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata pdf-lib@1.17.1
+  - claim: 0 OSV advisories for pdf-lib@1.17.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - files.pdf
+  conflicts: []
+  tested_with:
+    - contract-harness

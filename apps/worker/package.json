@@ -1,0 +1,42 @@
+{
+  "name": "@turbineh/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Build pipeline worker: compile \u2192 select \u2192 resolve \u2192 assemble \u2192 verify \u2192 deliver",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "build:local": "tsx src/cli.ts",
+    "verify:recipe": "tsx src/verify-recipe.ts",
+    "verify:spec": "tsx src/verify-spec.ts",
+    "bench:selection": "tsx src/selection-bench.ts",
+    "bench:component-plan": "tsx src/component-plan-bench.ts",
+    "service": "tsx src/service.ts"
+  },
+  "dependencies": {
+    "@turbineh/assembler": "workspace:*",
+    "@turbineh/backup-coder": "workspace:*",
+    "@turbineh/catalog": "workspace:*",
+    "@turbineh/compiler": "workspace:*",
+    "@turbineh/curation": "workspace:*",
+    "@turbineh/db": "workspace:*",
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/deployer": "workspace:*",
+    "@turbineh/engine": "workspace:*",
+    "@turbineh/integrator": "workspace:*",
+    "@turbineh/remediation": "workspace:*",
+    "@turbineh/reporter": "workspace:*",
+    "@turbineh/resolver": "workspace:*",
+    "@turbineh/selector": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "@turbineh/storage": "workspace:*",
+    "@turbineh/verifier": "workspace:*",
+    "pg": "8.23.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

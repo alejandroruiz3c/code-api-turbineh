@@ -1,0 +1,28 @@
+# Anchored to the repository root so app routes such as src/app/v1/builds are never excluded.
+node_modules
+**/node_modules
+**/.next
+.turbo
+**/.turbo
+**/coverage
+**/dist
+/builds
+/artifacts
+/bench/results/runs
+/ingest/.cache
+.env*
+**/.env*
+*.rtf
+/.claude
+# Private packages (ADR-0053, ADR-0056) are git-ignored but MUST be uploaded with production web deploys: the
+# checkouts infra/private/sync.sh pins (private/<name>), without their git data, dependencies, benchmarks or coverage.
+!/private
+!/private/**
+/private/*/.git
+/private/*/node_modules
+/private/*/bench
+/private/*/coverage
+/private/*/services
+/private/*/integration
+# Legacy location before ADR-0056: never uploaded.
+/private/orchestration

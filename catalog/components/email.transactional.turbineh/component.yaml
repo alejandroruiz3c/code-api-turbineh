@@ -1,0 +1,49 @@
+schema: turbineh.component/v0.1
+id: email.transactional.turbineh
+version: 0.1.0
+status: approved
+category: email
+source:
+  purl: pkg:generic/turbineh/email.transactional.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Transactional email through the Resend HTTP API; production requires the key (or EMAIL_DELIVERY=disabled), development and tests use a local outbox file, links are never logged"
+  does_not: "Does not provide email templates, bounce handling or bulk sending"
+  use_cases: [landing-waitlist]
+  pros: ["Maintained by TurbineH", "No third-party runtime dependency"]
+  cons: ["Feature scope intentionally small"]
+  alternatives: []
+contract:
+  inputs: ["see source"]
+  outputs: ["see source"]
+  errors: ["see source"]
+  limits: ["see source"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: true, fs: false, db: false, external_services: [resend] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Included in recipe templates at src/lib/email.ts"
+  config: [RESEND_API_KEY, EMAIL_FROM]
+  migrations: false
+quality:
+  tests: { command: "recipes saas-crud, internal-tool, landing-waitlist: typecheck, lint, unit, build, e2e (sandbox)", passed: true, date: 2026-10-10 }
+security:
+  scanned_at: 2026-10-10
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed; no third-party dependencies of its own."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Waitlist confirmation is sent through the outbox transport without leaking message bodies (E2E, recipe landing-waitlist)"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipes.json"
+relations:
+  requires: []
+  provides: [email.transactional]
+  conflicts: []
+  tested_with: [recipe.landing-waitlist]

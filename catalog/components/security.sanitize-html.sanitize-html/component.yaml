@@ -1,0 +1,76 @@
+schema: turbineh.component/v0.1
+id: security.sanitize-html.sanitize-html
+version: 0.1.0
+status: approved
+category: security
+source:
+  purl: pkg:npm/sanitize-html@2.17.7
+  repo: https://github.com/apostrophecms/apostrophe
+  integrity: sha512-PGtEkc9cbnedU3s9TmzDbpsZ8w086g/0Q8k8/oIO1NLNU3i5k9yn835CrjJSajp1KMmkisbO1qPXxNKO3welAg==
+capability:
+  does: Allow-list HTML sanitizer for user-generated rich text
+  does_not: Does not sanitize CSS in style attributes unless configured
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add sanitize-html@2.17.7
+  types: "@types/sanitize-html@2.16.1"
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata sanitize-html@2.17.7
+  - claim: 0 OSV advisories for sanitize-html@2.17.7 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - security.sanitize-html
+  conflicts: []
+  tested_with:
+    - contract-harness

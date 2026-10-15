@@ -1,0 +1,51 @@
+schema: turbineh.component/v0.1
+id: authz.organizations.better-auth
+version: 0.1.0
+status: approved
+category: authz
+source:
+  purl: pkg:npm/better-auth@1.7.6
+  repo: https://github.com/better-auth/better-auth
+  integrity: sha512-WTMqOpmTTj+oBoX7zzPOzL85342Upyf+/v0IkH1kvGRA85lV4JGRFIYMIRKqvjZ6ShsuL5VX/c9C13jtoZXcKA==
+capability:
+  does: "Organizations (workspaces) with members, roles (owner, admin, member), invitations and an active organization per session"
+  does_not: "Does not scope application data by itself; the app must filter every query by the active organization"
+  use_cases: [saas-crud, client-portal, internal-tool]
+  pros: ["Same library as the session component, no extra dependency"]
+  cons: ["Role checks for app data are the app's responsibility"]
+  alternatives: []
+contract:
+  inputs: ["authenticated session"]
+  outputs: ["active organization id", "member role"]
+  errors: ["not a member", "no active organization"]
+  limits: ["Requires the organization plugin on server and client"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+  peer: { next: "^14.0.0 || ^15.0.0 || ^16.0.0", react: "^18.0.0 || ^19.0.0" }
+effects: { network: false, fs: false, db: true, external_services: [] }
+integration:
+  strategy: dependency
+  install: "pnpm add better-auth@1.7.6"
+  config: [BETTER_AUTH_SECRET, BETTER_AUTH_URL]
+  migrations: true
+quality:
+  tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
+security:
+  scanned_at: 2026-10-10
+  tools: [osv.dev-api]
+  findings: []
+  scope: "Known advisories for this exact version (OSV). Static analysis not yet run."
+license:
+  declared: MIT
+  detected: MIT
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Sign-up creates an organization and the creator is owner (E2E in recipe saas-crud)"
+    origin: tested
+    ref: "bench/results/2026-10-10-d1-recipe-saas-crud.json"
+relations:
+  requires: [auth.session]
+  provides: [authz.organizations]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

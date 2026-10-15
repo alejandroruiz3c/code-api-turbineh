@@ -1,0 +1,5 @@
+{
+  "id": "tracker-03",
+  "expected_recipe": "tracker",
+  "prompt": "A study tracker for students to log hours studied per subject each day with goals and streaks."
+}

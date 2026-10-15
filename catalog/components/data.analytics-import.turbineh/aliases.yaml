@@ -1,0 +1,9 @@
+# Criteria aliases (ADR-0047): the analytics tests say "filters"; the request names its own (date range, shop).
+# Resolved by the assembler from src/analytics-import/params.json and applied to these tests' proofs only.
+file: src/analytics-import/params.json
+tests:
+  - tests/e2e/analytics-import.spec.ts
+  - tests/unit/analytics-import.test.ts
+aliases:
+  - term: filters
+    from: "filters[]"

@@ -1,0 +1,16 @@
+{
+  "primary_ref": "scaleway:deepseek-v4-flash-0731",
+  "secondary_ref": "scaleway:glm-5.2",
+  "primary": {
+    "status": "ok",
+    "model": "deepseek-v4-flash-0731",
+    "latencyMs": 853,
+    "reply": "ready"
+  },
+  "secondary": {
+    "status": "ok",
+    "model": "glm-5.2",
+    "latencyMs": 616,
+    "reply": "ready"
+  }
+}

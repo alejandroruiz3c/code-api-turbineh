@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-10T20:51:03.478Z",
+  "jev": {
+    "status": "ok",
+    "backend": "jev",
+    "model": "jev-1.13.0",
+    "runs": 10,
+    "requests_per_ask": 1,
+    "latency_ms": {
+      "p50": 89,
+      "p95": 166,
+      "max": 166
+    },
+    "usage_last": {
+      "input_tokens": 486,
+      "output_tokens": 84
+    },
+    "answers_last": {
+      "best_fit": {
+        "type": "choice",
+        "choice": "auth.session.next-auth",
+        "confidence": 0.5066666666666667,
+        "probabilities": {
+          "auth.session.better-auth": 0.36,
+          "auth.session.lucia-pattern": 0.01,
+          "auth.session.next-auth": 0.63,
+          "none_of_the_above": 0
+        }
+      },
+      "needs_oauth_helpers": {
+        "type": "noul",
+        "noul": 0.31
+      }
+    }
+  },
+  "open": {
+    "status": "ok",
+    "backend": "open",
+    "model": "chinhnc/Quyet-1.0-Medium",
+    "runs": 10,
+    "requests_per_ask": 1,
+    "latency_ms": {
+      "p50": 966,
+      "p95": 1040,
+      "max": 1040
+    },
+    "usage_last": {
+      "input_tokens": 478,
+      "output_tokens": 0
+    },
+    "answers_last": {
+      "best_fit": {
+        "type": "choice",
+        "choice": "auth.session.next-auth",
+        "confidence": 0.6332,
+        "probabilities": {
+          "auth.session.better-auth": 0.1773,
+          "auth.session.lucia-pattern": 0.0602,
+          "auth.session.next-auth": 0.7249,
+          "none_of_the_above": 0.0377
+        }
+      },
+      "needs_oauth_helpers": {
+        "type": "noul",
+        "noul": 0.7324,
+        "confidence": 0.7324
+      }
+    }
+  }
+}

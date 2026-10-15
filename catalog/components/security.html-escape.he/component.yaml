@@ -1,0 +1,76 @@
+schema: turbineh.component/v0.1
+id: security.html-escape.he
+version: 0.1.0
+status: approved
+category: security
+source:
+  purl: pkg:npm/he@1.2.0
+  repo: https://github.com/mathiasbynens/he
+  integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==
+capability:
+  does: Encodes and decodes HTML entities robustly
+  does_not: Does not sanitize full HTML documents
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add he@1.2.0
+  types: "@types/he@1.2.3"
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata he@1.2.0
+  - claim: 0 OSV advisories for he@1.2.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - security.html-escape
+  conflicts: []
+  tested_with:
+    - contract-harness

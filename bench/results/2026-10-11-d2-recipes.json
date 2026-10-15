@@ -1,0 +1,75 @@
+{
+  "description": "Recipes bookings and client-portal (WP15) verified end-to-end through the pipeline on the local sandbox, with real models (compiler, decider, Backup Coder, writer).",
+  "date": "2026-10-11",
+  "runs": {
+    "bookings": {
+      "prompt": "An appointment booking app for a physiotherapy clinic: staff set weekly opening hours, receptionists book appointments for patients without double booking, and everyone sees a weekly calendar. Patients get an email confirmation.",
+      "buildId": "0aaf700b-1d65-41fb-a53d-db460352a515",
+      "status": "done",
+      "recipe": {
+        "requested": "bookings",
+        "built": "bookings"
+      },
+      "timings_ms": {
+        "compile": 2186,
+        "select": 136,
+        "resolve": 4,
+        "assemble": 108,
+        "integrate": 5317,
+        "verify": 55957,
+        "total": 63739
+      },
+      "checks": null,
+      "criteria_verified": "4/5",
+      "integrated": [
+        "ui.calendar.react-day-picker",
+        "data.dates.date-fns",
+        "data.serialization.superjson",
+        "ui.notifications.sonner"
+      ],
+      "backup_activations": [
+        {
+          "capability": "jobs.queue",
+          "trigger": "T1",
+          "model": "deepseek-v4-flash-0731"
+        }
+      ],
+      "corrections": 1,
+      "swappedOut": []
+    },
+    "client-portal": {
+      "prompt": "A client portal for an accounting firm: clients submit requests with a title and description, attach documents like PDFs or scans, and follow the status of each request. Staff review requests and update their status.",
+      "buildId": "0e8d3672-3e4f-40d0-843f-5b74fa591f8e",
+      "status": "done",
+      "recipe": {
+        "requested": "client-portal",
+        "built": "client-portal"
+      },
+      "timings_ms": {
+        "compile": 1892,
+        "select": 147,
+        "resolve": 4,
+        "assemble": 105,
+        "integrate": 10822,
+        "verify": 66486,
+        "total": 79478
+      },
+      "checks": null,
+      "criteria_verified": "4/5",
+      "integrated": [
+        "data.ids.nanoid",
+        "data.serialization.superjson",
+        "ui.notifications.sonner"
+      ],
+      "backup_activations": [
+        {
+          "capability": "jobs.queue",
+          "trigger": "T1",
+          "model": "deepseek-v4-flash-0731"
+        }
+      ],
+      "corrections": 1,
+      "swappedOut": []
+    }
+  }
+}

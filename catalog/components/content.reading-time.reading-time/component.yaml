@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: content.reading-time.reading-time
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:npm/reading-time@1.5.0
+  repo: https://github.com/ngryman/reading-time
+  integrity: sha512-onYyVhBNr4CmAxFsKS7bz+uTLRakypIe4R+5A824vBSkQy/hB3fZepoVEf8OVAxzLvK+H/jm9TzpI3ETSm64Kg==
+capability:
+  does: Estimates reading time of an article
+  does_not: Does not parse Markdown
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add reading-time@1.5.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata reading-time@1.5.0
+  - claim: 0 OSV advisories for reading-time@1.5.0 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-4b.json
+relations:
+  requires: []
+  provides:
+    - content.blog
+  conflicts: []
+  tested_with:
+    - contract-harness

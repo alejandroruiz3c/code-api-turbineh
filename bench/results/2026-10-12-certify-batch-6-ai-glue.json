@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-12",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "sandbox": "install with network (no secrets), tests and type-check with --network none",
+  "typecheckTail": "exit=0\n",
+  "runTail": "exit=0\n",
+  "components": {
+    "ai.token-count.gpt-tokenizer": {
+      "purl": "pkg:npm/gpt-tokenizer@4.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "files.pdf-text.unpdf": {
+      "purl": "pkg:npm/unpdf@1.8.1",
+      "passed": true,
+      "message": ""
+    },
+    "files.docx-text.mammoth": {
+      "purl": "pkg:npm/mammoth@1.13.0",
+      "passed": true,
+      "message": ""
+    },
+    "files.office-text.officeparser": {
+      "purl": "pkg:npm/officeparser@8.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.html-to-markdown.node-html-markdown": {
+      "purl": "pkg:npm/node-html-markdown@2.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.readability.mozilla-readability": {
+      "purl": "pkg:npm/@mozilla/readability@0.6.0",
+      "passed": true,
+      "message": ""
+    },
+    "content.html-dom.linkedom": {
+      "purl": "pkg:npm/linkedom@0.18.13",
+      "passed": true,
+      "message": ""
+    },
+    "content.html-parse.cheerio": {
+      "purl": "pkg:npm/cheerio@1.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.json-repair.jsonrepair": {
+      "purl": "pkg:npm/jsonrepair@3.15.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.partial-json.partial-json": {
+      "purl": "pkg:npm/partial-json@0.1.7",
+      "passed": true,
+      "message": ""
+    },
+    "ai.sse-parsing.eventsource-parser": {
+      "purl": "pkg:npm/eventsource-parser@4.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "ai.schema-validation.ajv": {
+      "purl": "pkg:npm/ajv@8.20.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.vector-store.pgvector": {
+      "purl": "pkg:npm/pgvector@0.3.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.language-detection.franc-min": {
+      "purl": "pkg:npm/franc-min@6.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.prompt-templates.mustache": {
+      "purl": "pkg:npm/mustache@4.2.0",
+      "passed": true,
+      "message": ""
+    },
+    "ops.queue-throttle.p-queue": {
+      "purl": "pkg:npm/p-queue@9.3.3",
+      "passed": true,
+      "message": ""
+    },
+    "ai.mcp-server.modelcontextprotocol-sdk": {
+      "purl": "pkg:npm/@modelcontextprotocol/sdk@1.31.0",
+      "passed": true,
+      "message": ""
+    },
+    "ai.text-chunking.sentence-splitter": {
+      "purl": "pkg:npm/sentence-splitter@5.0.1",
+      "passed": true,
+      "message": ""
+    },
+    "ai.stopwords.stopword": {
+      "purl": "pkg:npm/stopword@3.1.5",
+      "passed": true,
+      "message": ""
+    },
+    "content.markdown-to-text.remove-markdown": {
+      "purl": "pkg:npm/remove-markdown@0.7.1",
+      "passed": true,
+      "message": ""
+    },
+    "data.yaml.yaml": {
+      "purl": "pkg:npm/yaml@2.9.1",
+      "passed": true,
+      "message": ""
+    },
+    "email.parsing.mailparser": {
+      "purl": "pkg:npm/mailparser@3.9.31",
+      "passed": true,
+      "message": ""
+    }
+  }
+}

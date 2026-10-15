@@ -1,0 +1,16 @@
+{
+  "target": "https://software.turbineh.com",
+  "date": "2026-10-12T19:09:37.410Z",
+  "submitted": 10,
+  "accepted": 10,
+  "rejected": [],
+  "green": 10,
+  "wallClockS": 430,
+  "buildsPerHour": 83.7,
+  "maxQueued": 7,
+  "maxWorkersSeen": 2,
+  "notes": [
+    "All builds submitted at once; wall clock from first submission to last result.",
+    "workers = workers with a heartbeat in the last 90 s (GET /health)."
+  ]
+}

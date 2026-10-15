@@ -1,0 +1,5 @@
+{
+  "id": "portal-01",
+  "expected_recipe": "client-portal",
+  "prompt": "A client portal for an accounting firm: clients submit requests with a title and description, attach documents like PDFs or scans, and follow the status of each request. Staff review requests and update their status."
+}

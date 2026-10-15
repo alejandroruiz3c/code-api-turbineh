@@ -1,0 +1,122 @@
+name: batch-5
+description: "Fifth curation batch: maps, images, consent, galleries and the remaining accessible UI controls"
+entries:
+  - id: ui.map.maplibre
+    package: "maplibre-gl"
+    category: ui
+    provides: ["ui.map"]
+    does: "Interactive vector maps (store locations, delivery areas) without a proprietary SDK"
+    does_not: "Needs a tile source (style URL) chosen by the client"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: files.image-processing.jimp
+    package: "jimp"
+    category: files
+    provides: ["files.image-processing"]
+    does: "Resizes, crops and converts images in pure JavaScript (thumbnails for products and galleries)"
+    does_not: "Slower than native libraries for very large images"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.cookie-consent.vanilla-cookieconsent
+    package: "vanilla-cookieconsent"
+    category: ui
+    provides: ["privacy.cookie-consent"]
+    does: "GDPR cookie consent banner with categories, only needed when non-essential cookies are used"
+    does_not: "Does not block third-party scripts by itself without configuration"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.lightbox.yarl
+    package: "yet-another-react-lightbox"
+    category: ui
+    provides: ["ui.lightbox"]
+    does: "Accessible image lightbox and galleries for products and portfolios"
+    does_not: "Not a carousel (see ui.carousel)"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.slider.radix
+    package: "@radix-ui/react-slider"
+    category: ui
+    provides: ["ui.slider"]
+    does: "Accessible range sliders (price filters, quantities)"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.checkbox.radix
+    package: "@radix-ui/react-checkbox"
+    category: ui
+    provides: ["ui.checkbox"]
+    does: "Accessible custom checkboxes"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.switch.radix
+    package: "@radix-ui/react-switch"
+    category: ui
+    provides: ["ui.switch"]
+    does: "Accessible on/off switches for settings"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.progress.radix
+    package: "@radix-ui/react-progress"
+    category: ui
+    provides: ["ui.progress"]
+    does: "Accessible progress bars (uploads, onboarding)"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.avatar.radix
+    package: "@radix-ui/react-avatar"
+    category: ui
+    provides: ["ui.avatar"]
+    does: "User avatars with image fallback"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.scroll-area.radix
+    package: "@radix-ui/react-scroll-area"
+    category: ui
+    provides: ["ui.scroll-area"]
+    does: "Custom scroll areas for panels and long lists"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.toggle-group.radix
+    package: "@radix-ui/react-toggle-group"
+    category: ui
+    provides: ["ui.toggle-group"]
+    does: "Accessible toggle groups (view switchers, filters)"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.alert-dialog.radix
+    package: "@radix-ui/react-alert-dialog"
+    category: ui
+    provides: ["ui.alert-dialog"]
+    does: "Accessible confirmation dialogs before destructive actions"
+    does_not: "Unstyled"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.hover-card.radix
+    package: "@radix-ui/react-hover-card"
+    category: ui
+    provides: ["ui.hover-card"]
+    does: "Preview cards on hover (people, links)"
+    does_not: "Unstyled; not for touch-only interactions"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: files.dropzone.react-dropzone
+    package: "react-dropzone"
+    category: files
+    provides: ["files.upload"]
+    does: "Drag-and-drop file selection with type and size filters in the browser"
+    does_not: "Client-side only; the server must still validate"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: files.pdf.react-pdf
+    package: "@react-pdf/renderer"
+    category: files
+    provides: ["files.pdf"]
+    does: "PDF documents (invoices, tickets, reports) written as React components on the server"
+    does_not: "Not an HTML-to-PDF converter"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: files.qr.qrcode-react
+    package: "qrcode.react"
+    category: files
+    provides: ["files.qr"]
+    does: "QR codes as SVG or canvas React components"
+    does_not: "Does not scan QR codes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]
+  - id: ui.color-picker.react-colorful
+    package: "react-colorful"
+    category: ui
+    provides: ["ui.color-picker"]
+    does: "Tiny accessible colour pickers (branding, product options)"
+    does_not: "Unstyled beyond defaults"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal", "corporate-site", "storefront"]

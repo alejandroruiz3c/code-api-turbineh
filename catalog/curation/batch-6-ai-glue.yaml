@@ -1,0 +1,25 @@
+name: batch-6-ai-glue
+description: "F3 batch with curated glue (type-checked with the contract tests)"
+entries:
+  - id: ai.token-count.gpt-tokenizer
+  - id: files.pdf-text.unpdf
+  - id: files.docx-text.mammoth
+  - id: files.office-text.officeparser
+  - id: content.html-to-markdown.node-html-markdown
+  - id: content.readability.mozilla-readability
+  - id: content.html-dom.linkedom
+  - id: content.html-parse.cheerio
+  - id: ai.json-repair.jsonrepair
+  - id: ai.partial-json.partial-json
+  - id: ai.sse-parsing.eventsource-parser
+  - id: ai.schema-validation.ajv
+  - id: ai.vector-store.pgvector
+  - id: ai.language-detection.franc-min
+  - id: ai.prompt-templates.mustache
+  - id: ops.queue-throttle.p-queue
+  - id: ai.mcp-server.modelcontextprotocol-sdk
+  - id: ai.text-chunking.sentence-splitter
+  - id: ai.stopwords.stopword
+  - id: content.markdown-to-text.remove-markdown
+  - id: data.yaml.yaml
+  - id: email.parsing.mailparser

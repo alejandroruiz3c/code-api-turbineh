@@ -1,0 +1,78 @@
+schema: turbineh.component/v0.1
+id: email.plain-text.html-to-text
+version: 0.1.0
+status: approved
+category: email
+source:
+  purl: pkg:npm/html-to-text@10.0.1
+  repo: https://github.com/html-to-text/node-html-to-text
+  integrity: sha512-GiVhRI1BatGARSCmlXWNCjDT0cWrwBWoeduLoV0WSKAgaV/wa+hUWy5LiQLUs4UwiUrE52ZCMfBGiKD87TDPrg==
+capability:
+  does: Plain-text version of HTML emails (better deliverability)
+  does_not: Does not send emails
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add html-to-text@10.0.1
+  types: "@types/html-to-text@9.0.4"
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata html-to-text@10.0.1
+  - claim: 0 OSV advisories for html-to-text@10.0.1 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-recertify-curated-glue.json
+relations:
+  requires: []
+  provides:
+    - email.plain-text
+  conflicts: []
+  tested_with:
+    - contract-harness

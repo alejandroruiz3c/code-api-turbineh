@@ -1,0 +1,5 @@
+{
+  "id": "projects-02",
+  "expected_recipe": "projects",
+  "prompt": "A simple project tracker for a construction company: each building project has tasks with responsible person, due date and status from to do to done."
+}

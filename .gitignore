@@ -1,0 +1,57 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+!.env.example.append
+*.rtf
+KEYS*
+# Code routes for API key management (not key files): case-insensitive filesystems match KEYS*.
+!apps/web/src/app/keys/
+!apps/web/src/app/v1/keys/
+*.pem
+*.key
+
+# Dependencies and builds
+node_modules/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Local caches
+ingest/.cache/
+# Root-level only: source folders with these names (e.g. app/v1/builds) must stay tracked.
+/builds/
+
+/artifacts/
+
+# Next.js build output
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
+.vercel
+
+# Backup Coder flywheel records from local runs
+catalog/gaps/*.json
+
+# Agent worktrees (local only)
+.claude/
+
+# CLI bundle served by the web app (built by @turbineh/cli before the web build)
+apps/web/public/cli/
+bench/agent-decisions/.runtime/
+
+# Private packages (ADR-0053, ADR-0056): checkouts of private repositories pinned in infra/private/versions.json
+# (infra/private/sync.sh), never part of this public tree.
+/private/

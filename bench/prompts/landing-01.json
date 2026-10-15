@@ -1,0 +1,5 @@
+{
+  "id": "landing-01",
+  "expected_recipe": "landing-waitlist",
+  "prompt": "A landing page for a new meal-planning app with a waitlist form (name, email), a confirmation email and an admin panel listing signups."
+}

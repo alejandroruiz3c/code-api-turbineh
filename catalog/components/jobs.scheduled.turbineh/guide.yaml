@@ -1,0 +1,88 @@
+schema: turbineh.guide/v0.1
+component: jobs.scheduled.turbineh
+title: Scheduled jobs with time zones, a protected cron route, idempotent runs and email digests
+summary: >-
+  Runs the recurring work a request describes — "overdue tasks are emailed to the assignee every morning", "a daily
+  summary for managers" — from a cron route that any scheduler (Vercel Cron, GitHub Actions, a crontab) calls every few
+  minutes with a secret header. Each job has a cron expression evaluated in its own IANA time zone, so "07:00 in
+  Madrid" stays 07:00 across daylight saving. Every scheduled time of every job runs at most once: the run is claimed
+  under a unique key, so retries and two schedulers never send twice; failed runs are retried. With workflow records
+  it emails overdue and stuck records to the person who created them and a daily attention digest to the members who
+  manage the workspace, logged when no email provider is configured. It does not keep a clock itself.
+keywords:
+  [cron, scheduled jobs, scheduler, every morning, daily email, digest, reminders, overdue reminders, overdue emails,
+   recurring task, vercel cron, time zone, idempotent, notifications, summary email]
+synonyms:
+  scheduled job: [cron job, recurring task, scheduled task, periodic job]
+  digest: [summary email, daily report, reminder email]
+  overdue: [late, past due, stuck, over the limit]
+use_cases:
+  - "Overdue tasks emailed to their owner every morning at 07:00 local time"
+  - "A weekday digest of everything that needs attention for workspace managers"
+  - "Any recurring job the app adds (custom kind) with the same protection and idempotence"
+use_when:
+  - "The request says something happens every morning, daily, weekly or on a schedule"
+  - "Overdue or stuck records must be emailed"
+avoid_when:
+  - "One-off background work triggered by a user action (use jobs.queue.turbineh)"
+  - "Sub-minute schedules or long-running workers"
+tradeoffs:
+  - { choice: "An external scheduler calls a route", gain: "Works on serverless hosts and anywhere; nothing to keep alive", cost: "A scheduler must be configured (Vercel Cron, GitHub Actions…)" }
+  - { choice: "Run key = (job, latest scheduled time)", gain: "Idempotent across retries and concurrent calls; missed runs catch up on the next call", cost: "Only the latest missed occurrence runs (no backfill of older ones)" }
+  - { choice: "Cron evaluated in-app per time zone", gain: "Local times stay right across daylight saving", cost: "Minute-by-minute scan of up to 8 days per call (cheap, bounded)" }
+config:
+  - { name: "src/jobs/params.json", default: "overdue reminders 07:00 daily, digest 08:00 weekdays, UTC", description: "Jobs from the request: id, kind, cron, timeZone, what (validated at start-up)" }
+  - { name: CRON_SECRET, description: "Shared secret of /api/cron/run (≥32 chars); without it the route answers 503" }
+interfaces:
+  - { name: "Cron route", signature: "GET|POST /api/cron/run[?job=<id>] — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { ran, skipped, failed }", where: src/app/api/cron/run/route.ts }
+  - { name: runScheduled, signature: "runScheduled({ jobId?, now? }, jobs?) → RunReport — claims (job, latest occurrence), sends the digest, records the run", where: src/jobs/runner.ts }
+  - { name: DIGESTS, signature: "Record<kind, (job, now) => Promise<{ to, subject, text }[]>>", where: src/jobs/digests.ts }
+  - { name: "Cron", signature: "parseCron(expr); matches(cron, at, timeZone); lastOccurrence(expr, timeZone, now, lookbackDays = 8)", where: src/jobs/cron.ts }
+extension_points:
+  - what: "Add a scheduled job (weekly report, reminder before a booking…)"
+    where: "src/jobs/params.json, src/jobs/digests.ts"
+    how: "Add a job with kind \"custom\" (or a new kind) and return its emails from DIGESTS; the runner handles the schedule, idempotence and logging."
+  - what: "Change when a job runs or its time zone"
+    where: "src/jobs/params.json"
+    how: "Edit cron (five fields) and timeZone (IANA); validated at start-up."
+  - what: "Call the route on a schedule in production"
+    where: "CRON_SECRET, your scheduler"
+    how: "Vercel Cron: add `{ \"crons\": [{ \"path\": \"/api/cron/run\", \"schedule\": \"*/10 * * * *\" }] }` to vercel.json and set CRON_SECRET; elsewhere call it with the x-cron-secret header."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [projects, internal-tool, client-portal, tracker, saas-crud]
+  requires: []
+  works_with: [domain.workflow.turbineh, email.transactional.turbineh, jobs.queue.turbineh]
+  notes: "Without domain.workflow.turbineh the built-in digests have no data (custom jobs only)."
+security:
+  - "The route requires CRON_SECRET (≥32 characters) in a header, compared in constant time; disabled without it"
+  - "No user input besides a validated job id; digests read data through the domain services"
+  - "A run never sends twice for the same scheduled time (unique key in the database)"
+guarantees:
+  - { claim: "The cron route refuses calls without the secret", test: "tests/e2e/scheduled-jobs.spec.ts › the cron route refuses calls without the secret header" }
+  - { claim: "Each scheduled time of a job runs once", test: "tests/e2e/scheduled-jobs.spec.ts › a due job runs once per scheduled time: calling again sends nothing (idempotent)" }
+  - { claim: "Schedules follow the job's time zone across daylight saving", test: "tests/unit/scheduled-jobs.test.ts › finds the latest scheduled time in the job's time zone, across daylight saving" }
+  - { claim: "Overdue records are emailed to their creator, logged without an email provider", test: "tests/e2e/jobs-digests.spec.ts › overdue records are emailed every morning to the person who created them, logged when there is no email provider" }
+  - { claim: "The daily digest goes to the members who manage the workspace", test: "tests/e2e/jobs-digests.spec.ts › the daily digest lists what needs attention to the members who manage the workspace" }
+limits:
+  - "Needs an external scheduler; only the latest missed occurrence of a job runs"
+  - "Workflow records have a creator, not an assignee: overdue emails go to whoever created the record"
+  - "Email only (no SMS or push)"
+example: |
+  // src/jobs/params.json
+  { "jobs": [{ "id": "overdue-reminders", "kind": "overdue-digest", "cron": "0 7 * * *", "timeZone": "Europe/Madrid",
+               "what": "Overdue tasks are emailed to the assignee every morning" }], "logWhenNoEmailProvider": true }
+  // scheduler: curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/cron/run
+params:
+  file: src/jobs/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "jobs[].id", description: "Job id (lowercase, dashes)" }
+    - { name: "jobs[].kind", description: "overdue-digest, daily-digest or custom (a handler in src/jobs/digests.ts)" }
+    - { name: "jobs[].cron", default: "\"0 7 * * *\"", description: "Five-field cron in the job's time zone" }
+    - { name: "jobs[].timeZone", default: "UTC", description: "IANA time zone of the schedule" }
+    - { name: "jobs[].what", description: "The request's words, used in the email" }
+    - { name: "logWhenNoEmailProvider", default: "true", description: "Emails are logged when no provider is configured" }
+  example: |
+    { "jobs": [{ "id": "overdue-reminders", "kind": "overdue-digest", "cron": "0 7 * * *", "timeZone": "Europe/Madrid", "what": "Overdue tasks emailed every morning" }], "logWhenNoEmailProvider": true }

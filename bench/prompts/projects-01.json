@@ -1,0 +1,5 @@
+{
+  "id": "projects-01",
+  "expected_recipe": "projects",
+  "prompt": "A task manager for a marketing agency team: projects with a kanban board, tasks assigned to team members with priorities and due dates, comments on tasks, and a personal list of my tasks."
+}

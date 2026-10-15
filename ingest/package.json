@@ -1,0 +1,20 @@
+{
+  "name": "@turbineh/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Seeds the discovered catalog layer from public package metadata (ecosyste.ms) and embeds it",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "ingest": "tsx src/cli.ts",
+    "sync": "tsx src/sync-catalog.ts"
+  },
+  "dependencies": {
+    "@turbineh/catalog": "workspace:*",
+    "@turbineh/db": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "yaml": "2.9.1"
+  }
+}

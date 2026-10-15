@@ -1,0 +1,133 @@
+{
+  "agent": "claude-code@2.1.283",
+  "model": "claude-opus-5-5",
+  "date": "2026-10-11T19:50:35.791Z",
+  "timeBoxMin": 38,
+  "maxTurns": "60",
+  "parallel": 3,
+  "results": [
+    {
+      "id": "landing-01",
+      "agent": "claude-code@2.1.283",
+      "model": "claude-opus-5-5",
+      "dir": "builds/baseline/landing-01-1791747778073",
+      "agentExit": 0,
+      "finished": true,
+      "timeBoxMin": 38,
+      "agentS": 346,
+      "turns": 25,
+      "costUsd": 0.9396292,
+      "tokens": {
+        "input": 48,
+        "output": 29073,
+        "cacheRead": 767361,
+        "cacheWrite": 40901
+      },
+      "green": false,
+      "verifyS": 30,
+      "checks": {
+        "install": true,
+        "migrations": true,
+        "lint": true,
+        "typecheck": true,
+        "unit": true,
+        "build": true,
+        "e2e": true,
+        "secrets": true,
+        "static": false,
+        "dependencies": true,
+        "licenses": false
+      },
+      "security": {
+        "staticErrors": 3,
+        "staticWarnings": 0,
+        "advisories": 2,
+        "secrets": 0,
+        "blockedLicences": 3
+      },
+      "agentError": null
+    },
+    {
+      "id": "portal-01",
+      "agent": "claude-code@2.1.283",
+      "model": "claude-opus-5-5",
+      "dir": "builds/baseline/portal-01-1791747778076",
+      "agentExit": 0,
+      "finished": true,
+      "timeBoxMin": 38,
+      "agentS": 406,
+      "turns": 26,
+      "costUsd": 1.0454496,
+      "tokens": {
+        "input": 50,
+        "output": 33232,
+        "cacheRead": 806123,
+        "cacheWrite": 43877
+      },
+      "green": false,
+      "verifyS": 30,
+      "checks": {
+        "install": true,
+        "migrations": true,
+        "lint": true,
+        "typecheck": true,
+        "unit": true,
+        "build": true,
+        "e2e": true,
+        "secrets": true,
+        "static": false,
+        "dependencies": true,
+        "licenses": false
+      },
+      "security": {
+        "staticErrors": 3,
+        "staticWarnings": 0,
+        "advisories": 2,
+        "secrets": 0,
+        "blockedLicences": 3
+      },
+      "agentError": null
+    },
+    {
+      "id": "bookings-01",
+      "agent": "claude-code@2.1.283",
+      "model": "claude-opus-5-5",
+      "dir": "builds/baseline/bookings-01-1791747778069",
+      "agentExit": 0,
+      "finished": true,
+      "timeBoxMin": 38,
+      "agentS": 430,
+      "turns": 27,
+      "costUsd": 1.2605428,
+      "tokens": {
+        "input": 52,
+        "output": 40489,
+        "cacheRead": 945999,
+        "cacheWrite": 52271
+      },
+      "green": false,
+      "verifyS": 28,
+      "checks": {
+        "install": true,
+        "migrations": true,
+        "lint": true,
+        "typecheck": true,
+        "unit": true,
+        "build": true,
+        "e2e": true,
+        "secrets": true,
+        "static": false,
+        "dependencies": true,
+        "licenses": false
+      },
+      "security": {
+        "staticErrors": 3,
+        "staticWarnings": 0,
+        "advisories": 2,
+        "secrets": 0,
+        "blockedLicences": 3
+      },
+      "agentError": null
+    }
+  ]
+}

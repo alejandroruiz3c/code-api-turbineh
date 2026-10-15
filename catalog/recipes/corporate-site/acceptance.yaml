@@ -1,0 +1,15 @@
+# Acceptance criteria → tests for corporate-site (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
+  covers: ["home|services|about|pages?\\b|navigat|brows"]
+- test: "tests/e2e/site.spec.ts › is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)"
+  covers: ["\\bseo\\b|search engine|sitemap|structured data|json-ld|answer engine|robots|llms\\.txt"]
+- test: "tests/e2e/site.spec.ts › a visitor submits the contact form and gets a confirmation"
+  covers: ["contact|message|enquir|inquir|get in touch", "form|send|submit|message"]
+- test: "tests/e2e/site.spec.ts › the owner (admin) reads the contact message in the dashboard"
+  covers: ["message|enquir|inquir|contact", "admin|owner|staff|read|see|view|inbox"]
+- test: "tests/e2e/site.spec.ts › the admin publishes a post that appears on the blog, RSS and sitemap"
+  covers: ["blog|post|article|news|\\brss\\b|feed"]
+- test: "tests/e2e/site.spec.ts › the owner (admin) edits the website headline and the home page shows it"
+  covers: ["edit|updat|chang|manag", "content|text|headline|copy|website|page|section", "admin|owner|staff|cms"]
+- test: "tests/unit/site.test.ts › renders Markdown without executing HTML"
+  covers: ["markdown|rich text|html|xss|sanitiz"]

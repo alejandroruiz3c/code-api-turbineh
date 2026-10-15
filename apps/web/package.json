@@ -1,0 +1,47 @@
+{
+  "name": "@turbineh/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CODE-API-TURBINEH web app: prompt-first UI and the public /v1 API (software.turbineh.com)",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/copy-cli.mjs && next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "auth:migrate": "tsx scripts/auth-migrate.ts"
+  },
+  "dependencies": {
+    "@turbineh/db": "workspace:*",
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/deployer": "workspace:*",
+    "@turbineh/engine": "workspace:*",
+    "@turbineh/orchestration": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "@turbineh/storage": "workspace:*",
+    "better-auth": "1.7.6",
+    "next": "16.3.8",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.3.8",
+    "@tailwindcss/postcss": "4.3.3",
+    "@turbineh/cli": "workspace:*",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript-eslint": "8.70.1"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

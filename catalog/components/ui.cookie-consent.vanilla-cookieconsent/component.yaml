@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ui.cookie-consent.vanilla-cookieconsent
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/vanilla-cookieconsent@3.1.0
+  repo: https://github.com/orestbida/cookieconsent
+  integrity: sha512-/McNRtm/3IXzb9dhqMIcbquoU45SzbN2VB+To4jxEPqMmp7uVniP6BhGLjU8MC7ZCDsNQVOp27fhQTM/ruIXAA==
+capability:
+  does: GDPR cookie consent banner with categories, only needed when non-essential cookies are used
+  does_not: Does not block third-party scripts by itself without configuration
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add vanilla-cookieconsent@3.1.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata vanilla-cookieconsent@3.1.0
+  - claim: 0 OSV advisories for vanilla-cookieconsent@3.1.0 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-5.json
+relations:
+  requires: []
+  provides:
+    - privacy.cookie-consent
+  conflicts: []
+  tested_with:
+    - contract-harness

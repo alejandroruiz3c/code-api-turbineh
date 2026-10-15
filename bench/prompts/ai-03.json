@@ -1,0 +1,5 @@
+{
+  "id": "ai-03",
+  "expected_recipe": "ai-agents",
+  "prompt": "Internal HR assistant for a 200-person company: employees ask questions about policies (holidays, expenses, remote work) answered from HR documents, the assistant can email the answer to the employee after they confirm, and HR admins manage the documents."
+}

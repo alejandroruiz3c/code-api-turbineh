@@ -1,0 +1,18 @@
+id: projects
+description: Project and task management for teams with kanban boards, assignees, priorities, due dates, comments and a personal task list
+extends: saas-crud
+providedEntities:
+  [Project, Task, Todo, Issue, Ticket, Card, Board, Column, Comment, Assignment, Sprint, Milestone, Subtask]
+defaultCapabilities: [data.pagination, ops.rate-limit]
+# Implemented by the template itself (native, no extra dependencies).
+providedCapabilities: [ui.drag-drop]
+nav:
+  - { label: Projects, href: /dashboard/projects }
+  - { label: My tasks, href: /dashboard/my-tasks }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Add a task field or column"
+      where: "src/db/recipe-tables.ts, src/server/board.ts, src/app/dashboard/tasks/"
+      how: "Add the column, update the board and task page; then `pnpm db:generate`."

@@ -1,0 +1,54 @@
+schema: turbineh.component/v0.1
+id: security.ai-safety.turbineh
+version: 0.1.0
+status: approved
+category: security
+source:
+  purl: pkg:generic/turbineh/security.ai-safety.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "AI Safety Pack, always installed with the AI orchestrator: refuses prompt-injection requests and oversized input, keeps documents as data, optional redaction of personal data, scans answers for secrets, per-user rate limit and daily token allowances per user and workspace, tool allow-list with human confirmation for irreversible actions, audit record of every AI call (content stored only as a hash)"
+  does_not: "Does not replace content moderation by a dedicated model; cannot be switched off"
+  use_cases: [ai-agents]
+  pros: ["Maintained by TurbineH", "Deterministic checks (no model decides what is safe to skip)"]
+  cons: ["Heuristic injection patterns: new phrasings may pass; the TurbineH orchestration adds a second, server-side safety policy"]
+  alternatives: []
+contract:
+  inputs: ["guardInput(text, 'request' | 'document'); checkLimits({ organizationId, userId }); scanOutput(text); allowedTools(registry, enabled)"]
+  outputs: ["{ text, flags }; audit(entry) → ai_audit row"]
+  errors: ["AiSafetyError with a user-facing message (never internals)"]
+  limits: ["AI_MAX_INPUT_CHARS (default 20000), AI_REQUESTS_PER_MINUTE_PER_USER (20), AI_DAILY_TOKENS_PER_USER (200000), AI_DAILY_TOKENS_PER_WORKSPACE (2000000)"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: false, fs: false, db: true, external_services: [] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/ together with ai.orchestrator.turbineh: src/lib/ai/{guard,safety}.ts, src/db/component-ai-safety.ts, tests/unit/ai-safety.test.ts"
+  config: [AI_MAX_INPUT_CHARS, AI_REQUESTS_PER_MINUTE_PER_USER, AI_DAILY_TOKENS_PER_USER, AI_DAILY_TOKENS_PER_WORKSPACE, AI_REDACT_PII]
+  migrations: true
+quality:
+  tests:
+    {
+      command: "unit tests in the app (injection, size, PII, secrets, tools) + E2E of recipe ai-agents (an injection attempt is refused)",
+      passed: true,
+      date: 2026-10-12,
+    }
+security:
+  scanned_at: 2026-10-12
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: no content stored in the audit (SHA-256 only), limits checked before any model runs, error messages never echo input or internals."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Injection attempts are refused and answers are scanned in every build of recipe ai-agents"
+    origin: tested
+    ref: "bench/results/2026-10-12-f3-ai-agents.md"
+relations:
+  requires: [ai.orchestrator.turbineh]
+  provides: [security.ai-safety]
+  conflicts: []
+  tested_with: [recipe.ai-agents]

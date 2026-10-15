@@ -1,0 +1,26 @@
+{
+  "name": "@turbineh/reporter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "User-facing build report: decider maps acceptance criteria to evidence, an open writer model drafts short parts, code assembles",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/remediation": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "openai": "7.23.0",
+    "zod": "4.6.5"
+  }
+}

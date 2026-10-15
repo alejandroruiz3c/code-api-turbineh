@@ -1,0 +1,73 @@
+schema: turbineh.component/v0.1
+id: ai.schema-validation.ajv
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:npm/ajv@8.20.0
+  repo: https://github.com/ajv-validator/ajv
+  integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==
+capability:
+  does: Validates JSON against JSON Schema (structured model output, tool arguments, imported data)
+  does_not: Does not repair invalid data
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add ajv@8.20.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata ajv@8.20.0
+  - claim: 0 OSV advisories for ajv@8.20.0 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - ai.schema-validation
+  conflicts: []
+  tested_with:
+    - contract-harness

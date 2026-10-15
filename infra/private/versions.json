@@ -1,0 +1,25 @@
+{
+  "$comment": "Pinned releases of TurbineH's private packages (ADR-0057, docs/PRIVATE_ORCHESTRATION.md). infra/private/sync.sh checks each one out at private/<name> (git-ignored). Only pins live here, never code. requiredBy: deploy targets of infra/staging/deploy.sh that refuse to deploy without the package. contract (optional): a file the package vendors from this repository, compared byte for byte before deploying.",
+  "packages": {
+    "agent-orchestrator": {
+      "repo": "alejandroruiz3c/turbineh-agent-orchestrator",
+      "tag": "v1.0.0",
+      "commit": "9d95134a862be89c184bd278348e997d127349d4",
+      "requiredBy": ["web"],
+      "contract": {
+        "vendored": "contract/orchestration.ts",
+        "public": "packages/orchestration/src/types.ts"
+      }
+    },
+    "resource-decider": {
+      "repo": "alejandroruiz3c/turbineh-resource-decider",
+      "tag": "v1.0.0",
+      "commit": "8e624cf551e9e733202521073a54506afd226ef4",
+      "requiredBy": ["web", "worker"],
+      "contract": {
+        "vendored": "contract/decider.ts",
+        "public": "packages/decider/src/contract.ts"
+      }
+    }
+  }
+}

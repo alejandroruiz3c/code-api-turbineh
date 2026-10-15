@@ -1,0 +1,24 @@
+[Unit]
+Description=CODE-API-TURBINEH build worker (staging, ADR-0022)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=turbineh
+WorkingDirectory=/opt/code-api-turbineh-staging/apps/worker
+EnvironmentFile=/etc/turbineh/worker-staging.env
+# The worker decides with TurbineH's private resource decision engine (ADR-0058): it refuses to start without it.
+Environment=TURBINEH_REQUIRE_PRIVATE_ORCHESTRATION=1
+# The worker is the main process (no pnpm wrapper): SIGTERM reaches it and only it.
+ExecStart=/opt/code-api-turbineh-staging/node_modules/.bin/tsx src/service.ts
+Restart=always
+RestartSec=5
+# Graceful stop: running builds finish first (the worker drains on SIGTERM, up to 25 min)
+TimeoutStopSec=1800
+KillSignal=SIGTERM
+# Only the main process gets SIGTERM; sandbox containers and their docker clients keep running until the drain ends.
+KillMode=mixed
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

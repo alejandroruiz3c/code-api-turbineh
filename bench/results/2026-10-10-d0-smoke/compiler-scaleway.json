@@ -1,0 +1,213 @@
+{
+  "model": "gemma-4-26b-a4b-it",
+  "valid": "5/5",
+  "results": [
+    {
+      "prompt": "A SaaS to manage gym memberships: organizations, admins and …",
+      "ok": true,
+      "recipe": "saas-crud",
+      "recipe_confidence": 1,
+      "capabilities": [
+        "security.headers",
+        "data.validation",
+        "auth.session",
+        "authz.roles",
+        "authz.organizations",
+        "data.orm",
+        "data.pagination",
+        "ui.table",
+        "ui.form",
+        "ui.layout",
+        "email.transactional",
+        "payments.checkout",
+        "jobs.scheduler",
+        "ops.rate-limit",
+        "ops.idempotency"
+      ],
+      "entities": [
+        "Organization",
+        "StaffRole",
+        "Member",
+        "MembershipPlan"
+      ],
+      "decider": {
+        "model": "jev-1.13.0",
+        "latencyMs": 155
+      },
+      "attempts": {
+        "meta": 1,
+        "entities": 1,
+        "pages": 1,
+        "criteria": 1
+      },
+      "latencyMs": 2841,
+      "usage": {
+        "input_tokens": 391,
+        "output_tokens": 1065
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A landing page for my coffee subscription startup with a wai…",
+      "ok": true,
+      "recipe": "landing-waitlist",
+      "recipe_confidence": 1,
+      "capabilities": [
+        "security.headers",
+        "data.validation",
+        "authz.roles",
+        "data.orm",
+        "ui.table",
+        "ui.form",
+        "ui.layout",
+        "email.transactional",
+        "jobs.queue",
+        "ops.rate-limit"
+      ],
+      "entities": [
+        "WaitlistSignup"
+      ],
+      "decider": {
+        "model": "jev-1.13.0",
+        "latencyMs": 87
+      },
+      "attempts": {
+        "meta": 1,
+        "entities": 1,
+        "pages": 1,
+        "criteria": 1
+      },
+      "latencyMs": 1292,
+      "usage": {
+        "input_tokens": 391,
+        "output_tokens": 622
+      },
+      "errors": []
+    },
+    {
+      "prompt": "An internal tool for our warehouse to track inventory items …",
+      "ok": true,
+      "recipe": "internal-tool",
+      "recipe_confidence": 1,
+      "capabilities": [
+        "security.headers",
+        "data.validation",
+        "auth.session",
+        "authz.roles",
+        "data.orm",
+        "data.pagination",
+        "data.csv-import",
+        "data.csv-export",
+        "ui.table",
+        "ui.form",
+        "ui.layout",
+        "files.upload"
+      ],
+      "entities": [
+        "InventoryItem"
+      ],
+      "decider": {
+        "model": "jev-1.13.0",
+        "latencyMs": 93
+      },
+      "attempts": {
+        "meta": 1,
+        "entities": 1,
+        "pages": 1,
+        "criteria": 1
+      },
+      "latencyMs": 1433,
+      "usage": {
+        "input_tokens": 395,
+        "output_tokens": 692
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A booking app for a physiotherapy clinic: therapists set ava…",
+      "ok": true,
+      "recipe": "bookings",
+      "recipe_confidence": 1,
+      "capabilities": [
+        "security.headers",
+        "data.validation",
+        "auth.session",
+        "authz.roles",
+        "data.orm",
+        "ui.table",
+        "ui.form",
+        "ui.layout",
+        "ui.calendar",
+        "email.transactional",
+        "jobs.queue",
+        "jobs.scheduler",
+        "ops.rate-limit",
+        "ops.idempotency"
+      ],
+      "entities": [
+        "Availability",
+        "Booking",
+        "Notification"
+      ],
+      "decider": {
+        "model": "jev-1.13.0",
+        "latencyMs": 105
+      },
+      "attempts": {
+        "meta": 1,
+        "entities": 1,
+        "pages": 1,
+        "criteria": 1
+      },
+      "latencyMs": 2771,
+      "usage": {
+        "input_tokens": 387,
+        "output_tokens": 1018
+      },
+      "errors": []
+    },
+    {
+      "prompt": "A client portal for an accounting firm where clients upload …",
+      "ok": true,
+      "recipe": "client-portal",
+      "recipe_confidence": 1,
+      "capabilities": [
+        "security.headers",
+        "data.validation",
+        "auth.session",
+        "authz.roles",
+        "authz.organizations",
+        "data.orm",
+        "data.pagination",
+        "ui.table",
+        "ui.form",
+        "ui.layout",
+        "files.upload",
+        "email.transactional",
+        "jobs.queue",
+        "ops.rate-limit"
+      ],
+      "entities": [
+        "ClientProfile",
+        "TaxFilingRequest",
+        "Document"
+      ],
+      "decider": {
+        "model": "jev-1.13.0",
+        "latencyMs": 82
+      },
+      "attempts": {
+        "meta": 1,
+        "entities": 1,
+        "pages": 1,
+        "criteria": 1
+      },
+      "latencyMs": 2159,
+      "usage": {
+        "input_tokens": 375,
+        "output_tokens": 957
+      },
+      "errors": []
+    }
+  ]
+}

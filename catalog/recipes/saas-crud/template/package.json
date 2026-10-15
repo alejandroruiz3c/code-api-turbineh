@@ -1,0 +1,61 @@
+{
+  "name": "__APP_SLUG__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "tsx scripts/local-db.ts --run --migrate -- next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "tsx scripts/local-db.ts --run --fresh --migrate -- playwright test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/local-db.ts --run -- tsx scripts/migrate.ts",
+    "db:local": "tsx scripts/local-db.ts --serve"
+  },
+  "dependencies": {
+    "better-auth": "1.7.6",
+    "clsx": "2.1.1",
+    "drizzle-orm": "0.45.3",
+    "next": "16.3.8",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwind-merge": "3.7.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
+    "@electric-sql/pglite-socket": "0.2.11",
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.3.8",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.19.0",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "drizzle-kit": "0.31.11",
+    "embedded-postgres": "17.10.0-beta.17",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [],
+    "ignoredOptionalDependencies": [
+      "sharp"
+    ],
+    "overrides": {
+      "esbuild@<0.25.0": "0.25.12"
+    }
+  }
+}

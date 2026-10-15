@@ -1,0 +1,72 @@
+schema: turbineh.component/v0.1
+id: files.type-detection.file-type
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/file-type@22.1.1
+  repo: https://github.com/sindresorhus/file-type
+  integrity: sha512-sEB0oStmeLGtpmSAD88RDNuLsvhv4iC3u0lE25CUvfCULvj49xoQ3l3K525Vn+ZzsZ6DOLajQCV6RmhwwhqiJg==
+capability:
+  does: Detects real file type from magic bytes (not from the extension)
+  does_not: Does not scan files for malware
+  use_cases:
+    - client-portal
+    - saas-crud
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add file-type@22.1.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata file-type@22.1.1
+  - claim: 0 OSV advisories for file-type@22.1.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-recertify-curated-glue-4.json
+relations:
+  requires: []
+  provides:
+    - files.type-detection
+  conflicts: []
+  tested_with:
+    - contract-harness

@@ -1,0 +1,4 @@
+name: recertify-curated-glue-3
+description: "Curated glue for i18n-iso-countries (model-written glue spent 3 corrections per storefront build)"
+entries:
+  - id: data.countries.i18n-iso-countries

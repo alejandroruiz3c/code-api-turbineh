@@ -1,0 +1,107 @@
+{
+  "prompt": "A SaaS for language schools: schools as workspaces with admin and teacher roles; manage students (name, email, level, enrolled on) and courses (title, teacher, weekly hours, price).",
+  "buildId": "456af441-6e6a-4b8c-b552-0ac1c55527a5",
+  "status": "done",
+  "repoDir": "builds/456af441-6e6a-4b8c-b552-0ac1c55527a5/linguistflow",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6366
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 426
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2112
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1286
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 566
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7960
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3908
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 67
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2078,
+      "select": 119,
+      "resolve": 7,
+      "assemble": 129,
+      "verify": 26022,
+      "total": 28390
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 447,
+        "output_tokens": 965
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 95,
+      "requests": 1,
+      "questions": 33
+    },
+    "reuse": {
+      "generatedLines": 531,
+      "reusedLines": 747,
+      "reusedShare": 0.585
+    },
+    "recipe": {
+      "requested": "saas-crud",
+      "built": "saas-crud"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "data.pagination.turbineh",
+      "ui.primitives.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "payments.checkout",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

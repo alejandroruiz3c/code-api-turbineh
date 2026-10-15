@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-10",
+  "harness": {
+    "vitest": "5.0.2",
+    "vite": "8.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "sandbox": "install with network (no secrets), tests with --network none",
+  "runTail": "exit=0\n",
+  "components": {
+    "ui.styling.clsx": {
+      "purl": "pkg:npm/clsx@2.1.1",
+      "passed": true,
+      "message": ""
+    },
+    "ui.styling.tailwind-merge": {
+      "purl": "pkg:npm/tailwind-merge@3.7.0",
+      "passed": true,
+      "message": ""
+    },
+    "data.diff.diff": {
+      "purl": "pkg:npm/diff@9.0.0",
+      "passed": true,
+      "message": ""
+    },
+    "security.html-escape.he": {
+      "purl": "pkg:npm/he@1.2.0",
+      "passed": true,
+      "message": ""
+    }
+  }
+}

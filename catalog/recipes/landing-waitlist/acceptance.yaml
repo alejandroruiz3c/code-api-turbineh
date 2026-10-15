@@ -1,0 +1,11 @@
+# Acceptance criteria → tests for landing-waitlist (plus saas-crud's). Every regex of a rule must match the criterion.
+- test: "tests/e2e/waitlist.spec.ts › a visitor on the landing page submits their name and email and joins the waitlist"
+  covers: ["wait[- ]?list|sign[- ]?up form|early access|join|subscribe|register interest"]
+- test: "tests/e2e/waitlist.spec.ts › joining twice gives the same answer (no enumeration)"
+  covers: ["twice|duplicate|already|same email|enumerat|again"]
+- test: "tests/e2e/waitlist.spec.ts › the owner (admin) sees the list of waitlist signups in the dashboard"
+  covers: ["admin|owner|staff|team", "see|view|list|export|sign[- ]?ups|entries|waitlist"]
+- test: "tests/e2e/waitlist.spec.ts › shows benefits, how it works and an FAQ"
+  covers: ["benefit|feature|how it works|faq|question|hero|landing"]
+- test: "tests/e2e/waitlist.spec.ts › is ready for search engines (metadata, sitemap, robots)"
+  covers: ["\\bseo\\b|search engine|sitemap|metadata|robots|open ?graph"]

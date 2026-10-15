@@ -1,0 +1,67 @@
+schema: turbineh.component/v0.1
+id: files.upload.busboy
+version: 0.1.0
+status: evaluated
+category: files
+source:
+  purl: pkg:npm/busboy@1.6.0
+  repo: ssh://git@github.com/mscdex/busboy
+  integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==
+capability:
+  does: Streaming multipart/form-data parser for file uploads
+  does_not: Does not store files
+  use_cases:
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add busboy@1.6.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest, sandbox --network none)
+    passed: true
+    date: 2026-10-10
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: UNKNOWN
+  detected: UNKNOWN
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License UNKNOWN
+    origin: maintainer
+    ref: npm registry metadata busboy@1.6.0
+  - claim: 0 OSV advisories for busboy@1.6.0 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+relations:
+  requires: []
+  provides:
+    - files.upload
+  conflicts: []
+  tested_with: []

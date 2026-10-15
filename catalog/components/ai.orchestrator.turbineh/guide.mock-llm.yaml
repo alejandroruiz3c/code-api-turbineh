@@ -1,0 +1,49 @@
+schema: turbineh.guide/v0.1
+component: ai.orchestrator.turbineh
+part: tests/mock-llm
+title: Scripted mock model for offline AI tests (tests/mock-llm)
+summary: >-
+  A local OpenAI-compatible model for tests: no internet, no keys, same input → same output. When tools are offered,
+  script rules turn the user's plain-language message into the same tool calls a real model would make; tool results are
+  rendered to text. Without tools it answers like the verification simulator (minimal JSON for schemas, "Mock answer: …").
+  It also serves embeddings and routing decisions. Playwright starts it with the app, so every AI E2E test runs offline.
+keywords: [mock llm, fake model, test double, offline tests, playwright, e2e, openai-compatible mock, tool call script, no internet]
+synonyms:
+  mock llm: [fake LLM, stub model, model simulator, local model server, LLM test double]
+use_cases:
+  - "E2E tests of any AI app (assistants, agents, batch AI) without network access"
+  - "Deterministic demos of a tool-using assistant"
+use_when:
+  - "Tests must not reach the internet (verification sandbox, CI)"
+  - "A domain component needs its tools exercised end to end"
+avoid_when:
+  - "Measuring answer quality of a real model (use a real endpoint and an evaluation set)"
+tradeoffs:
+  - { choice: "Regex rules per domain", gain: "Readable, deterministic, no model weights", cost: "Only the phrasings the tests use" }
+config:
+  - { name: MOCK_LLM_PORT, default: "4010", description: "Port of the mock" }
+interfaces:
+  - { name: startMockLlm, signature: "startMockLlm(scripts: MockScript[], port?) → { server, url }", where: tests/mock-llm/mock.ts }
+  - { name: MockScript, signature: "{ id, rules: [{ tool, when: RegExp, args(text, match) }], render?: { [tool]: (result, args) => string } }", where: tests/mock-llm/mock.ts }
+  - { name: "Playwright wiring", signature: "tests/e2e/mocks/TURBINEH_AI_URL.ts, started by playwright.config.ts (sets TURBINEH_AI_URL, AI_BASE_URL, AI_API_KEY, AI_MODEL, TURBINEH_AI_TOKEN)", where: tests/e2e/mocks/TURBINEH_AI_URL.ts }
+extension_points:
+  - what: "Script a new domain"
+    where: "tests/mock-llm/scripts/<domain>.ts"
+    how: "export default { id, rules: [{ tool: 'my_tool', when: /pattern/i, args: (text, m) => ({ ... }) }], render: { my_tool: (r) => '...' } }. Rules fire only when the request offers that tool; first match wins (order matters)."
+compatibility:
+  runtime: "node >= 20 with tsx"
+  recipes: [ai-agents]
+security:
+  - "Listens on 127.0.0.1 only; never forwards requests; test-only keys"
+guarantees:
+  - { claim: "Rules produce tool calls only when the tool is offered", test: "tests/unit/ai-agent.test.ts › turns matching requests into tool calls only when the tool is offered" }
+limits:
+  - "No streaming; one tool call per reply"
+example: |
+  // tests/mock-llm/scripts/orders.ts
+  import type { MockScript } from "../mock";
+  export default {
+    id: "orders",
+    rules: [{ tool: "lookup_order", when: /order (A-\d+)/i, args: (_t, m) => ({ order: m[1] }) }],
+    render: { lookup_order: (r) => `Order ${String(r.order)} is ${String(r.status)}.` },
+  } satisfies MockScript;

@@ -1,0 +1,73 @@
+schema: turbineh.component/v0.1
+id: data.yaml.yaml
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:npm/yaml@2.9.1
+  repo: https://github.com/eemeli/yaml
+  integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==
+capability:
+  does: Parses and writes YAML (agent and prompt configuration, structured output that humans edit)
+  does_not: Custom tags are disabled by default (safe parsing)
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add yaml@2.9.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: ISC
+  detected: ISC
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License ISC
+    origin: maintainer
+    ref: npm registry metadata yaml@2.9.1
+  - claim: 0 OSV advisories for yaml@2.9.1 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - data.yaml
+  conflicts: []
+  tested_with:
+    - contract-harness

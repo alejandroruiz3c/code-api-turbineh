@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: ui.styling.class-variance-authority
+version: 0.1.0
+status: approved
+category: ui
+source:
+  purl: pkg:npm/class-variance-authority@0.7.1
+  repo: https://github.com/joe-bell/cva
+  integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==
+capability:
+  does: Typed component variants for utility-class styling
+  does_not: Does not include styles itself
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add class-variance-authority@0.7.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License Apache-2.0
+    origin: maintainer
+    ref: npm registry metadata class-variance-authority@0.7.1
+  - claim: 0 OSV advisories for class-variance-authority@0.7.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - ui.styling
+  conflicts: []
+  tested_with:
+    - contract-harness

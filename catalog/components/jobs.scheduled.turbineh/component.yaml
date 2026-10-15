@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: jobs.scheduled.turbineh
+version: 0.1.0
+status: approved
+category: jobs
+source:
+  purl: pkg:generic/turbineh/jobs.scheduled.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Scheduled jobs from the request (\"overdue tasks are emailed every morning\"): cron expressions evaluated in each job's IANA time zone (DST-correct), a cron route protected by a secret header (x-cron-secret or Vercel Cron's Bearer), idempotent runs (each scheduled time of each job runs once, recorded under a unique key; failed runs are retried), and email digests — overdue/stuck records to the person who created them and a daily attention digest to the members who manage the workspace — logged when there is no email provider."
+  does_not: "Does not run a clock by itself (an external scheduler calls the route), queue arbitrary background work (jobs.queue.turbineh) or send SMS/push"
+  use_cases: [projects, internal-tool, client-portal, tracker, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Schedules, time zones and digests come from the request as data",
+      "Idempotent by construction: retries and concurrent schedulers never send twice",
+    ]
+  cons: ["Needs a scheduler to call the route (Vercel Cron, GitHub Actions, any cron)"]
+  alternatives: [jobs.scheduler.croner, jobs.scheduler.cron-parser, jobs.queue.turbineh]
+contract:
+  inputs:
+    [
+      "src/jobs/params.json (jobs[]: id, kind overdue-digest|daily-digest|custom, cron, timeZone, what; logWhenNoEmailProvider)",
+      "GET|POST /api/cron/run[?job=<id>] with x-cron-secret: CRON_SECRET or Authorization: Bearer CRON_SECRET",
+    ]
+  outputs: ["{ ran[], skipped[], failed[] } per call; scheduled_runs rows (job, scheduled time, status, sent, transport)"]
+  errors: ["401 without the secret, 503 without CRON_SECRET, 400 for a malformed job id; a failing digest marks the run failed (retried next call)"]
+  limits: ["20 jobs; looks back 8 days for the latest occurrence; minute precision"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/jobs/{cron,config,runner,digests}.ts + params.json, src/db/component-scheduled-jobs.ts, src/app/api/cron/run/route.ts, unit and E2E tests. files-with/domain.workflow.turbineh/ replaces src/jobs/digests.ts with the workflow digests and adds their E2E."
+  config: [CRON_SECRET]
+  migrations: true
+params:
+  file: src/jobs/params.json
+  schema: params.schema.json
+  entities: [Job, ScheduledJob, Reminder, Digest, EmailLog, Notification, Cron]
+quality:
+  tests:
+    {
+      command: "unit (cron fields, latest occurrence in a time zone across DST, same occurrence until the next) + E2E (route refuses without the secret; one run per scheduled time; overdue and daily digests emailed and logged with workflow); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: constant-time secret comparison, secret only from the environment (≥32 chars, route disabled without it), no user input beyond a validated job id, digests read through the workflow service, emails through the email component."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "projects + workflow + kanban + uploads + jobs.scheduled and internal-tool + workflow + jobs.scheduled pass the full verification gate with the scheduled-jobs E2E suites"
+    origin: tested
+    ref: "verify:recipe (ADR-0048 combinations)"
+relations:
+  requires: []
+  provides: [jobs.scheduled]
+  conflicts: []
+  tested_with: [recipe.projects, recipe.internal-tool]

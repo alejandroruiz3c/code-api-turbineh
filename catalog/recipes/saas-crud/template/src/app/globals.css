@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens: every screen uses these (bg-surface, bg-panel, text-ink, text-muted, border-line, bg-brand…), never
+ * fixed palette colours. The assembler rewrites this block from the palette in the request (background, accents,
+ * call-to-action, type) or the uploaded brand, with WCAG contrast for text. Edit here and every screen follows.
+ */
+@theme {
+  --color-surface: #f8fafc;
+  --color-panel: #ffffff;
+  --color-subtle: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-line: #e2e8f0;
+  --color-field: #cbd5e1;
+  --color-brand: #0f172a;
+  --color-brand-contrast: #ffffff;
+  --color-accent: #0f172a;
+  --color-danger: #b91c1c;
+  --color-danger-contrast: #ffffff;
+  --color-danger-soft: #fef2f2;
+  --color-success: #047857;
+  --color-warning: #92400e;
+  --color-warning-soft: #fffbeb;
+  --color-info: #1e40af;
+  --color-info-soft: #eff6ff;
+  --font-brand: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+  font-family: var(--font-brand);
+}
+
+a {
+  text-decoration-color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
+input,
+textarea,
+select {
+  @apply bg-panel text-ink;
+}
+
+option {
+  @apply bg-panel text-ink;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

@@ -1,0 +1,81 @@
+schema: turbineh.component/v0.1
+id: data.ics-export.ical-generator
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:npm/ical-generator@11.1.1
+  repo: https://github.com/sebbo2002/ical-generator
+  integrity: sha512-1m50e+BOMzxtE3lFXlFiOKvze4Mmiiq2+QoEMw7w7EDtWSq8OxWrdN6mmQdaymBVjmkP1pg0BAPUesBL1ZHQMQ==
+capability:
+  does: Generates iCalendar (.ics) feeds and invitations
+  does_not: Does not sync with external calendars
+  use_cases:
+    - bookings
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    dayjs: ">= 1.10.0"
+    luxon: ">= 1.26.0"
+    rrule: ">= 2.6.8"
+    moment: ">= 2.29.0"
+    "@types/luxon": ">= 1.26.0"
+    "@types/mocha": ">= 8.2.1"
+    moment-timezone: ">= 0.5.33"
+    "@touch4it/ical-timezones": ">=1.6.0"
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add ical-generator@11.1.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata ical-generator@11.1.1
+  - claim: 0 OSV advisories for ical-generator@11.1.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - data.ics-export
+  conflicts: []
+  tested_with:
+    - contract-harness

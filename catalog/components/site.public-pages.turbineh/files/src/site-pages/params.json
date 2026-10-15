@@ -1,0 +1,7 @@
+{
+  "pages": [
+    { "entity": "Project", "path": "/projects", "detail": true, "filters": ["sector"] },
+    { "entity": "JobPosition", "path": "/careers", "detail": true, "filters": ["location"] }
+  ],
+  "seo": true
+}

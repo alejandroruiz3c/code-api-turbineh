@@ -1,0 +1,117 @@
+{
+  "prompt": "A SaaS for freelance agencies to track projects (name, client, budget, deadline, status, notes) and invoices (number, amount, issued on, paid) per agency workspace with admin and member roles.",
+  "buildId": "f3f5bcfd-124a-4cfe-9998-d9f6e425d9f1",
+  "status": "done",
+  "repoDir": "builds/f3f5bcfd-124a-4cfe-9998-d9f6e425d9f1/agencyflow",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6446
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 434
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2052
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1194
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 469
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 12008
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 4335
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 93
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2349,
+      "select": 143,
+      "resolve": 7,
+      "assemble": 142,
+      "verify": 30351,
+      "total": 33019
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 459,
+        "output_tokens": 1023
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 115,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 350,
+      "reusedLines": 594,
+      "reusedShare": 0.629
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "security.pack.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "email.transactional",
+        "trigger": "T1"
+      },
+      {
+        "capability": "payments.checkout",
+        "trigger": "T1"
+      },
+      {
+        "capability": "ops.idempotency",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

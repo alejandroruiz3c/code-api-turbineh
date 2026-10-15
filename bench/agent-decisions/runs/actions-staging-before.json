@@ -1,0 +1,467 @@
+{
+  "summary": {
+    "label": "actions-staging-origin-main",
+    "ref": "origin/main",
+    "target": "staging",
+    "set": "actions",
+    "model": "gemma-4-26b-a4b-it",
+    "date": "2026-10-13T15:54:42.241Z",
+    "cases": 20,
+    "accuracy": 1,
+    "passed": "20/20",
+    "latencyMs": {
+      "perTurn": {
+        "p50": 1571,
+        "p95": 2582,
+        "mean": 1546
+      }
+    },
+    "calls": {
+      "model": 20,
+      "decider": 20,
+      "deciderErrors": 0
+    },
+    "tokens": {
+      "modelInput": 19558,
+      "modelOutput": 2383,
+      "decider": 17717
+    },
+    "costUsd": 0.01401,
+    "costPer1000CasesUsd": 0.7,
+    "prices": {
+      "input": 0.27,
+      "output": 0.54,
+      "decider": 0.42
+    },
+    "wallS": 16
+  },
+  "rows": [
+    {
+      "id": "a01",
+      "expected": [
+        "clinic_info"
+      ],
+      "got": "clinic_info",
+      "ok": true,
+      "ms": [
+        2196.406625
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 973,
+        "modelOut": 54,
+        "deciderCalls": 1,
+        "deciderTokens": 877,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a02",
+      "expected": [
+        "clinic_info"
+      ],
+      "got": "clinic_info",
+      "ok": true,
+      "ms": [
+        1887.5273329999998
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 971,
+        "modelOut": 95,
+        "deciderCalls": 1,
+        "deciderTokens": 873,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a03",
+      "expected": [
+        "clinic_info"
+      ],
+      "got": "clinic_info",
+      "ok": true,
+      "ms": [
+        1286.5090410000003
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 973,
+        "modelOut": 91,
+        "deciderCalls": 1,
+        "deciderTokens": 877,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a04",
+      "expected": [
+        "clinic_info"
+      ],
+      "got": "clinic_info",
+      "ok": true,
+      "ms": [
+        1014.2746669999997
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 976,
+        "modelOut": 59,
+        "deciderCalls": 1,
+        "deciderTokens": 879,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a05",
+      "expected": [
+        "check_availability"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1584.5689590000002
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 975,
+        "modelOut": 124,
+        "deciderCalls": 1,
+        "deciderTokens": 884,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a06",
+      "expected": [
+        "check_availability"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1848.3261669999997
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 977,
+        "modelOut": 249,
+        "deciderCalls": 1,
+        "deciderTokens": 888,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a07",
+      "expected": [
+        "check_availability"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1548.0679170000003
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 977,
+        "modelOut": 150,
+        "deciderCalls": 1,
+        "deciderTokens": 888,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a08",
+      "expected": [
+        "check_availability"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1628.5836670000008
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 979,
+        "modelOut": 213,
+        "deciderCalls": 1,
+        "deciderTokens": 892,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a09",
+      "expected": [
+        "find_bookings"
+      ],
+      "got": "find_bookings",
+      "ok": true,
+      "ms": [
+        1169.8414169999996
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 983,
+        "modelOut": 69,
+        "deciderCalls": 1,
+        "deciderTokens": 891,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a10",
+      "expected": [
+        "find_bookings"
+      ],
+      "got": "find_bookings",
+      "ok": true,
+      "ms": [
+        1157.5967499999997
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 982,
+        "modelOut": 72,
+        "deciderCalls": 1,
+        "deciderTokens": 891,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a11",
+      "expected": [
+        "reply"
+      ],
+      "got": "reply",
+      "ok": true,
+      "ms": [
+        1130.9644170000001
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 967,
+        "modelOut": 95,
+        "deciderCalls": 1,
+        "deciderTokens": 864,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a12",
+      "expected": [
+        "reply"
+      ],
+      "got": "reply",
+      "ok": true,
+      "ms": [
+        994.1994579999991
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 974,
+        "modelOut": 72,
+        "deciderCalls": 1,
+        "deciderTokens": 876,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a13",
+      "expected": [
+        "reply"
+      ],
+      "got": "reply",
+      "ok": true,
+      "ms": [
+        1571.144959000001
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 974,
+        "modelOut": 128,
+        "deciderCalls": 1,
+        "deciderTokens": 876,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a14",
+      "expected": [
+        "reply",
+        "check_availability"
+      ],
+      "got": "reply",
+      "ok": true,
+      "ms": [
+        1380.5253329999996
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 974,
+        "modelOut": 128,
+        "deciderCalls": 1,
+        "deciderTokens": 877,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a15",
+      "expected": [
+        "check_availability",
+        "create_booking"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1688.1496670000015
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 999,
+        "modelOut": 156,
+        "deciderCalls": 1,
+        "deciderTokens": 925,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a16",
+      "expected": [
+        "cancel_booking",
+        "find_bookings"
+      ],
+      "got": "find_bookings",
+      "ok": true,
+      "ms": [
+        1548.706083000001
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 984,
+        "modelOut": 176,
+        "deciderCalls": 1,
+        "deciderTokens": 895,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a17",
+      "expected": [
+        "reschedule_booking",
+        "find_bookings",
+        "check_availability"
+      ],
+      "got": "find_bookings",
+      "ok": true,
+      "ms": [
+        2581.8582499999993
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 998,
+        "modelOut": 216,
+        "deciderCalls": 1,
+        "deciderTokens": 925,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a18",
+      "expected": [
+        "clinic_info",
+        "reply"
+      ],
+      "got": "reply",
+      "ok": true,
+      "ms": [
+        1761.4849999999988
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 972,
+        "modelOut": 77,
+        "deciderCalls": 1,
+        "deciderTokens": 874,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a19",
+      "expected": [
+        "clinic_info",
+        "reply"
+      ],
+      "got": "clinic_info",
+      "ok": true,
+      "ms": [
+        955.506625
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 971,
+        "modelOut": 57,
+        "deciderCalls": 1,
+        "deciderTokens": 873,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    },
+    {
+      "id": "a20",
+      "expected": [
+        "check_availability"
+      ],
+      "got": "check_availability",
+      "ok": true,
+      "ms": [
+        1979.1139999999996
+      ],
+      "error": null,
+      "meter": {
+        "modelCalls": 1,
+        "modelIn": 979,
+        "modelOut": 102,
+        "deciderCalls": 1,
+        "deciderTokens": 892,
+        "deciderErrors": 0,
+        "waitMs": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: ops.repo-analysis.turbineh
+version: 0.1.0
+status: approved
+category: ops
+source:
+  purl: pkg:generic/turbineh/ops.repo-analysis.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "TurbineH platform service: deterministic analysis of a client's existing repository through the GitHub API (no clone, configuration files only, env files by name only): application folder in a monorepo, framework and version, App/Pages Router, src/ layout, import aliases, TypeScript strictness, package manager and lockfile, auth library, ORM (Drizzle/Prisma/…), schema, migrations folder and database client module, database, UI libraries, Tailwind version, test runner, lint/format tools, CI files; then compatibility, conflicts and adaptation decisions with reasons for a capability. Keywords: analyse repository, detect stack, conventions, codebase scan, project structure, monorepo app path, App Router, Pages Router, path alias, ORM detection, Drizzle, Prisma, NextAuth, Clerk, better-auth, Tailwind, compatibility check, conflicts, brownfield"
+  does_not: "Does not read source code beyond configuration and database-client modules, never reads .env files or keys, does not execute anything, and does not decide with a model (all rules are code)"
+  use_cases: [integrate-into-existing-repository, stack-detection, plan-for-existing-project]
+  pros:
+    [
+      "Deterministic and explainable: every decision has a reason shown in the plan and the pull request",
+      "Works on public repositories without a connection; private ones with the workspace's GitHub connection",
+      "Same analysis for the API, the product UI, the CLI and the integration job",
+    ]
+  cons:
+    [
+      "Very large repositories: GitHub may truncate the file tree (stated in the result)",
+      "Only JavaScript/TypeScript projects are adapted automatically; others get an honest incompatibility",
+    ]
+  alternatives: ["Upload manifests (POST /v1/plans environment.files)", "Declared stack (adaptation stays pending)"]
+contract:
+  inputs:
+    [
+      "GET /v1/repos/{owner}/{name}/analysis?ref=&app= (Bearer or invitation cookie)",
+      "POST /v1/plans {need, environment: {repo: {provider: github, fullName, ref?, appPath?}}}",
+      "Library: analyseGitHubRepo(gh, fullName, {ref, appPath}) · analyseRepo({paths, files}) · analysisFindings(analysis, needs) from @turbineh/engine",
+    ]
+  outputs:
+    [
+      "RepoAnalysis {appPath, monorepo, packageManager, language, framework {name, version, router, appDir, pagesDir}, sourceRoot, typescript {aliases, strict}, styling, auth, orm {library, schema, migrationsDir, clientModule}, database, envFiles (names), ci, tests, lint, scripts, conventions[]}",
+      "Plan.repository {stack, conventions, conflicts, decisions [{topic, choice, why}], compatible, namespace}",
+    ]
+  errors: ["repo_unreadable (422/401) with the action: connect GitHub (private access for private repositories) or upload package.json"]
+  limits:
+    [
+      "Reads at most the root manifests, up to 40 package.json files (3 levels) and the app's configuration; files over 300 KB are skipped",
+      "Never reads .env*, *.pem/*.key, .npmrc, .yarnrc, .netrc or build output",
+    ]
+compat:
+  runtime: node@>=20
+effects: { network: true, fs: false, db: false, external_services: [github] }
+integration:
+  strategy: adapter
+  install: "Platform service of TurbineH (packages/engine/src/repo-analysis.ts, packages/engine/src/github.ts); nothing is vendored into the client's app. See catalog/components/ops.repo-analysis.turbineh/README.md"
+  config: []
+  migrations: false
+quality:
+  tests:
+    {
+      command: "pnpm --filter @turbineh/engine test (fixtures: App Router with src/, without src/, Pages Router, turborepo monorepo; secret canary never read)",
+      passed: true,
+      date: 2026-10-12,
+    }
+security:
+  scanned_at: 2026-10-12
+  tools: [gitleaks, review]
+  findings: []
+  scope: "First-party source reviewed: read allow-list, secret-file deny-list enforced in the reader itself, no execution, token only in the Authorization header."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Detects app path, router, src layout, alias, ORM/client module, auth, package manager, tests and CI on four real layouts; env files appear by name only and a secret canary is never read"
+    origin: tested
+    ref: "packages/engine/src/repo-integration.test.ts"
+relations:
+  requires: []
+  provides: [ops.repo-analysis, repo.analysis]
+  conflicts: []
+  tested_with: [deploy.github-pull-request.turbineh]

@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "ingest"
+  - "infra"
+  - "bench"
+
+# Test-only MCP client (@modelcontextprotocol/sdk, packages/cli): its server-side dependencies pinned to releases
+# published more than 14 days ago (the CLI never bundles them).
+overrides:
+  "@modelcontextprotocol/sdk>express": "5.2.1"
+  "@modelcontextprotocol/sdk>express-rate-limit": "8.7.0"
+  "@modelcontextprotocol/sdk>hono": "4.13.9"
+  "@modelcontextprotocol/sdk>@hono/node-server": "2.1.1"
+  "express-rate-limit>ip-address": "10.7.2"

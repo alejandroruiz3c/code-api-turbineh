@@ -1,0 +1,69 @@
+{
+  "bookings-01": {
+    "green": false,
+    "failed": [
+      "static",
+      "licenses"
+    ],
+    "staticErrors": [
+      "turbineh.server-action-without-authz src/app/actions/auth.ts:12",
+      "turbineh.server-action-without-authz src/app/actions/auth.ts:45",
+      "turbineh.server-action-without-authz src/app/actions/auth.ts:56"
+    ],
+    "advisories": [
+      "braces@3.0.3 HIGH development",
+      "esbuild@0.18.20 MODERATE production"
+    ],
+    "blockedLicences": [
+      "@img/sharp-libvips-linux-arm64@1.3.4 LGPL-3.0-or-later"
+    ]
+  },
+  "landing-01": {
+    "green": false,
+    "failed": [
+      "static",
+      "licenses"
+    ],
+    "staticErrors": [
+      "turbineh.server-action-without-authz src/app/actions.ts:15"
+    ],
+    "advisories": [
+      "braces@3.0.3 HIGH development",
+      "esbuild@0.18.20 MODERATE production"
+    ],
+    "blockedLicences": [
+      "@img/sharp-libvips-linux-arm64@1.3.4 LGPL-3.0-or-later"
+    ]
+  },
+  "portal-01": {
+    "green": false,
+    "failed": [
+      "static",
+      "licenses"
+    ],
+    "staticErrors": [
+      "turbineh.server-action-without-authz src/app/actions.ts:100"
+    ],
+    "advisories": [
+      "braces@3.0.3 HIGH development",
+      "esbuild@0.18.20 MODERATE production"
+    ],
+    "blockedLicences": [
+      "@img/sharp-libvips-linux-arm64@1.3.4 LGPL-3.0-or-later"
+    ]
+  },
+  "saas-01": {
+    "green": false,
+    "failed": [
+      "licenses"
+    ],
+    "staticErrors": [],
+    "advisories": [
+      "braces@3.0.3 HIGH development",
+      "esbuild@0.18.20 MODERATE production"
+    ],
+    "blockedLicences": [
+      "@img/sharp-libvips-linux-arm64@1.3.4 LGPL-3.0-or-later"
+    ]
+  }
+}

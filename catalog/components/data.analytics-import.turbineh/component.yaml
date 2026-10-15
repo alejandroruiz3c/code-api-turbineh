@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: data.analytics-import.turbineh
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:generic/turbineh/data.analytics-import.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "CSV import for analytics with the columns of the request (date, dimensions such as shop and product, measures such as quantity and revenue): every row validated first and the file imported whole or not at all, with a report of line, column and reason; a dashboard of totals compared with the previous period, measures by day/week/month/quarter/year, top values per dimension and a comparison between values of the scope dimension, filtered by date range and scope value; every chart exported as CSV with the same filters; per-scope access (a shop manager sees and imports only their shop) through record-access."
+  does_not: "Does not connect to databases or APIs, schedule imports, or draw line charts beyond accessible bars and tables"
+  use_cases: [analytics-dashboard, internal-tool, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Columns, periods and comparisons come from the request as data",
+      "All-or-nothing imports in one transaction with a precise report",
+    ]
+  cons: ["Rows are stored as JSON dimensions and measures (aggregated in SQL; very large datasets want a warehouse)"]
+  alternatives: [data.csv-import.turbineh, data.csv-import.papaparse]
+contract:
+  inputs:
+    [
+      "src/analytics-import/params.json (entity, columns, dateColumn?, measures?, scopeColumn?, periods, compareWithPreviousPeriod, filters, exportCsv)",
+      "CSV files up to 5 MB / 50,000 rows, header with the configured columns",
+    ]
+  outputs: ["analytics_imports, analytics_rows; /dashboard/reports (dashboard), /dashboard/reports/import (import + report), /dashboard/reports/export?chart=… (CSV)"]
+  errors: ["an invalid file imports nothing and returns every problem (line, column, reason); oversize files are refused"]
+  limits: ["5 MB and 50,000 rows per file; 200 problems listed per report; 500 values per comparison"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/analytics-import/{config,rules,service,filters}.ts + params.json, src/db/component-analytics-import.ts, src/app/dashboard/reports/**, src/components/analytics-import/bars.tsx, unit and E2E tests. files-with/domain.membership-access.turbineh/ adds the per-shop E2E."
+  config: []
+  migrations: true
+params:
+  file: src/analytics-import/params.json
+  schema: params.schema.json
+  entities: [Sale, DailySale, SalesRecord, Measurement, Metric, DataPoint, Import, ImportBatch, Report]
+quality:
+  tests:
+    {
+      command: "unit (column roles, CSV parsing, all-or-nothing validation with report, scope refusal, periods, previous range) + E2E (invalid file imports nothing with a report, totals by day/week/month, previous-period and per-shop comparison, chart CSV export; per-shop access with membership); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-13,
+    }
+security:
+  scanned_at: 2026-10-13
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: imports require a member who may create; restricted members import only rows of their scopes; every query is filtered by workspace and visible scopes; column names come from validated params and are passed as SQL parameters; files bounded in size and rows."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "analytics-dashboard + membership-access + analytics-import (Brightside) passes the full verification gate with the analytics E2E suites"
+    origin: tested
+    ref: "verify:recipe (ADR-0048 combinations)"
+relations:
+  requires: []
+  provides: [data.analytics-import]
+  conflicts: []
+  tested_with: [recipe.analytics-dashboard]

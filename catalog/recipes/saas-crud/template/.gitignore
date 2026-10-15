@@ -1,0 +1,18 @@
+node_modules/
+.next/
+.env*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+playwright/.auth/
+# Screen previews captured during verification (not part of the app)
+.turbineh-previews/
+# Data of the zero-setup local database (pnpm db:local)
+.turbineh/local-db/
+# Private uploads stored on local disk (storage.private-uploads.turbineh, outside public/)
+.data/
+# Emails recorded locally when no provider is configured (development; never committed)
+.turbineh/email-outbox.jsonl

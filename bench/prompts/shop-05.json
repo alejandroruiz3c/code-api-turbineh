@@ -1,0 +1,5 @@
+{
+  "id": "shop-05",
+  "expected_recipe": "storefront",
+  "prompt": "Online store for Alpine Wool, a merino clothing brand selling to Spain and the United States, with prices in EUR and USD chosen by the shopper, sweaters in sizes S, M and L with their own stock, shipping by country, 21% VAT included in Spain, discount codes (WELCOME10 for 10% off, a fixed 15 EUR code from 100 EUR) with usage limits and end dates, card payment, order emails and an admin panel."
+}

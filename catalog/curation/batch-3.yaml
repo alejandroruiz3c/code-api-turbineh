@@ -1,0 +1,31 @@
+name: batch-3
+description: "Third curation batch: styling utilities, diffs and HTML escaping"
+entries:
+  - id: ui.styling.clsx
+    package: "clsx"
+    category: ui
+    provides: ["ui.styling"]
+    does: "Builds className strings from conditions"
+    does_not: "Does not resolve conflicting Tailwind classes"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: ui.styling.tailwind-merge
+    package: "tailwind-merge"
+    category: ui
+    provides: ["ui.styling"]
+    does: "Merges Tailwind CSS classes resolving conflicts (last wins)"
+    does_not: "Does not generate CSS"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: data.diff.diff
+    package: "diff"
+    category: data
+    provides: ["data.diff"]
+    does: "Text and line diffs for change history and reviews"
+    does_not: "Does not merge conflicting edits"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]
+  - id: security.html-escape.he
+    package: "he"
+    category: security
+    provides: ["security.html-escape"]
+    does: "Encodes and decodes HTML entities robustly"
+    does_not: "Does not sanitize full HTML documents"
+    use_cases: ["saas-crud", "internal-tool", "landing-waitlist", "bookings", "client-portal"]

@@ -1,0 +1,77 @@
+schema: turbineh.component/v0.1
+id: ops.http-client.ky
+version: 0.1.0
+status: approved
+category: ops
+source:
+  purl: pkg:npm/ky@2.1.0
+  repo: https://github.com/sindresorhus/ky
+  integrity: sha512-nIKwelw+7qVqKOlX4Eht6GXfEXlDHcdIjyLWV3s119kYt5s+70ayTnYS+0fRNmtgGRRAfqdeWQbh8YizqkS0ng==
+capability:
+  does: Small fetch-based HTTP client with retries and timeouts for external APIs
+  does_not: Server or browser fetch only
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add ky@2.1.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata ky@2.1.0
+  - claim: 0 OSV advisories for ky@2.1.0 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-recertify-curated-glue-2.json
+relations:
+  requires: []
+  provides:
+    - ops.http-client
+  conflicts: []
+  tested_with:
+    - contract-harness

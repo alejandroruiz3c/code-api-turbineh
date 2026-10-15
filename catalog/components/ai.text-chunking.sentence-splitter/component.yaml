@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: ai.text-chunking.sentence-splitter
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:npm/sentence-splitter@5.0.1
+  repo: https://github.com/textlint-rule/sentence-splitter
+  integrity: sha512-Eu9l95hQfI0WdhXTznuBzqsFjTuL6UnPq341Ro1s2bjE3DMoBuhE0wk4z+rwbwVXfOAeuOQM0UF30HR2+66VuQ==
+capability:
+  does: Splits text into sentences and size-bounded chunks with overlap for retrieval (RAG) and summaries
+  does_not: Sizes are measured in characters; count tokens with ai.token-count when exact budgets matter
+  use_cases:
+    - ai-agents
+    - saas-crud
+    - internal-tool
+    - client-portal
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add sentence-splitter@5.0.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-12
+security:
+  scanned_at: 2026-10-12
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata sentence-splitter@5.0.1
+  - claim: 0 OSV advisories for sentence-splitter@5.0.1 on 2026-10-12
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-12-certify-batch-6-ai-glue.json
+relations:
+  requires: []
+  provides:
+    - ai.text-chunking
+  conflicts: []
+  tested_with:
+    - contract-harness

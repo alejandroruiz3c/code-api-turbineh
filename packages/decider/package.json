@@ -1,0 +1,26 @@
+{
+  "name": "@turbineh/decider",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Interface of the TurbineH resource decision engine, the public decision API client and the open minimal fallback",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine.d.ts",
+      "import": "./dist/engine.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "0.6.0"
+  }
+}

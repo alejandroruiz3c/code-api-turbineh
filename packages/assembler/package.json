@@ -1,0 +1,26 @@
+{
+  "name": "@turbineh/assembler",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Assembler: recipe + selected components + deterministic entity code generation + docs",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@turbineh/catalog": "workspace:*",
+    "@turbineh/compiler": "workspace:*",
+    "@turbineh/resolver": "workspace:*",
+    "@turbineh/shared": "workspace:*",
+    "yaml": "2.9.1"
+  }
+}

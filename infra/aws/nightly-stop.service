@@ -1,0 +1,8 @@
+[Unit]
+Description=TurbineH AWS worker: finish running builds, then power off (schedule, ADR-0024)
+
+[Service]
+Type=oneshot
+# The worker drains on SIGTERM (TimeoutStopSec=1800 in its unit); powering off stops the EC2 instance (not terminate).
+ExecStart=/bin/systemctl stop turbineh-worker
+ExecStart=/sbin/shutdown -h now

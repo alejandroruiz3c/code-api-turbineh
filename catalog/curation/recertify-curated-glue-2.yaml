@@ -1,0 +1,5 @@
+name: recertify-curated-glue-2
+description: "Curated glue for ky and jimp (model-written glue kept failing the build)"
+entries:
+  - id: ops.http-client.ky
+  - id: files.image-processing.jimp

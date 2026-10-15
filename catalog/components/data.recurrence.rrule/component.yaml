@@ -1,0 +1,71 @@
+schema: turbineh.component/v0.1
+id: data.recurrence.rrule
+version: 0.1.0
+status: approved
+category: data
+source:
+  purl: pkg:npm/rrule@2.8.1
+  repo: https://github.com/jakubroztocil/rrule
+  integrity: sha512-hM3dHSBMeaJ0Ktp7W38BJZ7O1zOgaFEsn41PDk+yHoEtfLV+PoJt9E9xAlZiWgf/iqEqionN0ebHFZIDAp+iGw==
+capability:
+  does: RFC 5545 recurrence rules (weekly, monthly...) and occurrence expansion
+  does_not: Does not store events or send reminders
+  use_cases:
+    - bookings
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add rrule@2.8.1
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-10
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: BSD-3-Clause
+  detected: BSD-3-Clause
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License BSD-3-Clause
+    origin: maintainer
+    ref: npm registry metadata rrule@2.8.1
+  - claim: 0 OSV advisories for rrule@2.8.1 on 2026-10-10
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-recertify-typecheck.json
+relations:
+  requires: []
+  provides:
+    - data.recurrence
+  conflicts: []
+  tested_with:
+    - contract-harness

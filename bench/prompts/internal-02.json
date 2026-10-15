@@ -1,0 +1,5 @@
+{
+  "id": "internal-02",
+  "expected_recipe": "internal-tool",
+  "prompt": "An internal inventory tool for a hardware store: products (SKU, name, category, stock, reorder level, supplier) with search, pagination, CSV import from the supplier and CSV export."
+}

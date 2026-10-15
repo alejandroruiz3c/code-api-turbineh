@@ -1,0 +1,89 @@
+{
+  "prompt": "A landing page for my coffee subscription startup BeanBox with a waitlist form, confirmation email and an admin panel to see signups.",
+  "buildId": "6b5abb7b-f29f-4759-8ebe-21272723661b",
+  "status": "failed",
+  "repoDir": "builds/6b5abb7b-f29f-4759-8ebe-21272723661b/beanbox-landing",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6399
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 400
+    },
+    {
+      "name": "typecheck",
+      "ok": false,
+      "ms": 2060,
+      "detail": "STEP install 0 6399\nSTEP migrations 0 400\nSTEP typecheck 2 2060\ntests/unit/csv.test.ts(18,43): error TS2322: Type '100' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(18,58): error TS2322: Type '1' is not assignable to type '1000'.\ntests/unit/csv.test.ts(19,45): error TS2322: Type '10' is not assignable to type '1000000'.\ntests/unit/csv.test.ts(19,59): error TS2322: Type '10' is not assignable to type '1000'.\n"
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 63
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 1722,
+      "select": 124,
+      "resolve": 5,
+      "assemble": 133,
+      "verify": 10297,
+      "total": 12334
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 399,
+        "output_tokens": 663
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 109,
+      "requests": 1,
+      "questions": 36
+    },
+    "reuse": {
+      "generatedLines": 190,
+      "reusedLines": 925,
+      "reusedShare": 0.83
+    },
+    "recipe": {
+      "requested": "landing-waitlist",
+      "built": "landing-waitlist"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "authz.roles.turbineh",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "email.transactional.turbineh",
+      "auth.session.better-auth",
+      "authz.organizations.better-auth",
+      "data.pagination.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "jobs.queue",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

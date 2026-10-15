@@ -1,0 +1,79 @@
+schema: turbineh.component/v0.1
+id: files.pdf.react-pdf
+version: 0.1.0
+status: approved
+category: files
+source:
+  purl: pkg:npm/@react-pdf/renderer@4.9.0
+  repo: https://github.com/diegomura/react-pdf
+  integrity: sha512-RAbARMwjcSYEpqpaWoWXz0uOGF1HjAl5hdJr889r5mgkPhF9xhX4CXSvcEbLTgFVj+KWbcar31MzcXYoANk/Ag==
+capability:
+  does: PDF documents (invoices, tickets, reports) written as React components on the server
+  does_not: Not an HTML-to-PDF converter
+  use_cases:
+    - saas-crud
+    - internal-tool
+    - landing-waitlist
+    - bookings
+    - client-portal
+    - corporate-site
+    - storefront
+  pros: []
+  cons: []
+  alternatives: []
+contract:
+  inputs:
+    - see contract.test.ts
+  outputs:
+    - see contract.test.ts
+  errors:
+    - see contract.test.ts
+  limits:
+    - see contract.test.ts
+compat:
+  runtime: node@>=20
+  peer:
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+effects:
+  network: false
+  fs: false
+  db: false
+  external_services: []
+integration:
+  strategy: dependency
+  install: pnpm add @react-pdf/renderer@4.9.0
+  config: []
+  migrations: false
+quality:
+  tests:
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    passed: true
+    date: 2026-10-11
+security:
+  scanned_at: 2026-10-11
+  tools:
+    - osv.dev-api
+  findings: []
+  scope: Known advisories for this exact version (OSV). Transitive dependencies are scanned when the component is assembled.
+license:
+  declared: MIT
+  detected: MIT
+  obligations:
+    - preserve-notice
+evidence:
+  - claim: License MIT
+    origin: maintainer
+    ref: npm registry metadata @react-pdf/renderer@4.9.0
+  - claim: 0 OSV advisories for @react-pdf/renderer@4.9.0 on 2026-10-11
+    origin: tested
+    ref: https://api.osv.dev/v1/query
+  - claim: Contract tests pass and type-check (strict) in the sandbox without network
+    origin: tested
+    ref: bench/results/2026-10-11-certify-batch-5.json
+relations:
+  requires: []
+  provides:
+    - files.pdf
+  conflicts: []
+  tested_with:
+    - contract-harness

@@ -1,0 +1,15 @@
+id: tracker
+description: Personal trackers for habits, health, money or any daily quantity — goals, quick logging, streaks, 30-day history and weekly totals
+extends: saas-crud
+providedEntities: [Tracker, Habit, Goal, Log, Entry, Checkin, CheckIn, Streak, Workout, Expense, Measurement]
+defaultCapabilities: [data.pagination, ops.rate-limit]
+providedCapabilities: [ui.charts, data.dates]
+nav:
+  - { label: My trackers, href: /dashboard/trackers }
+
+# Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
+guide:
+  extend:
+    - what: "Change streak or goal rules"
+      where: "src/server/streaks.ts"
+      how: "Pure functions with unit tests; the tracker pages read them."

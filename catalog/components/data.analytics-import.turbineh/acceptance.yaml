@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/analytics-import.spec.ts › a CSV upload with one invalid row: the entire file is rejected, nothing is imported, and the report provides the row number, field and reason for each error"
+  covers: ["invalid|reject|validat|error", "report|half|nothing|all or nothing|never"]
+- test: "tests/e2e/analytics-import.spec.ts › a valid CSV is imported whole and the dashboard shows totals by day, week and month"
+  covers: ["upload|import|csv", "day|week|month|period|dashboard|total"]
+- test: "tests/e2e/analytics-import.spec.ts › the dashboard compares the period with the previous one and between values of each dimension"
+  covers: ["compar|previous period|versus|vs\\.?"]
+- test: "tests/e2e/analytics-import.spec.ts › every chart on the dashboard exports its data as a CSV file with the same filters"
+  covers: ["export", "csv|chart"]
+- test: "tests/e2e/analytics-scopes.spec.ts › a shop manager sees only their own shop's figures and cannot import another shop's"
+  covers: ["only|own", "shop|store|region|their|branch"]
+- test: "tests/unit/analytics-import.test.ts › rejects the whole file when any row is invalid, with the line, column and reason of each problem"
+  covers: ["invalid|reject", "never half|half-imported|all or nothing|whole file"]

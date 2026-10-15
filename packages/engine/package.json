@@ -1,0 +1,27 @@
+{
+  "name": "@turbineh/engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Product engine (PLAN \u00a716): stack detection, capability search, plans, flow results and capability packages \u2014 shared by the API, the worker and the CLI",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "gen": "tsx scripts/gen-use-cases.ts"
+  },
+  "dependencies": {
+    "@turbineh/decider": "workspace:*",
+    "@turbineh/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "yaml": "2.9.1"
+  }
+}

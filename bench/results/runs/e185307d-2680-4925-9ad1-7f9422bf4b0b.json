@@ -1,0 +1,207 @@
+{
+  "prompt": "A course management app for a small music academy: teachers create courses with title, level and price, students enroll, admins see enrollments per course.",
+  "buildId": "e185307d-2680-4925-9ad1-7f9422bf4b0b",
+  "status": "done",
+  "repoDir": "builds/e185307d-2680-4925-9ad1-7f9422bf4b0b/melody-academy-manager",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 152
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 489
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 2158
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 3495
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 827
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 7969
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 3055
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 120
+    },
+    {
+      "name": "static",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "tokens": {
+      "compiler": {
+        "input_tokens": 411,
+        "output_tokens": 741
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 107,
+      "requests": 1,
+      "questions": 54
+    },
+    "reuse": {
+      "generatedLines": 347,
+      "reusedLines": 747,
+      "reusedShare": 0.683
+    },
+    "recipe": {
+      "requested": "saas-crud",
+      "built": "saas-crud"
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "authz.organizations.better-auth",
+      "data.pagination.turbineh"
+    ],
+    "pendingIntegration": [
+      {
+        "capability": "data.money",
+        "component": "data.money.decimal-js"
+      },
+      {
+        "capability": "security.password-hash",
+        "component": "security.password-hash.bcryptjs"
+      },
+      {
+        "capability": "ui.notifications",
+        "component": "ui.notifications.sonner"
+      }
+    ],
+    "gaps": [],
+    "timings": {
+      "compile": 2959,
+      "select": 151,
+      "resolve": 4,
+      "assemble": 107,
+      "verify": 37847,
+      "total": 41092
+    },
+    "alerts": [
+      {
+        "id": "GHSA-vfj7-8cjw-p6xm",
+        "level": "info",
+        "title": "high advisory in braces@3.0.3",
+        "explain": "A known vulnerability affects a development-only tool (used to build or test the app). It is not shipped to your users and is not reachable at runtime.",
+        "where": "braces@3.0.3"
+      }
+    ],
+    "remediation": [],
+    "report": {
+      "headline": "Melody Academy Manager built",
+      "overview": "The app is a course management platform for music academies. It handles course creation, student enrollment, and administrative tracking. It was built using a standard SaaS CRUD recipe, with about 68% of the code reused from existing components.",
+      "criteria": [
+        {
+          "criterion": "A teacher can successfully save a new course with a title, level, and price.",
+          "evidence": "End-to-end test: owner creates a course and sees it in the list",
+          "verified": true,
+          "confidence": 0.97875
+        },
+        {
+          "criterion": "A student can enroll in an existing course.",
+          "evidence": "End-to-end test: owner creates a enrollment and sees it in the list",
+          "verified": true,
+          "confidence": 0.9468749999999999
+        },
+        {
+          "criterion": "An admin can view a list of all students enrolled in a specific course.",
+          "evidence": "End-to-end test: owner creates a enrollment and sees it in the list",
+          "verified": true,
+          "confidence": 0.883125
+        },
+        {
+          "criterion": "The system prevents a teacher from creating a course without a price.",
+          "evidence": "Input validation with Zod schemas on every form and action",
+          "verified": true,
+          "confidence": 0.66
+        },
+        {
+          "criterion": "An admin can see the total number of enrollments for each course on a dashboard.",
+          "evidence": "Not verified automatically",
+          "verified": false,
+          "confidence": 0.649375
+        }
+      ],
+      "security": {
+        "status": "alerts",
+        "statusLine": "All checks passed. The app ships with security headers, content security policy, input validation, role-based access checks, rate limiting, and safe error messages.",
+        "points": [
+          "No issues were fixed automatically before delivery; nothing required it.",
+          "One high advisory remains in braces@3.0.3, but it affects development-only tools used to build or test the app. It is not shipped to your users and is not reachable at runtime, so it does not affect the live product."
+        ],
+        "fixedBeforeDelivery": 0
+      },
+      "nextSteps": [
+        "Add exact decimal arithmetic for money yourself or ask for it in a new build.",
+        "Add hashing passwords yourself or ask for it in a new build.",
+        "Update braces@3.0.3 when a patched version is released; this high advisory is development-only and not shipped to users.",
+        "Before deploying, set DATABASE_URL, BETTER_AUTH_SECRET and BETTER_AUTH_URL in your hosting environment."
+      ],
+      "improvement": {
+        "total": 1,
+        "fixable": 0,
+        "fixableProduction": 0,
+        "minutes": {
+          "min": 2,
+          "max": 4
+        },
+        "usesOneBuild": true
+      },
+      "finalVersion": false,
+      "writer": {
+        "model": "glm-5.2",
+        "fallback": false
+      }
+    },
+    "improvement": {
+      "total": 1,
+      "fixable": 0,
+      "fixableProduction": 0,
+      "minutes": {
+        "min": 2,
+        "max": 4
+      },
+      "usesOneBuild": true
+    }
+  }
+}

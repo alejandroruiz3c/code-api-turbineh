@@ -1,0 +1,109 @@
+{
+  "prompt": "A SaaS for property managers: agencies as workspaces; manage properties (address, city, monthly rent, available from, furnished) and tenants (full name, email, phone, lease end date).",
+  "buildId": "a531b3ce-47bf-4d41-8a9d-38a90f562cb3",
+  "status": "done",
+  "repoDir": "builds/a531b3ce-47bf-4d41-8a9d-38a90f562cb3/propflow-saas",
+  "steps": [
+    {
+      "name": "install",
+      "ok": true,
+      "ms": 6374
+    },
+    {
+      "name": "migrations",
+      "ok": true,
+      "ms": 446
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "ms": 2149
+    },
+    {
+      "name": "lint",
+      "ok": true,
+      "ms": 1252
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "ms": 478
+    },
+    {
+      "name": "build",
+      "ok": true,
+      "ms": 12962
+    },
+    {
+      "name": "e2e",
+      "ok": true,
+      "ms": 4438
+    },
+    {
+      "name": "secrets",
+      "ok": true,
+      "ms": 102
+    },
+    {
+      "name": "dependencies",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "licenses",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "timings": {
+      "compile": 2558,
+      "select": 112,
+      "resolve": 5,
+      "assemble": 119,
+      "verify": 31530,
+      "total": 34347
+    },
+    "tokens": {
+      "compiler": {
+        "input_tokens": 447,
+        "output_tokens": 1128
+      },
+      "decider": "input-only, counted by the provider"
+    },
+    "decider": {
+      "backend": "jev",
+      "model": "jev-1.13.0",
+      "latencyMs": 87,
+      "requests": 1,
+      "questions": 30
+    },
+    "reuse": {
+      "generatedLines": 438,
+      "reusedLines": 594,
+      "reusedShare": 0.576
+    },
+    "components": [
+      "security.pack.turbineh",
+      "data.validation.zod",
+      "auth.session.better-auth",
+      "authz.roles.turbineh",
+      "authz.organizations.better-auth",
+      "data.orm.drizzle",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "ui.primitives.turbineh",
+      "security.pack.turbineh"
+    ],
+    "gaps": [
+      {
+        "capability": "data.pagination",
+        "trigger": "T1"
+      },
+      {
+        "capability": "payments.checkout",
+        "trigger": "T1"
+      }
+    ]
+  }
+}

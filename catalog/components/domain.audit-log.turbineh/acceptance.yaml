@@ -1,0 +1,9 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/audit-log.spec.ts › the owner sees each change in the audit log with who made it and when, and exports it as CSV"
+  covers: ["audit|activity log|change ?log|history of changes", "owner|admin|visible|see|record|log"]
+- test: "tests/e2e/audit-log.spec.ts › the owner filters the audit log by action and by date"
+  covers: ["audit|activity log|change ?log", "filter|search|by (user|date|action)"]
+- test: "tests/e2e/audit-log.spec.ts › audit entries cannot be changed or deleted, not even directly in the database"
+  covers: ["audit|activity log|change ?log|history", "cannot be (edited|changed|deleted|modified)|immutable|append[- ]only|tamper"]
+- test: "tests/e2e/audit-log.spec.ts › another workspace never sees this workspace's audit entries"
+  covers: ["audit|activity log", "workspace|tenant|isolat|other (team|compan)"]
