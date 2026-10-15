@@ -13,8 +13,8 @@
     },
     "resource-decider": {
       "repo": "alejandroruiz3c/turbineh-resource-decider",
-      "tag": "v1.0.0",
-      "commit": "8e624cf551e9e733202521073a54506afd226ef4",
+      "tag": "v1.0.1",
+      "commit": "3c103caf21bed74969fe431886efdaab4db60ffa",
       "requiredBy": ["web", "worker"],
       "contract": {
         "vendored": "contract/decider.ts",
