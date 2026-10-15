@@ -2,6 +2,7 @@ import { findImprovement, getBuild } from "@turbineh/db";
 import { appQuickstart, explainFailure, flowOutcome, flowState } from "@turbineh/engine";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
+import { confirmDemandLater } from "@/server/demand-email";
 import { clientMetrics, isOps } from "@/server/ops";
 import { problem } from "@/server/problem";
 import { storage } from "@/server/storage";
@@ -16,6 +17,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!UUID.test(id)) return problem(404, "Build not found");
   const build = await getBuild(db, id, caller.ownerId);
   if (!build) return problem(404, "Build not found");
+  // ADR-0056: a refused request gets its priority-list email after this response.
+  confirmDemandLater(build);
   const improvement = build.options.mode === "improve" ? null : await findImprovement(db, id, caller.ownerId);
   const a = build.artifact as {
     zipKey?: string;

@@ -1,4 +1,5 @@
 import type { Plan } from "@turbineh/shared";
+import { confirmDemandLater } from "@/server/demand-email";
 import { ownedFlow, requireCaller, resultOf } from "@/server/product";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,8 @@ export async function GET(
   const { id } = await ctx.params;
   const row = await ownedFlow(caller, id);
   if (row instanceof Response) return row;
+  // ADR-0056: a refused request gets its priority-list email after this response.
+  confirmDemandLater(row);
   const result = await resultOf(row);
   const plan = (row.metrics.plan as Plan | undefined) ?? null;
   // The plan's fields at the top level (same shape as POST /v1/plans) plus the live result.
