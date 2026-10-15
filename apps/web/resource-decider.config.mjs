@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 export const DECIDER_ENGINE_SPECIFIER = "@turbineh/decider/engine";
 /** Relative to apps/web (Turbopack aliases take project-relative paths). */
 export const PRIVATE_DECIDER_RELATIVE = "../../private/resource-decider/src/index.ts";
-export const OPEN_DECIDER_RELATIVE = "../../packages/decider/src/open-engine.ts";
+/** The built open fallback (packages are built before the web app). */
+export const OPEN_DECIDER_RELATIVE = "../../packages/decider/dist/open-engine.js";
 export const PRIVATE_DECIDER = fileURLToPath(new URL(PRIVATE_DECIDER_RELATIVE, import.meta.url));
 export const OPEN_DECIDER = fileURLToPath(new URL(OPEN_DECIDER_RELATIVE, import.meta.url));
 export const hasPrivateDecider = () => existsSync(PRIVATE_DECIDER);
