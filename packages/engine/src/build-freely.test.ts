@@ -181,8 +181,14 @@ describe("failure messages: what happened, why, what to do, how to resume", () =
     ["BuildSpec invalid (T5)", "need_not_understood", /Two models tried/],
     [
       "out of scope for the beta: The prompt does not match any beta recipe. (closest recipe: none)",
-      "no_template",
-      /closest template/,
+      // ADR-0052: legacy out-of-scope runs read like any uncovered request (never "built on the closest template").
+      "use_case_not_covered",
+      /notify you with priority/,
+    ],
+    [
+      "Use case not covered by the library: AI drafts a post | Publish to Instagram",
+      "use_case_not_covered",
+      /notify you with priority/,
     ],
     ["worker lost the build twice", "interrupted", /not caused by your description/],
     ["internal error", "interrupted", /restart or an internal error/],

@@ -1,5 +1,5 @@
 import { findImprovement, getBuild } from "@turbineh/db";
-import { explainFailure, flowOutcome, flowState } from "@turbineh/engine";
+import { appQuickstart, explainFailure, flowOutcome, flowState } from "@turbineh/engine";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { clientMetrics, isOps } from "@/server/ops";
@@ -22,6 +22,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     bundleKey?: string;
     files?: string[];
     docs?: Record<string, string>;
+    scripts?: Record<string, string>;
     slug?: string;
     previews?: { name: string; key: string }[];
     reportOnly?: boolean;
@@ -98,6 +99,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           zip_url: await storage.url(a.zipKey),
           bundle_url: a.bundleKey ? await storage.url(a.bundleKey) : null,
           files: a.files ?? [],
+          // F20: how to run it, from the delivered app's real files and package.json scripts.
+          quickstart: appQuickstart({
+            slug: a.slug ?? "app",
+            files: a.files ?? [],
+            scripts: a.scripts ?? null,
+          }),
           docs: a.docs ?? {},
           previews: await Promise.all(
             (a.previews ?? []).map(async (p) => ({ name: p.name, url: await storage.url(p.key) })),

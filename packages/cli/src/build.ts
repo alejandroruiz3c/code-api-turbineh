@@ -6,7 +6,7 @@ import type { FlowResult, Plan } from "@turbineh/shared";
 import { adaptLocally } from "./adapt-local.js";
 import { cliCommand } from "./agent-docs.js";
 import { api, sleep } from "./api.js";
-import type { Ctx } from "./commands.js";
+import { explicitComponents, type Ctx } from "./commands.js";
 import {
   CliError,
   ensureProject,
@@ -136,6 +136,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
       environment: Object.keys(files).length ? { files } : {},
       preferences: project.preferences,
       generate: true,
+      ...explicitComponents(c.flags.components),
     },
   }).catch((err: unknown) => {
     if (err instanceof CliError) throw new CliError(err.error, exitOf(err.error.code));

@@ -10,7 +10,7 @@ import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
 import { DeployForMe } from "./deploy-for-me";
 import { RepoIntegration } from "./repo-integration";
-import { Panel, StateBadge, Stat, pct } from "./ui";
+import { badgeOf, Panel, StateBadge, Stat, pct } from "./ui";
 
 interface BuildReport {
   headline: string;
@@ -52,6 +52,8 @@ interface FlowProblem {
   action: string;
   resume?: string;
   next: { label: string; kind: "generate_again" | "new_flow" | "open_package" | "wait" };
+  /** `use_case_not_covered` (ADR-0052): the requirements the library does not cover yet. */
+  notCovered?: string[];
 }
 
 export interface BuildResult {
@@ -93,6 +95,8 @@ export interface BuildResult {
     files: string[];
     docs: Record<string, string>;
     report_only?: boolean;
+    /** F20: commands to run the app, from its real files and package.json scripts (API). */
+    quickstart?: string[];
   } | null;
 }
 
@@ -182,6 +186,9 @@ export function FlowView({ id }: { id: string }) {
   const compiling = by("compiling") as
     { decisions?: { recipe?: { choice: string; confidence: number } } } | undefined;
   const scope = by("compiling", "scope") as { builtOn?: string } | undefined;
+  // ADR-0052: the scope gate's verdict (the plan run's, kept on the row's event trace).
+  const gate = [...events].reverse().find((e) => e.phase === "compiling" && e.type === "scope_gate")
+    ?.data as { status?: string; notCovered?: { requirement: string; why: string }[] } | undefined;
 
   // The API's state (same as /v1/plans and the CLI); before the row is loaded, "generating".
   const state: FlowState =
@@ -207,14 +214,7 @@ export function FlowView({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center gap-3" role="status" aria-live="polite">
-        <StateBadge
-          state={state}
-          {...(outcome?.kind === "package_unverified"
-            ? { label: "Package ready · not verified yet", hint: outcome.title }
-            : outcome?.kind === "package_verified"
-              ? { label: "Package verified", hint: outcome.title }
-              : {})}
-        />
+        <StateBadge state={state} {...badgeOf(outcome)} />
         <span className="text-sm text-muted">
           {terminal
             ? `Finished${progress.elapsedMs > 0 ? ` in ${duration(progress.elapsedMs)}` : ""}.`
@@ -253,9 +253,8 @@ export function FlowView({ id }: { id: string }) {
             <Panel title="Intent understood">
               {scope?.builtOn ? (
                 <p className="text-sm text-ice-2">
-                  No ready-made template matched your need exactly, so it is built on the closest
-                  one: <span className="text-cream">{scope.builtOn}</span>. What it does not cover
-                  is listed in AGENTS.md (&ldquo;What is left&rdquo;) with where to implement it.
+                  No product family matched the headline, but every requirement maps to verified
+                  components, so it is built on <span className="text-cream">{scope.builtOn}</span>.
                 </p>
               ) : (
                 <p className="text-sm">
@@ -265,6 +264,19 @@ export function FlowView({ id }: { id: string }) {
                   </span>
                 </p>
               )}
+              {gate?.status === "partial" && gate.notCovered?.length ? (
+                <div className="mt-3 text-sm">
+                  <p className="text-amber">
+                    Only the covered part is built. Removed from scope (the library doesn&rsquo;t
+                    cover them yet):
+                  </p>
+                  <ul className="mt-1 list-disc pl-5 text-ice-2">
+                    {gate.notCovered.map((r) => (
+                      <li key={r.requirement}>{r.requirement}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </Panel>
           ) : null}
           {selecting?.decisions ? (
@@ -354,6 +366,16 @@ function WhatHappened({
       <div role="alert">
         <p className="text-base font-semibold text-cream">{title}</p>
         <p className="mt-2 text-sm text-ice-2">{why}</p>
+        {p?.notCovered?.length ? (
+          <div className="mt-3">
+            <p className="text-sm text-muted">Not covered by the library yet:</p>
+            <ul className="mt-1 list-disc pl-5 text-sm text-ice-2" data-testid="not-covered">
+              {p.notCovered.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p className="mt-3 text-sm text-ice-2">
           <span className="text-muted">What to do:</span> {action}
         </p>
@@ -446,6 +468,11 @@ function ResultScreen({
   }, [docs]);
   const works = (report?.criteria ?? []).filter((c) => c.verified);
   const pending = (report?.criteria ?? []).filter((c) => !c.verified);
+  // One state model (F18): the same count as the badge, the API and the CLI.
+  const req = result.outcome?.requirements ?? {
+    met: works.length,
+    total: works.length + pending.length,
+  };
   const h = result.metrics.handover;
   const components = (result.metrics.components ?? []).map((c) =>
     typeof c === "string" ? c : (c.id ?? ""),
@@ -464,7 +491,13 @@ function ResultScreen({
               </span>
               {result.verified === false
                 ? `Not verified: ${h?.checksPassed ?? "—"}/${h?.checksTotal ?? "—"} checks passed in the sandbox — see the failure above`
-                : `Package verified in the sandbox: ${h?.checksPassed ?? "—"}/${h?.checksTotal ?? "—"} checks (build, tests, end-to-end, secrets, security rules, vulnerabilities, licences)`}
+                : `Build checks passed in the sandbox: ${h?.checksPassed ?? "—"}/${h?.checksTotal ?? "—"} (build, tests, end-to-end, secrets, security rules, vulnerabilities, licences)`}
+            </li>
+            <li className="flex gap-2">
+              <span className={req.met < req.total ? "text-amber" : "text-teal"} aria-hidden="true">
+                {req.met < req.total ? "○" : "✓"}
+              </span>
+              {`Requirements met: ${req.met}/${req.total}${req.met < req.total ? " — the open ones are listed under “Requirements not met yet”" : ""}`}
             </li>
             {works.slice(0, 6).map((c) => (
               <li key={c.criterion} className="flex gap-2">
@@ -479,40 +512,54 @@ function ResultScreen({
             ))}
           </ul>
         </Panel>
-        <Panel title="Needs your configuration">
-          {needs.length === 0 && pending.length === 0 ? (
-            <p className="text-sm text-teal">Nothing pending.</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {needs.map((n) => (
-                <li key={n} className="flex gap-2">
-                  <span className="text-amber" aria-hidden="true">
-                    ○
-                  </span>
-                  <span>
-                    <span className="font-mono text-ice-2">{n}</span>
-                    <span className="block text-xs text-muted">
-                      Set it in your environment (see config/.env.example)
+        <div className="flex flex-col gap-6">
+          {/* F18: settings and unmet requirements are different things; neither is "configuration" for the other. */}
+          <Panel title="Settings">
+            {needs.length === 0 ? (
+              <p className="text-sm text-teal">Nothing to set.</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {needs.map((n) => (
+                  <li key={n} className="flex gap-2">
+                    <span className="text-amber" aria-hidden="true">
+                      ○
                     </span>
-                  </span>
-                </li>
-              ))}
-              {pending.map((c) => (
-                <li key={c.criterion} className="flex gap-2">
-                  <span className="text-amber" aria-hidden="true">
-                    ○
-                  </span>
-                  <span>
-                    {c.criterion}
-                    <span className="block text-xs text-muted">
-                      Not verified automatically — check it in your project
+                    <span>
+                      <span className="font-mono text-ice-2">{n}</span>
+                      <span className="block text-xs text-muted">
+                        Set it in .env.local (documented in{" "}
+                        {result.artifact?.files.includes(".env.example")
+                          ? ".env.example"
+                          : "config/.env.example"}
+                        )
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+          {pending.length > 0 ? (
+            <Panel title="Requirements not met yet">
+              <ul className="flex flex-col gap-2 text-sm">
+                {pending.map((c) => (
+                  <li key={c.criterion} className="flex gap-2">
+                    <span className="text-amber" aria-hidden="true">
+                      ○
+                    </span>
+                    <span>
+                      {c.criterion}
+                      <span className="block text-xs text-muted">
+                        No passing test proves it yet: AGENTS.md (&ldquo;What is left&rdquo;) says
+                        where to implement and prove it
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+        </div>
       </section>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -606,11 +653,17 @@ function ResultScreen({
           {tab === "try" ? (
             <>
               <Panel title="Run the example with sample data">
-                <pre className="prose-doc overflow-auto rounded-lg bg-navy-900/80 p-4 text-ice-2">{`unzip ${result.artifact?.slug ?? "package"}.zip && cd ${result.artifact?.slug ?? "package"}
-pnpm install
-cp .env.example .env.local     # fill the values listed under "Needs your configuration"
-pnpm db:migrate && pnpm db:seed
-pnpm dev                       # http://localhost:3000`}</pre>
+                {/* F20: from the delivered app's real files and package.json scripts (API `quickstart`). */}
+                <pre className="prose-doc overflow-auto rounded-lg bg-navy-900/80 p-4 text-ice-2">
+                  {(
+                    result.artifact?.quickstart ?? [
+                      `unzip ${result.artifact?.slug ?? "app"}.zip && cd ${result.artifact?.slug ?? "app"}`,
+                      "pnpm install",
+                      "cp .env.example .env.local",
+                      "pnpm dev",
+                    ]
+                  ).join("\n")}
+                </pre>
                 <p className="mt-3 text-xs text-muted">
                   Or put it live in your own accounts in minutes — you own everything:
                 </p>

@@ -56,7 +56,8 @@ turbineh init --yes             # any other agent: writes AGENTS.md`;
 const BUILD = `turbineh build @spec.md --json          # or: turbineh build "<what to build>" --json
 turbineh build @spec.md --json --timeout 30   # stop waiting after 30 minutes (default 20)
 turbineh resume <id> --json             # after exit 4 or an interrupted call: keep waiting, then write
-turbineh build @spec.md --json --approve      # after exit 3, only once the user agreed`;
+turbineh build @spec.md --json --approve      # after exit 3, only once the user agreed
+turbineh build "<spec>" --json --components id1,id2   # exactly these verified components (ids from search)`;
 
 const EVENTS = `{"event":"started","id":"<id>","target":"app","resume":"turbineh resume <id>"}
 {"event":"plan_ready","id":"<id>","capability":{…},"components":[…],"criteria":{"covered":[…],"open":[…]},"settings":[…]}
@@ -99,7 +100,10 @@ const EXIT_CODES: [code: string, meaning: string][] = [
   ["2", "Usage"],
   ["3", "A decision for the user: show it, then re-run with --approve"],
   ["4", "Timeout: run the resume command it prints"],
-  ["5", "Generation failed: rephrase the spec"],
+  [
+    "5",
+    "Not built: generation failed (rephrase the spec), or use_case_not_covered — tell the user it isn't covered yet",
+  ],
   ["6", "Written and committed, but the gate is not green: read left"],
   ["7", "Local conflict: the message names the files"],
 ];
@@ -128,7 +132,11 @@ curl -s ${SITE}/catalog/index.json -H "Authorization: Bearer $TURBINEH_TOKEN"`;
 const ENDPOINTS: [method: string, path: string, what: string][] = [
   ["GET", "/v1/capabilities?q=", "Search by need: complete flows and verified components"],
   ["GET", "/v1/capabilities/{id}", "Inspect a capability: components, requirements, licences"],
-  ["POST", "/v1/plans", "Plan a need against your stack; generate: true continues on its own"],
+  [
+    "POST",
+    "/v1/plans",
+    "Plan a need against your stack; generate: true continues on its own; components: [ids] for explicit components. Uncovered needs: 422 use_case_not_covered with notCovered",
+  ],
   ["GET", "/v1/plans/{id}", "State and result: what works, what needs configuration, checks"],
   ["POST", "/v1/plans/{id}/generate", 'Generate and verify; { "approve": true } after a decision'],
   ["GET", "/v1/plans/{id}/events", "Live progress (Server-Sent Events)"],
@@ -230,6 +238,24 @@ export default function UsePage() {
         the web app for people, the CLI and MCP server for coding agents, and the API for any app.
         Same states, same errors, same verified packages.
       </p>
+      <div
+        className="mt-4 max-w-3xl rounded-xl border border-amber/50 p-4 text-sm"
+        data-testid="scope-rule"
+      >
+        <p className="font-semibold text-cream">Only what the library covers</p>
+        <p className="mt-1 text-ice-2">
+          TurbineH builds the use cases and components in the{" "}
+          <Link href="/catalog" className="text-teal underline">
+            Catalogue
+          </Link>
+          , exactly as each one was verified. A request it does not cover is not built: you are told
+          &ldquo;The library doesn&rsquo;t cover this use case yet. We&rsquo;ll notify you with
+          priority as soon as it does.&rdquo;, with the requirements that are missing. When only
+          part of a request is covered, the plan lists what is removed from scope and you choose
+          whether to build the covered part. You can also pick verified components yourself (
+          <Code>--components</Code> in the CLI, <Code>components</Code> in the API).
+        </p>
+      </div>
 
       <nav aria-label="On this page" className="mt-6">
         <ul className="flex flex-wrap gap-2 text-sm">
@@ -286,7 +312,10 @@ export default function UsePage() {
               ["Describe", "New flow: the capability you need, in your words."],
               ["Plan", "Your environment, then one plan: components, files, settings, decisions."],
               ["Generate", "Live trace while the package is assembled, tested and scanned."],
-              ["Verified result", "What works, and what still needs your configuration."],
+              [
+                "Verified result",
+                "Build checks and requirements met, shown apart, and the settings you provide.",
+              ],
               ["Integrate", "Download the ZIP, or receive a pull request on your repository."],
             ].map(([t, d], i) => (
               <li key={t} className="rounded-xl border border-line bg-panel/30 p-4">

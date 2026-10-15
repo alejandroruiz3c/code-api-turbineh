@@ -1,5 +1,11 @@
 import type { ProductError } from "@turbineh/shared";
 import { productError } from "./errors.js";
+import {
+  NOT_COVERED_ACTION,
+  NOT_COVERED_TITLE,
+  NOT_COVERED_WHY,
+  parseNotCoveredReason,
+} from "./scope-gate.js";
 
 /**
  * Why a flow stopped, for people (ADR-0050): every raw reason the worker stores (`builds.error`) maps to what
@@ -38,6 +44,7 @@ export const asProductError = (p: FlowProblem): ProductError => ({
   message: p.message,
   action: p.action,
   ...(p.resume ? { resume: p.resume } : {}),
+  ...(p.notCovered ? { notCovered: p.notCovered } : {}),
 });
 
 /** The person-facing explanation of a failed flow. `raw` is the worker's reason (`builds.error`). */
@@ -63,14 +70,16 @@ export function explainFailure(raw: string | null | undefined, ctx: Ctx): FlowPr
       { label: "Start a new flow", kind: "new_flow" },
     );
   }
-  if (/out of scope/i.test(r)) {
-    return problem(
-      "no_template",
-      "This run stopped before building",
-      "No ready-made template matched the need and, at the time, the flow stopped there. TurbineH now builds it on the closest template and lists what is left with where to implement it.",
-      "Start the flow again with the same description.",
-      { label: "Start the flow again", kind: "new_flow" },
-    );
+  const notCovered = parseNotCoveredReason(r);
+  if (notCovered !== null || /out of scope/i.test(r)) {
+    // ADR-0052: the library doesn't cover the use case; nothing was built and the demand was recorded.
+    return {
+      ...problem("use_case_not_covered", NOT_COVERED_TITLE, NOT_COVERED_WHY, NOT_COVERED_ACTION, {
+        label: "Start a new flow",
+        kind: "new_flow",
+      }),
+      notCovered: notCovered ?? [],
+    };
   }
   if (/^Not delivered: a security or policy check blocks/i.test(r)) {
     return problem(

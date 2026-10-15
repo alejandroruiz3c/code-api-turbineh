@@ -21,6 +21,8 @@ export interface ProductError {
   message: string; // one sentence for people
   action: string; // the concrete next step, e.g. "Set STRIPE_SECRET_KEY in .env.local"
   resume?: string; // e.g. "turbineh apply --resume pl_123"
+  /** `use_case_not_covered` (ADR-0052): the requirements of the request the library does not cover yet. */
+  notCovered?: string[];
 }
 
 export interface Requirement {
@@ -162,6 +164,32 @@ export interface Plan {
   outcome?: PlanOutcome;
   /** What stays open after generation, each with where to implement it (ADR-0050). Never blocks generation. */
   left?: PlanLeftItem[];
+  /**
+   * Scope gate (ADR-0052): what the library covers of the request. A plan exists only when its use case is covered
+   * (`covered`), or when the person must explicitly choose to build the covered part only (`partial`: the removed
+   * requirements are listed here and the choice is in `needsApproval`). Uncovered requests never get a plan.
+   */
+  scope?: PlanScope;
+}
+
+/** One requirement of the request and whether the library covers it (ADR-0052). */
+export interface ScopeRequirement {
+  requirement: string;
+  covered: boolean;
+  /** How it was decided: a shipped test, a catalogue component, the use case, or why it is not covered. */
+  why: string;
+}
+
+export interface PlanScope {
+  status: "covered" | "partial";
+  /** The covered use case (recipe id) or "components" when the plan is the components the person chose. */
+  useCase: string;
+  /** Explicit name of what is built, e.g. "Bookings app (covered part only)". */
+  name: string;
+  /** Requirements removed from scope because the library does not cover them yet (never "left" work). */
+  removed: ScopeRequirement[];
+  /** One sentence for people. */
+  message: string;
 }
 
 export interface PlanCriterion {
@@ -235,6 +263,13 @@ export interface FlowOutcome {
   verification: string; // what was checked, or why nothing was checked yet
   actions: FlowOutcomeAction[];
   left: string[]; // what is left to do, in order
+  /**
+   * F18 (ADR-0052): build checks and the request's requirements, kept apart. `badge` is the one line every client
+   * shows ("Checks 11/11 · Requirements 6/8 met"); "verified" alone is never shown while requirements are open.
+   */
+  checks?: { passed: number; total: number };
+  requirements?: { met: number; total: number };
+  badge?: string;
 }
 
 /** Project preferences reused by the CLI and Claude Code (`.turbineh/project.json`). */

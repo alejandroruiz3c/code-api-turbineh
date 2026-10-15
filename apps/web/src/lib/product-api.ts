@@ -103,6 +103,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
           message: body.message ?? body.title ?? "The request did not succeed.",
           action: body.action ?? body.detail ?? "Try again in a moment.",
           ...(body.resume ? { resume: body.resume } : {}),
+          // ADR-0052: `use_case_not_covered` lists the requirements the library doesn't cover yet.
+          ...(Array.isArray(body.notCovered) ? { notCovered: body.notCovered } : {}),
         }
       : null,
   };

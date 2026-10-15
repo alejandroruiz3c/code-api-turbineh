@@ -289,6 +289,9 @@ export function whereFor(criterion: string, files: PackageGuide["files"]): strin
     .map((f) => f.path);
 }
 
+/** Where a criterion with no matching E2E spec is proved: a new spec (the package has no such file yet). */
+export const NEW_SPEC = "tests/e2e/requirements.spec.ts (new file)";
+
 /** The E2E spec where a criterion's test belongs: the spec whose titles share the most words with it. */
 export function testFileFor(criterion: string, tests: PackageGuide["tests"]): string {
   const want = new Set(words(criterion));
@@ -299,7 +302,8 @@ export function testFileFor(criterion: string, tests: PackageGuide["tests"]): st
       score: words(`${t.file} ${t.titles.join(" ")}`).filter((w) => want.has(w)).length,
     }))
     .sort((a, b) => b.score - a.score || a.file.localeCompare(b.file))[0];
-  return best && best.score > 0 ? best.file : "tests/e2e/app.spec.ts";
+  // Never a file that does not exist (audit F20): with no matching spec, a new one, marked as such.
+  return best && best.score > 0 ? best.file : NEW_SPEC;
 }
 
 /** Extension points every recipe has; recipes add their own in recipe.yaml (`guide.extend`). */
@@ -433,7 +437,7 @@ export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
   }
   const explained = new Set((g.failures ?? []).map((f) => f.step));
   for (const c of g.criteria.filter((x) => x.status === "open")) {
-    const spec = c.testFile ?? "tests/e2e/app.spec.ts";
+    const spec = c.testFile ?? NEW_SPEC;
     left.push({
       kind: "criterion",
       what: c.text,
@@ -482,7 +486,7 @@ export function agentsMarkdown(g: PackageGuide): string {
         c.status === "met"
           ? `met — \`${c.test?.file}\` › "${esc(c.test?.title ?? "")}"`
           : c.status === "open"
-            ? `**open** — implement in ${c.where?.map((w) => `\`${w}\``).join(", ") || "src/app"}; prove it in \`${c.testFile ?? "tests/e2e/app.spec.ts"}\``
+            ? `**open** — implement in ${c.where?.map((w) => `\`${w}\``).join(", ") || "src/app"}; prove it in \`${c.testFile ?? NEW_SPEC}\``
             : c.test
               ? `implemented, not verified — \`${c.test.file}\` › "${esc(c.test.title)}"`
               : "not verified";

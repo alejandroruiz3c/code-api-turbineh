@@ -1,6 +1,6 @@
 # ADR-0050 · Build freely, and always say what happened
 
-- Status: accepted (number may need renumbering at merge)
+- Status: accepted (number may need renumbering at merge); §4 superseded by ADR-0052
 - Date: 2026-10-13
 - Context: the owner tested production (software.turbineh.com) on 2026-10-13 and reported two problems.
   1. Flow `0bfd9dff` (plan on a connected repository → "Generate & verify"): the flow page said "What happened: A check
@@ -39,7 +39,9 @@
    - Another language: a complete Next.js app run as a separate service, with the same one-click switch.
    - Existing projects (repository or files) keep explicit incompatibilities, rewritten the same way, and need approval.
      The wizard no longer disables generation on `compatible: false`; approvals are what a person must confirm.
-4. **Free-form needs always lead to a buildable plan.** When the compiler finds no matching template, the need is built
+4. **Superseded by [ADR-0052](0052-scope-gate-covered-use-cases-only.md) (2026-10-15): only covered use cases are
+   operated; uncovered requests are refused with `use_case_not_covered`.** Original text, kept for history:
+   **Free-form needs always lead to a buildable plan.** When the compiler finds no matching template, the need is built
    on the closest one (`closest_recipe`, else `saas-crud`) instead of failing "out of scope"; existing projects keep
    the component-only plan. The plan's `left` lists what stays open — gaps (written by TurbineH and verified),
    uncovered parts, and acceptance criteria no shipped test proves — each with where it is implemented (AGENTS.md ›

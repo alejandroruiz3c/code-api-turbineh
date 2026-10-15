@@ -28,6 +28,7 @@ import {
   getPool,
   heartbeat,
   putCachedSelection,
+  recordDemand,
   requeueForGeneration,
   requeueStale,
   requeueStaleRepoIntegrations,
@@ -49,7 +50,7 @@ import {
   type Phase,
   type PipelineDeps,
 } from "./pipeline.js";
-import { isGapNotice } from "@turbineh/engine";
+import { isGapNotice, type ScopeVerdict } from "@turbineh/engine";
 import { storeCapabilityPackage, type PlanRequest } from "./product.js";
 import { generateComponentPackage } from "./component-package.js";
 import { runContracts } from "@turbineh/curation";
@@ -119,7 +120,15 @@ async function storeArtifact(
       previews.push({ name: f.replace(/^\d-/, "").replace(/\.png$/, ""), key });
     }
   }
-  return { slug, zipKey, bundleKey, files, docs, previews, sizeBytes: zip.length };
+  // F20 (ADR-0052): the quickstart shown to people comes from the app's real scripts, never a fixed text.
+  const scripts = files.includes("package.json")
+    ? ((
+        JSON.parse(readFileSync(join(repoDir, "package.json"), "utf8")) as {
+          scripts?: Record<string, string>;
+        }
+      ).scripts ?? {})
+    : {};
+  return { slug, zipKey, bundleKey, files, docs, previews, scripts, sizeBytes: zip.length };
 }
 
 async function handle(build: BuildRow): Promise<void> {
@@ -169,6 +178,7 @@ async function handle(build: BuildRow): Promise<void> {
             ...(mode === "plan" ? { plan: build.options.plan as PlanRequest } : {}),
             ...(mode === "generate" && build.spec ? { spec: build.spec as BuildSpec } : {}),
             ...(forcedFailureRequested(build.prompt, process.env) ? { forceFailure: true } : {}),
+            ...(build.options.covered_only === true ? { coveredOnly: true } : {}),
           });
   if (mode === "generate" && plan) outcome.metrics = { ...outcome.metrics, plan };
   let artifact: Record<string, unknown> | undefined;
@@ -219,6 +229,20 @@ async function handle(build: BuildRow): Promise<void> {
     reason: outcome.reason ?? null,
   });
   log.info("build finished", { buildId: build.id, status: outcome.status });
+  // ADR-0052: a request the library does not cover (fully or in part) is demand: recorded for the owner, and the
+  // person is subscribed to a priority notification.
+  const gate = outcome.metrics.scopeGate as ScopeVerdict | undefined;
+  if (gate && gate.status !== "covered") {
+    await recordDemand(db, {
+      buildId: build.id,
+      ownerId: build.owner_id,
+      email: typeof build.options.contact_email === "string" ? build.options.contact_email : null,
+      request: build.prompt,
+      status: gate.status,
+      useCase: gate.useCase,
+      missing: gate.notCovered.map((r) => ({ requirement: r.requirement, why: r.why })),
+    }).catch((err: unknown) => log.error("demand not recorded", { error: String(err) }));
+  }
   // `turbineh build` (ADR-0036): a plan asked to continue straight into generation goes back to the queue at once
   // when nobody has to decide anything (TurbineH writing an uncovered part is what the build asked for) — no second
   // request, no client poll interval in between.

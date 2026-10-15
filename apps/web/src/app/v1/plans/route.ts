@@ -21,7 +21,7 @@ import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
-import { productProblem, requireCaller, resultOf } from "@/server/product";
+import { catalog, productProblem, requireCaller, resultOf } from "@/server/product";
 import { workspaceGitHub } from "@/server/github";
 import { planDecider } from "@/server/plan-decider";
 
@@ -71,6 +71,12 @@ const Body = z.object({
    * ADR-0036): saves a request and a queue round trip. Plans that need approval stop at `planned` as usual.
    */
   generate: z.boolean().optional(),
+  /**
+   * Verified component ids chosen explicitly (ADR-0052, from /v1/components or `turbineh search`): exactly these are
+   * planned, each as it was verified. Without them the need must map to a covered use case or it is refused with
+   * `use_case_not_covered`.
+   */
+  components: z.array(z.string().max(120)).max(20).optional(),
 });
 
 /**
@@ -87,6 +93,20 @@ export async function POST(req: Request): Promise<Response> {
       ERRORS.invalidRequest(parsed.error.issues[0]?.message ?? "Invalid request"),
     );
   const { need, environment, preferences, github_token } = parsed.data;
+  const components = [...new Set(parsed.data.components ?? [])];
+  if (components.length > 0) {
+    const approved = new Set((await catalog()).map((c) => c.id));
+    const unknown = components.filter((id) => !approved.has(id));
+    if (unknown.length > 0)
+      return productProblem(
+        422,
+        productError(
+          "unknown_component",
+          `Not a verified component: ${unknown.join(", ")}.`,
+          "Use ids from /v1/components or `turbineh search`.",
+        ),
+      );
+  }
 
   const quota = caller.kind === "api-key" ? caller.dailyQuota : env.USER_DAILY_BUILDS;
   if ((await buildsLastDay(db, caller.ownerId)) >= quota) {
@@ -177,9 +197,12 @@ export async function POST(req: Request): Promise<Response> {
         ...(files["package.json"] ? { projectDependencies: projectDependencies(files) } : {}),
         ...(preferences ? { preferences } : {}),
         ...(analysis ? { analysis } : {}),
+        ...(components.length ? { components } : {}),
       },
       ...(environment.repo ? { repo: environment.repo } : {}),
       ...(parsed.data.generate ? { autoGenerate: true } : {}),
+      // ADR-0052: an uncovered request is recorded as demand; signed-in people get the priority notice by email.
+      ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
     },
   });
   const links = { status_url: `/v1/plans/${id}`, events_url: `/v1/plans/${id}/events` };
