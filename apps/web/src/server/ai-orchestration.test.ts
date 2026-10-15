@@ -147,7 +147,9 @@ describe("trial cap per TurbineH account (ADR-0053)", () => {
 describe("orchestration endpoints (ADR-0053)", () => {
   it("uses the private engine when it is installed, else the open fallback", () => {
     const installed = existsSync(
-      fileURLToPath(new URL("../../../../private/orchestration/src/index.ts", import.meta.url)),
+      fileURLToPath(
+        new URL("../../../../private/agent-orchestrator/src/index.ts", import.meta.url),
+      ),
     );
     expect(engine.edition).toBe(installed ? "private" : "open");
   });

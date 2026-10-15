@@ -26,6 +26,16 @@ case "$TARGET" in
   *) echo "unknown target $TARGET"; exit 1 ;;
 esac
 
+# Private packages (ADR-0053, ADR-0057, docs/PRIVATE_ORCHESTRATION.md), before anything is deployed: every package
+# infra/private/versions.json requires for a target is checked out at its pinned tag and commit, clean, with its
+# contract in sync, and its version is printed; otherwise nothing is deployed. (The web app's AI gateway never ships
+# the open orchestration fallback; the Vercel production build also refuses to build without the engine.)
+for T in worker web; do
+  if [ "$WHAT" = "$T" ] || [ "$WHAT" = all ]; then
+    infra/private/sync.sh --for "$T" || { echo "refusing: private packages for $T do not match infra/private/versions.json"; exit 1; }
+  fi
+done
+
 # One deploy per environment at a time (parallel agents share staging): wait for the lock instead of overwriting a
 # deploy in progress. mkdir is atomic; a lock older than 45 min is considered stale.
 LOCK="${TMPDIR:-/tmp}/turbineh-deploy-$TARGET.lock"
@@ -63,15 +73,6 @@ if [ "$WHAT" = worker ] || [ "$WHAT" = all ]; then
 fi
 
 if [ "$WHAT" = web ] || [ "$WHAT" = all ]; then
-  # The AI gateway runs the private orchestration engine (ADR-0053, docs/PRIVATE_ORCHESTRATION.md): never deploy the
-  # open fallback. The Vercel build (VERCEL_ENV=production) also refuses to build without it.
-  if [ ! -f private/orchestration/src/index.ts ]; then
-    echo "refusing: private/orchestration is missing (clone the private orchestration repository there first)"; exit 1
-  fi
-  if [ -n "$(git -C private/orchestration status --porcelain 2>/dev/null)" ]; then
-    echo "refusing: private/orchestration has uncommitted changes"; exit 1
-  fi
-  echo "orchestration engine: private@$(git -C private/orchestration rev-parse --short HEAD 2>/dev/null || echo unknown)"
   TOKEN="$(grep '^VERCEL_TOKEN=' .env.local | cut -d= -f2-)"
   PID="$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.vercel.com/v9/projects/$PROJECT?teamId=$TEAM" \
     | python3 -I -c 'import sys,json; print(json.load(sys.stdin)["id"])')"

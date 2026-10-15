@@ -52,5 +52,6 @@ catalog/gaps/*.json
 apps/web/public/cli/
 bench/agent-decisions/.runtime/
 
-# Private orchestration engine (ADR-0053): its own private repository, never part of this public tree.
+# Private packages (ADR-0053, ADR-0056): checkouts of private repositories pinned in infra/private/versions.json
+# (infra/private/sync.sh), never part of this public tree.
 /private/

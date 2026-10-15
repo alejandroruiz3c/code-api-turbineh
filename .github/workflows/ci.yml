@@ -48,6 +48,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm catalog:validate
+      # Pins of the private packages (ADR-0057): format only; the packages themselves are not available here.
+      - run: infra/private/sync.sh --validate
 
   # ADR-0037 §D4: recipes assembled together with domain components, exactly as the pipeline assembles them, so a
   # cross-component regression (66af3182) is caught before main. Fast part only (typecheck + unit); the full E2E gate
