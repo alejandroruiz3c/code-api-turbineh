@@ -1,13 +1,37 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BuildSpec } from "@turbineh/compiler";
+import {
+  cellValue,
+  columnLines,
+  constraintName,
+  FIELD_LIMITS,
+  maxLength,
+  fieldChecks,
+  fieldsOf,
+  hasOptions,
+  inputLimits,
+  inputsOf,
+  inputType,
+  isStateField,
+  recordIdKey,
+  stampsFor,
+  timeZoneKey,
+  transitionFields,
+  transitionPermission,
+  usesDateTime,
+  valueLines,
+  zodLines,
+  type Field,
+} from "./fields.js";
 import { camel, entityNames, label, snake, words } from "./naming.js";
+
+export * from "./fields.js";
 
 /** Header on every generated (non-catalog) file, so reused vs generated is measured honestly. */
 export const GENERATED = "// turbineh:generated";
 
 type Entity = BuildSpec["entities"][number];
-type Field = Entity["fields"][number];
 
 /** Entities the auth component already provides; never generated again. */
 const AUTH_PROVIDED = new Set([
@@ -24,18 +48,6 @@ const AUTH_PROVIDED = new Set([
   "workspace",
   "tenant",
 ]);
-/** Columns the generator owns; model-proposed duplicates are dropped. */
-const RESERVED_FIELDS = new Set([
-  "id",
-  "organizationId",
-  "createdAt",
-  "updatedAt",
-  "password",
-  "passwordHash",
-  "orgId",
-  "tenantId",
-]);
-
 /**
  * Tables already defined in the app by the recipe (`src/db/recipe-tables.ts`) or by native components
  * (`src/db/component-*.ts`): a generated entity with the same table would collide (e.g. a "Subscription" entity
@@ -63,104 +75,6 @@ export function entitiesToGenerate(spec: BuildSpec, providedByRecipe: string[] =
     return true;
   });
 }
-
-export function fieldsOf(e: Entity): Field[] {
-  const seen = new Set<string>();
-  return e.fields.filter((f) => {
-    const key = camel(f.name);
-    if (RESERVED_FIELDS.has(key) || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-export function column(f: Field): string {
-  const c = snake(f.name);
-  const base = {
-    string: `varchar("${c}", { length: 255 })`,
-    email: `varchar("${c}", { length: 320 })`,
-    text: `text("${c}")`,
-    enum: `varchar("${c}", { length: 64 })`,
-    file: `text("${c}")`,
-    reference: `varchar("${c}", { length: 64 })`,
-    integer: `integer("${c}")`,
-    decimal: `numeric("${c}", { precision: 12, scale: 2 })`,
-    boolean: `boolean("${c}")`,
-    date: `date("${c}")`,
-    datetime: `timestamp("${c}", { withTimezone: true })`,
-    tags: `text("${c}").array()`,
-  }[f.type];
-  if (f.type === "tags") return `${base}.notNull().default([])`;
-  const req = f.required && f.type !== "boolean" ? ".notNull()" : "";
-  const def = f.type === "boolean" ? ".notNull().default(false)" : "";
-  return `${base}${req}${def}`;
-}
-
-export function zodField(f: Field): string {
-  const opt = (s: string) => (f.required ? s : `${s}.optional()`);
-  const str = (max: number) =>
-    f.required
-      ? `z.string().trim().min(1).max(${max})`
-      : `z.string().trim().max(${max}).transform((v) => v || undefined).optional()`;
-  if (f.type === "enum" && f.options?.length) {
-    const e = `z.enum(${JSON.stringify(f.options)})`;
-    return f.required ? e : `z.union([${e}, z.literal("").transform(() => undefined)]).optional()`;
-  }
-  switch (f.type) {
-    case "tags":
-      // Comma- or semicolon-separated, normalised (lowercase, unique, at most 20).
-      return `z.string().trim().max(500).default("").transform((v) => [...new Set(v.split(/[,;]/).map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 20).map((t) => t.slice(0, 40)))`;
-    case "string":
-    case "enum":
-    case "reference":
-      return str(255);
-    case "file":
-      return f.required
-        ? `z.url()`
-        : `z.union([z.url(), z.literal("").transform(() => undefined)]).optional()`;
-    case "text":
-      return str(5000);
-    case "email":
-      return f.required
-        ? `z.email()`
-        : `z.union([z.email(), z.literal("").transform(() => undefined)]).optional()`;
-    case "integer":
-      return opt(`z.coerce.number().int().min(-2147483648).max(2147483647)`);
-    case "decimal":
-      return opt(`z.coerce.number().finite()`);
-    case "boolean":
-      return `z.preprocess((v) => v === true || v === "on" || v === "true", z.boolean())`;
-    case "date":
-      return f.required
-        ? `z.iso.date()`
-        : `z.union([z.iso.date(), z.literal("").transform(() => undefined)]).optional()`;
-    case "datetime":
-      return f.required
-        ? `z.coerce.date()`
-        : `z.union([z.coerce.date(), z.literal("").transform(() => undefined)]).optional()`;
-  }
-}
-
-export function inputType(f: Field): string {
-  return {
-    string: "text",
-    enum: "text",
-    reference: "text",
-    file: "url",
-    text: "text",
-    email: "email",
-    integer: "number",
-    decimal: "number",
-    boolean: "checkbox",
-    date: "date",
-    datetime: "datetime-local",
-    tags: "text",
-  }[f.type];
-}
-
-/** An enum field with the values the request lists (rendered as a select). */
-export const hasOptions = (f: Field): f is Field & { options: string[] } =>
-  f.type === "enum" && Array.isArray(f.options) && f.options.length > 0;
 
 /** A text field that holds an email address (the compiler sometimes types it as plain text). */
 const emailLike = (f: Field) =>
@@ -214,7 +128,7 @@ export function importedSample(f: Field, value: string, suffix: string): string 
 
 /** First plain text field: what people type to identify a record (and what a reference to it holds). */
 export function displayField(e: Entity): Field | undefined {
-  return fieldsOf(e).find(
+  return inputsOf(e).find(
     (f) => ["string", "text", "enum"].includes(f.type) && words(f.name).at(-1) !== "id",
   );
 }
@@ -247,7 +161,7 @@ export function seedSample(
   all: Entity[],
   variant = "",
 ): Record<string, string> {
-  const fields = fieldsOf(target);
+  const fields = inputsOf(target);
   const display = displayField(target);
   const suffix = `for-${entityNames(forEntity.name).slug}${variant ? `-${variant}` : ""}`;
   const out: Record<string, string> = {};
@@ -321,6 +235,11 @@ export interface EntityOptions {
   auditLog?: boolean;
   /** The request's name for the owner role (e.g. "Manager"): generated E2E titles name the actor that way. */
   ownerLabel?: string;
+  /**
+   * Entities that get a table and a page of their own (a reference to one of them becomes a tenant-scoped foreign key);
+   * default: every entity in `all`.
+   */
+  referenceable?: string[];
 }
 
 /** An event entity attached to its parent. Field names are camelCase names of the event entity. */
@@ -360,7 +279,82 @@ function eventCall(l: EventLink, id: string, from: string, to: string): string {
     parts.push(
       `${l.map.at}: ${at?.type === "date" ? "new Date().toISOString().slice(0, 10)" : "new Date()"}`,
     );
-  return `await record${en.pascal}({ ${parts.join(", ")} });`;
+  // Written in the same transaction (`tx`) as the change it records.
+  return `await record${en.pascal}({ ${parts.join(", ")} }, tx);`;
+}
+
+/** A reference field resolved to the generated entity it names. */
+export interface ResolvedRef {
+  f: Field;
+  t: ReturnType<typeof entityNames>;
+}
+
+/**
+ * The table of one generated entity (ADR-0054): the workspace column the server owns, one column per built field (and
+ * its companions), the tenant-scoped foreign key of each reference (a row can only point to a record of its own
+ * workspace: (organization_id, <ref>_record_id) → (organization_id, id)), and checks for allowed values and
+ * non-negative numbers that hold even for writes outside the app.
+ */
+export function tableFile(
+  e: Entity,
+  refs: ResolvedRef[] = [],
+  fields: Field[] = fieldsOf(e),
+  /** A child's parent column: the parent's id (uuid), a tenant-scoped foreign key that deletes with the parent. */
+  parent: { field: string; t: ResolvedRef["t"] } | null = null,
+  /** Settings: a "stage" there is what the setting applies to, typed like any field (not workflow state). */
+  stateIsInput = false,
+): string {
+  const n = entityNames(e.name);
+  const pg = new Set(["pgTable", "uuid", "varchar", "timestamp", "unique"]);
+  const lineOf = (f: Field) =>
+    parent && camel(f.name) === parent.field
+      ? [`  ${parent.field}: uuid("${snake(f.name)}").notNull(),`]
+      : columnLines(f, stateIsInput);
+  for (const f of fields) {
+    pg.add(lineOf(f)[0]?.split(":")[1]?.trim().split("(")[0] ?? "");
+  }
+  const checks = fields.flatMap((f) => fieldChecks(f, n.table));
+  if (checks.length) pg.add("check");
+  if (refs.length || parent) pg.add("foreignKey");
+  pg.delete("");
+  const targets = [
+    ...new Map(
+      [...refs, ...(parent ? [{ t: parent.t }] : [])].map((r) => [r.t.slug, r.t]),
+    ).values(),
+  ].filter((t) => t.slug !== n.slug);
+  const extra = [
+    `  // Other tables reference rows of this one only within the same workspace (tenant-scoped foreign keys).`,
+    `  unique("${constraintName(n.table, "organization_id", "id_key")}").on(t.organizationId, t.id),`,
+    ...refs.map(
+      (r) =>
+        `  foreignKey({\n    name: "${constraintName(n.table, snake(r.f.name), "fk")}",\n    columns: [t.organizationId, t.${recordIdKey(r.f)}],\n    foreignColumns: [${r.t.variable}.organizationId, ${r.t.variable}.id],\n  }).onDelete("restrict"),`,
+    ),
+    ...(parent
+      ? [
+          `  foreignKey({\n    name: "${constraintName(n.table, snake(parent.field), "fk")}",\n    columns: [t.organizationId, t.${parent.field}],\n    foreignColumns: [${parent.t.variable}.organizationId, ${parent.t.variable}.id],\n  }).onDelete("cascade"),`,
+        ]
+      : []),
+    ...checks.map((c) => `  ${c},`),
+  ];
+  return `${GENERATED}
+${checks.length ? `import { sql } from "drizzle-orm";\n` : ""}import { ${[...pg].sort().join(", ")} } from "drizzle-orm/pg-core";
+${targets.map((t) => `import { ${t.variable} } from "./${t.slug}";\n`).join("")}
+export const ${n.variable} = pgTable(
+  "${n.table}",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: varchar("organization_id", { length: 64 }).notNull(),
+${fields
+  .flatMap((f) => lineOf(f))
+  .map((l) => `  ${l}`)
+  .join("\n")}
+${refs.map((r) => `    ${recordIdKey(r.f)}: uuid("${snake(r.f.name)}_record_id"),\n`).join("")}    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+${extra.join("\n")}
+  ],
+);
+`;
 }
 
 /**
@@ -375,8 +369,13 @@ export function generateEntity(
   opts: EntityOptions = {},
 ): GeneratedFile[] {
   const n = entityNames(e.name);
-  const fields = fieldsOf(e);
   const settings = opts.variant === "settings";
+  // Every built field (shown in the list and the export) and the ones people type (forms, CSV import): workflow
+  // state (status, approvedAt…) is never typed, only changed by a role-gated transition (ADR-0054). Settings are
+  // configuration set by roles that may "configure": a "stage" there names what the setting applies to.
+  const fields = fieldsOf(e);
+  const inputs = settings ? fields : inputsOf(e);
+  const transitions = settings ? [] : transitionFields(e);
   // Who the generated E2E tests act as: the owner, named as the request names that role ("manager (owner)").
   const actor =
     opts.ownerLabel && opts.ownerLabel.toLowerCase() !== "owner"
@@ -392,21 +391,41 @@ export function generateEntity(
   const scopeKey = scope ? camel(scope.field) : null;
   // Title of the workflow item: what identifies the record (its first text field and first date), else its label.
   const titleParts = [
-    fieldsOf(e).find((f) => ["string", "text"].includes(f.type) && !/id$/i.test(f.name)),
-    fieldsOf(e).find((f) => f.type === "date" || f.type === "datetime"),
+    inputs.find((f) => ["string", "text"].includes(f.type) && !/id$/i.test(f.name)),
+    inputs.find((f) => f.type === "date" || f.type === "datetime"),
   ].filter((f): f is Field => Boolean(f));
   const workflowTitle = titleParts.length
     ? `[${titleParts.map((f) => `input.${camel(f.name)}`).join(", ")}].filter((v) => v !== undefined && v !== null && String(v).trim() !== "").map(String).join(" · ") || ${JSON.stringify(n.labelSingular)}`
     : JSON.stringify(n.labelSingular);
   const events = opts.events ?? [];
   const children = opts.children ?? [];
-  const tagField = fields.find((f) => f.type === "tags");
+  const tagField = inputs.find((f) => f.type === "tags");
   // Settings are keyed by their first required text field (e.g. the stage a limit applies to).
-  const settingKey = fields.find(
+  const settingKey = inputs.find(
     (f) => f.required && ["string", "enum", "reference", "email"].includes(f.type),
   );
+  // References to other generated entities (ADR-0054): the field keeps the referenced record's display value people
+  // type, and the server resolves it to that record's id in the same workspace (tenant-scoped foreign key), refusing
+  // values that name no record. Never a free id typed in a form.
+  const refs = inputs
+    .filter((f) => f.name !== scope?.field)
+    .flatMap((f) => {
+      const target = referenceTarget(f, e, all);
+      const display = target ? displayField(target) : undefined;
+      if (target && opts.referenceable && !opts.referenceable.includes(target.name)) return [];
+      return target && display ? [{ f, target, t: entityNames(target.name), display }] : [];
+    });
+  const refOf = (f: Field) => refs.find((r) => r.f === f);
+  // Lifecycle stamps per transition value (approvedAt/approvedBy when the status becomes "Approved").
+  const stamps = transitions.map((tf) => ({
+    tf,
+    byValue: (tf.options ?? [])
+      .map((o) => ({ value: o, fields: stampsFor(e, o) }))
+      .filter((s) => s.fields.length > 0),
+  }));
+  const dt = usesDateTime(inputs);
   const sortField = opts.sort
-    ? (fields.find(
+    ? (inputs.find(
         (f) =>
           (f.type === "date" || f.type === "datetime") &&
           words(f.name)
@@ -414,54 +433,47 @@ export function generateEntity(
             .includes(opts.sort?.field ?? "\u0000"),
       ) ??
       (/date|time/.test(opts.sort.field)
-        ? fields.find((f) => f.type === "date" || f.type === "datetime")
+        ? inputs.find((f) => f.type === "date" || f.type === "datetime")
         : undefined))
     : undefined;
-  const pgImports = new Set(["pgTable", "uuid", "varchar", "timestamp"]);
-  for (const f of fields) {
-    const fn = column(f).split("(")[0] ?? "";
-    pgImports.add(fn);
-  }
+  const table = tableFile(e, refs, fields, null, settings);
 
-  const table = `${GENERATED}
-import { ${[...pgImports].sort().join(", ")} } from "drizzle-orm/pg-core";
-
-export const ${n.variable} = pgTable("${n.table}", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: varchar("organization_id", { length: 64 }).notNull(),
-${fields.map((f) => `  ${camel(f.name)}: ${column(f)},`).join("\n")}
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-`;
-
-  const toRow = fields
-    .map((f) => {
-      const k = camel(f.name);
-      if (f.type === "boolean") return `    ${k}: input.${k},`;
-      if (f.type === "decimal")
-        return f.required
-          ? `    ${k}: String(input.${k}),`
-          : `    ${k}: input.${k} === undefined ? null : String(input.${k}),`;
-      return f.required ? `    ${k}: input.${k},` : `    ${k}: input.${k} ?? null,`;
-    })
-    .join("\n");
+  const toRow = [
+    ...inputs.flatMap((f) => valueLines(f)),
+    // Set by the server from the typed display value (never typed itself).
+    ...refs.map((r) => `    ${recordIdKey(r.f)}: null as string | null,`),
+  ].join("\n");
 
   const schema = `${GENERATED}
 import { z } from "zod";
 import type { ${n.variable} } from "@/db/tables/${n.slug}";
-import type { EntityRules } from "@/lib/rules";
+${dt ? `import { localDateTime, timeZone, zonedToUtc } from "@/lib/datetime";\n` : ""}import type { EntityRules } from "@/lib/rules";
 import type { ${n.pascal}Related } from "./related";
 
-/** Input validation for ${n.labelPlural} (Security Pack: every boundary is validated). */
+/**
+ * Input validation for ${n.labelPlural} (Security Pack: every boundary is validated). Limits come from one source (the
+ * same as the table's columns)${transitions.length || fields.length > inputs.length ? "; workflow state is not an input: only transitions change it" : ""}.
+ */
 export const create${n.pascal}Schema = z.object({
-${fields.map((f) => `  ${camel(f.name)}: ${zodField(f)},`).join("\n")}
+${inputs.flatMap((f) => zodLines(f)).join("\n")}
 });
 
 export type Create${n.pascal}Input = z.infer<typeof create${n.pascal}Schema>;
 export type ${n.pascal}Row = typeof ${n.variable}.$inferSelect;
 export type ${n.pascal}Rules = EntityRules<Create${n.pascal}Input, ${n.pascal}Row, ${n.pascal}Related>;
 
-/** Column values of a validated input (the workspace, id and creation date are added by the server). */
+/** Workflow state a new record starts with: set by the server, never typed (only transitions change it). */
+export const initial${n.pascal}State = {
+${fields
+  .filter((f) => isStateField(f) && !inputs.includes(f))
+  .flatMap((f) => [
+    `  ${camel(f.name)}: ${hasOptions(f) ? JSON.stringify(f.options[0]) : f.type === "boolean" ? "false" : "null"},`,
+    ...(f.type === "datetime" ? [`  ${timeZoneKey(f)}: "UTC",`] : []),
+  ])
+  .join("\n")}
+};
+
+/** Column values of a validated input (the workspace, id, state and creation date are set by the server). */
 export function to${n.pascal}Values(input: Create${n.pascal}Input) {
   return {
 ${toRow}
@@ -473,8 +485,9 @@ ${toRow}
 import type { ${n.pascal}Rules } from "./schema";
 
 /**
- * Business rules for ${n.labelPlural.toLowerCase()}: none were requested for this app. When the request contains rules,
- * TurbineH writes them here with their own unit tests.
+ * Business rules for ${n.labelPlural.toLowerCase()}. No rule of the request is implemented in this file (yet). Every rule the
+ * request states is accounted for in TURBINEH_REPORT.md under "Business rules" with an id: implemented here by
+ * TurbineH with its own unit tests, or listed as a limitation or a blocked item — never dropped.
  */
 export const check${n.pascal}Rules: ${n.pascal}Rules = () => Promise.resolve(null);
 `;
@@ -492,20 +505,84 @@ export const related${n.pascal} = (organizationId: string) => bindRelated(relate
 export type ${n.pascal}Related = ReturnType<typeof related${n.pascal}>;
 `;
 
+  // Server-side values of the record's references (resolved in the workspace) and of a transition's lifecycle stamps.
+  const refsCall = refs.length
+    ? `, ...(await ${camel(n.pascal)}References(ctx.organizationId, input))`
+    : "";
+  const stampValue = (f: Field): string | null => {
+    const k = camel(f.name);
+    if (f.type === "datetime") return `${k}: new Date(), ${timeZoneKey(f)}: "UTC"`;
+    if (f.type === "date") return `${k}: new Date().toISOString().slice(0, 10)`;
+    if (f.type === "boolean") return `${k}: true`;
+    if (["string", "email", "text"].includes(f.type)) return `${k}: ctx.email`;
+    return null;
+  };
+  const transitionActions = settings
+    ? ""
+    : transitions
+        .map((tf) => {
+          const k = camel(tf.name);
+          const fp = entityNames(tf.name).pascal;
+          const perm = transitionPermission(tf);
+          const st = stamps.find((s) => s.tf === tf)?.byValue ?? [];
+          const stampExpr = st
+            .map((s) => {
+              const parts = s.fields.map(stampValue).filter((x): x is string => x !== null);
+              return parts.length
+                ? `...(to === ${JSON.stringify(s.value)} ? { ${parts.join(", ")} } : {})`
+                : "";
+            })
+            .filter(Boolean);
+          const tracked = events.filter((l) => l.tracked === k);
+          return `
+/**
+ * Moves the ${label(tf.name).toLowerCase()} of one ${n.labelSingular.toLowerCase()}: the only way it changes (forms never send it), for roles with
+ * the "${perm}" permission, in one transaction with its audit entry${tracked.length ? " and history" : ""}.
+ */
+export async function change${n.pascal}${fp}(formData: FormData): Promise<void> {
+  const ctx = await requireMember();
+  if (!can(ctx.role, "${perm}", ${resource})) throw new UserFacingError("You are not allowed to change the ${label(tf.name).toLowerCase()} of ${n.labelPlural.toLowerCase()}.");
+  if (!(await rateLimit(\`transition:${n.table}:\${ctx.userId}\`))) throw new UserFacingError("Too many requests. Try again later.");
+  const id = z.uuid().parse(formData.get("id"));
+  const to = ${hasOptions(tf) ? `z.enum(${JSON.stringify(tf.options)})` : `z.string().trim().min(1).max(${maxLength(tf) ?? FIELD_LIMITS.enum})`}.parse(formData.get("${k}"));
+  await db.transaction(async (tx) => {
+    const [previous] = await tx
+      .select()
+      .from(${n.variable})
+      .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+      .limit(1)
+      .for("update");
+    if (!previous${scope ? ` || !(await canSeeScope(ctx, previous.${scopeKey} ?? null))` : ""}) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
+    if (previous.${k} === to) return;
+    const values = { ${k}: to${stampExpr.length ? `, ${stampExpr.join(", ")}` : ""} };
+    await tx
+      .update(${n.variable})
+      .set(values)
+      .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.${snake(tf.name)}_changed", subjectType: "${n.labelSingular}", subjectId: id, before: previous, after: { ...previous, ...values } }, tx);
+${tracked.map((l) => `    ${eventCall(l, "id", `previous.${k} ?? null`, "to")}\n`).join("")}  });
+  revalidatePath("${base}");
+  redirect("${base}");
+}
+`;
+        })
+        .join("");
+
   const actions = `${GENERATED}
 "use server";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq${refs.length ? ", ilike" : ""}, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { ${n.variable} } from "@/db/schema";
+import { ${[n.variable, ...new Set(refs.map((r) => r.t.variable))].join(", ")} } from "@/db/schema";
 import { audit } from "@/lib/audit";
-${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { UserFacingError } from "@/security/errors";
+${features.csvImport ? `import { CSV_LIMITS, parseCsv } from "@/lib/csv";\n` : ""}import { isForeignKeyViolation } from "@/lib/db-errors";
+import { UserFacingError } from "@/security/errors";
 import { RULES_SCAN_LIMIT } from "@/lib/rules";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-${scope ? `import { canSeeScope } from "@/server/record-access";\n` : ""}${workflow ? `import { createItem } from "@/workflow/service";\n` : ""}${events
+${scope ? `import { canSeeScope } from "@/server/record-access";\n` : ""}${workflow ? `import { createItem } from "@/workflow/service";\n${workflow.dueField && inputs.find((f) => f.name === workflow.dueField)?.type === "datetime" ? `import { zonedToUtc } from "@/lib/datetime";\n` : ""}` : ""}${events
     .filter((l) => l.tracked)
     .map((l) => {
       const en = entityNames(l.event.name);
@@ -513,7 +590,12 @@ ${scope ? `import { canSeeScope } from "@/server/record-access";\n` : ""}${workf
     })
     .join("")}import { related${n.pascal} } from "./related";
 import { check${n.pascal}Rules } from "./rules";
-import { create${n.pascal}Schema, to${n.pascal}Values, type ${n.pascal}Row } from "./schema";
+import {
+  create${n.pascal}Schema,
+  initial${n.pascal}State,
+  to${n.pascal}Values,
+  type ${refs.length ? `Create${n.pascal}Input, type ` : ""}${n.pascal}Row,
+} from "./schema";
 
 /** Records the business rules may inspect: same workspace only, newest first, bounded; never the record being changed. */
 function existing${n.pascal}(organizationId: string, exceptId?: string): Promise<${n.pascal}Row[]> {
@@ -529,11 +611,42 @@ function existing${n.pascal}(organizationId: string, exceptId?: string): Promise
     .orderBy(desc(${n.variable}.createdAt))
     .limit(RULES_SCAN_LIMIT);
 }
-
+${refs
+  .map(
+    (r) => `
+/**
+ * The ${r.t.labelSingular.toLowerCase()} a ${label(r.f.name).toLowerCase()} names (its ${label(r.display.name).toLowerCase()}), in this workspace only: its id, or a
+ * user-facing error. A reference never points to another workspace or to nothing (tenant-scoped foreign key).
+ */
+async function ${camel(r.f.name)}RecordId(organizationId: string, value: string | null | undefined): Promise<string | null> {
+  if (!value) return null;
+  const [row] = await db
+    .select({ id: ${r.t.variable}.id })
+    .from(${r.t.variable})
+    .where(and(eq(${r.t.variable}.organizationId, organizationId), ilike(${r.t.variable}.${camel(r.display.name)}, value.replace(/[%_\\\\]/g, "\\\\$&"))))
+    .orderBy(desc(${r.t.variable}.createdAt))
+    .limit(1);
+  if (!row) throw new UserFacingError(\`Choose an existing ${r.t.labelSingular.toLowerCase()}: "\${value.slice(0, 80)}" was not found.\`);
+  return row.id;
+}
+`,
+  )
+  .join("")}${
+    refs.length
+      ? `
+/** Ids of the records this input references, resolved in the workspace (never typed). */
+async function ${camel(n.pascal)}References(organizationId: string, input: Create${n.pascal}Input) {
+  return {
+${refs.map((r) => `    ${recordIdKey(r.f)}: await ${camel(r.f.name)}RecordId(organizationId, input.${camel(r.f.name)}),`).join("\n")}
+  };
+}
+`
+      : ""
+  }
 export async function create${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("create")})) throw new UserFacingError("You are not allowed to create ${n.labelPlural.toLowerCase()}.");
-  if (!rateLimit(\`create:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
+  if (!(await rateLimit(\`create:${n.table}:\${ctx.userId}\`))) throw new UserFacingError("Too many requests. Try again later.");
   const input = create${n.pascal}Schema.parse(Object.fromEntries(formData));
   const violation = await check${n.pascal}Rules(input, {
     operation: "create",
@@ -549,22 +662,39 @@ ${
 }${
     settings && settingKey
       ? `  // A setting is one row per ${label(settingKey.name).toLowerCase()}: saving an existing one updates it (no duplicates, no delete).
+  const setting = { ...to${n.pascal}Values(input)${refsCall} };
   const [same] = await db
     .select({ id: ${n.variable}.id })
     .from(${n.variable})
-    .where(and(eq(${n.variable}.organizationId, ctx.organizationId), eq(${n.variable}.${camel(settingKey.name)}, to${n.pascal}Values(input).${camel(settingKey.name)})))
+    .where(and(eq(${n.variable}.organizationId, ctx.organizationId), eq(${n.variable}.${camel(settingKey.name)}, setting.${camel(settingKey.name)})))
     .limit(1);
   if (same) {
-    await db.update(${n.variable}).set(to${n.pascal}Values(input)).where(eq(${n.variable}.id, same.id));
-    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: same.id, after: to${n.pascal}Values(input) });
+    await db.transaction(async (tx) => {
+      await tx.update(${n.variable}).set(setting).where(and(eq(${n.variable}.id, same.id), eq(${n.variable}.organizationId, ctx.organizationId)));
+      await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: same.id, after: setting }, tx);
+    });
     revalidatePath("${base}");
     return;
   }
 `
       : ""
-  }  const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
-  const [created] = await db.insert(${n.variable}).values(values).returning({ id: ${n.variable}.id });
-  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: created?.id ?? null, after: values });
+  }  const values = { organizationId: ctx.organizationId, ...initial${n.pascal}State, ...to${n.pascal}Values(input)${refsCall} };
+  // The record, its audit entry${events.some((l) => l.tracked) ? " and its first history entry" : ""} are written together or not at all.
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx.insert(${n.variable}).values(values).returning();
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.created", subjectType: "${n.labelSingular}", subjectId: row?.id ?? null, after: values }, tx);
+${
+  events.some((l) => l.tracked)
+    ? `    if (row) {
+${events
+  .filter((l) => l.tracked)
+  .map((l) => `      ${eventCall(l, "row.id", "null", `String(row.${l.tracked} ?? "")`)}`)
+  .join("\n")}
+    }
+`
+    : ""
+}    return row;
+  });
 ${
   workflow
     ? `  // Its status lives in the workflow (domain.workflow.turbineh): initial state, history and role-gated changes.
@@ -572,28 +702,27 @@ ${
     await createItem(ctx, {
       workflow: ${JSON.stringify(workflow.key)},
       title: ${workflowTitle},
-      subjectId: created.id,${scope ? `\n      scopeId: input.${scopeKey} ?? null,` : ""}${workflow.dueField ? `\n      dueAt: input.${camel(workflow.dueField)} ? new Date(input.${camel(workflow.dueField)}) : null,` : ""}
+      subjectId: created.id,${scope ? `\n      scopeId: input.${scopeKey} ?? null,` : ""}${
+        workflow.dueField
+          ? `\n      dueAt: input.${camel(workflow.dueField)} ? ${
+              inputs.find((f) => f.name === workflow.dueField)?.type === "datetime"
+                ? `zonedToUtc(input.${camel(workflow.dueField)}, input.${camel(workflow.dueField)}TimeZone)`
+                : `new Date(input.${camel(workflow.dueField)})`
+            } : null,`
+          : ""
+      }
     });
 `
-    : ""
-}${
-    events.some((l) => l.tracked)
-      ? `  if (created) {
-${events
-  .filter((l) => l.tracked)
-  .map((l) => `    ${eventCall(l, "created.id", "null", `String(input.${l.tracked} ?? "")`)}`)
-  .join("\n")}
-  }
+    : `  void created;
 `
-      : ""
-  }  revalidatePath("${base}");
+}  revalidatePath("${base}");
 }
 
 /** Changes one record of the active workspace; business rules run again with the previous values. */
 export async function update${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("update")})) throw new UserFacingError("You are not allowed to change ${n.labelPlural.toLowerCase()}.");
-  if (!rateLimit(\`update:${n.table}:\${ctx.userId}\`)) throw new UserFacingError("Too many requests. Try again later.");
+  if (!(await rateLimit(\`update:${n.table}:\${ctx.userId}\`))) throw new UserFacingError("Too many requests. Try again later.");
   const id = z.uuid().parse(formData.get("id"));
   const [previous] = await db
     .select()
@@ -613,43 +742,53 @@ export async function update${n.pascal}(formData: FormData): Promise<void> {
     related: related${n.pascal}(ctx.organizationId),
   });
   if (violation) throw new UserFacingError(violation);
-  const values = to${n.pascal}Values(input);
-  await db
-    .update(${n.variable})
-    .set(values)
-    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
-  await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: id, before: previous, after: { ...previous, ...values } });
+  const values = { ...to${n.pascal}Values(input)${refsCall} };
+  await db.transaction(async (tx) => {
+    await tx
+      .update(${n.variable})
+      .set(values)
+      .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)));
+    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.updated", subjectType: "${n.labelSingular}", subjectId: id, before: previous, after: { ...previous, ...values } }, tx);
 ${events
-  .filter((l) => l.tracked)
+  .filter((l) => l.tracked && inputs.some((f) => camel(f.name) === l.tracked))
   .map(
     (
       l,
-    ) => `  // Every change of ${label(l.tracked ?? "").toLowerCase()} is recorded (append-only history, ${entityNames(l.event.name).labelPlural}).
-  if (String(previous.${l.tracked} ?? "") !== String(input.${l.tracked} ?? "")) {
-    ${eventCall(l, "id", `previous.${l.tracked} ?? null`, `String(input.${l.tracked} ?? "")`)}
-  }
+    ) => `    // Every change of ${label(l.tracked ?? "").toLowerCase()} is recorded (append-only history, ${entityNames(l.event.name).labelPlural}).
+    if (String(previous.${l.tracked} ?? "") !== String(input.${l.tracked} ?? "")) {
+      ${eventCall(l, "id", `previous.${l.tracked} ?? null`, `String(input.${l.tracked} ?? "")`)}
+    }
 `,
   )
-  .join("")}  revalidatePath("${base}");
+  .join("")}  });
+  revalidatePath("${base}");
   redirect("${base}");
 }
-
+${transitionActions}
 export async function delete${n.pascal}(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("delete")})) throw new UserFacingError("You are not allowed to delete ${n.labelPlural.toLowerCase()}.");
-  const id = String(formData.get("id") ?? "");
+  const id = z.uuid().parse(formData.get("id"));
 ${
   scope
     ? `  const [target] = await db.select().from(${n.variable}).where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId))).limit(1);
   if (!target || !(await canSeeScope(ctx, target.${scopeKey} ?? null))) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} no longer exists.");
 `
     : ""
-}  const removed = await db
-    .delete(${n.variable})
-    .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
-    .returning();
-  for (const before of removed)
-    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before });
+}  try {
+    await db.transaction(async (tx) => {
+      const removed = await tx
+        .delete(${n.variable})
+        .where(and(eq(${n.variable}.id, id), eq(${n.variable}.organizationId, ctx.organizationId)))
+        .returning();
+      for (const before of removed)
+        await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.deleted", subjectType: "${n.labelSingular}", subjectId: before.id, before }, tx);
+    });
+  } catch (err) {
+    // Other records still reference it (tenant-scoped foreign key): say so instead of failing.
+    if (isForeignKeyViolation(err)) throw new UserFacingError("This ${n.labelSingular.toLowerCase()} is still used by other records. Change or delete those first.");
+    throw err;
+  }
   revalidatePath("${base}");
 }
 ${
@@ -659,7 +798,7 @@ ${
 export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, ${act("create")})) throw new UserFacingError("You are not allowed to import ${n.labelPlural.toLowerCase()}.");
-  if (!rateLimit(\`import:${n.table}:\${ctx.userId}\`, 5)) throw new UserFacingError("Too many imports. Try again later.");
+  if (!(await rateLimit(\`import:${n.table}:\${ctx.userId}\`, 5))) throw new UserFacingError("Too many imports. Try again later.");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) throw new UserFacingError("Choose a CSV file.");
   if (file.size > CSV_LIMITS.maxBytes) throw new UserFacingError("The CSV file is too large.");
@@ -669,16 +808,25 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
   let known: ${n.pascal}Row[] | null = null;
   const existing = async () => (known ??= await existing${n.pascal}(ctx.organizationId));
   const related = related${n.pascal}(ctx.organizationId);
-  const accepted = [];
+  const accepted: (typeof ${n.variable}.$inferInsert)[] = [];
   for (const input of valid) {
     if (await check${n.pascal}Rules(input, { operation: "create", previous: null, existing, related })) continue;
-    const values = { organizationId: ctx.organizationId, ...to${n.pascal}Values(input) };
+${
+  refs.length
+    ? `    // A row whose references name no record of this workspace is rejected.
+    const references = await ${camel(n.pascal)}References(ctx.organizationId, input).catch(() => null);
+    if (!references) continue;
+    const values = { organizationId: ctx.organizationId, ...initial${n.pascal}State, ...to${n.pascal}Values(input), ...references };`
+    : `    const values = { organizationId: ctx.organizationId, ...initial${n.pascal}State, ...to${n.pascal}Values(input) };`
+}
     accepted.push(values);
     (await existing()).unshift({ id: crypto.randomUUID(), createdAt: new Date(), ...values });
   }
   if (accepted.length > 0) {
-    await db.insert(${n.variable}).values(accepted);
-    await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.imported", subjectType: "${n.labelSingular}", summary: \`\${accepted.length} imported from CSV, \${rows.length - accepted.length} rejected\` });
+    await db.transaction(async (tx) => {
+      await tx.insert(${n.variable}).values(accepted);
+      await audit({ organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email, action: "${n.slug}.imported", subjectType: "${n.labelSingular}", summary: \`\${accepted.length} imported from CSV, \${rows.length - accepted.length} rejected\` }, tx);
+    });
   }
   revalidatePath("${base}");
   redirect(\`${base}?imported=\${accepted.length}&rejected=\${rows.length - accepted.length}\`);
@@ -699,7 +847,8 @@ export async function import${n.pascal}Csv(formData: FormData): Promise<void> {
               ))}
             </select>
           </div>`;
-  const formFields = fields
+  // Only typed fields: workflow state, tenant ids, reference ids and secrets are never form fields (ADR-0054).
+  const formFields = inputs
     .map((f) => {
       const id = `${n.slug}-${snake(f.name)}`;
       if (f === scopeField) return scopeSelect(id, `""`);
@@ -719,17 +868,29 @@ ${f.required ? "" : `              <option value="">—</option>\n`}${f.options.
       }
       const step = f.type === "decimal" ? ` step="0.01"` : "";
       const hint =
-        f.type === "tags" ? ` placeholder="Comma-separated, e.g. pricing, onboarding"` : "";
+        f.type === "tags"
+          ? ` placeholder="Comma-separated, e.g. pricing, onboarding"`
+          : refOf(f)
+            ? ` placeholder="${label(refOf(f)?.display.name ?? "").replace(/"/g, "")} of an existing ${refOf(f)?.t.labelSingular.toLowerCase()}"`
+            : "";
+      // A date and time is typed in the person's own time zone (sent along, stored with the UTC instant).
+      const zone =
+        f.type === "datetime" ? `\n            <TimeZoneField name="${timeZoneKey(f)}" />` : "";
       return `          <div>
             <Label htmlFor="${id}">${label(f.name)}</Label>
-            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${hint}${f.required ? " required" : ""} />
+            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${hint}${inputLimits(f)}${f.required ? " required" : ""} />${zone}
           </div>`;
     })
     .join("\n");
 
-  const firstText = fields.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
+  const firstText = inputs.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
   const search = firstText ? camel(firstText.name) : null;
-  const columns = fields.map((f) => camel(f.name));
+  // CSV export: every built column (never a secret), datetimes with the zone they were typed in. CSV import: the
+  // typed fields only.
+  const columns = fields.flatMap((f) =>
+    f.type === "datetime" ? [camel(f.name), timeZoneKey(f)] : [camel(f.name)],
+  );
+  const importColumns = inputs.map((f) => camel(f.name));
 
   // One list query (filters, scope, order) shared by the list page and the CSV export, so the export contains exactly
   // the filtered list.
@@ -794,7 +955,7 @@ import { db } from "@/db/client";
 import { ${n.variable}${workflow ? ", workflowItems" : ""} } from "@/db/schema";
 import { create${n.pascal}, delete${n.pascal}${features.csvImport ? `, import${n.pascal}Csv` : ""} } from "@/entities/${n.slug}/actions";
 import { ${listParams}, ${listQuery}, ${listWhere} } from "@/entities/${n.slug}/query";
-import { PAGE_SIZE, parsePage } from "@/lib/pagination";
+${dt ? `import { TimeZoneField } from "@/components/time-zone-field";\n` : ""}${usesDateTime(fields) ? `import { formatDateTime } from "@/lib/datetime";\n` : ""}import { PAGE_SIZE, parsePage } from "@/lib/pagination";
 import { can, requireMember } from "@/server/authz";
 ${scope ? `import { scopeOptions } from "@/server/record-access";\n` : ""}${workflow ? `import { workflowOf } from "@/workflow/config";\nimport { stateLabel } from "@/workflow/engine";\n` : ""}
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -854,7 +1015,7 @@ ${
     ? `      <Card title="Import ${n.labelPlural.toLowerCase()} from CSV">
         <form action={import${n.pascal}Csv} className="flex items-end gap-3">
           <div>
-            <Label htmlFor="${n.slug}-csv">CSV file (columns: ${columns.join(", ")})</Label>
+            <Label htmlFor="${n.slug}-csv">CSV file (columns: ${importColumns.join(", ")})</Label>
             <input id="${n.slug}-csv" name="file" type="file" accept=".csv,text/csv" required />
           </div>
           <Button type="submit">Import CSV</Button>
@@ -893,7 +1054,7 @@ ${
         <Table head={[${fields.map((f) => `"${f === scopeField ? (scope?.label ?? label(f.name)) : label(f.name)}"`).join(", ")}${fields.length ? ", " : ""}${stateColumn}""]}>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-line">
-${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField ? `scopes.find((s) => s.id === row.${camel(f.name)})?.name ?? ""` : f.type === "boolean" ? `row.${camel(f.name)} ? "Yes" : "No"` : f.type === "tags" ? `(row.${camel(f.name)} ?? []).join(", ")` : `String(row.${camel(f.name)} ?? "")`}}</td>`).join("\n")}${
+${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField ? `scopes.find((s) => s.id === row.${camel(f.name)})?.name ?? ""` : cellValue(f)}}</td>`).join("\n")}${
     workflow
       ? `
               <td className="px-3 py-2">
@@ -940,8 +1101,7 @@ ${fields.map((f) => `              <td className="px-3 py-2">{${f === scopeField
 }
 `;
 
-  const hasDateTime = fields.some((f) => f.type === "datetime");
-  const editFields = fields
+  const editFields = inputs
     .map((f) => {
       const id = `${n.slug}-edit-${snake(f.name)}`;
       const k = `row.${camel(f.name)}`;
@@ -962,19 +1122,58 @@ ${f.required ? "" : `              <option value="">—</option>\n`}${f.options.
       }
       const value =
         f.type === "datetime"
-          ? `asDateTime(${k})`
+          ? `toDateTimeInput(${k}, row.${timeZoneKey(f)})`
           : f.type === "tags"
             ? `(${k} ?? []).join(", ")`
             : f.required
               ? k
               : `${k} ?? ""`;
       const step = f.type === "decimal" ? ` step="0.01"` : "";
+      // A stored date and time is edited in the zone it was typed in (kept unless it is typed again elsewhere).
+      const zone =
+        f.type === "datetime"
+          ? `\n            <input type="hidden" name="${timeZoneKey(f)}" value={row.${timeZoneKey(f)}} />\n            <p className="mt-1 text-xs text-muted">Time zone: {row.${timeZoneKey(f)}}</p>`
+          : "";
       return `          <div>
             <Label htmlFor="${id}">${label(f.name)}</Label>
-            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${f.required ? " required" : ""} defaultValue={${value}} />
+            <Input id="${id}" name="${camel(f.name)}" type="${inputType(f)}"${step}${inputLimits(f)}${f.required ? " required" : ""} defaultValue={${value}} />${zone}
           </div>`;
     })
     .join("\n");
+
+  // One small form per workflow-state field: the only way its value changes (role-gated server action, ADR-0054).
+  const transitionCards = settings
+    ? ""
+    : transitions
+        .map((tf) => {
+          const k = camel(tf.name);
+          const fp = entityNames(tf.name).pascal;
+          const id = `${n.slug}-transition-${snake(tf.name)}`;
+          return `      {canChange${fp} ? (
+        <Card title="${label(tf.name)}">
+          <form action={change${n.pascal}${fp}} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="id" value={row.id} />
+            <div>
+              <Label htmlFor="${id}">${label(tf.name)}</Label>
+${
+  hasOptions(tf)
+    ? `              <select id="${id}" name="${k}" className="w-full rounded-md border border-field px-3 py-2 text-sm focus:outline-brand" defaultValue={row.${k} ?? ""} required>
+${tf.options.map((o) => `                <option value=${JSON.stringify(o)}>${o}</option>`).join("\n")}
+              </select>`
+    : `              <Input id="${id}" name="${k}" type="text" maxLength={${maxLength(tf) ?? FIELD_LIMITS.enum}} defaultValue={row.${k} ?? ""} required />`
+}
+            </div>
+            <Button type="submit">Change ${label(tf.name).toLowerCase()}</Button>
+          </form>
+        </Card>
+      ) : (
+        <Card title="${label(tf.name)}">
+          <p className="text-sm">{row.${k} ?? "—"}</p>
+        </Card>
+      )}
+`;
+        })
+        .join("");
 
   const editPage = `${GENERATED}
 import { and, eq } from "drizzle-orm";
@@ -986,27 +1185,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
 import { ${n.variable}${workflow ? ", workflowItems" : ""} } from "@/db/schema";
-import { update${n.pascal} } from "@/entities/${n.slug}/actions";
-${[
-  ...events.map((l) => {
-    const en = entityNames(l.event.name);
-    return `import { ${en.pascal}Timeline } from "@/entities/${en.slug}/timeline";\n`;
-  }),
-  ...children.map((l) => {
-    const cn = entityNames(l.child.name);
-    return `import { ${cn.pascal}Section } from "@/entities/${cn.slug}/section";\n`;
-  }),
-].join("")}import { can, requireMember } from "@/server/authz";
+import { ${[`update${n.pascal}`, ...(settings ? [] : transitions.map((tf) => `change${n.pascal}${entityNames(tf.name).pascal}`))].join(", ")} } from "@/entities/${n.slug}/actions";
+${dt ? `import { toDateTimeInput } from "@/lib/datetime";\n` : ""}${[
+    ...events.map((l) => {
+      const en = entityNames(l.event.name);
+      return `import { ${en.pascal}Timeline } from "@/entities/${en.slug}/timeline";\n`;
+    }),
+    ...children.map((l) => {
+      const cn = entityNames(l.child.name);
+      return `import { ${cn.pascal}Section } from "@/entities/${cn.slug}/section";\n`;
+    }),
+  ].join("")}import { can, requireMember } from "@/server/authz";
 ${scope ? `import { canSeeScope, scopeOptions } from "@/server/record-access";\n` : ""}${workflow ? `import { workflowOf } from "@/workflow/config";\nimport { stateLabel } from "@/workflow/engine";\n` : ""}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-${
-  hasDateTime
-    ? `/** A stored date and time as the value of a datetime-local input (server time zone). */
-const asDateTime = (d: Date | null) =>
-  d ? new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : "";
-`
-    : ""
-}
+
 /** Edit one ${n.labelSingular.toLowerCase()} of the active workspace (owners and admins). */
 export default async function Edit${n.pascal}Page({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
@@ -1035,6 +1227,15 @@ ${
   const wf = workflowOf(${JSON.stringify(workflow.key)});
 `
       : ""
+  }${
+    settings
+      ? ""
+      : transitions
+          .map(
+            (tf) =>
+              `  const canChange${entityNames(tf.name).pascal} = can(ctx.role, "${transitionPermission(tf)}", ${resource});\n`,
+          )
+          .join("")
   }  return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -1052,9 +1253,9 @@ ${editFields}
           </div>
         </form>
       </Card>
-${
-  workflow
-    ? `      {item ? (
+${transitionCards}${
+    workflow
+      ? `      {item ? (
         <Card title="Status">
           <p className="text-sm">
             <span data-testid="record-state">{wf ? stateLabel(wf, item.state) : item.state}</span> ·{" "}
@@ -1065,8 +1266,8 @@ ${
         </Card>
       ) : null}
 `
-    : ""
-}${[
+      : ""
+  }${[
     ...children.map(
       (l) => `      <${entityNames(l.child.name).pascal}Section parentId={row.id} />\n`,
     ),
@@ -1082,12 +1283,13 @@ ${
 import { db } from "@/db/client";
 import { ${n.variable} } from "@/db/schema";
 import { ${listParams}, ${listWhere} } from "@/entities/${n.slug}/query";
-import { toCsv } from "@/lib/csv";
+import { EXPORT_MAX_ROWS, exportTooLarge, toCsv } from "@/lib/csv";
 import { can, requireMember } from "@/server/authz";
 
 /**
  * CSV export (component data.csv-export.turbineh): exactly the list as filtered on screen (same query string), in the
- * active workspace, for roles that may export.
+ * active workspace, for roles that may export. Never silently truncated: above EXPORT_MAX_ROWS the export is refused
+ * with an explicit message (narrow the filters). Secrets are never columns (ADR-0054).
  */
 export async function GET(request: Request): Promise<Response> {
   const ctx = await requireMember();
@@ -1096,7 +1298,8 @@ export async function GET(request: Request): Promise<Response> {
     ctx,
     ${listParams}(Object.fromEntries(new URL(request.url).searchParams)),
   );
-  const rows = await db.select().from(${n.variable}).where(where).orderBy(order).limit(10_000);
+  const rows = await db.select().from(${n.variable}).where(where).orderBy(order).limit(EXPORT_MAX_ROWS + 1);
+  if (rows.length > EXPORT_MAX_ROWS) return exportTooLarge();
   return new Response(toCsv(rows, ${JSON.stringify(columns)}), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
@@ -1108,31 +1311,57 @@ export async function GET(request: Request): Promise<Response> {
 `;
 
   const sample = (f: Field) => sampleFor(e, f, all);
-  // Records the reference fields point to are created first, so the form's values name real records.
-  const seeds = (variant = "") =>
-    fields.flatMap((f) => {
-      const target = referenceTarget(f, e, all);
-      const display = target ? displayField(target) : undefined;
-      if (!target || !display) return [];
-      const t = entityNames(target.name);
-      const seed = seedSample(target, e, all, variant);
-      const steps = fieldsOf(target)
-        .filter((x) => seed[camel(x.name)] !== undefined)
-        .map((x) =>
-          x.type === "boolean"
-            ? `  await page.getByLabel("${label(x.name)}", { exact: true }).check();`
-            : hasOptions(x)
-              ? `  await page.getByLabel("${label(x.name)}", { exact: true }).selectOption("${seed[camel(x.name)]}");`
-              : `  await page.getByLabel("${label(x.name)}", { exact: true }).fill("${seed[camel(x.name)]}");`,
-        );
-      return [
-        `  await page.goto("/dashboard/${t.slug}");
+  // Records the reference fields point to are created first (and the records those point to, two levels deep), so
+  // the form's values name real records: the server resolves every reference in the workspace and refuses the rest.
+  const seedSteps = (
+    target: Entity,
+    forEntity: Entity,
+    pool: Entity[],
+    variant: string,
+    depth: number,
+  ): string[] => {
+    const display = displayField(target);
+    if (!display) return [];
+    const t = entityNames(target.name);
+    const seed = seedSample(target, forEntity, pool, variant);
+    const nested =
+      depth > 0
+        ? inputsOf(target).flatMap((x) => {
+            const inner = referenceTarget(x, target, pool);
+            return inner
+              ? seedSteps(
+                  inner,
+                  target,
+                  pool.filter((p) => p.name !== target.name),
+                  "",
+                  depth - 1,
+                )
+              : [];
+          })
+        : [];
+    const steps = inputsOf(target)
+      .filter((x) => seed[camel(x.name)] !== undefined)
+      .map((x) =>
+        x.type === "boolean"
+          ? `  await page.getByLabel("${label(x.name)}", { exact: true }).check();`
+          : hasOptions(x)
+            ? `  await page.getByLabel("${label(x.name)}", { exact: true }).selectOption("${seed[camel(x.name)]}");`
+            : `  await page.getByLabel("${label(x.name)}", { exact: true }).fill("${seed[camel(x.name)]}");`,
+      );
+    return [
+      ...nested,
+      `  await page.goto("/dashboard/${t.slug}");
 ${steps.join("\n")}
   await page.getByRole("button", { name: "Create ${t.labelSingular.toLowerCase()}" }).click();
   await page.getByRole("cell", { name: "${seed[camel(display.name)]}" }).first().waitFor({ timeout: 10_000 }).catch(() => undefined);`,
-      ];
+    ];
+  };
+  const seeds = (variant = "") =>
+    inputs.flatMap((f) => {
+      const target = referenceTarget(f, e, all);
+      return target ? seedSteps(target, e, all, variant, 2) : [];
     });
-  const editable = fields.find(
+  const editable = inputs.find(
     (f) =>
       ["string", "text", "enum"].includes(f.type) && !hasOptions(f) && !referenceTarget(f, e, all),
   );
@@ -1142,14 +1371,14 @@ ${steps.join("\n")}
       : hasOptions(f)
         ? `  await page.getByLabel("${label(f.name)}", { exact: true }).selectOption("${value}");`
         : `  await page.getByLabel("${label(f.name)}", { exact: true }).fill("${value}");`;
-  const fills = fields
+  const fills = inputs
     // The field the edit test changes is filled too, even when optional, so the edit test finds the record.
     .filter((f) => f.required || f === firstText || f === editable)
     .map((f) => fill(f, sample(f)))
     .join("\n");
   // Values unique to one test, so filters and sort orders are checked on records only that test created.
   const uniqueFills = (marker: string, extra: Record<string, string>) =>
-    fields
+    inputs
       .filter((f) => f.required || f === firstText || extra[camel(f.name)] !== undefined)
       .map((f) =>
         fill(
@@ -1173,7 +1402,7 @@ ${steps.join("\n")}
     : `  await expect(page.getByRole("row").nth(1)).toBeVisible();`;
 
   const csvSample = (suffix: string) =>
-    `${columns.join(",")}\\n${fields
+    `${importColumns.join(",")}\\n${inputs
       .map((f) => {
         if (f.type === "boolean") return "true";
         if (referenceTarget(f, e, all)) return sampleFor(e, f, all, suffix);
@@ -1235,13 +1464,15 @@ ${steps}
         const marker = `history-${en.slug}`;
         const [first = "", second = ""] = tracked.options;
         if (!markerText(marker)) return [];
+        // Workflow state starts at its first value and moves only through its transition form (never the edit form).
+        const viaTransition = transitions.includes(tracked);
         return [
           `
 test("every ${label(tracked.name).toLowerCase()} change of a ${n.labelSingular.toLowerCase()} is recorded in its history with who and when", async ({ page }) => {
-${createWith(marker, { [camel(tracked.name)]: first })}
+${createWith(marker, viaTransition ? {} : { [camel(tracked.name)]: first })}
 ${openEdit(markerText(marker) ?? "")}
   await page.getByLabel("${label(tracked.name)}", { exact: true }).selectOption("${second}");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByRole("button", { name: "${viaTransition ? `Change ${label(tracked.name).toLowerCase()}` : "Save changes"}" }).click();
   await expect(page).toHaveURL(/${base.replace(/\//g, "\\/")}$/);
 ${openEdit(markerText(marker) ?? "")}
   const timeline = page.getByTestId("timeline");

@@ -17,7 +17,7 @@ export async function importAnalyticsCsv(
   formData: FormData,
 ): Promise<ImportState> {
   const ctx = await requireMember();
-  if (!rateLimit(`analytics:import:${ctx.userId}`, 10))
+  if (!(await rateLimit(`analytics:import:${ctx.userId}`, 10)))
     return { ok: false, message: "Too many imports. Try again in a minute.", errors: [], total: 0 };
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0)

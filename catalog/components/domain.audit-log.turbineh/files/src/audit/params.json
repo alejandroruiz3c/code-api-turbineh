@@ -1,6 +1,17 @@
 {
   "pageSize": 50,
-  "redactFields": ["password", "secret", "token", "hash"],
+  "redactFields": [
+    "password",
+    "passphrase",
+    "secret",
+    "token",
+    "hash",
+    "apikey",
+    "api_key",
+    "credential",
+    "privatekey",
+    "private_key"
+  ],
   "ignoreFields": ["id", "organizationId", "createdAt", "updatedAt"],
   "exportLimit": 5000
 }

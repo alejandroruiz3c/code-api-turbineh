@@ -95,8 +95,20 @@ const DEFAULT_ACTIONS: Record<string, Action[]> = {
   editor: ["read", "create", "update", "delete", "export"],
 };
 const ALL: Action[] = [...ACTIONS];
-/** Template default (saas-crud): members read and create; owners and admins do everything. */
-const MEMBER_DEFAULT: Action[] = ["read", "create", "export"];
+/**
+ * Template default (saas-crud): members read and create; owners and admins do everything. Approving, exporting,
+ * changing settings, managing members and reading the audit log are separate privileges a member never gets unless
+ * the request grants them to that role in so many words (deny by default, ADR-0054).
+ */
+const MEMBER_DEFAULT: Action[] = ["read", "create"];
+/** Admin-like privileges: a member never inherits them from another role's mapping (ADR-0054). */
+export const PRIVILEGED_ACTIONS: readonly Action[] = [
+  "approve",
+  "export",
+  "configure",
+  "manage_members",
+  "view_audit",
+];
 
 /** Words before a role noun that make it an object ("see all clients", "invite each client", "by that client"). */
 const OBJECT_MARKERS = new Set([
@@ -177,14 +189,19 @@ function labelFor(noun: RoleNoun, prompt: string): string {
   return titleCase(singular(raw.split(/\s+/).map(singular).join(" ")));
 }
 
-/** Org roles each spec role maps to, by rank. */
-function mapToOrgRoles(roles: { id: string; rank: number }[]): Record<string, OrgRole[]> {
+/**
+ * Org roles each spec role maps to, by rank. The invited "member" org role is only ever the request's lowest role:
+ * with a single role, a high-ranked one (owner, admin, manager, editor, staff) is the workspace owner and admin and
+ * invited members keep the least-privileged default; a low-ranked one (member, viewer, client) is the member role and
+ * owner/admin keep their defaults. A member never inherits an admin-like role (ADR-0054).
+ */
+export function mapToOrgRoles(roles: { id: string; rank: number }[]): Record<string, OrgRole[]> {
   const sorted = [...roles].sort((a, b) => b.rank - a.rank);
   const out: Record<string, OrgRole[]> = {};
   const [a, b, ...rest] = sorted;
   if (!a) return out;
   if (!b) {
-    out[a.id] = ["owner", "admin", "member"];
+    out[a.id] = a.rank >= MEMBER_RANK_CEILING ? ["owner", "admin"] : ["member"];
     return out;
   }
   if (rest.length === 0) {
@@ -197,6 +214,9 @@ function mapToOrgRoles(roles: { id: string; rank: number }[]): Record<string, Or
   for (const r of rest) out[r.id] = ["member"];
   return out;
 }
+
+/** Ranks below this are member-like roles (member, teammate, employee, scoped manager, client, viewer). */
+const MEMBER_RANK_CEILING = 3;
 
 /** Extracts the permission matrix (deterministic). `specRoles` are the roles the compiler model listed (fallback). */
 export function extractPermissions(
@@ -244,7 +264,7 @@ export function extractPermissions(
     rank: r.rank,
   }));
   const orgOf = mapToOrgRoles(roles);
-  const top = [...roles].sort((a, b) => b.rank - a.rank)[0];
+  const top = roles.find((r) => orgOf[r.id]?.includes("owner"));
   const actions: Record<string, Set<Action>> = {};
   const scope: Record<string, RoleScope> = {};
   for (const r of roles) {
@@ -428,10 +448,36 @@ export function extractPermissions(
     scope: scope[r.id] ?? { kind: "all", of: null },
   });
   const specRolesOut = roles.map(toRole);
+  // Every workspace role is backed by a role of the matrix. A single high-ranked role (e.g. "staff") is the owner and
+  // admin, and invited members get the least-privileged default; a single low-ranked role (e.g. "viewer") is the member,
+  // and the owner keeps full rights. Never the other way round (ADR-0054).
+  if (!specRolesOut.some((r) => r.orgRoles.includes("member"))) {
+    specRolesOut.push({
+      id: specRolesOut.some((r) => r.id === "member") ? "invited_member" : "member",
+      label: "Member",
+      orgRoles: ["member"],
+      actions: [...MEMBER_DEFAULT],
+      scope: { kind: "all", of: null },
+    });
+    assumptions.push(
+      "The request names no role for invited people: invited members read and create only (no approve, export, settings, members or audit log).",
+    );
+  }
+  if (!specRolesOut.some((r) => r.orgRoles.includes("owner"))) {
+    specRolesOut.unshift({
+      id: specRolesOut.some((r) => r.id === "owner") ? "workspace_owner" : "owner",
+      label: "Owner",
+      orgRoles: ["owner", "admin"],
+      actions: [...ALL],
+      scope: { kind: "all", of: null },
+    });
+  }
   const byOrgRole = Object.fromEntries(
     ORG_ROLES.map((o) => {
+      // Admin falls back to the owner's role (never the member's); every org role is mapped above.
       const r =
-        specRolesOut.find((x) => x.orgRoles.includes(o)) ?? specRolesOut[specRolesOut.length - 1];
+        specRolesOut.find((x) => x.orgRoles.includes(o)) ??
+        specRolesOut.find((x) => x.orgRoles.includes("owner"));
       return [
         o,
         {

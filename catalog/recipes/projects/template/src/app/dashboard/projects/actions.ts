@@ -47,7 +47,7 @@ const taskSchema = z.object({
 export async function createTask(formData: FormData): Promise<void> {
   const ctx = await requireMember();
   if (!can(ctx.role, "create")) throw new UserFacingError("You are not allowed to create tasks.");
-  if (!rateLimit(`create:tasks:${ctx.userId}`))
+  if (!(await rateLimit(`create:tasks:${ctx.userId}`)))
     throw new UserFacingError("Too many requests. Try again later.");
   const input = taskSchema.parse(Object.fromEntries(formData));
   const [project] = await db

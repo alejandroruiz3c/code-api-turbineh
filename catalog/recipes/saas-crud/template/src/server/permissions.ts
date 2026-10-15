@@ -3,8 +3,8 @@ import { can as roleCan, ROLE_LABEL, ROLES, type Action } from "@/server/role-po
 /**
  * Role matrix (ADR-0044): what each workspace role may do, per action and optionally per resource, plus the sign-up
  * email-domain rule. Base behaviour: the role policy in src/server/role-policy.ts decides (template owner/admin/member,
- * or the request's roles when domain.membership-access replaced it); approving and changing settings need "update",
- * exporting needs "read". TurbineH replaces this file with the request's matrix (who approves, who exports, per-resource
+ * or the request's roles when domain.membership-access replaced it); approving, exporting and changing settings are
+ * privileges of their own, never implied by "update" or "read" (ADR-0054). TurbineH replaces this file with the request's matrix (who approves, who exports, per-resource
  * rules, "only @company emails") when the request states one. Everything calls `can()` from src/server/authz.ts,
  * which asks `allows()` here, so one file decides.
  */
@@ -33,15 +33,19 @@ export const RESOURCE_RULES: Record<string, Partial<Record<Permission, readonly 
 /** Sign-up restricted to these email domains ([] = no restriction; staff in ADMIN_EMAILS may always sign up). */
 export const SIGN_UP_EMAIL_DOMAINS: readonly string[] = [];
 
-/** The role-policy action an extra permission follows in the base matrix. */
+/**
+ * The role-policy action each permission is checked against in the base matrix. Approving, exporting and changing
+ * settings are privileges of their own (never implied by "update" or "read"), so a member who may read cannot export
+ * and a member who may edit cannot approve (ADR-0054).
+ */
 const BASE: Record<Permission, Action> = {
   read: "read",
   create: "create",
   update: "update",
   delete: "delete",
-  approve: "update",
-  export: "read",
-  configure: "update",
+  approve: "approve",
+  export: "export",
+  configure: "configure",
   manage_members: "manage_members",
   view_audit: "view_audit",
   see_all_scopes: "see_all_scopes",

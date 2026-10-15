@@ -140,18 +140,41 @@ export function permissionTests(f: Fidelity, m: AppRoleMatrix): UnitTest[] {
       .map((e) => entityNames(e.name).labelPlural.toLowerCase()),
   );
   const guarded = records ? ` ${records}` : " records";
+  // The request's matrix as fixed expectations, written out when the app is assembled (ADR-0054): the test never
+  // reads ROLE_MATRIX, so a change to the matrix (or to can()) cannot make its own test pass.
+  const expected = Object.fromEntries(
+    roles.map(([k, r]) => [k, Object.fromEntries(ALL_ACTIONS.map((a) => [a, r.can.includes(a)]))]),
+  );
+  const labels = Object.fromEntries(roles.map(([k, r]) => [k, r.label]));
   const tests: UnitTest[] = [
     {
       title:
         "each role can do exactly what the request's role matrix lists (roles, permissions), nothing else",
       body: [
-        `const actions = ${JSON.stringify(ALL_ACTIONS)} as const;`,
-        "for (const [role, rights] of Object.entries(ROLE_MATRIX))",
-        "  for (const action of actions)",
-        "    expect(can(role, action), `${role} ${action}`).toBe(rights.can.includes(action));",
+        `const expected: Record<string, Record<string, boolean>> = ${JSON.stringify(expected)};`,
+        "for (const [role, rights] of Object.entries(expected))",
+        "  for (const [action, allowed] of Object.entries(rights))",
+        "    expect(can(role, action as Parameters<typeof can>[1]), `${role} ${action}`).toBe(allowed);",
+        `expect(Object.fromEntries(Object.entries(ROLE_MATRIX).map(([k, r]) => [k, r.label]))).toEqual(${JSON.stringify(labels)});`,
+        `expect(can("superuser", "read")).toBe(false);`,
       ],
     },
   ];
+  // Fixed negatives for the invited-member role (deny by default): privileges the request did not grant it in so many
+  // words are refused, whatever the matrix file says later.
+  const memberKey = m.ownKeys ? m.defaultRole : "member";
+  const member = m.roles[memberKey];
+  const denied = (
+    ["approve", "export", "configure", "manage_members", "view_audit"] as Permission[]
+  ).filter((a) => member && !member.can.includes(a));
+  if (member && denied.length > 0)
+    tests.push({
+      title:
+        denied.length === 5
+          ? "a member cannot approve, export, change settings, manage members or read the audit log"
+          : `a ${member.label.toLowerCase()} (invited member) cannot ${list(denied.map((a) => VERB[a] ?? a))}`,
+      body: denied.map((a) => `expect(can(${JSON.stringify(memberKey)}, "${a}")).toBe(false);`),
+    });
   // Read-only roles.
   for (const [k, r] of roles) {
     const ro = r.can.filter((a) => a !== "see_all_scopes");
@@ -391,9 +414,18 @@ import { allows, ROLE_MATRIX } from "@/server/permissions";
 export const ROLES: readonly string[] = Object.keys(ROLE_MATRIX);
 export type Role = string;
 export type Action =
-  "read" | "create" | "update" | "delete" | "manage_members" | "view_audit" | "see_all_scopes";
+  | "read"
+  | "create"
+  | "update"
+  | "delete"
+  | "approve"
+  | "export"
+  | "configure"
+  | "manage_members"
+  | "view_audit"
+  | "see_all_scopes";
 
-/** Role given to a member whose stored role is unknown: the least privileged one (deny by default). */
+/** Role new invitations get by default: the least privileged one. Never used for an unknown stored role. */
 export const DEFAULT_ROLE: Role = "member";
 
 /** Role labels for screens (the request's names). */
@@ -405,9 +437,9 @@ export function can(role: Role, action: Action): boolean {
   return allows(role, action);
 }
 
-/** A stored role, or the least privileged role when it is unknown. */
-export function toRole(value: unknown): Role {
-  return typeof value === "string" && ROLES.includes(value) ? value : DEFAULT_ROLE;
+/** A stored role, or null when it is missing or unknown: deny by default (requireMember() refuses it, ADR-0054). */
+export function toRole(value: unknown): Role | null {
+  return typeof value === "string" && ROLES.includes(value) ? value : null;
 }
 `;
 }

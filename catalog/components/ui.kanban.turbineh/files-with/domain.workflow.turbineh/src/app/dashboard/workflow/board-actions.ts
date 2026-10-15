@@ -14,7 +14,7 @@ const schema = z.object({ id: z.uuid(), to: z.string().regex(/^[a-z][a-z0-9_]{0,
 
 export async function moveCard(id: string, to: string): Promise<{ ok: boolean; message: string }> {
   const ctx = await requireMember();
-  if (!rateLimit(`kanban:move:${ctx.userId}`, 60))
+  if (!(await rateLimit(`kanban:move:${ctx.userId}`, 60)))
     return { ok: false, message: "Too many moves. Try again in a minute." };
   const parsed = schema.safeParse({ id, to });
   if (!parsed.success) return { ok: false, message: "Invalid move." };

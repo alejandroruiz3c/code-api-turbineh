@@ -2,6 +2,7 @@ import type { BuildSpec } from "@turbineh/compiler";
 import {
   displayField,
   fieldsOf,
+  inputsOf,
   GENERATED,
   importedSample,
   referenceTarget,
@@ -23,7 +24,8 @@ const FORMATS: Record<Entity["fields"][number]["type"], string> = {
   decimal: 'number as a string, e.g. "12.5"',
   boolean: 'checkbox: "on" when true; omit the field when false',
   date: 'date only, exactly "YYYY-MM-DD" (e.g. "2026-10-13"), never a time',
-  datetime: 'local date and time "YYYY-MM-DDTHH:mm" (e.g. "2026-10-13T10:30")',
+  datetime:
+    'local date and time "YYYY-MM-DDTHH:mm" (e.g. "2026-10-13T10:30"), typed in the IANA zone sent as <field>TimeZone (default "UTC"); the parsed input keeps the string, the stored row holds the UTC Date',
   file: "https URL",
   tags: 'comma- or semicolon-separated tags, e.g. "pricing, onboarding" (stored as a lowercase list)',
 };
@@ -84,7 +86,8 @@ export function referencedEntities(e: Entity, all: Entity[]): string[] {
 
 export function ruleFiles(e: Entity, all: Entity[] = [e], relatedNames: string[] = []): RuleFiles {
   const n = entityNames(e.name);
-  const fields = fieldsOf(e);
+  // What forms and imports send: workflow state and secrets are never inputs (ADR-0054).
+  const fields = inputsOf(e);
   const firstText = fields.find((f) => ["string", "text", "enum", "reference"].includes(f.type));
   const editable = fields.find(
     (f) => ["string", "text", "enum"].includes(f.type) && !referenceTarget(f, e, all),
@@ -169,12 +172,13 @@ export type ${n.pascal}Related = ReturnType<typeof related${n.pascal}>;
   id: "${id}",
   organizationId: "org-e2e",
   createdAt: new Date("2026-10-12T09:00:00Z"),
+  ...initial${pascal}State,
   ...to${pascal}Values(input),
 })`;
   const relatedImports = relatedEntities
     .map(
       (r) =>
-        `import { create${r.pascal}Schema, to${r.pascal}Values, type Create${r.pascal}Input, type ${r.pascal}Row } from "@/entities/${r.slug}/schema";`,
+        `import { create${r.pascal}Schema, initial${r.pascal}State, to${r.pascal}Values, type Create${r.pascal}Input, type ${r.pascal}Row } from "@/entities/${r.slug}/schema";`,
     )
     .join("\n");
   const relatedValue = relatedEntities.length
@@ -197,7 +201,7 @@ ${relatedEntities
   const fixturesTest = `${GENERATED}
 import { describe, expect, it } from "vitest";
 import { check${n.pascal}Rules } from "${base}/rules";
-import { create${n.pascal}Schema, to${n.pascal}Values, type Create${n.pascal}Input, type ${n.pascal}Row } from "${base}/schema";
+import { create${n.pascal}Schema, initial${n.pascal}State, to${n.pascal}Values, type Create${n.pascal}Input, type ${n.pascal}Row } from "${base}/schema";
 ${relatedImports}
 
 const created = create${n.pascal}Schema.parse(${JSON.stringify(created)});

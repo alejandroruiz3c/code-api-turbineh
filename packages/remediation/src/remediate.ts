@@ -2,7 +2,16 @@ import { execFileSync } from "node:child_process";
 import type { Decider } from "@turbineh/decider";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { leakingFiles, sandbox, type StaticFinding, type VerifyResult } from "@turbineh/verifier";
+import {
+  assertionWeakening,
+  isFixedOracle,
+  isTestFile,
+  leakingFiles,
+  revertWeakenedTests,
+  sandbox,
+  type StaticFinding,
+  type VerifyResult,
+} from "@turbineh/verifier";
 import OpenAI from "openai";
 import { z } from "zod";
 import { findingKey, isAiReroute, triageFindings } from "./triage.js";
@@ -40,7 +49,7 @@ export const FIX_MARKER = "// turbineh:security-fix";
 const SYSTEM = `You are an application-security engineer fixing ONE TypeScript/Next.js file.
 Fix exactly the reported findings with the smallest safe change. Keep behaviour, exports, imports that are still used,
 and the "use server"/"use client" directive (it must stay the first statement). Prefer existing helpers:
-requireMember()/can() from "@/server/authz", rateLimit() from "@/security/rate-limit", Zod schemas, Drizzle query
+requireMember()/can() from "@/server/authz", "await rateLimit()" from "@/security/rate-limit", Zod schemas, Drizzle query
 builders (never raw SQL strings), environment variables via "@/env". Never add secrets.
 Return JSON only: {"content": "<the full corrected file>"}.`;
 
@@ -201,6 +210,8 @@ async function fixCode(
         .replace(new RegExp(`\\n?${FIX_MARKER}.*$`, "m"), "")
         .trimEnd();
       if (!after || after === before.trimEnd()) return [];
+      // A security fix never weakens a test either (ADR-0054).
+      if (isTestFile(file) && assertionWeakening(before, after, isFixedOracle(file))) return [];
       writeFileSync(
         p,
         `${after}\n${FIX_MARKER} ${[...new Set(fs.map((f) => f.rule))].join(", ")}\n`,
@@ -329,6 +340,14 @@ export async function repairAfterRemediation(
       detail: `quality gate fixed after security remediation (${failing.map((x) => x.name).join(", ")})`,
     });
   }
+  // A repair never weakens a test (ADR-0054): weakened test files are restored from HEAD and not committed.
+  const weakened = new Set(
+    revertWeakenedTests(
+      dir,
+      changes.map((c) => c.target),
+    ).map((w) => w.file),
+  );
+  changes.splice(0, changes.length, ...changes.filter((c) => !weakened.has(c.target)));
   const repairLeaks = new Set(
     leakingFiles(
       dir,

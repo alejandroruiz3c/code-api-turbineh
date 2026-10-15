@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BackupCoder } from "@turbineh/backup-coder";
-import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
+import { leakingFiles, revertWeakenedTests, type VerifyResult } from "@turbineh/verifier";
 import {
   askFile,
   CODE_RULES,
@@ -48,6 +48,8 @@ export function correctableFiles(dir: string, log: string): string[] {
         /\.(ts|tsx)$/.test(f) &&
         !f.startsWith("tests/unit/components/") &&
         !f.endsWith(".fixtures.test.ts") &&
+        // The request's roles and constraints as fixed expectations (written by code, ADR-0054): oracles too.
+        !/^tests\/unit\/(permissions|spec-constraints)\.test\.ts$/.test(f) &&
         !/^src\/entities\/[^/]+\/related\.ts$/.test(f) &&
         // Security Pack, AI orchestrator and AI Safety Pack are certified TurbineH code: a model never edits them
         // (they are also the only files allowed to talk to models, so editing them would bypass the AI rules).
@@ -72,7 +74,8 @@ export function correctableFiles(dir: string, log: string): string[] {
 
 const PATCH_SYSTEM = `You fix ONE file of a TypeScript/Next.js app so that the failing quality gate passes.
 Change only what the error log reports for this file, with the smallest edit. Keep exports, behaviour, validation,
-authorization checks and the "use server"/"use client" directive (first statement). Never add secrets.`;
+authorization checks and the "use server"/"use client" directive (first statement). Never add secrets. In a test file
+never delete, skip or loosen a test or an assertion: fix the code under test instead (weakened tests are reverted).`;
 
 export interface CorrectionStep {
   attempt: number;
@@ -112,7 +115,7 @@ export async function patchOnce(
       changed.push(f);
     }),
   );
-  const kept = dropLeaks(dir, changed);
+  const kept = dropLeaks(dir, keepAssertions(dir, changed));
   if (kept.length === 0) return null;
   changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: directed correction ${attempt} (${changed.length} file(s))`);
@@ -154,11 +157,21 @@ export async function backupPatch(
       changed.push(f);
     }),
   );
-  const kept = dropLeaks(dir, changed);
+  const kept = dropLeaks(dir, keepAssertions(dir, changed));
   if (kept.length === 0) return null;
   changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: backup coder correction (T4, ${changed.length} file(s))`);
   return { attempt, by: model, trigger: "T4", files: changed, usage };
+}
+
+/**
+ * A repair never weakens a test (ADR-0054): changed test files that lose a test or an assertion, skip one, or edit an
+ * assertion of a fixed oracle are restored from HEAD (deterministic, `revertWeakenedTests`) and dropped from the step.
+ */
+export function keepAssertions(dir: string, files: string[]): string[] {
+  if (!existsSync(join(dir, ".git"))) return files;
+  const weakened = new Set(revertWeakenedTests(dir, files).map((w) => w.file));
+  return files.filter((f) => !weakened.has(f));
 }
 
 /** Model-written changes that look like secrets are reverted before they can reach git history. */

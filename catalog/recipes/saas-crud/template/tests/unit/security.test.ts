@@ -1,6 +1,8 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { securityHeaders } from "@/security/headers";
-import { rateLimit } from "@/security/rate-limit";
+import { memoryStore, rateLimit } from "@/security/rate-limit";
 
 describe("security headers", () => {
   const headers = Object.fromEntries(securityHeaders().map((h) => [h.key, h.value]));
@@ -21,11 +23,34 @@ describe("security headers", () => {
 });
 
 describe("rate limit", () => {
-  it("blocks after the limit within the window", () => {
-    const key = `t-${Math.random()}`;
-    expect(rateLimit(key, 2, 1000, 0)).toBe(true);
-    expect(rateLimit(key, 2, 1000, 1)).toBe(true);
-    expect(rateLimit(key, 2, 1000, 2)).toBe(false);
-    expect(rateLimit(key, 2, 1000, 2000)).toBe(true);
+  it("blocks after the limit within the window", async () => {
+    const store = memoryStore();
+    const key = "t-window";
+    expect(await rateLimit(key, 2, 1000, { store, now: 0 })).toBe(true);
+    expect(await rateLimit(key, 2, 1000, { store, now: 1 })).toBe(true);
+    expect(await rateLimit(key, 2, 1000, { store, now: 2 })).toBe(false);
+    expect(await rateLimit(key, 2, 1000, { store, now: 2000 })).toBe(true);
+  });
+
+  it("is shared by every instance in production: counters live in the database, not in process memory", () => {
+    const src = readFileSync("src/security/rate-limit.ts", "utf8");
+    expect(src).toMatch(/process\.env\.NODE_ENV === "test"/);
+    expect(src).toMatch(/insert\(rateLimits\)[\s\S]*onConflictDoUpdate/);
+  });
+
+  it("every call is awaited (an un-awaited limiter is a Promise, always truthy, and never blocks)", () => {
+    const files = readdirSync("src", { recursive: true, encoding: "utf8" })
+      .filter((f) => /\.(ts|tsx)$/.test(f))
+      .map((f) => join("src", f));
+    const unawaited = files.flatMap((f) => {
+      const src = readFileSync(f, "utf8");
+      return [...src.matchAll(/\brateLimit\(/g)]
+        .filter((m) => {
+          const before = src.slice(Math.max(0, (m.index ?? 0) - 16), m.index);
+          return !/await\s*\(?\s*$/.test(before) && !/function\s+$/.test(before);
+        })
+        .map(() => f);
+    });
+    expect(unawaited).toEqual([]);
   });
 });

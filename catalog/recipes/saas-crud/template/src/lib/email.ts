@@ -1,12 +1,13 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { env } from "@/env";
 
 /**
- * Transactional email (component email.transactional.turbineh): Resend HTTP API when RESEND_API_KEY is set,
- * otherwise a local outbox log (development and sandboxed tests). Never logs message bodies; an action link (e.g. email
- * verification) is logged in log mode, because without a provider the log is the only way to deliver it. The test
- * outbox file (EMAIL_OUTBOX_FILE, set only by playwright.config.ts for a test run) also keeps the text, so E2E tests
- * can check what an email says; the console log never does.
+ * Transactional email (component email.transactional.turbineh): the Resend HTTP API when RESEND_API_KEY is set.
+ * Without it nothing is sent (ADR-0054): production refuses to start unless EMAIL_DELIVERY=disabled (src/env.ts);
+ * development and test runs record each email in a local outbox file (EMAIL_OUTBOX_FILE; in development
+ * `.turbineh/email-outbox.jsonl` by default), which is how E2E tests read links. Action links and bodies are never
+ * written to the console or server logs: anyone with log access could use them.
  */
 export async function sendEmail(msg: {
   to: string;
@@ -16,19 +17,24 @@ export async function sendEmail(msg: {
   link?: string;
 }): Promise<{ transport: "resend" | "log"; delivered: boolean }> {
   if (!env.RESEND_API_KEY) {
-    const entry = JSON.stringify({
-      to: msg.to,
-      subject: msg.subject,
-      ...(msg.link ? { link: msg.link } : {}),
-    });
-    console.info("[email:outbox]", entry);
-    // Test runs (playwright.config.ts) also record the outbox in a file so E2E tests can assert emails.
-    const outbox = process.env.EMAIL_OUTBOX_FILE;
-    if (outbox)
+    const outbox =
+      env.EMAIL_OUTBOX_FILE ??
+      (env.NODE_ENV === "development" ? ".turbineh/email-outbox.jsonl" : undefined);
+    if (outbox && env.EMAIL_DELIVERY !== "disabled") {
+      mkdirSync(dirname(outbox), { recursive: true });
       appendFileSync(
         outbox,
-        `${JSON.stringify({ ...(JSON.parse(entry) as object), text: msg.text })}\n`,
+        `${JSON.stringify({ to: msg.to, subject: msg.subject, ...(msg.link ? { link: msg.link } : {}), text: msg.text })}\n`,
       );
+    }
+    // The log says that an email was not sent, never what it says or which link it carries.
+    console.info(
+      "[email:not-sent]",
+      JSON.stringify({
+        subject: msg.subject,
+        outbox: outbox && env.EMAIL_DELIVERY !== "disabled" ? outbox : null,
+      }),
+    );
     return { transport: "log", delivered: false };
   }
   const res = await fetch("https://api.resend.com/emails", {

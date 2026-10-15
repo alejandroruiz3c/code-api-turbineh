@@ -1,4 +1,4 @@
-import { toCsv } from "@/lib/csv";
+import { EXPORT_MAX_ROWS, exportTooLarge, toCsv } from "@/lib/csv";
 import { requireAdmin } from "@/server/authz";
 import { waitlistConfig as cfg } from "@/waitlist/config";
 import { listSignups } from "@/waitlist/service";
@@ -7,7 +7,9 @@ import { listSignups } from "@/waitlist/service";
 export async function GET(): Promise<Response> {
   await requireAdmin();
   if (!cfg.ownerCanExport) return new Response("Not found", { status: 404 });
-  const rows = await listSignups(100_000);
+  // Never silently truncated (ADR-0054): over the limit the export is refused with a message.
+  const rows = await listSignups(EXPORT_MAX_ROWS + 1);
+  if (rows.length > EXPORT_MAX_ROWS) return exportTooLarge();
   const csv = toCsv(
     rows.map((r) => ({
       position: r.position ?? "",

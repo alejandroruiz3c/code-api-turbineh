@@ -94,7 +94,7 @@ limits:
   - "runAgent: 6 steps by default (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages kept"
   - "Confirmation words: English, Spanish, French, German, Portuguese (short, no digits); buttons work in any language"
   - "PII redaction (AI_REDACT_PII) also hides emails from tools: keep it off for agents that need the person's email"
-  - "In-memory rate limits are per instance"
+  - "Per-IP limits of the public assistant need TRUSTED_PROXY_HOPS off Vercel (otherwise visitors share one bucket)"
 example: |
   import { z } from "zod";
   import { defineTool, runAgent } from "@/lib/ai/agent";

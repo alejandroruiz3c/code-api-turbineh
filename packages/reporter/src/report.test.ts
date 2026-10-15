@@ -145,6 +145,31 @@ describe("business rules section (T3)", () => {
     );
     expect(businessRulesMarkdown({ businessRules: [] })).toBe("");
   });
+
+  it("never lets a rule of the request vanish: rules without code are listed with an id, as a limitation or blocked", () => {
+    const md = businessRulesMarkdown({
+      businessRules: [],
+      rulesNotImplemented: [
+        {
+          criterion: "A request over 500 EUR needs a second approval",
+          entity: "Request",
+          reason: "needs users, roles or an external service",
+          blocked: false,
+        },
+        {
+          criterion: "No two bookings of a room may overlap",
+          entity: "Booking",
+          reason: "the backup code model could not write it",
+          blocked: true,
+        },
+      ],
+    });
+    expect(md).toContain("## Business rules");
+    expect(md).toContain(
+      "R1 ⚠️ limitation **Request**: A request over 500 EUR needs a second approval — not implemented: needs users, roles or an external service",
+    );
+    expect(md).toContain("R2 ⛔ blocked **Booking**: No two bookings of a room may overlap");
+  });
 });
 
 describe("Backup Coder section (ADR-0055)", () => {

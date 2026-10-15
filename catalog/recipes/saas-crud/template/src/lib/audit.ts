@@ -1,7 +1,10 @@
+import type { Executor } from "@/db/client";
+
 /**
- * Audit hook (ADR-0041). Every change made through generated entities and domain components calls `audit()`. In the
- * base template it does nothing; the component domain.audit-log.turbineh replaces this file with an append-only log
- * (who, when, what changed) and an owner-visible page.
+ * Audit hook (ADR-0041). Every change made through generated entities and domain components calls `audit()`, passing
+ * the transaction of the change (`audit(entry, tx)`) so the change and its entry are committed together or not at all
+ * (ADR-0054). In the base template it does nothing; the component domain.audit-log.turbineh replaces this file with an
+ * append-only log (who, when, what changed) and an owner-visible page.
  */
 export interface AuditEntry {
   organizationId: string;
@@ -17,6 +20,7 @@ export interface AuditEntry {
   after?: Record<string, unknown> | null;
 }
 
-export async function audit(entry: AuditEntry): Promise<void> {
+export async function audit(entry: AuditEntry, executor?: Executor): Promise<void> {
   void entry;
+  void executor;
 }

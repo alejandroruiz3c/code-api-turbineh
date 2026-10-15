@@ -7,11 +7,11 @@ source:
   purl: pkg:generic/turbineh/security.pack.turbineh@0.1.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
-  does: "Security Pack: HTTP security headers with CSP, fixed-window rate limiting and safe error messages"
-  does_not: "Does not provide a WAF, bot detection or distributed rate limiting"
+  does: "Security Pack: HTTP security headers with CSP, a fixed-window rate limiter shared by every instance (PostgreSQL, TTL), client addresses behind trusted proxies only and safe error messages"
+  does_not: "Does not provide a WAF or bot detection"
   use_cases: [saas-crud, landing-waitlist, internal-tool, bookings, client-portal]
   pros: ["Maintained by TurbineH", "No third-party runtime dependency beyond the stack"]
-  cons: ["Single-instance assumptions documented in code"]
+  cons: ["One database round trip per limited action"]
   alternatives: []
 contract:
   inputs: ["see source"]
@@ -21,12 +21,12 @@ contract:
 compat:
   runtime: node@>=20
   framework: next@^16.0.0
-effects: { network: false, fs: false, db: false, external_services: [] }
+effects: { network: false, fs: false, db: true, external_services: [] }
 integration:
   strategy: vendored-with-provenance
   install: "Included in recipe templates at src/security/"
   config: []
-  migrations: false
+  migrations: true
 quality:
   tests: { command: "recipe saas-crud: typecheck, lint, unit, build, e2e (sandbox, no network)", passed: true, date: 2026-10-10 }
 security:

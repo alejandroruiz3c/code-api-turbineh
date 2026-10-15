@@ -20,7 +20,7 @@ const createSchema = z.object({
 
 export async function createWorkflowItem(formData: FormData): Promise<void> {
   const ctx = await requireMember();
-  if (!rateLimit(`workflow:create:${ctx.userId}`, 30)) throw new Error("Too many requests");
+  if (!(await rateLimit(`workflow:create:${ctx.userId}`, 30))) throw new Error("Too many requests");
   const input = createSchema.parse(Object.fromEntries(formData));
   const id = await createItem(ctx, {
     workflow: input.workflow,
@@ -45,7 +45,7 @@ export async function moveWorkflowItem(
   formData: FormData,
 ): Promise<WorkflowState> {
   const ctx = await requireMember();
-  if (!rateLimit(`workflow:move:${ctx.userId}`, 60))
+  if (!(await rateLimit(`workflow:move:${ctx.userId}`, 60)))
     return { ok: false, message: "Too many changes. Try again in a minute." };
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, message: "Invalid change." };

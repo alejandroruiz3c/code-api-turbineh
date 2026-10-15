@@ -541,7 +541,7 @@
         "runAgent: 6 steps by default (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages kept",
         "Confirmation words: English, Spanish, French, German, Portuguese (short, no digits); buttons work in any language",
         "PII redaction (AI_REDACT_PII) also hides emails from tools: keep it off for agents that need the person's email",
-        "In-memory rate limits are per instance"
+        "Per-IP limits of the public assistant need TRUSTED_PROXY_HOPS off Vercel (otherwise visitors share one bucket)"
       ],
       "example": "import { z } from \"zod\";\nimport { defineTool, runAgent } from \"@/lib/ai/agent\";\n\nconst lookupOrder = defineTool({\n  name: \"lookup_order\",\n  description: \"Status of an order by its number\",\n  parameters: z.object({ order: z.string().regex(/^A-\\d+$/) }),\n  execute: async ({ order }) => ({ order, status: \"shipped\" }),\n});\nconst r = await runAgent({\n  organizationId, userId, purpose: \"support\",\n  instructions: \"You help customers with their orders.\",\n  input: \"Where is order A-12?\", tools: [lookupOrder], state,\n});\n// r.reply → show it; r.state → store it; r.pending → show Confirm / Cancel\n",
       "keywords": [
@@ -1821,8 +1821,8 @@
       ],
       "guarantees": [
         {
-          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create, not update or delete)",
-          "test": "recipe template saas-crud/tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
+          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create; approve, export and settings are separate privileges)",
+          "test": "recipe template saas-crud/tests/unit/permissions.test.ts › each workspace role can do exactly what is written here, nothing else"
         },
         {
           "claim": "Staff access is granted only to verified allowlisted addresses",
@@ -1984,8 +1984,8 @@
       ],
       "guarantees": [
         {
-          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create, not update or delete).",
-          "test": "recipe template saas-crud/tests/unit/authz.test.ts › checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else"
+          "claim": "Each role can do exactly what the role matrix lists (template default - members read and create; approve, export and settings are separate privileges).",
+          "test": "recipe template saas-crud/tests/unit/permissions.test.ts › each workspace role can do exactly what is written here, nothing else"
         },
         {
           "claim": "Staff access is restricted to verified allowlisted addresses.",
@@ -8231,10 +8231,10 @@
       "provides": [
         "email.transactional"
       ],
-      "does": "Transactional email through the Resend HTTP API, with a local outbox log when no API key is configured",
+      "does": "Transactional email through the Resend HTTP API; production requires the key (or EMAIL_DELIVERY=disabled), development and tests use a local outbox file, links are never logged",
       "doesNot": "Does not provide email templates, bounce handling or bulk sending",
       "title": "email.transactional.turbineh",
-      "summary": "Transactional email through the Resend HTTP API, with a local outbox log when no API key is configured. Does not provide email templates, bounce handling or bulk sending. Transactional email delivery via Resend HTTP API or a local outbox log when no API key is provided.",
+      "summary": "Transactional email through the Resend HTTP API. Production refuses to start without an API key unless EMAIL_DELIVERY=disabled; development and tests record emails in a local outbox file. Links and bodies are never written to the console or logs. Does not provide email templates, bounce handling or bulk sending.",
       "useCases": [
         "Sending verification links",
         "Sending password reset emails",
@@ -8242,7 +8242,7 @@
       ],
       "useWhen": [
         "When RESEND_API_KEY is configured for production delivery",
-        "When local outbox logging is needed for development or sandboxed tests"
+        "When a local outbox file is needed for development or sandboxed tests"
       ],
       "avoidWhen": [
         "If you require a different implementation of Resend integration — use email.transactional.resend",
@@ -8252,7 +8252,7 @@
       "tradeoffs": [
         {
           "choice": "Local outbox mode",
-          "gain": "Allows testing and development without an API key by logging to console and optionally a file",
+          "gain": "Allows testing and development without an API key through a local outbox file (never the console)",
           "cost": "Emails are not actually delivered to recipients"
         }
       ],
@@ -8263,11 +8263,15 @@
         },
         {
           "name": "EMAIL_OUTBOX_FILE",
-          "description": "Environment variable read by the component's code."
+          "description": "Local outbox file (tests set it; development defaults to .turbineh/email-outbox.jsonl)."
         },
         {
           "name": "RESEND_API_KEY",
-          "description": "Environment variable read by the component's code."
+          "description": "Required in production (the app refuses to start without it unless EMAIL_DELIVERY=disabled)."
+        },
+        {
+          "name": "EMAIL_DELIVERY",
+          "description": "disabled: run without sending email on purpose (nothing is sent, links are never logged)."
         },
         {
           "name": "EMAIL_FROM",
@@ -8296,7 +8300,7 @@
       "security": [
         "Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-10.",
         "Effects: network yes, filesystem no, database no; external services: resend.",
-        "Does not log message bodies in log mode, only the recipient, subject, and action link."
+        "Never writes an action link, a body or a recipient to the console or server logs (ADR-0054)."
       ],
       "guarantees": [
         {
@@ -11784,13 +11788,13 @@
         "security.headers",
         "ops.rate-limit"
       ],
-      "does": "Security Pack: HTTP security headers with CSP, fixed-window rate limiting and safe error messages",
-      "doesNot": "Does not provide a WAF, bot detection or distributed rate limiting",
+      "does": "Security Pack: HTTP security headers with CSP, a fixed-window rate limiter shared by every instance (PostgreSQL, TTL), client addresses behind trusted proxies only and safe error messages",
+      "doesNot": "Does not provide a WAF or bot detection",
       "title": "security.pack.turbineh",
-      "summary": "Security Pack: HTTP security headers with CSP, fixed-window rate limiting and safe error messages. Does not provide a WAF, bot detection or distributed rate limiting. Security Pack providing HTTP security headers with CSP, fixed-window rate limiting, and safe error messages.",
+      "summary": "Security Pack: HTTP security headers with CSP, a fixed-window rate limiter shared by every instance (counters in the app's PostgreSQL with a TTL), client addresses taken only through trusted proxies, and safe error messages. Does not provide a WAF or bot detection.",
       "useCases": [
         "Implementing Content Security Policy (CSP) to restrict resource loading",
-        "Applying fixed-window rate limiting to prevent request flooding",
+        "Applying fixed-window rate limiting, shared by every instance, to prevent request flooding",
         "Securing HTTP responses with security headers",
         "Standardizing user-facing error messages"
       ],
@@ -11799,14 +11803,14 @@
       ],
       "avoidWhen": [
         "When requiring AI safety features — use security.ai-safety.turbineh",
-        "When distributed rate limiting is required — use ops.rate-limit.rate-limiter-flexible",
+        "When rate limiting must live outside PostgreSQL (e.g. Redis) — use ops.rate-limit.rate-limiter-flexible",
         "This component does not provide WAF or bot detection capabilities — use WAF or bot detection"
       ],
       "tradeoffs": [
         {
-          "choice": "Fixed-window rate limiting",
-          "gain": "Simpler implementation for basic request throttling",
-          "cost": "Does not provide distributed rate limiting"
+          "choice": "Fixed-window rate limiting in the app's own PostgreSQL",
+          "gain": "Shared by every instance with no extra service; expired windows are removed (TTL)",
+          "cost": "One database round trip per limited action"
         }
       ],
       "config": [
@@ -11823,8 +11827,13 @@
         },
         {
           "name": "rateLimit",
-          "signature": "function rateLimit(key: string, limit",
+          "signature": "async function rateLimit(",
           "where": "@/security/rate-limit"
+        },
+        {
+          "name": "clientIp",
+          "signature": "function clientIp(h: Headers, hops: number = trustedProxyHops()): string",
+          "where": "@/security/client-ip"
         },
         {
           "name": "UserFacingError",
@@ -11856,10 +11865,11 @@
       },
       "security": [
         "Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-10.",
-        "Effects: network no, filesystem no, database no.",
+        "Effects: network no, filesystem no, database yes.",
         "HTTP security headers",
         "Content Security Policy (CSP)",
-        "Fixed-window rate limiting",
+        "Fixed-window rate limiting shared by every instance",
+        "X-Forwarded-For trusted only through TRUSTED_PROXY_HOPS proxies",
         "Safe error messaging"
       ],
       "guarantees": [
@@ -11877,13 +11887,17 @@
         },
         {
           "claim": "Enforces rate limits within the window",
-          "test": "recipe template saas-crud/tests/unit/csv.test.ts › enforces limits"
+          "test": "recipe template saas-crud/tests/unit/security.test.ts › blocks after the limit within the window"
+        },
+        {
+          "claim": "Counters are shared by every instance (database, not process memory)",
+          "test": "recipe template saas-crud/tests/unit/security.test.ts › is shared by every instance in production: counters live in the database, not in process memory"
         }
       ],
       "limits": [
         "Does not provide WAF",
         "Does not provide bot detection",
-        "Does not provide distributed rate limiting"
+        "Without TRUSTED_PROXY_HOPS (and off Vercel) anonymous visitors share one rate-limit bucket"
       ],
       "example": "import { securityHeaders } from '@/security/headers';\nimport { rateLimit } from '@/security/rate-limit';\nimport { UserFacingError, toUserMessage } from '@/security/errors';\nimport { CSP_IMG_EXTRA } from '@/security/csp-sources';",
       "keywords": [

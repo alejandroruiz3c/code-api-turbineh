@@ -39,6 +39,16 @@ export interface ReportFacts {
     test: string;
     implemented?: boolean;
   }[];
+  /**
+   * Rules the request states that no code implements (ADR-0054): each is listed with why — a stated limitation, or a
+   * blocked item when it was chosen but could not be written or made to pass. A rule never vanishes from the report.
+   */
+  rulesNotImplemented?: {
+    criterion: string;
+    entity: string | null;
+    reason: string;
+    blocked: boolean;
+  }[];
   /** Estimate for "Improve & redeliver" (null when it is not offered). */
   improvement?: ImprovementEstimate | null;
   /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
@@ -73,6 +83,13 @@ export interface BuildReport {
   }[];
   /** Deterministic (ADR-0055): helpers the Backup Coder wrote for gaps — NOT catalogue-verified. */
   backupCode?: { capability: string; label: string; file: string }[];
+  /** Rules of the request without code: limitations and blocked items, each with an id in the report (ADR-0054). */
+  rulesNotImplemented: {
+    criterion: string;
+    entity: string | null;
+    reason: string;
+    blocked: boolean;
+  }[];
   improvement: ImprovementEstimate | null;
   finalVersion: boolean;
   writer: { model: string; fallback: boolean };
@@ -305,6 +322,7 @@ function fallbackText(facts: ReportFacts): {
 function stepFacts(facts: ReportFacts): string[] {
   const fixable = (facts.improvement?.fixable ?? 0) > 0;
   const dropped = (facts.businessRules ?? []).filter((r) => r.implemented === false);
+  const missing = facts.rulesNotImplemented ?? [];
   return [
     ...dropped
       .slice(0, 1)
@@ -312,6 +330,11 @@ function stepFacts(facts: ReportFacts): string[] {
         (r) =>
           `Not implemented automatically: ${r.rules.join("; ")} (${r.entity}). The checks could not be made to pass, so the app accepts these records as usual; add the rule yourself or ask for it in a new build.`,
       ),
+    ...(dropped.length === 0 && missing.length > 0
+      ? [
+          `${missing.length} business rule(s) of the request are not enforced by the app (listed with ids under "Business rules"): add them yourself or ask for them in a new build.`,
+        ]
+      : []),
     ...facts.gaps
       .slice(0, 2)
       .map(
@@ -426,6 +449,7 @@ export async function buildReport(
       implemented: r.implemented !== false,
     })),
     ...(facts.backupGenerated?.length ? { backupCode: facts.backupGenerated } : {}),
+    rulesNotImplemented: facts.rulesNotImplemented ?? [],
     improvement: facts.improvement ?? null,
     finalVersion: facts.finalVersion ?? false,
     writer: { model: writer.model, fallback: !summary || !security || !steps },
@@ -488,9 +512,18 @@ export function improvementText(
   );
 }
 
-/** Section listing the business rules written by the backup code model (T3) and the tests that check them. */
-export function businessRulesMarkdown(r: Pick<BuildReport, "businessRules">): string {
-  if (r.businessRules.length === 0) return "";
+/**
+ * Section listing every business rule of the request with an id (ADR-0054): the rules written by the backup code model
+ * (T3) and the tests that check them, then the ones without code — a stated limitation or a blocked item. A rule of
+ * the request is code, a listed limitation or a blocked item; it never vanishes.
+ */
+export function businessRulesMarkdown(
+  r: Pick<BuildReport, "businessRules"> & Partial<Pick<BuildReport, "rulesNotImplemented">>,
+): string {
+  const missing = r.rulesNotImplemented ?? [];
+  if (r.businessRules.length === 0 && missing.length === 0) return "";
+  let n = 0;
+  const id = () => `R${++n}`;
   const when = (s: RuleSpecFact) =>
     [
       s.operations.length === 2
@@ -504,14 +537,18 @@ export function businessRulesMarkdown(r: Pick<BuildReport, "businessRules">): st
     b.specs.map((s) => `${s.rule} (${when(s)})`).join("; ");
   const rows = r.businessRules.map((b) =>
     b.implemented
-      ? `- ✅ **${b.entity}**: ${list(b)} — \`${b.file}\`, tested in \`${b.test}\``
-      : `- ⬜ **${b.entity}**: ${list(b)} — not implemented (could not be made to pass; removed before delivery)`,
+      ? `- ${id()} ✅ **${b.entity}**: ${list(b)} — \`${b.file}\`, tested in \`${b.test}\``
+      : `- ${id()} ⬜ **${b.entity}**: ${list(b)} — not implemented, blocked (could not be made to pass; removed before delivery)`,
+  );
+  const others = missing.map(
+    (m) =>
+      `- ${id()} ${m.blocked ? "⛔ blocked" : "⚠️ limitation"}${m.entity ? ` **${m.entity}**` : ""}: ${m.criterion} — not implemented: ${m.reason}. The app does not enforce it; add it or ask for it in a new build.`,
   );
   return `## Business rules
 
-**Not catalogue-verified:** written by the Backup Coder (a model) because no audited component covers them. They run on the server before a record is created, imported or edited (as listed), read other records only through read-only, workspace-scoped loaders written by TurbineH, have their own unit tests and passed the same verification as the rest of the app.
+Every rule the request states, with an id: implemented (code and tests), or not implemented — a stated limitation or a blocked item. ${r.businessRules.length ? "**Not catalogue-verified:** implemented rules were written by the Backup Coder (a model) because no audited component covers them. They run on the server before a record is created, imported or edited (as listed), read other records only through read-only, workspace-scoped loaders written by TurbineH, have their own unit tests and passed the same verification as the rest of the app." : ""}
 
-${rows.join("\n")}
+${[...rows, ...others].join("\n")}
 
 `;
 }

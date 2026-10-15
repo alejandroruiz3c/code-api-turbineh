@@ -3,9 +3,9 @@
 schema: turbineh.guide/v0.1
 component: security.pack.turbineh
 title: security.pack.turbineh
-summary: "Security Pack: HTTP security headers with CSP, fixed-window rate limiting and safe error messages.
-  Does not provide a WAF, bot detection or distributed rate limiting. Security Pack providing HTTP security
-  headers with CSP, fixed-window rate limiting, and safe error messages."
+summary: "Security Pack: HTTP security headers with CSP, a fixed-window rate limiter shared by every instance
+  (counters in the app's PostgreSQL with a TTL), client addresses taken only through trusted proxies, and safe error
+  messages. Does not provide a WAF or bot detection."
 keywords:
   - security.pack.turbineh
   - security.headers
@@ -24,19 +24,19 @@ synonyms:
     - turbineh security
 use_cases:
   - Implementing Content Security Policy (CSP) to restrict resource loading
-  - Applying fixed-window rate limiting to prevent request flooding
+  - Applying fixed-window rate limiting, shared by every instance, to prevent request flooding
   - Securing HTTP responses with security headers
   - Standardizing user-facing error messages
 use_when:
   - When requiring basic HTTP security hardening and rate limiting via a single package
 avoid_when:
   - When requiring AI safety features — use security.ai-safety.turbineh
-  - When distributed rate limiting is required — use ops.rate-limit.rate-limiter-flexible
+  - When rate limiting must live outside PostgreSQL (e.g. Redis) — use ops.rate-limit.rate-limiter-flexible
   - This component does not provide WAF or bot detection capabilities — use WAF or bot detection
 tradeoffs:
-  - choice: Fixed-window rate limiting
-    gain: Simpler implementation for basic request throttling
-    cost: Does not provide distributed rate limiting
+  - choice: Fixed-window rate limiting in the app's own PostgreSQL
+    gain: Shared by every instance with no extra service; expired windows are removed (TTL)
+    cost: One database round trip per limited action
 config:
   - name: install
     description: Included in recipe templates at src/security/ (exact version, added by TurbineH)
@@ -45,8 +45,11 @@ interfaces:
     signature: "function securityHeaders():"
     where: "@/security/headers"
   - name: rateLimit
-    signature: "function rateLimit(key: string, limit"
+    signature: "async function rateLimit("
     where: "@/security/rate-limit"
+  - name: clientIp
+    signature: "function clientIp(h: Headers, hops: number = trustedProxyHops()): string"
+    where: "@/security/client-ip"
   - name: UserFacingError
     signature: class UserFacingError extends Error
     where: "@/security/errors"
@@ -66,10 +69,11 @@ compatibility:
   stack: Verified with Next.js (App Router), TypeScript strict, pnpm
 security:
   - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-10.
-  - "Effects: network no, filesystem no, database no."
+  - "Effects: network no, filesystem no, database yes."
   - HTTP security headers
   - Content Security Policy (CSP)
-  - Fixed-window rate limiting
+  - Fixed-window rate limiting shared by every instance
+  - X-Forwarded-For trusted only through TRUSTED_PROXY_HOPS proxies
   - Safe error messaging
 guarantees:
   - claim: Denies framing and sniffing via headers
@@ -80,11 +84,13 @@ guarantees:
     test: recipe template saas-crud/tests/unit/security.test.ts › allows remote images only over https, and only
       when the app opts in
   - claim: Enforces rate limits within the window
-    test: recipe template saas-crud/tests/unit/csv.test.ts › enforces limits
+    test: recipe template saas-crud/tests/unit/security.test.ts › blocks after the limit within the window
+  - claim: Counters are shared by every instance (database, not process memory)
+    test: "recipe template saas-crud/tests/unit/security.test.ts › is shared by every instance in production: counters live in the database, not in process memory"
 limits:
   - Does not provide WAF
   - Does not provide bot detection
-  - Does not provide distributed rate limiting
+  - Without TRUSTED_PROXY_HOPS (and off Vercel) anonymous visitors share one rate-limit bucket
 example: |-
   import { securityHeaders } from '@/security/headers';
   import { rateLimit } from '@/security/rate-limit';

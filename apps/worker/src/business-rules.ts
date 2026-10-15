@@ -173,6 +173,30 @@ export function selectRules(
   });
 }
 
+/** Reasons that mean the rule is enforced without T3 code (the recipe, or the generated form's validation). */
+const COVERED = new Set(["already part of the recipe", "covered by the generated form"]);
+
+/**
+ * Rules of the request that no code implements (ADR-0054), for the report: a rule is code (written by T3), covered by
+ * the recipe or the generated form, or listed here — a limitation (not chosen, with why) or blocked (chosen, but
+ * not written). Deterministic; criteria the decider did not take for rules are not rules.
+ */
+export function rulesWithoutCode(
+  candidates: readonly RuleCandidate[],
+  written: readonly string[],
+): { criterion: string; entity: string | null; reason: string; blocked: boolean }[] {
+  const done = new Set(written);
+  return candidates
+    .filter((c) => c.reason !== "not a business rule" && !COVERED.has(c.reason))
+    .filter((c) => !done.has(c.criterion))
+    .map((c) => ({
+      criterion: c.criterion,
+      entity: c.entity,
+      reason: c.selected ? "the backup code model could not write it safely" : c.reason,
+      blocked: c.selected,
+    }));
+}
+
 /** Deterministic: the generated entities (other than the restricted one) named in the rule text. */
 export function mentionedEntities(
   criterion: string,

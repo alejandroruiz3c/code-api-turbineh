@@ -68,38 +68,44 @@ export async function saveUpload(ctx: Actor, file: File, target: UploadTarget): 
   await storage().put(storageKey, bytes, mimeOf(type));
   let id: string;
   try {
-    const [row] = await db
-      .insert(uploads)
-      .values({
-        organizationId: ctx.organizationId,
-        scopeId,
-        subjectType,
-        subjectId,
-        fileName: safeFileName(file.name),
-        fileType: type,
-        mime: mimeOf(type),
-        size: bytes.byteLength,
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-        storageKey,
-        uploadedBy: ctx.userId,
-        uploadedByEmail: ctx.email.toLowerCase(),
-      })
-      .returning({ id: uploads.id });
-    if (!row) throw new Error("upload not recorded");
-    id = row.id;
+    // The file's row and its audit entry are written together or not at all (ADR-0054).
+    id = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(uploads)
+        .values({
+          organizationId: ctx.organizationId,
+          scopeId,
+          subjectType,
+          subjectId,
+          fileName: safeFileName(file.name),
+          fileType: type,
+          mime: mimeOf(type),
+          size: bytes.byteLength,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          storageKey,
+          uploadedBy: ctx.userId,
+          uploadedByEmail: ctx.email.toLowerCase(),
+        })
+        .returning({ id: uploads.id });
+      if (!row) throw new Error("upload not recorded");
+      await audit(
+        {
+          organizationId: ctx.organizationId,
+          actorId: ctx.userId,
+          actorEmail: ctx.email,
+          action: "file.uploaded",
+          subjectType: "File",
+          subjectId: row.id,
+          summary: `Uploaded "${safeFileName(file.name)}" (${sizeLabel(bytes.byteLength)})`,
+        },
+        tx,
+      );
+      return row.id;
+    });
   } catch (err) {
     await storage().delete(storageKey);
     throw err;
   }
-  await audit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.userId,
-    actorEmail: ctx.email,
-    action: "file.uploaded",
-    subjectType: "File",
-    subjectId: id,
-    summary: `Uploaded "${safeFileName(file.name)}" (${sizeLabel(bytes.byteLength)})`,
-  });
   if (cfg.notifyOnUpload) await notifyStaff(ctx, safeFileName(file.name), target);
   return id;
 }
@@ -168,15 +174,21 @@ export async function deleteUpload(ctx: Actor, id: string): Promise<void> {
   const row = await getUpload(ctx, id);
   if (row.uploadedBy !== ctx.userId && !can(ctx.role, "delete"))
     throw new UserFacingError("Only the uploader or someone who may delete can remove this file.");
-  await db.delete(uploads).where(eq(uploads.id, row.id));
-  await storage().delete(row.storageKey);
-  await audit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.userId,
-    actorEmail: ctx.email,
-    action: "file.deleted",
-    subjectType: "File",
-    subjectId: row.id,
-    summary: `Deleted "${row.fileName}"`,
+  // The row and its audit entry go together; the stored bytes are removed once both are committed (ADR-0054).
+  await db.transaction(async (tx) => {
+    await tx.delete(uploads).where(eq(uploads.id, row.id));
+    await audit(
+      {
+        organizationId: ctx.organizationId,
+        actorId: ctx.userId,
+        actorEmail: ctx.email,
+        action: "file.deleted",
+        subjectType: "File",
+        subjectId: row.id,
+        summary: `Deleted "${row.fileName}"`,
+      },
+      tx,
+    );
   });
+  await storage().delete(row.storageKey);
 }

@@ -58,7 +58,7 @@ export async function createTracker(formData: FormData): Promise<void> {
 
 export async function logValue(formData: FormData): Promise<void> {
   const { ctx, t } = await requireOwnTracker(z.uuid().parse(formData.get("trackerId")));
-  if (!rateLimit(`log:${ctx.userId}`, 60))
+  if (!(await rateLimit(`log:${ctx.userId}`, 60)))
     throw new UserFacingError("Too many entries. Try again in a minute.");
   const day = z.iso.date().parse(formData.get("day"));
   const value =

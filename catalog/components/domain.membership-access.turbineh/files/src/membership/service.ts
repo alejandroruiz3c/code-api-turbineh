@@ -84,7 +84,9 @@ export async function invite(
   );
   if (existing.rows.length) throw new UserFacingError(`${email} is already a member.`);
   const { token, tokenHash } = newInvitationToken();
-  const [row] = await db.transaction(async (tx) => {
+  const roleLabel = cfg.roles.find((r) => r.key === input.role)?.label ?? input.role;
+  // The invitation and its audit entry are written together or not at all (ADR-0054).
+  await db.transaction(async (tx) => {
     // A new invitation replaces any pending one for the same address.
     await tx
       .update(membershipInvitations)
@@ -96,7 +98,7 @@ export async function invite(
           eq(membershipInvitations.status, "pending"),
         ),
       );
-    return tx
+    const [row] = await tx
       .insert(membershipInvitations)
       .values({
         organizationId: actor.organizationId,
@@ -108,50 +110,57 @@ export async function invite(
         expiresAt: new Date(Date.now() + cfg.invitationDays * 86_400_000),
       })
       .returning({ id: membershipInvitations.id });
+    await audit(
+      {
+        organizationId: actor.organizationId,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: "invitation.created",
+        subjectType: "Invitation",
+        subjectId: row?.id ?? null,
+        summary: `Invited ${email} as ${roleLabel}`,
+      },
+      tx,
+    );
   });
   const link = `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/invite/${token}`;
   const workspace = await workspaceName(actor.organizationId);
-  const roleLabel = cfg.roles.find((r) => r.key === input.role)?.label ?? input.role;
   await sendEmail({
     to: email,
     subject: `You are invited to ${workspace}`,
     text: `${actor.email} invited you to join "${workspace}" as ${roleLabel}.\n\nAccept the invitation:\n\n${link}\n\nThe link works once and expires in ${cfg.invitationDays} days. If you did not expect it, ignore this email.`,
     link,
   });
-  await audit({
-    organizationId: actor.organizationId,
-    actorId: actor.userId,
-    actorEmail: actor.email,
-    action: "invitation.created",
-    subjectType: "Invitation",
-    subjectId: row?.id ?? null,
-    summary: `Invited ${email} as ${roleLabel}`,
-  });
   return { link };
 }
 
 export async function revokeInvitation(actor: Actor, id: string): Promise<void> {
-  const [row] = await db
-    .update(membershipInvitations)
-    .set({ status: "revoked" })
-    .where(
-      and(
-        eq(membershipInvitations.id, id),
-        eq(membershipInvitations.organizationId, actor.organizationId),
-        eq(membershipInvitations.status, "pending"),
-      ),
-    )
-    .returning({ email: membershipInvitations.email });
-  if (row)
-    await audit({
-      organizationId: actor.organizationId,
-      actorId: actor.userId,
-      actorEmail: actor.email,
-      action: "invitation.revoked",
-      subjectType: "Invitation",
-      subjectId: id,
-      summary: `Revoked the invitation of ${row.email}`,
-    });
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(membershipInvitations)
+      .set({ status: "revoked" })
+      .where(
+        and(
+          eq(membershipInvitations.id, id),
+          eq(membershipInvitations.organizationId, actor.organizationId),
+          eq(membershipInvitations.status, "pending"),
+        ),
+      )
+      .returning({ email: membershipInvitations.email });
+    if (row)
+      await audit(
+        {
+          organizationId: actor.organizationId,
+          actorId: actor.userId,
+          actorEmail: actor.email,
+          action: "invitation.revoked",
+          subjectType: "Invitation",
+          subjectId: id,
+          summary: `Revoked the invitation of ${row.email}`,
+        },
+        tx,
+      );
+  });
 }
 
 /** The invitation behind a link, for the landing page (never reveals the token hash). */
@@ -206,6 +215,18 @@ export async function acceptInvitation(
       .update(membershipInvitations)
       .set({ status: "accepted", acceptedBy: session.userId, acceptedAt: now })
       .where(eq(membershipInvitations.id, inv.id));
+    await audit(
+      {
+        organizationId: inv.organizationId,
+        actorId: session.userId,
+        actorEmail: session.email,
+        action: "invitation.accepted",
+        subjectType: "Member",
+        subjectId: session.userId,
+        summary: `${normEmail(session.email)} joined as ${inv.role}`,
+      },
+      tx,
+    );
     return { inv };
   });
   if ("error" in result) {
@@ -217,17 +238,7 @@ export async function acceptInvitation(
     }[result.error ?? "invalid"];
     throw new UserFacingError(message ?? "This invitation is not valid.");
   }
-  const { inv } = result;
-  await audit({
-    organizationId: inv.organizationId,
-    actorId: session.userId,
-    actorEmail: session.email,
-    action: "invitation.accepted",
-    subjectType: "Member",
-    subjectId: session.userId,
-    summary: `${normEmail(session.email)} joined as ${inv.role}`,
-  });
-  return inv.organizationId;
+  return result.inv.organizationId;
 }
 
 async function memberOf(organizationId: string, memberId: string) {
@@ -255,8 +266,8 @@ export async function changeRole(actor: Actor, memberId: string, newRole: string
     owners: Number(target.owners),
   });
   if (error) throw new UserFacingError(error);
-  if (newRole === null) {
-    await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
+    if (newRole === null) {
       await tx.execute(
         sql`delete from member where id = ${memberId} and "organizationId" = ${actor.organizationId}`,
       );
@@ -268,25 +279,28 @@ export async function changeRole(actor: Actor, memberId: string, newRole: string
             eq(accessScopeMembers.userId, target.userId),
           ),
         );
-    });
-  } else if (newRole !== target.role) {
-    await db.execute(
-      sql`update member set role = ${newRole} where id = ${memberId} and "organizationId" = ${actor.organizationId}`,
+    } else if (newRole !== target.role) {
+      await tx.execute(
+        sql`update member set role = ${newRole} where id = ${memberId} and "organizationId" = ${actor.organizationId}`,
+      );
+    }
+    await audit(
+      {
+        organizationId: actor.organizationId,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: newRole === null ? "member.removed" : "member.role_changed",
+        subjectType: "Member",
+        subjectId: target.userId,
+        summary:
+          newRole === null
+            ? `Removed ${target.email} (${target.role})`
+            : `${target.email}: ${target.role} → ${newRole}`,
+        before: { role: target.role },
+        after: newRole === null ? null : { role: newRole },
+      },
+      tx,
     );
-  }
-  await audit({
-    organizationId: actor.organizationId,
-    actorId: actor.userId,
-    actorEmail: actor.email,
-    action: newRole === null ? "member.removed" : "member.role_changed",
-    subjectType: "Member",
-    subjectId: target.userId,
-    summary:
-      newRole === null
-        ? `Removed ${target.email} (${target.role})`
-        : `${target.email}: ${target.role} → ${newRole}`,
-    before: { role: target.role },
-    after: newRole === null ? null : { role: newRole },
   });
 }
 
@@ -319,22 +333,27 @@ export async function listScopes(organizationId: string) {
 }
 
 export async function createScope(actor: Actor, name: string) {
-  const [row] = await db
-    .insert(accessScopes)
-    .values({ organizationId: actor.organizationId, name: name.trim() })
-    .onConflictDoNothing()
-    .returning({ id: accessScopes.id });
-  if (!row) throw new UserFacingError(`"${name.trim()}" already exists.`);
-  await audit({
-    organizationId: actor.organizationId,
-    actorId: actor.userId,
-    actorEmail: actor.email,
-    action: "scope.created",
-    subjectType: cfg.scope?.label ?? "Scope",
-    subjectId: row.id,
-    summary: `Created ${name.trim()}`,
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(accessScopes)
+      .values({ organizationId: actor.organizationId, name: name.trim() })
+      .onConflictDoNothing()
+      .returning({ id: accessScopes.id });
+    if (!row) throw new UserFacingError(`"${name.trim()}" already exists.`);
+    await audit(
+      {
+        organizationId: actor.organizationId,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: "scope.created",
+        subjectType: cfg.scope?.label ?? "Scope",
+        subjectId: row.id,
+        summary: `Created ${name.trim()}`,
+      },
+      tx,
+    );
+    return row.id;
   });
-  return row.id;
 }
 
 /** Adds an existing workspace member (by email) to a scope. */
@@ -346,17 +365,22 @@ export async function addToScope(actor: Actor, scopeId: string, email: string) {
   );
   const userId = m.rows[0]?.userId;
   if (!userId) throw new UserFacingError("Invite this person first: they are not a member yet.");
-  await db
-    .insert(accessScopeMembers)
-    .values({ scopeId, userId, organizationId: actor.organizationId })
-    .onConflictDoNothing();
-  await audit({
-    organizationId: actor.organizationId,
-    actorId: actor.userId,
-    actorEmail: actor.email,
-    action: "scope.member_added",
-    subjectType: cfg.scope?.label ?? "Scope",
-    subjectId: scopeId,
-    summary: `${normEmail(email)} added to ${scope.name}`,
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(accessScopeMembers)
+      .values({ scopeId, userId, organizationId: actor.organizationId })
+      .onConflictDoNothing();
+    await audit(
+      {
+        organizationId: actor.organizationId,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: "scope.member_added",
+        subjectType: cfg.scope?.label ?? "Scope",
+        subjectId: scopeId,
+        summary: `${normEmail(email)} added to ${scope.name}`,
+      },
+      tx,
+    );
   });
 }

@@ -51,7 +51,7 @@ import {
   type WrittenRules,
 } from "@turbineh/integrator";
 import { leakingFiles, type VerifyResult } from "@turbineh/verifier";
-import { decideRules, type RuleCandidate } from "./business-rules.js";
+import { decideRules, rulesWithoutCode, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
@@ -863,6 +863,11 @@ test("forced failure for the not-verified delivery test", () => {
           file: r.module,
           test: r.test,
         })),
+        // Rules of the request without code: listed as limitations or blocked items, never dropped (ADR-0054).
+        rulesNotImplemented: rulesWithoutCode(
+          t3.candidates,
+          rules.flatMap((r) => r.rules),
+        ),
       },
       metrics: { ...metrics, timings },
       swap: {

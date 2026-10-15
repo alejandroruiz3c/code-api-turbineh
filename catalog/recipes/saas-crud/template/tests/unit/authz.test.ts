@@ -6,8 +6,9 @@ const state = vi.hoisted(() => ({
   session: null as null | { user: Record<string, unknown> },
 }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: async () => state.session } } }));
+// The client's own (prepended) entry, then the one the trusted proxy appended.
 vi.mock("next/headers", () => ({
-  headers: async () => new Headers({ "x-forwarded-for": `${state.ip}, 10.0.0.1` }),
+  headers: async () => new Headers({ "x-forwarded-for": `198.51.100.66, ${state.ip}` }),
 }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -18,42 +19,13 @@ vi.mock("@/env", () => ({ env: { ADMIN_EMAILS: "" } }));
 
 beforeEach(() => {
   state.session = null;
+  // One trusted proxy (as on Vercel): its entry is the client address; entries a client prepends are ignored.
+  process.env.TRUSTED_PROXY_HOPS = "1";
 });
 
+// Role rights are proven with fixed expectations in tests/unit/permissions.test.ts and tests/unit/access.test.ts
+// (never by comparing can() with the matrix it reads, ADR-0054).
 describe("role policy", () => {
-  it("checks every workspace role against the role matrix: each role can do exactly what it lists, nothing else", async () => {
-    const { can } = await import("@/server/authz");
-    const { ROLE_MATRIX } = await import("@/server/permissions");
-    const actions = [
-      "read",
-      "create",
-      "update",
-      "delete",
-      "approve",
-      "export",
-      "configure",
-      "manage_members",
-      "view_audit",
-    ] as const;
-    for (const [role, rights] of Object.entries(ROLE_MATRIX))
-      for (const action of actions)
-        expect(can(role, action), `${role} ${action}`).toBe(rights.can.includes(action));
-    // The workspace owner can always manage the workspace; unknown roles can do nothing.
-    expect(can("owner", "manage_members")).toBe(true);
-    expect(can("superuser", "read")).toBe(false);
-  });
-
-  it("gives an unknown stored role the least privilege (deny by default)", async () => {
-    const { toRole, can, DEFAULT_ROLE } = await import("@/server/role-policy");
-    const { ROLE_MATRIX } = await import("@/server/permissions");
-    expect(toRole("owner")).toBe("owner");
-    expect(toRole("superuser")).toBe(DEFAULT_ROLE);
-    expect(toRole(undefined)).toBe(DEFAULT_ROLE);
-    expect(can(toRole("superuser"), "delete")).toBe(
-      ROLE_MATRIX[DEFAULT_ROLE]?.can.includes("delete") ?? false,
-    );
-  });
-
   it("staff allow-list denies by default and matches whole emails only", async () => {
     const { isAdminEmail } = await import("@/server/authz");
     expect(isAdminEmail("ana@example.com", "")).toBe(false);

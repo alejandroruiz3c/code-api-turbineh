@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 /** Variables src/env.ts requires (no .optional() / .default()), read from the schema itself. */
 function requiredVars(): string[] {
   const src = readFileSync("src/env.ts", "utf8");
-  const keys = [...src.matchAll(/^ {2}([A-Z][A-Z0-9_]*):/gm)];
+  const keys = [...src.matchAll(/^ {2,4}([A-Z][A-Z0-9_]*):/gm)];
   return keys
     .filter((k, i) => {
       const chunk = src.slice(k.index, keys[i + 1]?.index ?? src.length);
@@ -60,6 +60,41 @@ describe("environment", () => {
     const literal =
       /(?:const\s+\w*(?:secret|password|passwd|api_?key|token|private_?key)\w*\s*=|\w*(?:secret|password|passwd|api_?key|token|private_?key)\w*\s*:)\s*"[A-Za-z0-9_+/=-]{16,}"/i;
     expect(src).not.toMatch(literal);
+  });
+
+  it("production requires an email provider (or EMAIL_DELIVERY=disabled on purpose) and says so clearly", async () => {
+    const base = Object.fromEntries(requiredVars().map((n) => [n, sample(n)]));
+    process.env = { ...base, NODE_ENV: "production" };
+    vi.resetModules();
+    await expect(import("@/env")).rejects.toThrow(/RESEND_API_KEY is required in production/);
+    process.env = { ...base, NODE_ENV: "production", EMAIL_DELIVERY: "disabled" };
+    vi.resetModules();
+    await expect(import("@/env")).resolves.toBeTruthy();
+    process.env = { ...base, NODE_ENV: "production", RESEND_API_KEY: "re_test_value" };
+    vi.resetModules();
+    await expect(import("@/env")).resolves.toBeTruthy();
+  });
+
+  it("never writes an email's link or text to the console, with or without a provider", async () => {
+    process.env = {
+      ...Object.fromEntries(requiredVars().map((n) => [n, sample(n)])),
+      NODE_ENV: "test",
+    };
+    vi.resetModules();
+    const logged: string[] = [];
+    const spy = vi.spyOn(console, "info").mockImplementation((...args) => {
+      logged.push(args.join(" "));
+    });
+    const { sendEmail } = await import("@/lib/email");
+    await sendEmail({
+      to: "ana@example.com",
+      subject: "Verify your email address",
+      text: "Open https://app.example.com/verify?token=secret-123",
+      link: "https://app.example.com/verify?token=secret-123",
+    });
+    spy.mockRestore();
+    expect(logged.join("\n")).not.toContain("secret-123");
+    expect(logged.join("\n")).not.toContain("ana@example.com");
   });
 
   it("allow-lists are never required", () => {
