@@ -13,7 +13,7 @@ findings before delivery and hands over a complete, verified package with a plai
 verification (+ corrections) → security remediation → report → delivery`
 
 - **Decider:** JEV by TypeSafe AI behind one interface, with an open fallback; many small questions in one batched
-  request ([ADR-0004](docs/adr/0004-decider.md), [best practices](docs/DECIDER_BEST_PRACTICES.md)).
+  request ([ADR-0004](docs/adr/0004-decider.md)).
 - **Compiler:** a small open-weights model writes the `BuildSpec` in small, validated parts ([ADR-0010](docs/adr/0010-decomposition-principle.md)).
 - **Catalog:** approved components only — manifest, contract tests (run and type-checked), OSV scan and allowed
   licence ([ADR-0012](docs/adr/0012-catalog-curation.md)). Eleven recipes: SaaS CRUD, internal tool, landing page,
@@ -103,7 +103,7 @@ Smoke tests: `pnpm smoke:compiler` · `pnpm smoke:backup-coder`. Staging runbook
 ## Documentation
 
 - [Product description (source of truth)](docs/PRODUCT_DESCRIPTION.md) · [Plan](docs/PLAN.md) · [Architecture](docs/ARCHITECTURE.md) · [Component manifest](docs/COMPONENT_MANIFEST.md)
-- [Decider best practices](docs/DECIDER_BEST_PRACTICES.md) · [ADRs](docs/adr/) · [Staging](docs/STAGING.md) · [Secrets](docs/SECRETS.md)
+- [ADRs](docs/adr/) · [Staging](docs/STAGING.md) · [Secrets](docs/SECRETS.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
 ## License

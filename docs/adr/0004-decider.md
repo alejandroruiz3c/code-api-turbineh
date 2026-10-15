@@ -19,9 +19,7 @@
 
 ## Best practices enforced in code
 
-See `docs/DECIDER_BEST_PRACTICES.md`. Highlights: all questions for a state in **one** request; many atomic
-questions instead of one complex one; `none_of_the_above` by default; state budget checked before sending
-(fail instead of silent truncation); per-action act/review/escalate bands.
+The practices and their calibration are proprietary and live in the private resource decision engine (ADR-0058).
 
 ## Open points (Gate G0)
 
