@@ -10,6 +10,16 @@
         "vendored": "contract/orchestration.ts",
         "public": "packages/orchestration/src/types.ts"
       }
+    },
+    "resource-decider": {
+      "repo": "alejandroruiz3c/turbineh-resource-decider",
+      "tag": "v1.0.0",
+      "commit": "8e624cf551e9e733202521073a54506afd226ef4",
+      "requiredBy": ["web", "worker"],
+      "contract": {
+        "vendored": "contract/decider.ts",
+        "public": "packages/decider/src/contract.ts"
+      }
     }
   }
 }
