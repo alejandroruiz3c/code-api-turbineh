@@ -2,10 +2,11 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { BackupCoder } from "@turbineh/backup-coder";
 import type { VerifyResult } from "@turbineh/verifier";
 import { describe, expect, it } from "vitest";
 import { commit, correctableFiles, failureLog, qualityFailed } from "./corrector.js";
-import { isFillable } from "./gaps.js";
+import { backupMayFill, CataloguedCapabilityError, fillGap, isFillable } from "./gaps.js";
 import { copyCuratedGlue, glueCacheKey, glueFile, useVerifiedGlue } from "./integrate.js";
 import { withHeader } from "./model.js";
 
@@ -87,8 +88,9 @@ describe("corrector scope", () => {
 
 describe("policies", () => {
   it("never lets the Backup Coder write auth, security, payments, email or UI", () => {
-    expect(isFillable("ops.idempotency")).toBe(true);
     expect(isFillable("data.money")).toBe(true);
+    // Idempotency needs persistence + a unique constraint (ADR-0055): reported as not covered, never generated.
+    expect(isFillable("ops.idempotency")).toBe(false);
     for (const c of [
       "auth.oauth",
       "authz.roles",
@@ -99,6 +101,23 @@ describe("policies", () => {
     ]) {
       expect(isFillable(c)).toBe(false);
     }
+  });
+
+  it("never lets the Backup Coder reimplement a capability the catalogue covers (F09)", async () => {
+    const catalogued = new Set(["jobs.scheduler"]);
+    expect(backupMayFill("jobs.scheduler", catalogued)).toBe(false);
+    expect(backupMayFill("data.money", catalogued)).toBe(true);
+    const coder = {
+      fill: () => Promise.reject(new Error("must not be called")),
+    } as unknown as BackupCoder;
+    await expect(
+      fillGap(
+        mkdtempSync(join(tmpdir(), "gap-")),
+        { capability: "jobs.scheduler", label: "cron", trigger: "T2" },
+        coder,
+        { buildId: "b", summary: "s", allowedImports: [], gapsDir: tmpdir(), catalogued },
+      ),
+    ).rejects.toBeInstanceOf(CataloguedCapabilityError);
   });
 
   it("writes UI glue as .tsx and keeps exactly one header", () => {

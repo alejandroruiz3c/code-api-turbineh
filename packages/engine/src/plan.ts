@@ -235,7 +235,7 @@ export function buildPlan(input: PlanInput): Plan {
       ...compat.missing,
       ...input.gaps.map(
         (g) =>
-          `${input.labels?.(g) ?? g}: no verified component yet — TurbineH writes it during generation and verifies it with the rest`,
+          `${input.labels?.(g) ?? g}: no verified component yet — the Backup Coder may write it during generation (not catalogue-verified; checked only by this build's gate)`,
       ),
       ...(input.notCovered ?? []),
     ],

@@ -47,6 +47,7 @@ import {
   gateFailures,
   gateFindings,
   quickCheck,
+  REPORTS_DIR,
   verify,
   type VerifyResult,
 } from "@turbineh/verifier";
@@ -468,12 +469,20 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       ok: result.ok,
       verifiedAt: result.scannedAt,
       environment: "TurbineH sandbox: no internet, ephemeral Postgres, service mocks",
-      steps: result.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })),
+      steps: result.steps.map((s) => ({
+        name: s.name,
+        ok: s.ok,
+        ms: s.ms,
+        ...(s.note ? { note: s.note } : {}),
+      })),
+      ...(result.skipped?.length ? { skipped: result.skipped } : {}),
+      reports: shippedReports(input.repoDir),
       findings: gateFindings(result),
     },
     criteria: report.criteria,
     gaps: facts.gaps,
     failures: delivery.failures,
+    backup: (facts.backupGenerated ?? []).map((b) => ({ capability: b.capability, file: b.file })),
   });
   const acceptance = guide
     ? guide.criteria.map((c) => ({
@@ -605,4 +614,14 @@ ${alerts.length ? alerts.map((a) => `- **${a.title}** (${a.where}) — ${a.expla
 
 This report is not a statement that the software is "secure"; it lists what was checked, when and with what result.
 `;
+}
+
+/** Gate reports present in the package (`.turbineh/reports/`, ADR-0055). */
+function shippedReports(repoDir: string): string[] {
+  const dir = join(repoDir, REPORTS_DIR);
+  return existsSync(dir)
+    ? readdirSync(dir)
+        .sort()
+        .map((f) => `${REPORTS_DIR}/${f}`)
+    : [];
 }

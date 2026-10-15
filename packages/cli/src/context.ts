@@ -53,7 +53,7 @@ export function token(): string {
     fail(
       "unauthorized",
       "No access token configured.",
-      "Run `turbineh login <token>` (or set TURBINEH_TOKEN) with the token from your invitation.",
+      "Run `turbineh login` (the token from your invitation, typed without echo) or set TURBINEH_TOKEN.",
     );
   return t as string;
 }

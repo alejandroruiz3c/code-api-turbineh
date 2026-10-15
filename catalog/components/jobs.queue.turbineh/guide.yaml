@@ -79,9 +79,16 @@ guarantees:
     test: files/tests/unit/jobs.test.ts › backs off exponentially and caps at one hour
   - claim: The system registers typed jobs and rejects unsafe type names
     test: files/tests/unit/jobs.test.ts › registers typed jobs and rejects unsafe type names
+  - claim: A job left running by a crashed runner is recovered when its lease expires
+    test: "files/tests/unit/jobs.test.ts › recovers a running job whose lease expired: claimed again with a new fencing token"
+  - claim: A heartbeat renews the lease while the handler runs
+    test: files/tests/unit/jobs.test.ts › renews the lease with a heartbeat while the handler runs
+  - claim: A runner whose lease was taken over never writes its result (fencing token)
+    test: "files/tests/unit/jobs.test.ts › fences a runner whose lease was taken over: its result is not written and the handler is aborted"
 limits:
   - Max attempts per job is capped at 20
   - Backoff delay is capped at 1 hour
+  - Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)
 example: |-
   import { defineJob, enqueue } from '@/lib/jobs';
 

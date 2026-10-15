@@ -39,10 +39,10 @@ import {
 import type { FixerSlot } from "@turbineh/remediation";
 import type { WriterConfig } from "@turbineh/reporter";
 import {
+  backupMayFill,
   fillGap,
   glueCacheKey,
   integrateComponents,
-  isFillable,
   rulesCapability,
   writeRules,
   type FilledGap,
@@ -544,8 +544,15 @@ test("forced failure for the not-verified delivery test", () => {
   }));
   const componentsDir = join(deps.repoRoot, "catalog/components");
   const label = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;
+  // ADR-0055 (audit F09): a capability an approved component provides is never written by the Backup Coder, even
+  // when the resolver could not use that component in this build — it is reported as not covered instead.
+  const catalogued = new Set(
+    catalog.filter((c) => c.status === "approved").flatMap((c) => c.provides),
+  );
   const toFill = gaps
-    .filter((g) => isFillable(g.capability) && (g.trigger === "T1" || g.trigger === "T2"))
+    .filter(
+      (g) => backupMayFill(g.capability, catalogued) && (g.trigger === "T1" || g.trigger === "T2"),
+    )
     .map((g) => ({
       capability: g.capability,
       label: label(g.capability),
@@ -577,6 +584,7 @@ test("forced failure for the not-verified delivery test", () => {
             summary: spec.summary,
             allowedImports: ["zod", ...Object.keys(pkg.dependencies)],
             gapsDir: deps.gapsDir ?? join(deps.repoRoot, "catalog/gaps"),
+            catalogued,
           })
             .catch(() => null)
             .then(async (r) => {
@@ -1004,7 +1012,7 @@ function appendComponentsDoc(
           .join("\n")}\n`
       : "",
     filled.length
-      ? `## Written by the Backup Coder\n\nNo audited component exists yet for these capabilities. The code carries \`// turbineh:generated-backup\`, has its own unit tests and passed the same verification.\n\n${filled
+      ? `## Written by the Backup Coder — NOT catalogue-verified\n\nNo approved catalogue component provides these capabilities, so a model wrote them. They are **not catalogue-verified**: no contract tests, security review or audit beyond this build's own gate. The code carries \`// turbineh:generated-backup\` and its own unit tests; review it before relying on it.\n\n${filled
           .map(
             (f) => `- \`${f.capability}\` (${f.trigger}) → \`${f.module}\` · tests \`${f.test}\``,
           )

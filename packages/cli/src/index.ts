@@ -29,7 +29,8 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
                                     verified pull request on your GitHub repository
   turbineh connect github [--private] [--with-token]   ·   turbineh disconnect github
   turbineh revert [integration]     undo one integration, keep later work
-  turbineh login <token>            save your invitation token (or set TURBINEH_TOKEN)
+  turbineh login [--with-token]     save your invitation token: typed without echo, or piped on stdin with
+                                    --with-token (or set TURBINEH_TOKEN); never as an argument
 
   --json   structured output for coding agents (build/resume: one JSON event per line, the last line is the result)
   --yes    do not ask for confirmation (respects .turbineh/project.json policy)

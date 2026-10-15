@@ -191,7 +191,7 @@ export function leftItems(input: {
   return [
     ...input.gaps.map((g) => ({
       part: label(g),
-      why: "No verified component covers it yet: TurbineH writes it during generation and the same checks verify it.",
+      why: "No verified component covers it yet: the Backup Coder may write it during generation. That code is not catalogue-verified; only this build's checks cover it.",
       where: `Generated code marked \`turbineh:generated-backup\` — ${WHERE_LEFT}`,
     })),
     ...input.notCovered.map((n) => ({

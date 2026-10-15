@@ -71,6 +71,8 @@ export interface BuildReport {
     test: string;
     implemented: boolean;
   }[];
+  /** Deterministic (ADR-0055): helpers the Backup Coder wrote for gaps — NOT catalogue-verified. */
+  backupCode?: { capability: string; label: string; file: string }[];
   improvement: ImprovementEstimate | null;
   finalVersion: boolean;
   writer: { model: string; fallback: boolean };
@@ -320,7 +322,7 @@ function stepFacts(facts: ReportFacts): string[] {
       .slice(0, 1)
       .map(
         (b) =>
-          `Review ${b.file} (${b.label}): it was written by the backup code model because no audited component exists yet; it passed the same checks and has its own tests.`,
+          `Review ${b.file} (${b.label}): NOT catalogue-verified — the Backup Coder (a model) wrote it because no approved component provides it; only this build's checks and its own tests cover it.`,
       ),
     ...facts.alerts
       .slice(0, 2)
@@ -423,6 +425,7 @@ export async function buildReport(
       test: r.test,
       implemented: r.implemented !== false,
     })),
+    ...(facts.backupGenerated?.length ? { backupCode: facts.backupGenerated } : {}),
     improvement: facts.improvement ?? null,
     finalVersion: facts.finalVersion ?? false,
     writer: { model: writer.model, fallback: !summary || !security || !steps },
@@ -439,7 +442,7 @@ ${r.overview}
 
 ${r.criteria.map((c) => `- ${c.verified ? "✅" : "⬜"} ${c.criterion} — _${c.evidence}_`).join("\n") || "- (none)"}
 
-${businessRulesMarkdown(r)}## Security
+${businessRulesMarkdown(r)}${backupCodeMarkdown(r)}## Security
 
 **${r.security.statusLine}**${r.security.fixedBeforeDelivery ? ` (${r.security.fixedBeforeDelivery} issue(s) fixed automatically before delivery)` : ""}
 
@@ -506,9 +509,21 @@ export function businessRulesMarkdown(r: Pick<BuildReport, "businessRules">): st
   );
   return `## Business rules
 
-Written by the backup code model because no audited component covers them. They run on the server before a record is created, imported or edited (as listed), read other records only through read-only, workspace-scoped loaders written by TurbineH, have their own unit tests and passed the same verification as the rest of the app.
+**Not catalogue-verified:** written by the Backup Coder (a model) because no audited component covers them. They run on the server before a record is created, imported or edited (as listed), read other records only through read-only, workspace-scoped loaders written by TurbineH, have their own unit tests and passed the same verification as the rest of the app.
 
 ${rows.join("\n")}
+
+`;
+}
+
+/** Section naming every Backup Coder file in the package as NOT catalogue-verified (ADR-0055). */
+export function backupCodeMarkdown(r: Pick<BuildReport, "backupCode">): string {
+  if (!r.backupCode?.length) return "";
+  return `## Backup Coder code — not catalogue-verified
+
+No approved catalogue component provides these capabilities, so the Backup Coder (a model) wrote them. They are **not catalogue-verified**: no contract tests, security review or audit beyond this build's own checks. Each file carries \`// turbineh:generated-backup\` and has its own unit tests; review it before relying on it.
+
+${r.backupCode.map((b) => `- ⚠️ ${b.label} (\`${b.capability}\`) — \`${b.file}\``).join("\n")}
 
 `;
 }

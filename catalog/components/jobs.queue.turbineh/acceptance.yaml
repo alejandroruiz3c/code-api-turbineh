@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+# Behaviour contract of the queue's leases (ADR-0055): a crashed runner never leaves a job `running` forever, a lease
+# is renewed while the job runs, and a runner whose lease was taken over can never write a result (fencing token).
+- test: "tests/unit/jobs.test.ts › recovers a running job whose lease expired: claimed again with a new fencing token"
+  covers: ["job|task|queue|background", "stuck|stale|crash|recover|lease|never (stay|remain)"]
+- test: "tests/unit/jobs.test.ts › marks a stale running job without attempts left as failed (LeaseExpired), never runs it again"
+  covers: ["job|task|queue|background", "stuck|stale|crash|lease|attempt"]
+- test: "tests/unit/jobs.test.ts › renews the lease with a heartbeat while the handler runs"
+  covers: ["job|task|queue|background", "heartbeat|lease|long[- ]running"]
+- test: "tests/unit/jobs.test.ts › fences a runner whose lease was taken over: its result is not written and the handler is aborted"
+  covers: ["job|task|queue|background", "fenc|twice|duplicate|exactly once|concurren|overwrite"]
+- test: "tests/unit/jobs.test.ts › retries a failing job with backoff and fails it after maxAttempts, fenced by its token"
+  covers: ["job|task|queue|background", "retr|backoff"]

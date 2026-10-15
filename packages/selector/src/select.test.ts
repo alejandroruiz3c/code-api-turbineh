@@ -91,4 +91,55 @@ describe("selectComponents", () => {
     );
     expect(res.decisions[0]?.trigger).toBe("T2");
   });
+
+  it("keeps an approved provider the decider judged as not covering (F09): the Backup Coder never rewrites it", async () => {
+    // The decider says "no" to coverage but nothing is risky: approved manifests declare the capability.
+    const decider: Decider = {
+      ...fakeDecider([]),
+      async ask<Q extends Questions>(_s: unknown, questions: Q) {
+        const answers: Record<string, unknown> = {};
+        for (const [k, q] of Object.entries(questions))
+          answers[k] =
+            q.type === "choice"
+              ? {
+                  type: "choice",
+                  choice: "jobs.scheduler.croner",
+                  confidence: 0.5,
+                  probabilities: {
+                    "jobs.scheduler.croner": 0.6,
+                    "jobs.scheduler.cron-parser": 0.4,
+                  },
+                }
+              : { type: "noul", noul: k.startsWith("covers") ? 0.2 : 0.05 };
+        return {
+          answers,
+          meta: {
+            backend: "jev",
+            model: "m",
+            latencyMs: 1,
+            requests: 1,
+            usage: { input_tokens: 1, output_tokens: 1 },
+          },
+        } as unknown as Decision<Q>;
+      },
+    };
+    const res = await selectComponents(
+      {
+        app: { recipe: "saas-crud", summary: "x", acceptance_criteria: [] },
+        candidates: {
+          "jobs.scheduler": [
+            card("jobs.scheduler.cron-parser", "jobs.scheduler"),
+            card("jobs.scheduler.croner", "jobs.scheduler"),
+          ],
+        },
+      },
+      decider,
+    );
+    expect(res.decisions[0]?.trigger).toBeNull();
+    expect(res.decisions[0]?.catalogueFallback).toBe(true);
+    expect(res.decisions[0]?.ranked.map((c) => c.id)).toEqual([
+      "jobs.scheduler.croner",
+      "jobs.scheduler.cron-parser",
+    ]);
+  });
 });
