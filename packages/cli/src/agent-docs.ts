@@ -27,6 +27,8 @@ dashboards, client portals, CRUD SaaS, landing pages). Before writing one of the
   Before handing over: \`turbineh verify --full --json\` (the gate's security and policy checks, here).
 - Exit: 0 green · 3 ask the user, then \`--approve\` · 4 timeout → \`turbineh resume <id> --json\` · 5 failed · 6 gate
   not green · 7 local conflict (message names the files).
+- Only covered use cases are built: else \`use_case_not_covered\` + \`notCovered[]\` — tell the user it isn't covered yet
+  (priority notice when it is); never rephrase to get around it. Own picks: \`turbineh search\`, then \`--components a,b\`.
 ${END}
 `;
 
@@ -52,6 +54,13 @@ allowed-tools: Bash(turbineh *)
 4. After your changes: \`turbineh verify --json\` (failures with file:line and the fix); \`turbineh left --json\` re-reads
    what is left. Before handing over: \`turbineh verify --full --json\` — the TurbineH gate's security and policy
    checks (secrets, Semgrep rules, OSV, licences; same pinned versions) with file:line and the fix; exit 1 = fix first.
+
+Scope: TurbineH builds only the use cases and components its library covers, as they were verified. A request it
+does not cover fails with \`error.code: "use_case_not_covered"\` and \`error.notCovered\` (nothing is built): tell the
+user the library doesn't cover it yet and that they will be notified with priority — do not rephrase the spec to get
+around it. A partially covered spec stops with exit 3: the plan's \`scope.removed\` lists what is out of scope; continue
+with \`--approve\` only if the user wants the covered part. To use specific verified components, find them with
+\`turbineh search "<need>"\` and pass \`--components id1,id2\`.
 
 Exit codes: 0 green · 2 usage · 3 a decision for the user (re-run with \`--approve\` once they agree) · 4 still
 running → \`turbineh resume <id> --json\` (also after an interrupted call) · 5 generation failed (rephrase the spec) ·

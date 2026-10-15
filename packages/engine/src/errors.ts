@@ -1,4 +1,5 @@
 import type { ProductError } from "@turbineh/shared";
+import { NOT_COVERED_ACTION, NOT_COVERED_MESSAGE } from "./scope-gate.js";
 
 /** Actionable errors: what happened, what to do and how to resume (never just "an error occurred"). */
 export const productError = (
@@ -35,13 +36,14 @@ export const ERRORS = {
       "Wait a few seconds and check again.",
       `turbineh status ${id}`,
     ),
-  /** Legacy runs only: since ADR-0050 an unmatched need is built on the closest template, never refused. */
-  outOfScope: (reason: string) =>
-    productError(
-      "no_template",
-      `No ready-made template matched this need, so this run stopped before building (${reason}).`,
-      "Start the flow again: TurbineH now builds it on the closest template and lists what is left with where to implement it.",
-    ),
+  /**
+   * ADR-0052 (supersedes ADR-0050 §4): a request whose use case the library does not cover is refused before anything
+   * is generated, with the requirements that are not covered. The demand is recorded for a priority notification.
+   */
+  outOfScope: (notCovered: string[]): ProductError => ({
+    ...productError("use_case_not_covered", NOT_COVERED_MESSAGE, NOT_COVERED_ACTION),
+    notCovered,
+  }),
   generationFailed: (id: string, reason: string) =>
     productError(
       "generation_failed",
@@ -61,7 +63,7 @@ export const ERRORS = {
     productError(
       "missing_env",
       `${name} is not set.`,
-      `Set ${name} in your .env.local (see config/.env.example) — it is a credential only you have.`,
+      `Set ${name} in your .env.local (see .env.example) — it is a credential only you have.`,
       `turbineh verify --resume ${id}`,
     ),
 } as const;

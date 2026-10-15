@@ -9,7 +9,9 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
 
   turbineh build "<spec>" | @spec.md  spec → verified code written and committed here (empty folder: whole app;
                                     project: capability in its own folder) + summary of what is left
-         [--approve] [--timeout <min>] [--json]
+         [--approve] [--timeout <min>] [--components id,id] [--json]
+                                    only covered use cases are built: an uncovered request is refused
+                                    (use_case_not_covered); --components builds exactly these verified components
   turbineh resume [id]              keep waiting for a build that timed out or was interrupted, then write it
   turbineh status [id]              flows, states, pending build and integrations
   turbineh left                     in a delivered package: what is left (open criteria with where, gate, settings)
@@ -23,7 +25,8 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh mcp                      MCP server on stdio: claude mcp add turbineh -- turbineh mcp
   turbineh search "<need>"          capabilities and components that cover a need
   turbineh inspect <id>             what a capability includes, needs and was verified with
-  turbineh plan "<need>"            plan only: components, files, deps, settings, criteria, cost
+  turbineh plan "<need>" [--components id,id]
+                                    plan only: components, files, deps, settings, criteria, cost
   turbineh apply [plan] [--approve] generate a plan, integrate it on a new branch (one commit)
   turbineh apply [plan] --pr [--repo owner/name] [--base branch]
                                     verified pull request on your GitHub repository

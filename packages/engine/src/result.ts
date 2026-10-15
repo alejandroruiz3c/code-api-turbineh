@@ -96,6 +96,76 @@ export function flowState(row: FlowRow): FlowState {
   return checks.every((c) => c.ok) ? "verified" : "generated";
 }
 
+/**
+ * F18 (ADR-0052): build checks and the request's requirements, never merged into one "verified". Checks come from the
+ * gate (`handover` for complete apps, `verify` for packages); requirements from the acceptance criteria after the gate
+ * (`acceptance`: met / covered / open). The badge is the same line on the web, the API and the CLI.
+ */
+export function checksAndRequirements(
+  row: Pick<FlowRow, "metrics">,
+): Pick<FlowOutcome, "checks" | "requirements" | "badge"> {
+  const m = row.metrics;
+  const h = m.handover as { checksPassed?: number; checksTotal?: number } | undefined;
+  const verify = ((m.verify as CheckResult[] | undefined) ?? []).filter(
+    (c) => c.name !== "certification",
+  );
+  const checks =
+    typeof h?.checksTotal === "number" && h.checksTotal > 0
+      ? { passed: h.checksPassed ?? 0, total: h.checksTotal }
+      : verify.length > 0
+        ? { passed: verify.filter((c) => c.ok).length, total: verify.length }
+        : undefined;
+  const a = m.acceptance as { met?: number; covered?: number; open?: string[] } | undefined;
+  const total = a ? (a.met ?? 0) + (a.covered ?? 0) + (a.open?.length ?? 0) : 0;
+  const requirements = a && total > 0 ? { met: a.met ?? 0, total } : undefined;
+  const parts = [
+    checks ? `Checks ${checks.passed}/${checks.total}` : null,
+    requirements ? `Requirements ${requirements.met}/${requirements.total} met` : null,
+  ].filter((x): x is string => x !== null);
+  return {
+    ...(checks ? { checks } : {}),
+    ...(requirements ? { requirements } : {}),
+    ...(parts.length ? { badge: parts.join(" · ") } : {}),
+  };
+}
+
+/**
+ * F20 (ADR-0052): how to run a delivered app, from its real files and package.json scripts (stored with the artefact),
+ * never a fixed text: no `db:seed` when the template has none, `.env.example` where it really is.
+ */
+export function appQuickstart(input: {
+  slug: string;
+  files: readonly string[];
+  /** package.json scripts (name → command) of the delivered app; null for builds stored before they were recorded. */
+  scripts?: Record<string, string> | null;
+}): string[] {
+  const scripts: Record<string, string> =
+    input.scripts ??
+    (input.files.includes("package.json")
+      ? {
+          dev: "next dev",
+          ...(input.files.includes("scripts/migrate.ts") ? { "db:migrate": "migrate" } : {}),
+        }
+      : {});
+  const env = input.files.includes(".env.example")
+    ? ".env.example"
+    : input.files.includes("config/.env.example")
+      ? "config/.env.example"
+      : null;
+  const autoMigrate = /--migrate\b/.test(scripts.dev ?? "");
+  const lines = [`unzip ${input.slug}.zip && cd ${input.slug}`, "pnpm install"];
+  if (env) lines.push(`cp ${env} .env.local     # fill the values listed under "Settings"`);
+  if (scripts["db:migrate"] && !autoMigrate) lines.push("pnpm db:migrate");
+  if (scripts["db:seed"]) lines.push("pnpm db:seed");
+  if (scripts.dev)
+    lines.push(
+      autoMigrate
+        ? "pnpm dev                       # without DATABASE_URL it starts a local PostgreSQL and migrates it"
+        : "pnpm dev",
+    );
+  return lines;
+}
+
 /** The not-verified-yet title of a capability package (ADR-0051). Shared by the web, the API and the CLI. */
 export const PACKAGE_NOT_VERIFIED_TITLE =
   "Package ready (not verified yet: it is verified inside your project when you integrate it)";
@@ -105,6 +175,19 @@ export const PACKAGE_NOT_VERIFIED_TITLE =
  * API and the CLI say the same. Deterministic: no model.
  */
 export function flowOutcome(row: FlowRow): FlowOutcome {
+  const o = stateOutcome(row);
+  if (o.kind === "working" || o.kind === "planned" || o.kind === "failed") return o;
+  const s = checksAndRequirements(row);
+  const open = s.requirements ? s.requirements.total - s.requirements.met : 0;
+  // F18: passing checks never read as "everything the request asked for is done" while requirements are open.
+  const title =
+    o.kind === "app_verified" && open > 0
+      ? `Build checks passed in the TurbineH sandbox · ${open} requirement(s) not met yet`
+      : o.title;
+  return { ...o, title, ...s };
+}
+
+function stateOutcome(row: FlowRow): FlowOutcome {
   const state = flowState(row);
   const plan = row.metrics.plan as Plan | undefined;
   const pkg = row.artifact?.package as { slug?: string } | undefined;

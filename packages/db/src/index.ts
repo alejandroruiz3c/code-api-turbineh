@@ -6,3 +6,4 @@ export * from "./ops.js";
 export * from "./ai-gateway.js";
 export * from "./product.js";
 export * from "./github.js";
+export * from "./demand.js";

@@ -55,7 +55,8 @@ import { decideRules, type RuleCandidate } from "./business-rules.js";
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
-import { openCriteriaLeft } from "@turbineh/engine";
+import { notCoveredReason, openCriteriaLeft, type ScopeVerdict } from "@turbineh/engine";
+import { coveredPart, gateRequest, withScope } from "./scope.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
@@ -178,6 +179,11 @@ export async function runBuild(
     plan?: PlanRequest;
     /** Test-only (see FORCED_FAILURE_SPEC): one E2E test that always fails. */
     forceFailure?: boolean;
+    /**
+     * Direct builds (no plan): the person chose to build only the covered part of a partially covered request
+     * (ADR-0052). Plans ask for that choice through `needsApproval` instead.
+     */
+    coveredOnly?: boolean;
   } = {},
 ): Promise<BuildOutcome> {
   // The test-only marker never reaches a model (it is honoured only through options.forceFailure).
@@ -252,23 +258,83 @@ export async function runBuild(
   }
   // Specs stored before palettes existed (approved plans) still get the colours stated in the prompt.
   if (spec.palette === undefined) spec.palette = extractPalette(prompt);
-  if (spec.recipe === "out_of_scope" && options.plan && options.plan.stack.source !== "declared") {
-    // An existing project (repository or files) and no complete use case fits: plan the certified components that
-    // cover the need (e.g. the AI orchestrator) to add to it.
-    const plan = componentPlan(buildId, options.plan, join(deps.repoRoot, "catalog/components"));
-    await deps.emit(buildId, "selecting", "done", {
-      componentOnly: true,
-      selected: plan.components.map((c) => c.id),
-    });
-    return {
-      buildId,
-      status: "done",
+  const catalogDir = join(deps.repoRoot, "catalog/components");
+  // Scope gate (ADR-0052, supersedes ADR-0050 §4): only covered use cases, or the components the person chose, are
+  // operated. Generation from an approved plan was gated when it was planned.
+  const explicit = options.plan?.components ?? [];
+  const componentOnly =
+    explicit.length > 0 ||
+    (spec.recipe === "out_of_scope" &&
+      options.plan !== undefined &&
+      options.plan.stack.source !== "declared");
+  let verdict: ScopeVerdict | null = null;
+  if (!options.spec) {
+    const candidate =
+      componentOnly && options.plan
+        ? componentPlan(buildId, options.plan, catalogDir, explicit)
+        : null;
+    t = performance.now();
+    verdict = await gateRequest({
+      prompt,
       spec,
-      metrics: { timings, plan, tokens: { compiler: compiled.usage } },
-    };
+      componentsDir: catalogDir,
+      decider: deps.decider,
+      explicit,
+      ...(candidate
+        ? { componentIds: candidate.components.map((c) => c.id) }
+        : {
+            provenByTests: new Set(
+              spec.recipe === "out_of_scope"
+                ? []
+                : planCriteria(
+                    spec.acceptance_criteria,
+                    join(deps.repoRoot, "catalog/recipes"),
+                    spec.recipe,
+                    [],
+                  )
+                    .filter((c) => c.status === "covered")
+                    .map((c) => c.criterion),
+            ),
+          }),
+    });
+    lap("scope", t);
+    await deps.emit(buildId, "compiling", "scope_gate", {
+      status: verdict.status,
+      via: verdict.via,
+      useCase: verdict.useCase,
+      notCovered: verdict.notCovered,
+    });
+    const refused =
+      verdict.status === "uncovered" ||
+      (verdict.status === "partial" && !options.plan && !options.coveredOnly);
+    if (refused) {
+      // Nothing is generated: the person is told the library doesn't cover it yet; the demand is recorded.
+      return {
+        buildId,
+        status: "failed",
+        spec,
+        reason: notCoveredReason(verdict),
+        metrics: { timings, scopeGate: verdict, tokens: { compiler: compiled.usage } },
+      };
+    }
+    if (candidate) {
+      const plan = withScope(candidate, verdict, spec.app_name);
+      await deps.emit(buildId, "selecting", "done", {
+        componentOnly: true,
+        selected: plan.components.map((c) => c.id),
+      });
+      return {
+        buildId,
+        status: "done",
+        spec: verdict.status === "partial" ? coveredPart(spec, verdict) : spec,
+        metrics: { timings, plan, scopeGate: verdict, tokens: { compiler: compiled.usage } },
+      };
+    }
   }
-  // Never block on an unknown use case (ADR-0050): build it on the closest template; what no template covers is
-  // listed as "what is left" with where to implement it. Real safety stops happen above (Abuse Guard) and in the gate.
+  const requestedName = spec.app_name;
+  if (verdict?.status === "partial") Object.assign(spec, coveredPart(spec, verdict));
+  // Every requirement is covered here: a request no family matched but whose requirements all map to the catalogue is
+  // built on the closest template (recorded; ADR-0052 keeps this only for fully covered requests).
   let scope: { builtOn: string; reason: string } | null = null;
   if (spec.recipe === "out_of_scope") {
     scope = {
@@ -451,11 +517,18 @@ export async function runBuild(
       ...Object.values(resolution.selected).map((c) => c.id),
     ]);
     plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];
+    if (verdict) withScope(plan, verdict, requestedName);
     return {
       buildId,
       status: "done",
       spec,
-      metrics: { timings, plan, tokens: { compiler: compiled.usage }, decider: selection.decider },
+      metrics: {
+        timings,
+        plan,
+        tokens: { compiler: compiled.usage },
+        decider: selection.decider,
+        ...(verdict ? { scopeGate: verdict } : {}),
+      },
     };
   }
 
@@ -714,6 +787,7 @@ test("forced failure for the not-verified delivery test", () => {
   // 5 · verify → automatic security remediation → report (shared with "improve and redeliver")
   t = performance.now();
   const metrics: Record<string, unknown> = {
+    ...(verdict ? { scopeGate: verdict } : {}),
     tokens: { compiler: compiled.usage, decider: "input-only, counted by the provider" },
     ...(t5 ? { compilerBackup: { trigger: "T5", model: t5.model } } : {}),
     decider: selection.decider,

@@ -29,6 +29,8 @@ export interface PlanRequest {
   preferences?: ProjectPreferences;
   /** Analysis of the connected repository (PLAN §16 P5). */
   analysis?: RepoAnalysis;
+  /** Verified components the person chose explicitly (ADR-0052): exactly these are planned. */
+  components?: string[];
 }
 
 interface Manifest {
@@ -142,19 +144,9 @@ export function flowPlan(input: {
     ...(input.request.projectDependencies
       ? { projectDependencies: input.request.projectDependencies }
       : {}),
-    notCovered: [
-      ...(input.scope
-        ? [
-            `What is specific to your need beyond a ${useCase?.name ?? input.recipeId} app: no ready-made template matched it exactly, so it is built on the closest one`,
-          ]
-        : []),
-      ...(INFERENCE.test(input.request.need) &&
-      !components.some((c) => c.id.startsWith("ai.orchestrator"))
-        ? [
-            `The AI part of the need: this app has no AI built in. Add it afterwards with a new flow such as "AI assistant for <task>" (TurbineH orchestration with its AI Safety Pack)`,
-          ]
-        : []),
-    ],
+    // ADR-0052: what the library does not cover never reaches a plan as "left" work — the scope gate refuses it or
+    // removes it from scope with the person's explicit choice (`Plan.scope`).
+    notCovered: [],
     labels: input.labels,
     envKeys: envKeysOf(env),
     entities: input.entities,
@@ -185,12 +177,26 @@ const INFERENCE =
  * Component-only plan (no complete use case fits): the certified components that cover the need. Any need that
  * involves inference gets the TurbineH AI orchestrator and its AI Safety Pack (PLAN §16, owner decision).
  */
-export function componentPlan(buildId: string, request: PlanRequest, componentsDir: string): Plan {
+export function componentPlan(
+  buildId: string,
+  request: PlanRequest,
+  componentsDir: string,
+  /** Components the person chose (ADR-0052): exactly these (plus what they require), nothing inferred. */
+  explicit: readonly string[] = [],
+): Plan {
   // Platform services (repository integration, analysis) are discoverable in search but never packaged as code.
   const all = catalogEntries(componentsDir).filter((c) => !PLATFORM_SERVICES.has(c.id));
   const picked = new Map<string, CatalogEntry>();
   const byId = (id: string) => all.find((c) => c.id === id);
-  if (INFERENCE.test(request.need)) {
+  const chosen = new Set<string>();
+  for (const id of explicit) {
+    const c = byId(id);
+    if (c) {
+      picked.set(id, c);
+      chosen.add(id);
+    }
+  }
+  if (chosen.size === 0 && INFERENCE.test(request.need)) {
     for (const id of ["ai.orchestrator.turbineh", "security.ai-safety.turbineh"]) {
       const c = byId(id);
       if (c) picked.set(id, c);
@@ -199,7 +205,7 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
   // Only what the need asks for (ADR-0051): rare words decide, a further component only for a further capability of
   // the need. Before, any component sharing one word ("small", "client", "external") was added, up to six.
   const matched = new Map<string, string[]>();
-  for (const m of componentsForNeed(request.need, all, { limit: 6 })) {
+  for (const m of chosen.size ? [] : componentsForNeed(request.need, all, { limit: 6 })) {
     if (m.entry.provides.every((p) => [...picked.values()].some((c) => c.provides.includes(p))))
       continue;
     picked.set(m.entry.id, m.entry);
@@ -216,13 +222,15 @@ export function componentPlan(buildId: string, request: PlanRequest, componentsD
     catalogToPlanned(
       c,
       c.provides[0] ?? c.category,
-      c.id.startsWith("ai.orchestrator")
-        ? "Every inference goes through TurbineH orchestration (understand intent → orchestrate decisions → execute)"
-        : c.id.startsWith("security.ai-safety")
-          ? "Always shipped with the orchestrator: input guardrails, budgets, output checks, audit"
-          : matched.has(c.id)
-            ? `Covers "${c.provides.join(", ")}" — what your need asks for (${(matched.get(c.id) ?? []).join(", ")}); certified, audited component`
-            : `Required by ${[...picked.values()].find((p) => byId(p.id)?.requires.includes(c.id))?.id ?? "a selected component"} — certified, audited component`,
+      chosen.has(c.id)
+        ? `Chosen by you — certified, audited component (${c.does})`
+        : c.id.startsWith("ai.orchestrator")
+          ? "Every inference goes through TurbineH orchestration (understand intent → orchestrate decisions → execute)"
+          : c.id.startsWith("security.ai-safety")
+            ? "Always shipped with the orchestrator: input guardrails, budgets, output checks, audit"
+            : matched.has(c.id)
+              ? `Covers "${c.provides.join(", ")}" — what your need asks for (${(matched.get(c.id) ?? []).join(", ")}); certified, audited component`
+              : `Required by ${[...picked.values()].find((p) => byId(p.id)?.requires.includes(c.id))?.id ?? "a selected component"} — certified, audited component`,
     ),
   );
   const deps = components

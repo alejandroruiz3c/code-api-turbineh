@@ -50,6 +50,11 @@ const spec = {
                 properties: {
                   prompt: { type: "string", minLength: 20, maxLength: 20000 },
                   github_username: { type: "string" },
+                  covered_only: {
+                    type: "boolean",
+                    description:
+                      "Build only the covered part of a partially covered request (explicit choice). Uncovered requests are refused: use_case_not_covered.",
+                  },
                   options: { type: "object" },
                 },
               },
@@ -167,7 +172,7 @@ const spec = {
       post: {
         summary: "Plan a need against your stack (nothing is generated)",
         description:
-          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate? }. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
+          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate?, components? }. Scope gate (ADR-0052): only use cases the library covers are planned. An uncovered need answers 422 `use_case_not_covered` with `notCovered` (the requirements not covered; the demand is recorded for a priority notice); a partially covered one returns a plan whose `scope.removed` lists what is out of scope and whose first `needsApproval` entry is the explicit choice to build only the covered part. `components: ["id", …]` (verified ids from /v1/components) plans exactly those components. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
         responses: {
           "200": { description: "Plan" },
           "202": { description: "{ id, state: planning, status_url }" },

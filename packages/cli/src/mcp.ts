@@ -41,6 +41,18 @@ const obj = (properties: Record<string, Schema>, required: string[] = []): Schem
   ...(required.length ? { required } : {}),
 });
 
+/** ADR-0052: verified components chosen explicitly (ids from `search`), built exactly as they were verified. */
+const COMPONENTS_ARG: Schema = {
+  type: "array",
+  items: { type: "string" },
+  description:
+    "Verified component ids from search to build exactly (instead of a use case). Use it when the user picks components.",
+};
+const componentsFlag = (v: unknown): Record<string, string> =>
+  Array.isArray(v) && v.some((x) => typeof x === "string")
+    ? { components: v.filter((x): x is string => typeof x === "string").join(",") }
+    : {};
+
 export const TOOLS: Tool[] = [
   {
     name: "build",
@@ -54,8 +66,10 @@ export const TOOLS: Tool[] = [
       },
       approve: {
         type: "boolean",
-        description: "Only after the user agreed to the plan's needsApproval decisions.",
+        description:
+          "Only after the user agreed to the plan's needsApproval decisions (e.g. building only the covered part of a partially covered spec).",
       },
+      components: COMPONENTS_ARG,
       timeoutMinutes: { type: "number", description: "Stop waiting after this (default 20)." },
     }),
     map: (a) => ({
@@ -64,6 +78,7 @@ export const TOOLS: Tool[] = [
       flags: {
         ...(str(a.specFile) ? { spec: str(a.specFile) as string } : {}),
         ...(a.approve === true ? { approve: true } : {}),
+        ...componentsFlag(a.components),
         ...(typeof a.timeoutMinutes === "number" ? { timeout: String(a.timeoutMinutes) } : {}),
       },
     }),
@@ -97,8 +112,8 @@ export const TOOLS: Tool[] = [
     name: "plan",
     description:
       "Plan a need for this project without generating: components, compatibility, files, dependencies, settings, criteria covered/open, decisions that need the user.",
-    inputSchema: obj({ need: { type: "string" } }, ["need"]),
-    map: (a) => ({ cmd: "plan", args: [str(a.need) ?? ""], flags: {} }),
+    inputSchema: obj({ need: { type: "string" }, components: COMPONENTS_ARG }, ["need"]),
+    map: (a) => ({ cmd: "plan", args: [str(a.need) ?? ""], flags: componentsFlag(a.components) }),
   },
   {
     name: "apply",
@@ -147,7 +162,7 @@ export const TOOLS: Tool[] = [
 ];
 
 const INSTRUCTIONS =
-  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result.";
+  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result. Only covered use cases are built: an uncovered request fails with error.code use_case_not_covered and error.notCovered — tell the user the library doesn't cover it yet and that they will be notified with priority; never rephrase the spec to get around it. A partially covered spec stops for a decision (exit 3): show the removed requirements and continue with approve only if the user wants the covered part. To build specific verified components, pass components (ids from search).";
 
 type Message = { jsonrpc: "2.0"; id?: string | number | null; method?: string; params?: unknown };
 

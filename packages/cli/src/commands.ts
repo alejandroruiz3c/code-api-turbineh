@@ -334,6 +334,15 @@ export function planLines(p: Plan): string[] {
         ]
       : []),
     ...p.incompatibilities.map((i) => `  ${yellow("!")} ${i}`),
+    // ADR-0052: what the library does not cover is removed from scope, never listed as work left.
+    ...(p.scope?.status === "partial"
+      ? [
+          "",
+          yellow(bold(`Covered part only: ${p.scope.name}`)),
+          `  ${p.scope.message}`,
+          ...p.scope.removed.map((r) => `  ${yellow("✗")} ${r.requirement} ${dim(`— ${r.why}`)}`),
+        ]
+      : []),
     ...(p.left?.length
       ? [
           "",
@@ -370,6 +379,21 @@ export function planLines(p: Plan): string[] {
   ];
 }
 
+/**
+ * `--components id1,id2` (ADR-0052): build exactly these verified components (from `turbineh search`), each as it was
+ * verified. Without it, the request must map to a covered use case or it is refused (`use_case_not_covered`).
+ */
+export const explicitComponents = (flag: unknown): { components?: string[] } => {
+  const ids =
+    typeof flag === "string"
+      ? flag
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+  return ids.length ? { components: ids } : {};
+};
+
 export async function plan(c: Ctx): Promise<CommandResult> {
   const need = c.args.join(" ").trim();
   if (!need)
@@ -392,6 +416,7 @@ export async function plan(c: Ctx): Promise<CommandResult> {
           ? { stack: { language: "typescript", framework: c.flags.stack } }
           : {},
       preferences: project.preferences,
+      ...explicitComponents(c.flags.components),
     },
   });
   project.lastPlan = created.id;
@@ -837,6 +862,8 @@ export async function status(c: Ctx): Promise<CommandResult> {
         ...(r.result.outcome
           ? [
               r.result.outcome.title,
+              // F18: checks and requirements apart, the same line as the web badge.
+              ...(r.result.outcome.badge ? [`  ${r.result.outcome.badge}`] : []),
               ...(r.result.outcome.verification ? [`  ${r.result.outcome.verification}`] : []),
             ]
           : []),

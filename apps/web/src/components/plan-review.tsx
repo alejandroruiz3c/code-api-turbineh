@@ -72,6 +72,31 @@ export function PlanReview({
             <p className="mt-2 text-xs text-muted">{plan.outcome.actions[0]?.detail}</p>
           </section>
         ) : null}
+        {plan.scope?.status === "partial" ? (
+          <section
+            aria-label="Not covered by the library"
+            data-testid="scope-removed"
+            className="mt-4 rounded-lg border border-amber/60 p-4"
+          >
+            <p className="text-sm font-semibold text-amber">
+              The library doesn&rsquo;t cover all of this yet
+            </p>
+            <p className="mt-1 text-sm text-ice-2">{plan.scope.message}</p>
+            <p className="mt-3 text-xs text-muted">Removed from scope (not built):</p>
+            <ul className="mt-1 list-disc pl-5 text-sm text-ice-2">
+              {plan.scope.removed.map((r) => (
+                <li key={r.requirement}>
+                  {r.requirement} <span className="text-xs text-muted">— {r.why}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted">
+              To build only the covered part (&ldquo;{plan.scope.name}&rdquo;), approve it under
+              &ldquo;Needs your approval&rdquo;. We&rsquo;ll notify you with priority when the rest
+              is covered.
+            </p>
+          </section>
+        ) : null}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Estimate value={`~${plan.estimate.seconds} s`} label="Time to a verified package" />
           <Estimate

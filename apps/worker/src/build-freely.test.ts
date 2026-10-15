@@ -28,7 +28,7 @@ describe("free-form need → buildable plan", () => {
       ...(scope ? { scope } : {}),
     });
 
-  it("built on the closest template: compatible, no approval, the specific part listed as what is left", () => {
+  it("built on the closest template only when every requirement is covered (ADR-0052): nothing listed as left", () => {
     const p = plan({
       builtOn: "saas-crud",
       reason: "No ready-made template matches this need exactly.",
@@ -36,8 +36,8 @@ describe("free-form need → buildable plan", () => {
     expect(p.compatible).toBe(true);
     expect(p.needsApproval).toEqual([]);
     expect(p.outcome?.actions[0]?.id).toBe("generate");
-    expect(p.left?.[0]?.part).toMatch(/no ready-made template matched it exactly/);
-    expect(p.left?.[0]?.where).toMatch(/AGENTS.md/);
+    // Uncovered parts never reach a plan as "left" work: the scope gate refuses them or removes them from scope.
+    expect(p.left).toEqual([]);
   });
 
   it("a matched need lists nothing extra", () => {

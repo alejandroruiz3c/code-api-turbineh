@@ -21,11 +21,20 @@ const Body = z.object({
         .optional(),
     })
     .optional(),
+  /**
+   * ADR-0052: build only the covered part of a partially covered request (explicit choice). Without it such a request
+   * is refused like an uncovered one (`use_case_not_covered`, with the requirements not covered).
+   */
+  covered_only: z.boolean().optional(),
   // `mode` and `parent` are reserved for POST /v1/builds/{id}/improve.
   options: z
     .record(z.string(), z.unknown())
     .transform((o) =>
-      Object.fromEntries(Object.entries(o).filter(([k]) => !["mode", "parent", "brand"].includes(k))),
+      Object.fromEntries(
+        Object.entries(o).filter(
+          ([k]) => !["mode", "parent", "brand", "covered_only", "contact_email"].includes(k),
+        ),
+      ),
     )
     .optional(),
 });
@@ -57,6 +66,8 @@ export async function POST(req: Request): Promise<Response> {
     ...(ipHash ? { clientIpHash: ipHash } : {}),
     options: { ...parsed.data.options, ...(parsed.data.github_username ? { github_username: parsed.data.github_username } : {}),
       ...(parsed.data.brand ? { brand: parsed.data.brand } : {}),
+      ...(parsed.data.covered_only ? { covered_only: true } : {}),
+      ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
     },
   });
   return Response.json(

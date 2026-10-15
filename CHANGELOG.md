@@ -4,8 +4,34 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Scope gate (ADR-0052, supersedes ADR-0050 §4, owner rule): TurbineH only operates requests whose use case the library
+  covers — a covered recipe, or verified components the request maps to or the person chooses (`components` in
+  `POST /v1/plans`, `--components` in the CLI, `components` in MCP). The gate reads the compiled requirements and the
+  request's headline: code flags uncovered platform integrations, autonomous actions, native/hardware apps and AI in
+  use cases without AI; the decider judges the rest in one batched request. An uncovered request is not built:
+  `use_case_not_covered` — "The library doesn't cover this use case yet. We'll notify you with priority as soon as it
+  does." — with `notCovered` (web, API, CLI exit 5). A partially covered request lists what is removed from scope and
+  needs an explicit choice to build only the covered part ("Build only the covered part", `{"approve": true}`,
+  `--approve`; `covered_only: true` on `POST /v1/builds`). The audit's "autonomous social media publisher" is refused
+  instead of being built as a CRUD app.
+- Agent instructions (`turbineh init` block, Claude Code skill, MCP instructions) and `/use` state the rule and how to
+  pick explicit components.
+
+### Added
+
+- Demand for uncovered use cases (`0011_use_case_demand.sql`): every refused or partial request is recorded with the
+  missing requirements, and its owner is subscribed to a priority notification. Staff read it at `GET /v1/ops/demand`
+  or with `pnpm --filter @turbineh/db demand`.
+
 ### Fixed
 
+- Audit F18: the state badge separates build checks from requirements ("Checks 11/11 · Requirements 6/8 met") on the
+  web, the API (`outcome.badge`) and the CLI; "Package verified" is never shown alone while requirements are open, and
+  settings and unmet requirements are separate panels.
+- Audit F20: the quickstart comes from the delivered app's real files and scripts (no `pnpm db:seed`, `.env.example` at
+  the root); generated AGENTS.md no longer points open criteria to a non-existent `tests/e2e/app.spec.ts`.
 - Backup Coder limits (ADR-0055, audit F09/F08): the Backup Coder never reimplements a capability an approved
   catalogue component provides (a hand-written cron scheduler shipped next to `jobs.scheduler.croner`): the selector
   keeps approved providers the decider judged as not covering unless they are risky, and `fillGap` refuses catalogued

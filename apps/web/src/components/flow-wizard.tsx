@@ -49,7 +49,11 @@ export function FlowWizard({
   const [engineMissing, setEngineMissing] = useState(false);
   const [approved, setApproved] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ message: string; action: string } | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    action: string;
+    notCovered?: string[];
+  } | null>(null);
   const github = useGithub();
   const params = useSearchParams();
   const githubResult = params.get("github");
@@ -198,6 +202,14 @@ export function FlowWizard({
         {error ? (
           <div role="alert" className="rounded-lg border border-bad/60 p-4 text-sm">
             <p className="text-bad">{error.message}</p>
+            {error.notCovered?.length ? (
+              // ADR-0052: what the library doesn't cover yet, so the person knows what was asked for.
+              <ul className="mt-2 list-disc pl-5 text-ice-2" data-testid="not-covered">
+                {error.notCovered.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            ) : null}
             <p className="mt-1 text-ice-2">→ {error.action}</p>
           </div>
         ) : null}

@@ -31,7 +31,7 @@ export const STATE_LABEL: Record<string, string> = {
   planned: "plan ready — nothing generated yet",
   generating: "generating and verifying",
   generated: "delivered, not verified — checks not all green (see the failure and fix)",
-  verified: "package generated and verified",
+  verified: "build checks passed in the TurbineH sandbox (see requirements met)",
   integrated: "integrated in this project (not verified here yet)",
   integration_verified: "integrated and verified in this project",
   deployed: "deployed",
@@ -53,6 +53,8 @@ export function print(result: CommandResult, json: boolean, compact = false): vo
     process.stderr.write(
       `\n${red("✖")} ${result.error.message}\n  ${bold("Do:")} ${result.error.action}\n`,
     );
+    // ADR-0052: an uncovered request lists the requirements the library does not cover yet.
+    for (const r of result.error.notCovered ?? []) process.stderr.write(`  ${yellow("✗")} ${r}\n`);
     if (result.error.resume) process.stderr.write(`  ${bold("Resume:")} ${result.error.resume}\n`);
   }
   if (result.next) process.stdout.write(`\n${cyan("→")} ${result.next}\n`);

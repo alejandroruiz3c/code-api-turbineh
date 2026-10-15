@@ -3,7 +3,7 @@ import type { FlowResult, Plan } from "@turbineh/shared";
 import { useEffect, useState } from "react";
 import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { RepoIntegration } from "./repo-integration";
-import { Panel, StateBadge, Stat, pct, secs } from "./ui";
+import { badgeOf, Panel, StateBadge, Stat, pct, secs } from "./ui";
 
 type Flow = Plan & { result?: FlowResult | null };
 
@@ -48,7 +48,7 @@ export function EngineFlow({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3" role="status" aria-live="polite">
-        <StateBadge state={r?.state ?? flow.state} />
+        <StateBadge state={r?.state ?? flow.state} {...badgeOf(r?.outcome ?? null)} />
         <span className="text-sm text-muted">{flow.capability.name}</span>
       </div>
       {r?.outcome && r.outcome.kind !== "working" ? (
@@ -81,7 +81,7 @@ export function EngineFlow({ id }: { id: string }) {
                 ))}
               </ul>
             </Panel>
-            <Panel title="Needs your configuration">
+            <Panel title="Settings">
               {r.needs.filter((n) => !n.satisfied).length === 0 ? (
                 <p className="text-sm text-teal">Nothing pending.</p>
               ) : (
@@ -148,6 +148,13 @@ export function EngineFlow({ id }: { id: string }) {
           {r.errors.map((e) => (
             <div key={e.code} role="alert" className="rounded-lg border border-bad/60 p-4 text-sm">
               <p className="text-bad">{e.message}</p>
+              {e.notCovered?.length ? (
+                <ul className="mt-1 list-disc pl-5 text-ice-2">
+                  {e.notCovered.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              ) : null}
               <p className="mt-1 text-ice-2">→ {e.action}</p>
               {e.resume ? <code className="mt-1 block text-xs text-teal">{e.resume}</code> : null}
             </div>
