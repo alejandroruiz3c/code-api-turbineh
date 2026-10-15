@@ -1,14 +1,11 @@
-import { choice, noul, type Decider } from "@turbineh/decider";
+import type { Decider, IntentDecisions } from "@turbineh/decider";
 import OpenAI from "openai";
 import { z } from "zod";
 import { buildSpecSchema, type BuildSpec } from "./build-spec.js";
 import { extractPalette } from "./palette.js";
 import { separateNonFunctional, type NonFunctionalRequirement } from "./non-functional.js";
 import {
-  ABUSE_QUESTIONS,
-  ABUSE_THRESHOLD,
   ALWAYS_ON,
-  CAPABILITY_QUESTIONS,
   OPTIONAL_PARTS,
   PARTS,
   PUBLIC_SITE_RECIPES,
@@ -29,18 +26,8 @@ export interface CompilerConfig {
   maxOutputTokens?: number;
 }
 
-/** Decider thresholds live in code (per decision point). */
-// Calibration v1 (2026-10-10, from build traces): 0.5 admitted styling/dialog/retry noise; recalibrate with the D2 benchmark.
-export const CAPABILITY_THRESHOLD = 0.6;
-
-export interface CompileDecisions {
-  recipe: { choice: string; confidence: number; probabilities: Record<string, number> };
-  capabilities: Record<string, number>;
-  /** Abuse Guard probabilities (one atomic question each). */
-  abuse: Record<string, number>;
-  deciderModel: string;
-  deciderLatencyMs: number;
-}
+/** Decisions about the request (product family, capabilities, Abuse Guard), from the resource decision engine. */
+export type CompileDecisions = IntentDecisions;
 
 export interface CompileResult {
   ok: boolean;
@@ -63,14 +50,14 @@ const SYSTEM =
 
 /**
  * Prompt → BuildSpec, decomposed:
- *  1. Decider: recipe (one Choice) + one atomic Noul per capability — a single batched request.
+ *  1. Decider (resource decision engine, ADR-0058): product family, optional capabilities and Abuse Guard.
  *  2. Small open model: four small structured parts (meta, entities, pages, criteria) in parallel.
  *  3. Code: deterministic assembly, always-on capabilities, final validation.
  */
 export async function compileIntent(
   prompt: string,
   config: CompilerConfig,
-  decider: Decider,
+  decider: Pick<Decider, "classifyIntent">,
 ): Promise<CompileResult> {
   const start = performance.now();
   const client = new OpenAI({
@@ -91,15 +78,16 @@ export async function compileIntent(
   const sitePromise = generatePart(client, config, prompt, "site", usage, attempts, errors).catch(
     () => undefined,
   );
-  const [decisions, ...requiredParts] = await Promise.all([
-    decide(prompt, decider),
+  const [intent, ...requiredParts] = await Promise.all([
+    decider.classifyIntent({ prompt, recipes: RECIPE_DESCRIPTIONS }),
     ...required.map((name) => generatePart(client, config, prompt, name, usage, attempts, errors)),
   ]);
+  const decisions = intent.decisions;
   const publicSite = (PUBLIC_SITE_RECIPES as readonly string[]).includes(decisions.recipe.choice);
   const parts = [...requiredParts, publicSite ? await sitePromise : undefined];
 
   const latencyMs = Math.round(performance.now() - start);
-  const flagged = Object.entries(decisions.abuse).filter(([, p]) => p >= ABUSE_THRESHOLD);
+  const flagged = intent.abuse;
   if (flagged.length > 0) {
     return {
       ok: false,
@@ -128,12 +116,7 @@ export async function compileIntent(
   const closest = Object.entries(decisions.recipe.probabilities)
     .filter(([k]) => k !== "out_of_scope")
     .sort(([, a], [, b]) => b - a)[0]?.[0];
-  const capabilities = [
-    ...ALWAYS_ON,
-    ...Object.entries(decisions.capabilities)
-      .filter(([, p]) => p >= CAPABILITY_THRESHOLD)
-      .map(([id]) => id),
-  ];
+  const capabilities = [...ALWAYS_ON, ...intent.capabilities];
 
   const parsed = buildSpecSchema.safeParse({
     recipe: decisions.recipe.choice,
@@ -163,44 +146,6 @@ export async function compileIntent(
     usage,
     errors,
     escalate: false,
-  };
-}
-
-async function decide(prompt: string, decider: Decider): Promise<CompileDecisions> {
-  const questions: Record<string, ReturnType<typeof choice> | ReturnType<typeof noul>> = {
-    recipe: choice(
-      "Which product family best matches the app described in `prompt`?",
-      RECIPE_DESCRIPTIONS,
-      { includeNone: false },
-    ),
-  };
-  for (const [id, text] of Object.entries(CAPABILITY_QUESTIONS)) {
-    questions[`cap:${id}`] = noul(`For the app described in \`prompt\`: ${text}`);
-  }
-  for (const [id, text] of Object.entries(ABUSE_QUESTIONS)) {
-    questions[`abuse:${id}`] = noul(`In \`prompt\`: ${text}`);
-  }
-  const d = await decider.ask({ prompt }, questions);
-  const recipe = d.answers.recipe;
-  if (recipe?.type !== "choice") throw new Error("decider returned no recipe choice");
-  const capabilities: Record<string, number> = {};
-  for (const [key, a] of Object.entries(d.answers)) {
-    if (key.startsWith("cap:") && a.type === "noul") capabilities[key.slice(4)] = a.noul;
-  }
-  const abuse: Record<string, number> = {};
-  for (const [key, a] of Object.entries(d.answers)) {
-    if (key.startsWith("abuse:") && a.type === "noul") abuse[key.slice(6)] = a.noul;
-  }
-  return {
-    recipe: {
-      choice: recipe.choice,
-      confidence: recipe.confidence,
-      probabilities: { ...recipe.probabilities },
-    },
-    capabilities,
-    abuse,
-    deciderModel: d.meta.model,
-    deciderLatencyMs: d.meta.latencyMs,
   };
 }
 

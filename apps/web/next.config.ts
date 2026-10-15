@@ -5,10 +5,18 @@ import {
   hasPrivateEngine,
   PRIVATE_ENGINE_RELATIVE,
 } from "./orchestration.config.mjs";
+import {
+  assertDeciderEngine,
+  DECIDER_ENGINE_SPECIFIER,
+  deciderEngineTarget,
+} from "./resource-decider.config.mjs";
 
 // Orchestration engine (ADR-0053): the private package when installed, else the public open fallback; production
 // builds fail loudly without the private one.
 assertEngine();
+// Resource decision engine (ADR-0058): the private package when installed, else the public open fallback (never the
+// Node loader); production builds fail loudly without the private one.
+assertDeciderEngine();
 
 const csp = [
   "default-src 'self'",
@@ -37,9 +45,12 @@ const config: NextConfig = {
     "@turbineh/shared",
     "@turbineh/storage",
   ],
-  ...(hasPrivateEngine()
-    ? { turbopack: { resolveAlias: { [ENGINE_SPECIFIER]: PRIVATE_ENGINE_RELATIVE } } }
-    : {}),
+  turbopack: {
+    resolveAlias: {
+      [DECIDER_ENGINE_SPECIFIER]: deciderEngineTarget(),
+      ...(hasPrivateEngine() ? { [ENGINE_SPECIFIER]: PRIVATE_ENGINE_RELATIVE } : {}),
+    },
+  },
   serverExternalPackages: ["pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
   // install.sh pins the published CLI version and SHA-256 (ADR-0055): its release.json travels with the function.
   outputFileTracingIncludes: { "/install.sh": ["./public/cli/release.json"] },

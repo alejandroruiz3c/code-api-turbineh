@@ -1,4 +1,4 @@
-import type { Answer, Decider } from "@turbineh/decider";
+import { openDecider, type Decider } from "@turbineh/decider";
 import { describe, expect, it } from "vitest";
 import { ERRORS } from "./errors.js";
 import { explainFailure } from "./messages.js";
@@ -14,31 +14,20 @@ import {
   type GateComponent,
 } from "./scope-gate.js";
 
-/** A decider that answers every requirement question with a fixed "needs something outside" probability. */
-function fakeDecider(outside: (requirement: string) => number): Decider & { calls: number } {
+/** A decider whose engine answers every open requirement with a fixed "needs something outside" verdict. */
+function fakeDecider(outside: (requirement: string) => boolean): Decider & { calls: number } {
   const d = {
-    id: "open" as const,
-    capabilities: { maxChoiceOptions: 10, maxScoreLevels: 10, maxStateTokens: 32_000 },
+    ...openDecider,
     calls: 0,
-    async ask(state: unknown, questions: Record<string, unknown>) {
+    async scopeOutside(input: Parameters<Decider["scopeOutside"]>[0]) {
       d.calls++;
-      const s = state as Record<string, string>;
-      const answers: Record<string, Answer> = {};
-      for (const id of Object.keys(questions))
-        answers[id] = { type: "noul", noul: outside(s[id] ?? "") } as Answer;
       return {
-        answers,
-        meta: {
-          backend: "open" as const,
-          model: "fake",
-          latencyMs: 1,
-          requests: 1,
-          usage: {} as never,
-        },
+        outside: Object.fromEntries(input.requirements.map((r) => [r.index, outside(r.text)])),
+        meta: { model: "fake", latencyMs: 1 },
       };
     },
   };
-  return d as unknown as Decider & { calls: number };
+  return d;
 }
 
 const CATALOG: GateComponent[] = [
@@ -71,7 +60,7 @@ const BOOKINGS = {
 
 describe("scope gate (ADR-0052)", () => {
   it("a covered recipe: every requirement covered, one batched decider request", async () => {
-    const decider = fakeDecider(() => 0.1);
+    const decider = fakeDecider(() => false);
     const v = await scopeGate(
       {
         need: "Bookings for a physiotherapy clinic with reminder emails",
@@ -95,7 +84,7 @@ describe("scope gate (ADR-0052)", () => {
   });
 
   it("components chosen explicitly are covered as they were verified, without asking the decider", async () => {
-    const decider = fakeDecider(() => 1);
+    const decider = fakeDecider(() => true);
     const v = await scopeGate(
       {
         need: "autonomous social media publisher",
@@ -129,7 +118,7 @@ describe("scope gate (ADR-0052)", () => {
     ]) {
       const v = await scopeGate(
         { ...SOCIAL, useCase, catalog: CATALOG, aiIncluded: false },
-        fakeDecider(() => 0.1),
+        fakeDecider(() => false),
       );
       expect(v.status, useCase?.id ?? "out_of_scope").toBe("uncovered");
       const why = v.notCovered.map((r) => r.why).join(" | ");
@@ -152,7 +141,7 @@ describe("scope gate (ADR-0052)", () => {
         catalog: CATALOG,
         aiIncluded: false,
       },
-      fakeDecider(() => 0.1),
+      fakeDecider(() => false),
     );
     expect(v.status).toBe("uncovered");
     expect(v.notCovered.map((r) => r.requirement)).toEqual([
@@ -170,7 +159,7 @@ describe("scope gate (ADR-0052)", () => {
         catalog: CATALOG,
         aiIncluded: false,
       },
-      fakeDecider(() => 0.1),
+      fakeDecider(() => false),
     );
     expect(v.status).toBe("covered");
   });
@@ -189,7 +178,7 @@ describe("scope gate (ADR-0052)", () => {
         catalog: CATALOG,
         aiIncluded: false,
       },
-      fakeDecider(() => 0.1),
+      fakeDecider(() => false),
     );
     expect(v.status).toBe("partial");
     expect(v.notCovered.map((r) => r.requirement)).toEqual([
@@ -204,7 +193,7 @@ describe("scope gate (ADR-0052)", () => {
     expect(isGapNotice(approval ?? "")).toBe(false);
   });
 
-  it("the decider decides requirements code cannot place (threshold in code)", async () => {
+  it("the decision engine decides requirements code cannot place", async () => {
     const v = await scopeGate(
       {
         need: "Shop",
@@ -217,7 +206,7 @@ describe("scope gate (ADR-0052)", () => {
         catalog: CATALOG,
         aiIncluded: false,
       },
-      fakeDecider((r) => (r.includes("ERP") ? 0.9 : 0.05)),
+      fakeDecider((r) => r.includes("ERP")),
     );
     expect(v.status).toBe("partial");
     expect(v.notCovered[0]?.requirement).toMatch(/ERP/);
@@ -225,9 +214,9 @@ describe("scope gate (ADR-0052)", () => {
 
   it("without a decider answer: covered use case keeps its requirements, no use case refuses", async () => {
     const failing = {
-      ...fakeDecider(() => 0),
-      ask: () => Promise.reject(new Error("down")),
-    } as unknown as Decider;
+      ...fakeDecider(() => false),
+      scopeOutside: () => Promise.reject(new Error("down")),
+    } satisfies Decider;
     const base = {
       need: "x",
       requirements: ["Staff see appointments"],

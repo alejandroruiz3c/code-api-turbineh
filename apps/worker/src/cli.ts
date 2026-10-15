@@ -6,7 +6,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { closePool, getPool } from "@turbineh/db";
-import { deciderFromEnv } from "@turbineh/decider";
+import { decisionIO } from "@turbineh/decider";
+import { engine as decisionEngine } from "@turbineh/decider/engine";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
 import { modelSlotsFromEnv } from "./models.js";
 import { runBuild } from "./pipeline.js";
@@ -33,7 +34,7 @@ const outcome = await runBuild(
   {
     repoRoot,
     buildsDir: join(repoRoot, "builds"),
-    decider: deciderFromEnv(env),
+    decider: decisionEngine.fromEnv(env, decisionIO),
     ...modelSlotsFromEnv(env),
     compiler: {
       baseURL: env.COMPILER_BASE_URL,

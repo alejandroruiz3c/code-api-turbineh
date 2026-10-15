@@ -19,5 +19,7 @@ node_modules
 /private/*/node_modules
 /private/*/bench
 /private/*/coverage
+/private/*/services
+/private/*/integration
 # Legacy location before ADR-0056: never uploaded.
 /private/orchestration

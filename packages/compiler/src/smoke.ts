@@ -2,7 +2,8 @@
  * WP4 smoke test: 5 prompts (one per beta recipe) must each produce a valid BuildSpec.
  *   pnpm smoke:compiler
  */
-import { deciderFromEnv } from "@turbineh/decider";
+import { decisionIO } from "@turbineh/decider";
+import { engine as decisionEngine } from "@turbineh/decider/engine";
 import { loadLocalEnv, readEnv } from "@turbineh/shared";
 import { compileIntent } from "./index.js";
 
@@ -17,7 +18,7 @@ export const SMOKE_PROMPTS = [
 async function main() {
   loadLocalEnv();
   const env = readEnv();
-  const decider = deciderFromEnv(env);
+  const decider = decisionEngine.fromEnv(env, decisionIO);
   const config = {
     baseURL: env.COMPILER_BASE_URL,
     model: env.COMPILER_MODEL,

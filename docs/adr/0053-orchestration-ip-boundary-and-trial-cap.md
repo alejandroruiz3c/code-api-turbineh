@@ -96,4 +96,5 @@ trigger ids; a recipe template and a component guide drop internal references.
   rewrite, which is the owner's decision (paths listed in the delivery report).
 - Open questions for the owner: whether `packages/decider` (typed adapter over the public decider SDK and the open
   alternative), the selector/compiler decision questions and `services/open-decider` should also become private; they
-  are part of the open library's selection pipeline, so they stay public here.
+  are part of the open library's selection pipeline, so they stay public here. **Resolved by ADR-0058**: they moved to
+  the private resource decision engine; an open fallback stays public.

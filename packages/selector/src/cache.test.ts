@@ -13,20 +13,22 @@ const input = (over: Partial<SelectionInput["app"]> = {}, cards = [card("a"), ca
   },
   candidates: { "data.dates": cards, "ui.empty": [] },
 });
+const key = (i: SelectionInput, version: number | string = 1) => selectionCacheKey(i, version);
 
 describe("selection cache key", () => {
   it("ignores case, spacing and candidate order", () => {
-    expect(selectionCacheKey(input())).toBe(
-      selectionCacheKey(input({ summary: " gym members " }, [card("b"), card("a")])),
-    );
+    expect(key(input())).toBe(key(input({ summary: " gym members " }, [card("b"), card("a")])));
   });
 
   it("changes with the request or with any candidate card (catalog change)", () => {
-    const base = selectionCacheKey(input());
-    expect(
-      selectionCacheKey(input({ acceptance_criteria: ["Staff can delete members"] })),
-    ).not.toBe(base);
-    expect(selectionCacheKey(input({}, [card("a"), card("b", "edited manifest")]))).not.toBe(base);
-    expect(selectionCacheKey(input({}, [card("a"), card("b"), card("c")]))).not.toBe(base);
+    const base = key(input());
+    expect(key(input({ acceptance_criteria: ["Staff can delete members"] }))).not.toBe(base);
+    expect(key(input({}, [card("a"), card("b", "edited manifest")]))).not.toBe(base);
+    expect(key(input({}, [card("a"), card("b"), card("c")]))).not.toBe(base);
+  });
+
+  it("changes with the decision engine's selection policy version", () => {
+    expect(key(input(), 2)).not.toBe(key(input(), 1));
+    expect(key(input(), "open-1")).not.toBe(key(input(), 1));
   });
 });

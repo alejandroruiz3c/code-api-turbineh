@@ -10,17 +10,23 @@ const monorepo = {
   "packages/ui/package.json": pkg({ react: "19.2.0" }),
 };
 
+/** A decider whose engine answers with `answer` (this fake accepts known apps at confidence ≥ 0.75). */
 function decider(answer: { choice: string; confidence: number } | Error): AppChoiceDecider & {
   calls: unknown[];
 } {
   const calls: unknown[] = [];
   return {
     calls,
-    ask: (async (state: unknown, questions: unknown) => {
-      calls.push({ state, questions });
+    chooseApp: async (input) => {
+      calls.push(input);
       if (answer instanceof Error) throw answer;
-      return { answers: { app: { type: "choice", probabilities: {}, ...answer } } };
-    }) as unknown as AppChoiceDecider["ask"],
+      const known = input.apps.some((a) => a.dir === answer.choice);
+      return {
+        dir: answer.choice,
+        confidence: answer.confidence,
+        accepted: known && answer.confidence >= 0.75,
+      };
+    },
   };
 }
 

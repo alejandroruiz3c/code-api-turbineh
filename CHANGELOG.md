@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Resource decisions behind a private engine (ADR-0058): the decision questions, prompts and thresholds (selection,
+  compiler intent and Abuse Guard, scope gate, entity kinds, monorepo app choice, remediation, criterion evidence, T3
+  business rules), the decider backends, the AI gateway's hedging policy and the open decider service moved to the
+  private package `resource-decider` (pinned in `infra/private/versions.json`, required by web and worker).
+  `@turbineh/decider` keeps the interface, the public decision API client and an open minimal fallback (deterministic
+  heuristics), so the open library builds, tests and runs without it. Production decisions are unchanged; workers
+  refuse to start without the private engine.
+
 ### Security
 
 - Generated apps (ADR-0054, external audit of a `saas-crud` app; catalogue-wide):

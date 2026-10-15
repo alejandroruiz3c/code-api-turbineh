@@ -427,7 +427,7 @@ export async function runBuild(
       catalog,
     ),
   };
-  const cacheKey = selectionCacheKey(selectionInput);
+  const cacheKey = selectionCacheKey(selectionInput, deps.decider.selectionVersion);
   const cached = await deps.selectionCache?.get(cacheKey).catch(() => null);
   const selection: SelectionResult = cached
     ? { ...cached, decider: { ...cached.decider, latencyMs: 0, requests: 0, cached: true } }
@@ -1144,10 +1144,7 @@ async function businessRules(
   const candidates = await decideRules(
     {
       summary: spec.summary,
-      recipe:
-        `${recipe.description}. Every other entity gets create and edit forms that already reject missing ` +
-        "required values and values of the wrong type (emails, numbers, dates), a searchable list and delete, " +
-        "scoped to the workspace.",
+      recipe: recipe.description,
       criteria: spec.acceptance_criteria,
       entities: Object.fromEntries(
         entities.map((e) => [e.name, fieldsOf(e).map((f) => `${f.name} (${f.type})`)]),
