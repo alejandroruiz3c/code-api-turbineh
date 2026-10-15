@@ -11,9 +11,13 @@ node_modules
 **/.env*
 *.rtf
 /.claude
-# The private orchestration engine (ADR-0053) is git-ignored but MUST be uploaded with production web deploys.
+# Private packages (ADR-0053, ADR-0056) are git-ignored but MUST be uploaded with production web deploys: the
+# checkouts infra/private/sync.sh pins (private/<name>), without their git data, dependencies, benchmarks or coverage.
 !/private
-!/private/orchestration/**
-/private/orchestration/.git
-/private/orchestration/node_modules
-/private/orchestration/bench
+!/private/**
+/private/*/.git
+/private/*/node_modules
+/private/*/bench
+/private/*/coverage
+# Legacy location before ADR-0056: never uploaded.
+/private/orchestration

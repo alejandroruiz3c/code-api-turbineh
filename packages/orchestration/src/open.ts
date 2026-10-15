@@ -14,7 +14,7 @@ import {
 
 /**
  * Open minimal orchestration engine (ADR-0053): what the public repository runs when the private engine
- * (private/orchestration) is not installed. One fixed route, no decisions, a generic system message, the model sees
+ * (private/agent-orchestrator) is not installed. One fixed route, no decisions, a generic system message, the model sees
  * every tool, one attempt per call. It keeps the public build, tests and local runs working; production deploys
  * refuse to build without the private engine.
  */

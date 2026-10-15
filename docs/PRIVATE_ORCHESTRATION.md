@@ -1,45 +1,75 @@
-# Private orchestration engine
+# Private packages (orchestration engine)
 
 TurbineH's orchestration (the server side of component #001, `ai.orchestrator.turbineh`) is proprietary and lives
-outside this public repository (ADR-0053). This repository contains its interface and an open minimal fallback in
-`packages/orchestration`; everything builds, tests and runs without the private engine.
+outside this public repository (ADR-0053), in its own private repository, consumed at a pinned release (ADR-0057). This
+repository contains its interface and an open minimal fallback in `packages/orchestration`; everything builds, tests
+and runs without the private engine.
 
 ## Layout
 
 ```
-code-api-turbineh/              public repository
-├── packages/orchestration/     @turbineh/orchestration: interface + open fallback (public)
-└── private/orchestration/      private repository, git-ignored here (proprietary engine)
+code-api-turbineh/                    public repository
+├── packages/orchestration/           @turbineh/orchestration: interface + open fallback (public)
+├── infra/private/versions.json       pins: { repo, tag, commit } per private package (no code)
+├── infra/private/sync.sh             checks the pins out into private/<name>
+└── private/agent-orchestrator/       checkout of the private agent orchestrator, git-ignored here (proprietary)
 ```
 
+`infra/private/versions.json` is a map of private packages (`packages.<name>`), each checked out at `private/<name>`:
+
+| Field        | Meaning                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------- |
+| `repo`       | private GitHub repository (`owner/name`)                                                                  |
+| `tag`        | pinned release tag (`vX.Y.Z`)                                                                             |
+| `commit`     | full commit SHA the tag must resolve to                                                                   |
+| `requiredBy` | deploy targets of `infra/staging/deploy.sh` that refuse to deploy without it (`web`, `worker`)            |
+| `contract`   | optional: `{ vendored, public }`, a file the package vendors from this repository, compared byte for byte |
+
 The web app picks the engine at build time (`apps/web/orchestration.config.mjs`): when
-`private/orchestration/src/index.ts` exists, `@turbineh/orchestration/engine` is aliased to it (Turbopack and Vitest);
-otherwise the open fallback is used.
+`private/agent-orchestrator/src/index.ts` exists, `@turbineh/orchestration/engine` is aliased to it (Turbopack and
+Vitest); otherwise the open fallback is used.
 
 ## Setup (operators)
 
+Access to the private repository is required (the GitHub CLI's login is used when available).
+
 ```bash
 cd code-api-turbineh
-git clone <private orchestration repository> private/orchestration   # never inside the public history
-cd private/orchestration
-../../node_modules/.bin/tsc -p tsconfig.json      # typecheck against the public interface
-../../node_modules/.bin/vitest run --root .        # engine tests
+infra/private/sync.sh            # clone/fetch and check out every pinned package (idempotent, offline when in place)
+infra/private/sync.sh --check    # verify only: present, pinned tag → pinned commit, HEAD, clean, contract in sync
 ```
 
 Then run the usual checks from the repository root (`pnpm typecheck && pnpm lint && pnpm test`): the web tests run
-against the private engine when it is present (`ai-orchestration.test.ts` asserts which one is loaded).
+against the private engine when it is present (`ai-orchestration.test.ts` asserts which one is loaded). The engine's
+own checks run in its repository (`pnpm install && pnpm check` inside `private/agent-orchestrator`, or its CI).
+
+Never edit the checkout in place: change the private repository through a PR, release a tag, then update the pin here.
+
+## Releasing a new engine version
+
+1. In the private repository: PR → CI green → merge → bump version, CHANGELOG, annotated tag `vX.Y.Z` (tags are
+   immutable).
+2. Here: a PR that updates `tag` and `commit` in `infra/private/versions.json` (`infra/private/sync.sh --validate`
+   runs in CI). Run `infra/private/sync.sh` and the web tests locally against the new engine.
+3. Deploy (below). Roll back by reverting the pin.
+
+An interface change (`packages/orchestration/src/types.ts`) goes here first, then into the engine's vendored copy and
+a new release, then the pin: deploys refuse an engine whose vendored contract differs from this checkout's interface.
 
 ## Production
 
+- `infra/staging/deploy.sh <staging|production> <web|worker|all>` runs `infra/private/sync.sh --for <target>` before
+  deploying anything: it checks out every package the target requires at its pinned tag and commit, verifies the
+  checkout is clean and the contract is in sync, prints each version (repository, tag and commit), and refuses to
+  deploy otherwise.
 - Vercel production builds (`VERCEL_ENV=production`) and any build with `TURBINEH_REQUIRE_PRIVATE_ORCHESTRATION=1`
   fail when the private engine is missing. `TURBINEH_ALLOW_OPEN_ORCHESTRATION=1` builds the open fallback on purpose.
-- `infra/staging/deploy.sh … web` refuses to deploy without `private/orchestration` or with uncommitted changes in it,
-  and prints the engine revision it deploys. `.vercelignore` uploads it (without `.git`, `node_modules`, `bench`).
-- Workers do not need it.
+- `.vercelignore` uploads `private/<name>` without `.git`, `node_modules`, `bench` and `coverage` (the legacy
+  `private/orchestration` location is never uploaded). Workers do not need the agent orchestrator.
 
 ## Rules
 
-- Never copy private sources into the public tree, issues, PRs, docs or generated apps.
+- Never copy private sources into the public tree, issues, PRs, docs or generated apps; only pins live here.
 - The engine has no runtime dependencies and imports only types from `packages/orchestration/src/types.ts`; a change
   to that interface is made in the public repository first, then in the private engine.
 - The gateway (public) keeps authentication, the trial cap, limits, the model allow-list, billing and error mapping;

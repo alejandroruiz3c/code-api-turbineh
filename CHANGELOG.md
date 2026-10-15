@@ -37,6 +37,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Private orchestration engine (ADR-0057): it is now its own private repository, consumed at a pinned release instead
+  of an unversioned local checkout. `infra/private/versions.json` pins each private package (`repo`, `tag`, `commit`,
+  `requiredBy`, optional `contract`; no code) and `infra/private/sync.sh` checks it out at `private/<name>`, verifying
+  that the tag resolves to the pinned commit, the checkout is clean and the vendored interface matches
+  `packages/orchestration/src/types.ts`. The web app loads the engine from `private/agent-orchestrator` (was
+  `private/orchestration`, no longer supported); `infra/staging/deploy.sh` syncs and verifies the packages each target
+  requires before deploying anything and prints their versions; `.vercelignore` uploads every pinned checkout without
+  git data, dependencies, benchmarks or coverage; CI validates the pins file.
 - Scope gate (ADR-0052, supersedes ADR-0050 §4, owner rule): TurbineH only operates requests whose use case the library
   covers — a covered recipe, or verified components the request maps to or the person chooses (`components` in
   `POST /v1/plans`, `--components` in the CLI, `components` in MCP). The gate reads the compiled requirements and the

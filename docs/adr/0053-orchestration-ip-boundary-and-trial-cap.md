@@ -1,6 +1,7 @@
 # ADR-0053 · Orchestration IP boundary (thin client + private engine) and a $2 trial cap per account
 
-- Status: accepted (number may need renumbering at merge)
+- Status: accepted (number may need renumbering at merge); the private engine's location and delivery are superseded by
+  ADR-0057 (own repository, pinned release at `private/agent-orchestrator`)
 - Date: 2026-10-15
 - Context: two owner requests.
   1. **Trial cap.** "For every user of our inference orchestration component, cap spend at $2; when the limit is
