@@ -3,8 +3,8 @@
   "packages": {
     "agent-orchestrator": {
       "repo": "alejandroruiz3c/turbineh-agent-orchestrator",
-      "tag": "v1.0.0",
-      "commit": "9d95134a862be89c184bd278348e997d127349d4",
+      "tag": "v1.1.0-rc.1",
+      "commit": "79db6ffa4db03983ea560a45fe04a0dea068cc7d",
       "requiredBy": ["web"],
       "contract": {
         "vendored": "contract/orchestration.ts",

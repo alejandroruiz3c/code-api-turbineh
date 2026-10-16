@@ -1,6 +1,7 @@
 import type { AiApp } from "@turbineh/db";
 import type { OrchestrationEngine } from "@turbineh/orchestration";
 import { z } from "zod";
+import type { RequestMetrics } from "./ai-metrics";
 import {
   authenticate,
   type GatewayDeps,
@@ -14,6 +15,7 @@ import {
   OrchestrateBody,
   OrchestratedChatBody,
   orchestrateFor,
+  usageReport,
 } from "./ai-orchestration";
 
 /**
@@ -30,8 +32,9 @@ export const SERVER_INFO = { name: "turbineh-orchestration", version: "1.0.0" };
 const INSTRUCTIONS =
   "TurbineH Intelligence Orchestration: send a task and get an orchestrated answer — TurbineH picks the route " +
   "(model and steps) for each request. Use `orchestrate` for one task over an input (pass a JSON Schema in `schema` " +
-  "to get JSON that matches it), `chat` for a conversation turn, and `trial_status` to see the remaining trial " +
-  "balance. When a tool returns trial_limit_reached, tell the user the trial is used up and to contact " +
+  "to get JSON that matches it), `chat` for a conversation turn, `trial_status` to see the remaining trial " +
+  "balance and `usage_report` for the account's totals (cost, latency, savings against a frontier model). Every " +
+  "answer carries structuredContent.metrics: latency_ms, tokens, cost_usd and the frontier reference. When a tool returns trial_limit_reached, tell the user the trial is used up and to contact " +
   `${TRIAL_CONTACT}; do not retry.`;
 
 type Schema = Record<string, unknown>;
@@ -100,6 +103,16 @@ export const TOOLS: ToolSpec[] = [
     },
   },
   {
+    name: "usage_report",
+    title: "Usage and savings report",
+    description:
+      "Cumulative measurement of this TurbineH account (all its AI apps): requests, model calls, input/output " +
+      "tokens, cost in USD as charged to the trial, p50/p95 latency, the cost of the same tokens at a frontier " +
+      "model's list price (frontier_reference_cost_usd), savings_usd and savings_pct, per surface and in total, plus " +
+      "the trial balance. Free.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "trial_status",
     title: "Trial balance",
     description:
@@ -130,7 +143,10 @@ const toolResult = (text: string, structured?: Record<string, unknown>, isError 
 });
 
 /** A refused or failed call as a tool error: the problem's message and code (402 → trial_limit_reached). */
-async function toolErrorOf(res: Response): Promise<ReturnType<typeof toolResult>> {
+async function toolErrorOf(
+  res: Response,
+  metrics?: RequestMetrics,
+): Promise<ReturnType<typeof toolResult>> {
   let p: { title?: string; detail?: string; code?: string } = {};
   try {
     p = (await res.json()) as typeof p;
@@ -147,6 +163,7 @@ async function toolErrorOf(res: Response): Promise<ReturnType<typeof toolResult>
         message,
         ...(res.status === 402 ? { contact: TRIAL_CONTACT } : {}),
       },
+      ...(metrics && metrics.model_calls > 0 ? { metrics } : {}),
     },
     true,
   );
@@ -166,6 +183,7 @@ async function callTool(
   args: unknown,
   deps: GatewayDeps,
   engine: OrchestrationEngine,
+  startedAt: number,
 ): Promise<ReturnType<typeof toolResult> | null> {
   switch (name) {
     case "trial_status": {
@@ -185,6 +203,18 @@ async function callTool(
         : "This account has no trial cap.";
       return toolResult(text, status);
     }
+    case "usage_report": {
+      const r = await usageReport(app, deps);
+      if (!r) return toolResult("The usage report is not available right now.", undefined, true);
+      const text =
+        `${r.requests} requests, ${r.input_tokens + r.output_tokens} tokens, $${r.cost_usd.toFixed(6)} ` +
+        `(same tokens at the ${r.frontier_reference}: $${r.frontier_reference_cost_usd.toFixed(6)}; ` +
+        `savings ${r.savings_pct}%). Latency p50 ${r.latency_ms.p50 ?? "-"} ms, p95 ${r.latency_ms.p95 ?? "-"} ms.` +
+        (r.trial.remaining_usd === null
+          ? ""
+          : ` Trial remaining: $${r.trial.remaining_usd.toFixed(4)} of $${r.trial.cap_usd}.`);
+      return toolResult(text, r as unknown as Record<string, unknown>);
+    }
     case "orchestrate": {
       const a = OrchestrateArgs.safeParse(args ?? {});
       if (!a.success)
@@ -195,8 +225,9 @@ async function callTool(
         { ...a.data, timeoutMs: DEFAULT_TIMEOUT_MS },
         deps,
         engine,
+        { surface: "mcp:orchestrate", startedAt },
       );
-      if (!out.ok) return toolErrorOf(out.response);
+      if (!out.ok) return toolErrorOf(out.response, out.metrics);
       let answer: unknown = out.result.text;
       if (a.data.schema) {
         try {
@@ -209,6 +240,7 @@ async function callTool(
         answer,
         route: out.result.route,
         usage: out.result.usage,
+        metrics: out.metrics,
         ...(await remaining(app, deps)),
       });
     }
@@ -218,12 +250,16 @@ async function callTool(
         return toolResult(`Invalid arguments: ${z.prettifyError(a.error)}`, undefined, true);
       const request = chatToOrchestrate({ messages: a.data.messages });
       if (!request) return toolResult("The last message must be the user's.", undefined, true);
-      const out = await orchestrateFor(app, "orchestrate", request, deps, engine);
-      if (!out.ok) return toolErrorOf(out.response);
+      const out = await orchestrateFor(app, "orchestrate", request, deps, engine, {
+        surface: "mcp:chat",
+        startedAt,
+      });
+      if (!out.ok) return toolErrorOf(out.response, out.metrics);
       return toolResult(out.result.text, {
         reply: out.result.text,
         route: out.result.route,
         usage: out.result.usage,
+        metrics: out.metrics,
         ...(await remaining(app, deps)),
       });
     }
@@ -244,6 +280,7 @@ export async function handleMcp(
   deps: GatewayDeps,
   engine: OrchestrationEngine,
 ): Promise<Response> {
+  const startedAt = Date.now();
   if (req.method !== "POST")
     return new Response(null, {
       status: 405,
@@ -298,7 +335,7 @@ export async function handleMcp(
     case "tools/call": {
       const p = (m.params ?? {}) as { name?: unknown; arguments?: unknown };
       try {
-        const result = await callTool(app, p.name, p.arguments, deps, engine);
+        const result = await callTool(app, p.name, p.arguments, deps, engine, startedAt);
         if (!result) return rpcError(id, -32602, `Unknown tool: ${String(p.name)}`);
         return reply(result);
       } catch (err) {

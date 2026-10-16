@@ -1,10 +1,18 @@
-import type { AiApp } from "@turbineh/db";
+import type { AiApp, AiRequestMetric, AiUsageTotals } from "@turbineh/db";
 import type { OrchestrateRequest, OrchestrationEngine } from "@turbineh/orchestration";
 import { engine as installedEngine } from "@turbineh/orchestration/engine";
 import { describe, expect, it } from "vitest";
 import { type GatewayDeps, gatewayConfig, TRIAL_REMAINING_HEADER } from "./ai-gateway";
 import { handleMcp, TOOLS } from "./ai-mcp";
-import { chatToOrchestrate, handleChatCompletions, handleOrchestration } from "./ai-orchestration";
+import { callCostUsd } from "./ai-cost";
+import { FRONTIER_REFERENCE, type RequestMetrics } from "./ai-metrics";
+import {
+  chatToOrchestrate,
+  handleChatCompletions,
+  handleOrchestration,
+  handleUsage,
+  NO_ANSWER,
+} from "./ai-orchestration";
 
 /**
  * Intelligence Orchestration as a product (ADR-0059): a trial token without a build uses the OpenAI-compatible chat
@@ -203,6 +211,98 @@ describe("OpenAI-compatible chat with orchestrated routing (ADR-0059)", () => {
   });
 });
 
+describe("compute control and empty answers (ADR-0060)", () => {
+  /** An engine that runs one model call with the given extra fields and returns what the gateway reported. */
+  const probe = (
+    extra: Record<string, unknown>,
+    out: { answer?: Record<string, unknown> } = {},
+  ): OrchestrationEngine => ({
+    edition: "open",
+    agentStep: async () => {
+      throw new Error("unused");
+    },
+    orchestrate: async (req, io) => {
+      const route = io.routes[0];
+      if (!route) throw new Error("no route");
+      const a = await io.chat(
+        { model: route.model, messages: [{ role: "user", content: req.input }], ...extra },
+        req.timeoutMs,
+      );
+      out.answer = a as never;
+      return {
+        text: a.text,
+        route: route.name,
+        model: route.model,
+        tool: null,
+        flags: ["truncated"],
+        usage: { calls: 1, inputTokens: 1, outputTokens: 1 },
+        decision: "none",
+      };
+    },
+  });
+  const chat = { model: "turbineh-orchestration", messages: [{ role: "user", content: "x" }] };
+
+  it("forwards reasoning_effort when the engine sets it, and reports finish_reason back", async () => {
+    const g = gateway();
+    const real = g.d.fetch;
+    g.d.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const res = await real(url, init);
+      const body = (await res.json()) as { choices: Record<string, unknown>[] };
+      body.choices[0] = { ...body.choices[0], finish_reason: "length" };
+      return Response.json(body);
+    }) as typeof fetch;
+    const out: { answer?: Record<string, unknown> } = {};
+    const res = await handleChatCompletions(
+      post(chat),
+      g.d,
+      probe({ reasoning_effort: "none" }, out),
+    );
+    expect(res.status).toBe(200);
+    expect(g.upstream[0]?.body.reasoning_effort).toBe("none");
+    expect(out.answer?.finishReason).toBe("length");
+    const body = (await res.json()) as {
+      choices: { finish_reason: string }[];
+      turbineh: { flags: string[] };
+    };
+    expect(body.choices[0]?.finish_reason).toBe("length");
+    expect(body.turbineh.flags).toEqual(["truncated"]);
+
+    const plain = gateway();
+    await handleChatCompletions(post(chat), plain.d, probe({}, out));
+    expect(plain.upstream[0]?.body).not.toHaveProperty("reasoning_effort");
+    expect(out.answer).not.toHaveProperty("finishReason");
+    const bad = await handleChatCompletions(
+      post(chat),
+      plain.d,
+      probe({ reasoning_effort: "max" }),
+    );
+    expect(bad.status).toBe(400);
+  });
+
+  it("JSON mode is structured output: the engine gets an object schema", () => {
+    expect(
+      chatToOrchestrate({ ...chat, response_format: { type: "json_object" } } as never),
+    ).toMatchObject({ schema: { type: "object" } });
+    expect(chatToOrchestrate(chat as never)).not.toHaveProperty("schema");
+  });
+
+  it("no answer from any attempt: 502 no_answer", async () => {
+    const g = gateway();
+    const engine: OrchestrationEngine = {
+      edition: "open",
+      agentStep: async () => {
+        throw new Error("unused");
+      },
+      orchestrate: async () => {
+        throw Object.assign(new Error(NO_ANSWER), { code: "upstream", status: 502 });
+      },
+    };
+    const res = await handleChatCompletions(post(chat), g.d, engine);
+    expect(res.status).toBe(502);
+    expect(await res.json()).toMatchObject({ code: "no_answer" });
+  });
+});
+
 describe("/orchestrate and /agent with a trial token (no build)", () => {
   it("timeoutMs is optional; the answer carries usage and the remaining balance", async () => {
     const g = gateway();
@@ -288,7 +388,12 @@ describe("remote MCP server (ADR-0059)", () => {
     const list = (await (await handleMcp(rpc("tools/list"), g.d, scripted())).json()) as {
       result: { tools: { name: string; description: string }[] };
     };
-    expect(list.result.tools.map((t) => t.name)).toEqual(["orchestrate", "chat", "trial_status"]);
+    expect(list.result.tools.map((t) => t.name)).toEqual([
+      "orchestrate",
+      "chat",
+      "usage_report",
+      "trial_status",
+    ]);
     for (const t of TOOLS) expect(t.description.length).toBeGreaterThan(80);
   });
 
@@ -382,5 +487,227 @@ describe("remote MCP server (ADR-0059)", () => {
       error: { code: number };
     };
     expect(method.error.code).toBe(-32601);
+  });
+});
+
+describe("per-request measurement and the usage report (ADR-0060)", () => {
+  /** The gateway double with stored measurements. */
+  function measured(spent: Record<string, number> = {}) {
+    const g = gateway(spent);
+    const stored: AiRequestMetric[] = [];
+    g.d.recordRequest = async (m) => {
+      stored.push(m);
+    };
+    return { ...g, stored };
+  }
+  // One chat call of the scripted engine: 100,000 in / 1,000 out on gemma.
+  const COST = callCostUsd("chat", "gemma-4-26b-a4b-it", 100_000, 1000);
+  const REFERENCE = (100_000 * 4 + 1000 * 20) / 1e6;
+
+  const expectMetrics = (m: RequestMetrics) => {
+    expect(m).toMatchObject({
+      model_calls: 1,
+      input_tokens: 100_000,
+      output_tokens: 1000,
+      frontier_reference: FRONTIER_REFERENCE.label,
+    });
+    expect(m.cost_usd).toBeCloseTo(COST, 8);
+    expect(m.frontier_reference_cost_usd).toBeCloseTo(REFERENCE, 8);
+    expect(m.savings_usd).toBeCloseTo(REFERENCE - COST, 8);
+    expect(m.savings_pct).toBeCloseTo(((REFERENCE - COST) / REFERENCE) * 100, 1);
+    expect(m.latency_ms).toBeGreaterThanOrEqual(0);
+  };
+
+  it("orchestrated chat: turbineh.metrics, headers, stored as 'chat'", async () => {
+    const g = measured({ [OWNER]: 0.5 });
+    const res = await handleChatCompletions(
+      post({ model: "turbineh-orchestration", messages: [{ role: "user", content: "x" }] }),
+      g.d,
+      scripted(),
+    );
+    const body = (await res.json()) as { turbineh: { metrics: RequestMetrics } };
+    expectMetrics(body.turbineh.metrics);
+    expect(Number(res.headers.get("X-TurbineH-Cost-USD"))).toBeCloseTo(COST, 8);
+    expect(res.headers.get("X-TurbineH-Latency-Ms")).toBe(String(body.turbineh.metrics.latency_ms));
+    expect(Number(res.headers.get("X-TurbineH-Frontier-Reference-Cost-USD"))).toBeCloseTo(
+      REFERENCE,
+      8,
+    );
+    expect(res.headers.get("X-TurbineH-Savings-Pct")).toBe(
+      String(body.turbineh.metrics.savings_pct),
+    );
+    expect(res.headers.get(TRIAL_REMAINING_HEADER)).not.toBeNull();
+    expect(g.stored).toHaveLength(1);
+    expect(g.stored[0]).toMatchObject({
+      ownerId: OWNER,
+      appId: TRIAL.id,
+      surface: "chat",
+      ok: true,
+    });
+  });
+
+  it("direct model chat: the OpenAI body plus turbineh.metrics, stored as 'chat-direct'", async () => {
+    const g = measured();
+    const res = await handleChatCompletions(
+      post({ model: "gemma-4-26b-a4b-it", messages: [{ role: "user", content: "x" }] }),
+      g.d,
+      scripted(),
+    );
+    const body = (await res.json()) as {
+      choices: unknown[];
+      turbineh: { metrics: RequestMetrics };
+    };
+    expect(body.choices).toHaveLength(1);
+    expectMetrics(body.turbineh.metrics);
+    expect(g.stored[0]?.surface).toBe("chat-direct");
+  });
+
+  it("/orchestrate and /agent: turbineh.metrics next to the engine's answer", async () => {
+    const g = measured();
+    const res = await handleOrchestration(
+      post({ task: "t", input: "x" }),
+      "orchestrate",
+      g.d,
+      scripted(),
+    );
+    const body = (await res.json()) as { text: string; turbineh: { metrics: RequestMetrics } };
+    expect(body.text).toBe('{"ok":true}');
+    expectMetrics(body.turbineh.metrics);
+    expect(g.stored[0]?.surface).toBe("orchestrate");
+  });
+
+  it("a failed request keeps its headers and is stored as failed; refused before any call: not stored", async () => {
+    const g = measured();
+    const engine: OrchestrationEngine = {
+      edition: "open",
+      agentStep: async () => {
+        throw new Error("unused");
+      },
+      orchestrate: async (req, io) => {
+        await io.chat(
+          { model: io.routes[0]!.model, messages: [{ role: "user", content: "x" }] },
+          1000,
+        );
+        throw Object.assign(new Error(NO_ANSWER), { code: "upstream", status: 502 });
+      },
+    };
+    const res = await handleOrchestration(
+      post({ task: "t", input: "x" }),
+      "orchestrate",
+      g.d,
+      engine,
+    );
+    expect(res.status).toBe(502);
+    expect(Number(res.headers.get("X-TurbineH-Cost-USD"))).toBeCloseTo(COST, 8);
+    expect(g.stored[0]).toMatchObject({ surface: "orchestrate", ok: false, modelCalls: 1 });
+
+    const capped = measured({ [OWNER]: 2 });
+    const refused = await handleOrchestration(
+      post({ task: "t", input: "x" }),
+      "orchestrate",
+      capped.d,
+      scripted(),
+    );
+    expect(refused.status).toBe(402);
+    expect(capped.stored).toHaveLength(0);
+  });
+
+  it("MCP: structuredContent.metrics; usage_report and GET /v1/usage return the account's totals", async () => {
+    const g = measured({ [OWNER]: 0.5 });
+    const call = (await (
+      await handleMcp(
+        new Request("https://gw.test/mcp", {
+          method: "POST",
+          headers: { Authorization: "Bearer tbh_ai_trial", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "tools/call",
+            params: { name: "orchestrate", arguments: { task: "t", input: "x" } },
+          }),
+        }),
+        g.d,
+        scripted(),
+      )
+    ).json()) as { result: { structuredContent: { metrics: RequestMetrics } } };
+    expectMetrics(call.result.structuredContent.metrics);
+    expect(g.stored[0]?.surface).toBe("mcp:orchestrate");
+
+    const totals: AiUsageTotals = {
+      total: {
+        requests: 4,
+        failedRequests: 1,
+        modelCalls: 9,
+        inputTokens: 4000,
+        outputTokens: 500,
+        costUsd: 0.0015,
+        referenceCostUsd: 0.026,
+        latencyP50Ms: 900,
+        latencyP95Ms: 2100,
+        since: "2026-10-15T00:00:00.000Z",
+        until: "2026-10-15T01:00:00.000Z",
+      },
+      bySurface: {},
+    };
+    totals.bySurface.chat = { ...totals.total };
+    g.d.usageTotals = async (owner) => {
+      expect(owner).toBe(OWNER);
+      return totals;
+    };
+    const res = await handleUsage(
+      new Request("https://gw.test/usage", { headers: { Authorization: "Bearer tbh_ai_trial" } }),
+      g.d,
+    );
+    expect(res.status).toBe(200);
+    const report = (await res.json()) as Record<string, unknown>;
+    expect(report).toMatchObject({
+      object: "turbineh.usage_report",
+      requests: 4,
+      failed_requests: 1,
+      model_calls: 9,
+      input_tokens: 4000,
+      output_tokens: 500,
+      latency_ms: { p50: 900, p95: 2100 },
+      cost_usd: 0.0015,
+      frontier_reference_cost_usd: 0.026,
+      frontier_reference: FRONTIER_REFERENCE.label,
+      savings_usd: 0.0245,
+      savings_pct: 94.2,
+      trial: { cap_usd: 2, reached: false },
+    });
+    expect((report.by_surface as Record<string, { savings_pct: number }>).chat?.savings_pct).toBe(
+      94.2,
+    );
+    const mcp = (await (
+      await handleMcp(
+        new Request("https://gw.test/mcp", {
+          method: "POST",
+          headers: { Authorization: "Bearer tbh_ai_trial", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 2,
+            method: "tools/call",
+            params: { name: "usage_report", arguments: {} },
+          }),
+        }),
+        g.d,
+        scripted(),
+      )
+    ).json()) as { result: { isError: boolean; structuredContent: Record<string, unknown> } };
+    expect(mcp.result.isError).toBe(false);
+    expect(mcp.result.structuredContent).toMatchObject({ requests: 4, savings_pct: 94.2 });
+
+    expect((await handleUsage(new Request("https://gw.test/usage"), g.d)).status).toBe(401);
+    const none = gateway();
+    expect(
+      (
+        await handleUsage(
+          new Request("https://gw.test/usage", {
+            headers: { Authorization: "Bearer tbh_ai_trial" },
+          }),
+          none.d,
+        )
+      ).status,
+    ).toBe(503);
   });
 });

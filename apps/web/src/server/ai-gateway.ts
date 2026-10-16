@@ -1,8 +1,9 @@
-import type { AdmitResult, AiApp } from "@turbineh/db";
+import type { AdmitResult, AiApp, AiRequestMetric, AiUsageTotals } from "@turbineh/db";
 import type { HedgeConfig, HedgeOutcome, HedgingPolicy } from "@turbineh/decider";
 import { engine } from "@turbineh/decider/engine";
 import { z } from "zod";
 import { callCostUsd } from "./ai-cost";
+import { metered, metricsHeaders, metricsOf, recordRequest } from "./ai-metrics";
 
 /**
  * TurbineH AI gateway (ADR-0029). Generated AI apps call it with their app token; it forwards to TurbineH's model
@@ -124,6 +125,11 @@ export function chatBody(body: unknown, cfg: GatewayConfig): Record<string, unkn
       tools: z.array(Tool).max(32).optional(),
       tool_choice: ToolChoice.optional(),
       stream: z.literal(false).optional(),
+      /**
+       * OpenAI-compatible reasoning control (ADR-0060): the open models think by default and can spend all of
+       * max_tokens on reasoning; "none" turns it off. Forwarded only when given.
+       */
+      reasoning_effort: z.enum(["none", "minimal", "low", "medium", "high"]).optional(),
     })
     .parse(body);
   if (!list(cfg.AI_GATEWAY_CHAT_MODELS).includes(b.model))
@@ -136,6 +142,7 @@ export function chatBody(body: unknown, cfg: GatewayConfig): Record<string, unkn
     max_tokens: Math.min(b.max_tokens ?? 1200, cfg.AI_GATEWAY_MAX_OUTPUT_TOKENS),
     ...(b.response_format ? { response_format: b.response_format } : {}),
     ...(tools ? { tools, tool_choice: b.tool_choice ?? "auto" } : {}),
+    ...(b.reasoning_effort ? { reasoning_effort: b.reasoning_effort } : {}),
   };
 }
 
@@ -221,6 +228,10 @@ export interface GatewayDeps {
   config: GatewayConfig;
   /** Hedging policy (the installed decision engine's by default). */
   hedging?: HedgingPolicy;
+  /** Stores one measured request for the account's usage report (ADR-0060); absent = not stored. */
+  recordRequest?: (m: AiRequestMetric) => Promise<void>;
+  /** The account's measured requests, aggregated (ADR-0060); absent = no usage report. */
+  usageTotals?: (ownerId: string) => Promise<AiUsageTotals>;
 }
 
 export const problem = (status: number, title: string, extra: Record<string, unknown> = {}) =>
@@ -415,6 +426,7 @@ export async function handleGateway(
   kind: GatewayKind,
   deps: GatewayDeps,
 ): Promise<Response> {
+  const started = Date.now();
   const app = await authenticate(req, deps);
   if (!app) return problem(401, "Invalid or missing AI token");
 
@@ -441,14 +453,24 @@ export async function handleGateway(
   if (!upstreamOf(kind, cfg).key) return problem(503, "AI is not available right now");
 
   const sent = Date.now();
-  const result = await forward(app, kind, body, deps);
+  const m = metered(deps, started);
+  const result = await forward(app, kind, body, m.deps);
   if (!result.ok) return upstreamProblem(result.status);
   const upstreamMs = Date.now() - sent;
-  return Response.json(result.json, {
+  // Per-request measurement (ADR-0060): headers on every answer; chat answers also carry it in `turbineh.metrics`
+  // (an extra field: the OpenAI shape is unchanged) and are stored for the account's usage report.
+  const metrics = metricsOf(m.meter);
+  const json =
+    kind === "chat" && result.json && typeof result.json === "object" && !Array.isArray(result.json)
+      ? { ...(result.json as Record<string, unknown>), turbineh: { metrics } }
+      : result.json;
+  if (kind === "chat") await recordRequest(app, "chat-direct", true, metrics, deps);
+  return Response.json(json, {
     headers: {
       "Cache-Control": "no-store",
       "Server-Timing": `upstream;dur=${upstreamMs}`,
       ...(kind === "chat" ? { "X-TurbineH-Hedge": result.hedge } : {}),
+      ...metricsHeaders(metrics),
       ...(await trialHeaders(app, deps)),
     },
   });
