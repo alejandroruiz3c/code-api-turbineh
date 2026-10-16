@@ -30,7 +30,11 @@ export async function getStaff(): Promise<Staff | null> {
   const h = await headers();
   if (h.get("authorization")) return null;
   const session = await auth.api.getSession({ headers: h }).catch(() => null);
-  if (session && list(env.OPS_ADMIN_EMAILS).includes(session.user.email.toLowerCase()))
+  // Only a verified email can name a staff member (same rule as the generated apps' staff, ADR-0040).
+  if (
+    session?.user.emailVerified &&
+    list(env.OPS_ADMIN_EMAILS).includes(session.user.email.toLowerCase())
+  )
     return { via: "session", ownerId: `user:${session.user.id}` };
   return null;
 }

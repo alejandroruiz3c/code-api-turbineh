@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = {
   caller: null as null | Record<string, unknown>,
-  session: null as null | { user: { id: string; email: string } },
+  session: null as null | { user: { id: string; email: string; emailVerified: boolean } },
   headers: new Headers(),
 };
 vi.mock("next/headers", () => ({ headers: async () => state.headers }));
@@ -82,12 +82,15 @@ describe("staff access", () => {
     expect(await getStaff()).toEqual({ via: "api-key", ownerId: "ops:smoke" });
     state.caller = { kind: "access", ownerId: "invite:ws-12345678", workspaceId: "ws-12345678" };
     expect(await getStaff()).toBeNull();
-    state.session = { user: { id: "u1", email: "staff@example.test" } };
+    state.session = { user: { id: "u1", email: "staff@example.test", emailVerified: true } };
     expect(await getStaff()).toEqual({ via: "session", ownerId: "user:u1" });
-    state.session = { user: { id: "u2", email: "client@example.test" } };
+    state.session = { user: { id: "u2", email: "client@example.test", emailVerified: true } };
+    expect(await getStaff()).toBeNull();
+    // An unverified email never names a staff member.
+    state.session = { user: { id: "u3", email: "staff@example.test", emailVerified: false } };
     expect(await getStaff()).toBeNull();
     // A Bearer caller is judged by its key only, never by a cookie session.
-    state.session = { user: { id: "u1", email: "staff@example.test" } };
+    state.session = { user: { id: "u1", email: "staff@example.test", emailVerified: true } };
     state.headers = new Headers({ authorization: "Bearer tbh_client" });
     state.caller = { kind: "api-key", ownerId: "user:42" };
     expect(await getStaff()).toBeNull();
@@ -132,7 +135,7 @@ describe("POST /v1/ops/owner-report/send", () => {
         }),
       );
     expect((await post()).status).toBe(404);
-    state.session = { user: { id: "u1", email: "staff@example.test" } };
+    state.session = { user: { id: "u1", email: "staff@example.test", emailVerified: true } };
     state.caller = { kind: "access", ownerId: "invite:ws-12345678", workspaceId: "ws-12345678" };
     expect((await post({ origin: "https://evil.example" })).status).toBe(403);
     const res = await post({
