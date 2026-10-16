@@ -6,7 +6,14 @@ import { detectStack, isGapNotice } from "@turbineh/engine";
 import { describe, expect, it } from "vitest";
 import { componentPlan, flowPlan } from "./product.js";
 import { emptyDelivery } from "./manifest.js";
-import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
+import {
+  coveredPart,
+  declaredOffers,
+  explainUncovered,
+  gateRequest,
+  offerPlan,
+  withScope,
+} from "./scope.js";
 
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
 
@@ -347,5 +354,28 @@ describe("uncovered use case → components-only offer (ADR-0062), against the r
     });
     expect(explanation.offer).toBeNull();
     expect(explanation.canDoNow).toMatch(/nothing was built/);
+  });
+});
+
+describe("offers from canonical criteria (ADR-0063)", () => {
+  it("a requirement a component's suite proves is linked to it, never listed as not included", () => {
+    const req = (requirement: string) => ({ requirement, covered: false, why: "x" });
+    const d = declaredOffers(
+      {
+        requirements: [
+          req("Posts are published automatically at the scheduled time"),
+          req("Failed publications are retried with backoff and logged"),
+          req("Users can update the scheduled time of a post"),
+          req("Posts are translated automatically into five languages"),
+        ],
+      },
+      componentsDir,
+      "A social media publisher for LinkedIn and X with scheduling and retries",
+    );
+    expect(d[0]?.map((x) => x.id)).toEqual(["social.publish.turbineh"]);
+    expect(d[1]?.map((x) => x.id)).toEqual(["social.publish.turbineh"]);
+    expect(d[2]?.map((x) => x.id)).toEqual(["social.publish.turbineh"]);
+    expect(d[3]).toBeUndefined();
+    expect(d[1]?.[0]?.test).toMatch(/social-publish\.spec\.ts › a failed publication is retried/);
   });
 });

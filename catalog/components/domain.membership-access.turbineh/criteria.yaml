@@ -30,7 +30,7 @@
 - id: membership.cannot-manage
   criterion: "A member whose role cannot manage the workspace cannot invite people or change roles"
   advertises: "roles"
-  says: ["invit|role|manage", "cannot|can't|not|only|denied|refus"]
+  says: ["invit|role|manage", "cannot|can't|\\bnot\\b|only|denied|refus"]
   terms: >-
     member members role roles manage managing workspace invite invites people change changes permission permissions
     only owners admins allowed denied refused viewer viewers editor editors

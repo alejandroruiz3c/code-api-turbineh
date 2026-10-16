@@ -525,6 +525,9 @@ describe("domain components' canonical criteria prove their own wording (ADR-006
     "domain.workflow.turbineh",
     "domain.audit-log.turbineh",
     "domain.bookings.turbineh",
+    "social.publish.turbineh",
+    "social.connections.turbineh",
+    "social.metrics.turbineh",
   ])("%s", (id) => {
     const list = canonicalCriteria({ recipesDir, recipe: "saas-crud", components: [id] }).filter(
       (c) => c.from === id && !c.when,

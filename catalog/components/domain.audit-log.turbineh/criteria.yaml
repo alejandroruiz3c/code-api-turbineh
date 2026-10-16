@@ -20,7 +20,7 @@
 - id: audit.immutable
   criterion: "Audit entries cannot be changed or deleted, not even directly in the database"
   advertises: "audit log"
-  says: ["audit|log|history|trail", "cannot|immutable|append|never|not|tamper"]
+  says: ["audit|log|history|trail", "cannot|immutable|append|never|\\bnot\\b|tamper"]
   terms: audit entries entry log logs changed deleted edit delete tamper append only immutable database directly never
   tests:
     - "tests/e2e/audit-log.spec.ts › audit entries cannot be changed or deleted, not even directly in the database"

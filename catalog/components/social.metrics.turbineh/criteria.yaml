@@ -1,0 +1,12 @@
+# Canonical acceptance criteria (ADR-0063) of social engagement metrics.
+- id: social-metrics.dashboard
+  criterion: "A dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule"
+  advertises: "likes, comments, shares, impressions"
+  says: ["metric|engagement|like|comment|share|impression|reach|analytic|stat"]
+  terms: >-
+    dashboard metrics metric engagement likes like comments comment shares share impressions reach basic
+    analytics stats statistics published post posts fetched schedule scheduled show shows see view data network
+    networks available
+  actors: [owner, admin, manager, editor]
+  tests:
+    - "tests/e2e/social-metrics.spec.ts › a dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule, not fetched again while fresh"

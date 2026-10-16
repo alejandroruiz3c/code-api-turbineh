@@ -28,7 +28,7 @@
 - id: workflow.history-immutable
   criterion: "Status history cannot be changed or deleted, not even directly in the database"
   advertises: "workflow"
-  says: ["history|log|trail|event", "cannot|immutable|append|never|not"]
+  says: ["history|log|trail|event", "cannot|immutable|append|never|\\bnot\\b"]
   terms: status history log trail event events append only immutable changed deleted edit delete database directly
   tests:
     - "tests/e2e/workflow.spec.ts › status history cannot be changed or deleted, not even directly in the database"

@@ -1,0 +1,22 @@
+{
+  "id": "FA04",
+  "band": "A",
+  "flowId": "d32e698a-35cd-4d3a-b4f9-e95977e7bf0a",
+  "refused": false,
+  "error": null,
+  "planCriteria": null,
+  "approved": [
+    "Build verified components only, \"Verified components: a kanban board\": the library doesn't cover this use case yet, so it is not built. You get a kanban board — working and verified, as separate components to add to your app. (ui.kanban.turbineh). Not included: Given a project exists, a user can create a task within that project; Given a task exists, a user can assign a specific team member to it; Given a task exists, a user can set a priority level for it; Given a task exists, a user can assign a due date to it; Given a task exists, a user can add a text comment to it; Given a task's due date has passed and it is not in the 'Done' column, the task is visually flagged as overdue; Given a user is logged in, the user can view a filtered list containing only tasks assigned to them; and the application itself (its screens, data and flows) — only these components. This package is not the complete product you described."
+  ],
+  "state": "generated",
+  "badge": "Not verified · functional 0/8 · components only: 1 served by a component, 7 out of scope",
+  "functional": {
+    "met": 0,
+    "total": 8,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": null,
+  "criteria": [],
+  "minutes": 3.6
+}

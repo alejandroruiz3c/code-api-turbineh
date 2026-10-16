@@ -284,6 +284,14 @@ function candidate(
     if (!named.test(derived)) return false;
   }
   if (statesRefusal(scopeOnly(derived)) && !statesRefusal(c.criterion)) return false;
+  // The function itself must be named: at least two of the request criterion's words are the canonical criterion's own
+  // (its wording, its tests' titles, its terms) — never only domain nouns, aliases or the request's subject words.
+  const own = salientStems(
+    [c.criterion, c.advertises, ...c.tests.map((t) => splitTestRef(t).title), ...c.terms].join(
+      "\n",
+    ),
+  );
+  if ([...salientStems(derived)].filter((w) => own.has(w)).length < 2) return false;
   return servesActors(derived, c, aliases);
 }
 

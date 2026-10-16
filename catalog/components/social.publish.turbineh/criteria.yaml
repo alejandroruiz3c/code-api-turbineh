@@ -1,0 +1,58 @@
+# Canonical acceptance criteria (ADR-0063) of social publishing: what the component proves with its E2E suite.
+- vocabulary: >-
+    post posts posting content draft drafts publication publications network networks social media account accounts
+    linkedin facebook instagram x twitter page pages owner brand business schedule scheduled time times connected
+
+- id: social-publish.adapt-format
+  criterion: "Each post is adapted to each network's format and length before it is saved"
+  advertises: "per-network length/format rules"
+  says: ["format|length|limit|characters?|adapt|tailor|fit|version"]
+  terms: >-
+    adapt adapts adapted adaptation tailor tailored fit fits format formats length lengths limit limits character
+    characters version versions each per network saved save before rules weighted counts count cut
+  actors: [owner, admin, manager, editor]
+  tests:
+    - "tests/e2e/social-publish.spec.ts › each post is adapted to each network's format and length before it is saved: a text over X's 280 weighted characters is refused with its count and nothing is saved, a shorter X version is saved"
+
+- id: social-publish.approval-schedule
+  criterion: "The owner approves each post before it is published; approved posts are published automatically at the scheduled time"
+  advertises: "optional approval, scheduling"
+  says: ["approv|schedul|publish|automatic|configured time|at the (set|chosen) time|post(s|ed)? at"]
+  terms: >-
+    approve approves approved approval human review reviewed before publish publishes published publishing
+    automatic automatically scheduled schedule scheduling configured set chosen time times hour runner once
+    logged step steps optional update updated
+  actors: [owner, admin, manager, editor]
+  tests:
+    - "tests/e2e/social-publish.spec.ts › human approval before publishing: the owner approves each post before it is published; approved posts are published automatically at the scheduled time by the runner, once, and every step is logged"
+
+- id: social-publish.retry
+  criterion: "A failed publication is retried with backoff and then published; each attempt is in the publication log"
+  advertises: "retries with exponential backoff"
+  says: ["retr|fail|error|backoff"]
+  terms: >-
+    retry retries retried retrying fail fails failed failure failures error errors backoff exponential attempt
+    attempts log logged logs publication published publish policy again
+  tests:
+    - "tests/e2e/social-publish.spec.ts › a failed publication is retried with backoff and then published; each attempt is in the publication log"
+
+- id: social-publish.log
+  criterion: "Each post has a unique idempotency key and the publication log is append-only in the database"
+  advertises: "append-only publication log"
+  says: ["log|record|history|idempot|twice|duplicate|once"]
+  terms: >-
+    log logs logged record records recorded history every each attempt attempts publication publications entry
+    entries status result idempotency key unique once twice duplicate append only database
+  tests:
+    - "tests/e2e/social-publish.spec.ts › each post has a unique idempotency key and the publication log is append-only in the database"
+
+- id: social-publish.calendar
+  criterion: "A content calendar shows the scheduled and published posts on their day with their network and status"
+  advertises: "calendar"
+  says: ["calendar|planner|scheduled posts|published posts|dashboard"]
+  terms: >-
+    content calendar calendars dashboard planner view views see sees show shows list scheduled published day days
+    status network networks upcoming past
+  actors: [owner, admin, manager, editor]
+  tests:
+    - "tests/e2e/social-publish.spec.ts › a content calendar shows the scheduled and published posts on their day with their network and status"

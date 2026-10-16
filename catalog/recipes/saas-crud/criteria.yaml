@@ -41,7 +41,7 @@
 - id: saas-crud.roles
   criterion: "A member cannot approve, export, change settings, manage members or read the audit log"
   advertises: "roles"
-  says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|not|only|restrict|limit|denied|deny|permission"]
+  says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|\\bnot\\b|only|restrict|limit|denied|deny|permission"]
   terms: >-
     role roles permission permissions privilege privileges right rights restrict restricted limit limited only
     admin admins administrator owner owners member members regular approve export settings setting configure
@@ -142,7 +142,7 @@
   advertises: "Multi-tenant SaaS"
   generated: "another workspace never sees this workspace's"
   when: open-sign-up
-  says: ["workspace|tenant|organi[sz]ation|company|team|account|isolat|other user|another user|private", "never|not|only|isolat|separate|private|cannot|own"]
+  says: ["workspace|tenant|organi[sz]ation|company|team|account|isolat|other user|another user|private", "never|\\bnot\\b|only|isolat|separate|private|cannot|own"]
   terms: >-
     workspace workspaces tenant tenants organization organizations organisation company companies team teams
     account accounts isolated isolation separate separated private own their only other another never see sees
