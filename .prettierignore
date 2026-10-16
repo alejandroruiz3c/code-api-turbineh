@@ -13,3 +13,5 @@ packages/engine/src/use-cases.generated.ts
 apps/web/public/catalog
 bench/agent-decisions/runs
 bench/agent-decisions/.runtime
+bench/validation/runs
+bench/validation/RESULTS.md
