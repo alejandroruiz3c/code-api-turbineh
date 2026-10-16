@@ -66,7 +66,8 @@ the web, the API, the CLI and MCP).
   honest state, ZIP or pull request. The badge says what it is: `Checks X/Y · Requirements 0/N met · components only: K
 served by a component, M out of scope`; the package README and `agent/INTEGRATE.md` carry a "Scope: verified
   components only" section (what you get, what is not included, component → requirement → proving test).
-- With nothing to offer, the refusal stands (422 `use_case_not_covered`, exit 5) with the explanation.
+- With nothing to offer, the refusal stands (422 `use_case_not_covered`, exit 5) with the explanation and the flow `id`
+  (plus `status_url`/`events_url`), so an agent can reference the refused request.
 
 ### 5 · Unchanged
 
@@ -84,6 +85,15 @@ schedule" — is exactly what the judgement removes, and code alone offers nothi
 Recall is deliberately low: the AI orchestrator for "AI drafts" / "AI captions" and a weekly CSV export were not
 confirmed by the engine, and `auth.session.better-auth` has no tested sign-in guarantee in its guide, so it is never
 offered until one is added.
+
+### 6 · The scope question sees the whole catalogue
+
+The private engine's scope question showed only the first 60 catalogue components, so requirements served by a later
+component (Stripe payments, PDF, QR codes…) were judged "outside the library". Since resource-decider 1.1.1 the worker
+sends the whole approved catalogue with each component's capabilities and guide keywords/aliases
+(`ScopeInput.catalog`), and the engine ranks it per requirement and keeps the most relevant ones within its state
+budget. Code checks never use keywords (a keyword never makes a platform "connected"). Re-run of the labelled set with
+1.1.1 (JEV): 4 offered, 4 correct (precision 1.000); the owner's example is still refused with the explanation.
 
 ## Consequences
 

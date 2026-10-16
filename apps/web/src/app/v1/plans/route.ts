@@ -219,9 +219,11 @@ export async function POST(req: Request): Promise<Response> {
     if (row && (row.status === "failed" || row.status === "done")) confirmDemandLater(row);
     if (row?.status === "failed") {
       const result = await resultOf(row);
+      // The flow id, so a coding agent can reference the refused request (status, events, support).
       return productProblem(
         422,
         result.errors[0] ?? ERRORS.generationFailed(id, "planning failed"),
+        { id, ...links },
       );
     }
     const plan = row?.status === "done" ? (row.metrics.plan as Plan | undefined) : undefined;

@@ -153,7 +153,16 @@ export interface EntityKindsVerdict {
 /** Scope gate (ADR-0052): requirements code could not place. */
 export interface ScopeInput {
   useCase: { id: string; description: string } | null;
-  catalog: readonly { id: string; does: string }[];
+  /**
+   * The approved catalogue (every component, never truncated by the caller): what each one does, the capabilities it
+   * provides and its documented keywords/aliases, so the engine can pick the components relevant to each requirement.
+   */
+  catalog: readonly {
+    id: string;
+    does: string;
+    provides?: readonly string[];
+    keywords?: readonly string[];
+  }[];
   /** Requirements to decide, by their index in the gate's list. */
   requirements: { index: number; text: string }[];
 }

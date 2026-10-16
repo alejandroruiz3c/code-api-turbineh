@@ -6,10 +6,15 @@ import { db } from "./db";
 import { storage } from "./storage";
 
 /** Product API errors carry the actionable ProductError (PLAN §16.4) inside RFC 9457 problem details. */
-export function productProblem(status: number, error: ProductError): Response {
+export function productProblem(
+  status: number,
+  error: ProductError,
+  /** Extra top-level fields, e.g. the flow `id` of a refused plan so agents can reference it. */
+  extra: Record<string, unknown> = {},
+): Response {
   return Response.json(
     // Fields at the top level too, so simple clients read code/message/action directly.
-    { type: "about:blank", title: error.message, status, ...error, error },
+    { type: "about:blank", title: error.message, status, ...error, ...extra, error },
     {
       status,
       headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" },

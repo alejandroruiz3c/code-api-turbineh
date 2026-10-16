@@ -114,8 +114,9 @@ const NATIVE_OR_HARDWARE: readonly [label: string, re: RegExp][] = [
 const AI =
   /\b(ai|a\.i\.|ia|llms?|gpt[\w-]*|language models?|machine learning|generative|gen ?ai|chat ?bots?|embeddings?|semantic search|rag|openai|inteligencia artificial)\b/i;
 
-const componentText = (c: GateComponent) =>
-  `${c.id} ${c.provides.join(" ")} ${c.does} ${(c.keywords ?? []).join(" ")}`;
+/** What a component verifiably does (manifest). Guide keywords only help the engine find candidates: a keyword never
+ * makes a platform "connected" here. */
+const componentText = (c: GateComponent) => `${c.id} ${c.provides.join(" ")} ${c.does}`;
 
 /** Deterministic: why a requirement is not covered, or null when code cannot tell (ADR-0039 §1(c)). */
 export function uncoveredByCode(

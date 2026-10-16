@@ -39,9 +39,16 @@ export async function gateRequest(input: {
   /** Components the person chose explicitly: exactly those are delivered (covered by definition). */
   explicit?: readonly string[];
 }): Promise<ScopeVerdict> {
-  const catalog: GateComponent[] = catalogEntries(input.componentsDir)
+  // The whole approved catalogue with its guide keywords and aliases: the engine selects what is relevant per
+  // requirement (it never sees a truncated list).
+  const catalog: GateComponent[] = offerCatalog(input.componentsDir)
     .filter((c) => !PLATFORM_SERVICES.has(c.id))
-    .map((c) => ({ id: c.id, provides: c.provides, does: c.does }));
+    .map((c) => ({
+      id: c.id,
+      provides: c.provides,
+      does: c.does,
+      ...(c.docs?.keywords.length ? { keywords: c.docs.keywords } : {}),
+    }));
   if (input.explicit?.length) {
     return scopeGate({
       need: input.prompt,

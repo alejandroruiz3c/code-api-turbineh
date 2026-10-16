@@ -251,6 +251,8 @@ describe("POST /v1/plans · uncovered use case (ADR-0062)", () => {
       };
     };
     expect(body.code).toBe("use_case_not_covered");
+    // The flow id, so agents can reference the refused request.
+    expect((body as unknown as { id: string }).id).toBe("00000000-0000-4000-8000-000000000001");
     expect(body.notCovered).toHaveLength(2);
     expect(body.explanation.notCovered[1]?.why).toMatch(/social media/);
     expect(body.explanation.priority).toMatch(/priority/);
