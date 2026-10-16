@@ -1,5 +1,11 @@
 "use client";
-import type { EstimateVsActual, FlowOutcome, FlowState, Plan } from "@turbineh/shared";
+import type {
+  EstimateVsActual,
+  FlowOutcome,
+  FlowState,
+  NotCoveredExplanation,
+  Plan,
+} from "@turbineh/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { currentRun, isWorking } from "@/lib/flow-events";
@@ -10,6 +16,7 @@ import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
 import { EstimateComparison } from "./estimate-comparison";
 import { DeployForMe } from "./deploy-for-me";
+import { NotCovered } from "./not-covered";
 import { RepoIntegration } from "./repo-integration";
 import { badgeOf, Panel, StateBadge, Stat, pct } from "./ui";
 
@@ -73,6 +80,8 @@ interface FlowProblem {
   next: { label: string; kind: "generate_again" | "new_flow" | "open_package" | "wait" };
   /** `use_case_not_covered` (ADR-0052): the requirements the library does not cover yet. */
   notCovered?: string[];
+  /** `use_case_not_covered` (ADR-0062): why, the priority notice and what we can do now (offer). */
+  explanation?: NotCoveredExplanation;
 }
 
 export interface BuildResult {
@@ -403,6 +412,15 @@ function WhatHappened({
   const next = p?.next ?? { label: "Start the flow again", kind: "new_flow" as const };
   const retry = next.kind === "generate_again";
   const need = encodeURIComponent((result.prompt ?? "").slice(0, 2000));
+  // ADR-0062: a refused direct build whose use case is not covered, with verified components that serve part of it.
+  async function buildComponents() {
+    setBusy(true);
+    setError(null);
+    const r = await productApi.startBuild(result.prompt ?? "", { componentsOnly: true });
+    setBusy(false);
+    if (r.ok) return window.location.assign(`/flows/${encodeURIComponent(r.data.build_id)}`);
+    setError(r.error ? `${r.error.message} → ${r.error.action}` : "It could not start.");
+  }
   async function generateAgain() {
     setBusy(true);
     setError(null);
@@ -416,7 +434,27 @@ function WhatHappened({
       <div role="alert">
         <p className="text-base font-semibold text-cream">{title}</p>
         <p className="mt-2 text-sm text-ice-2">{why}</p>
-        {p?.notCovered?.length ? (
+        {p?.explanation ? (
+          <div className="mt-3">
+            <NotCovered
+              explanation={p.explanation}
+              action={
+                p.explanation.offer && result.prompt ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    data-action="build_components"
+                    onClick={() => void buildComponents()}
+                    className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy disabled:opacity-50"
+                  >
+                    {busy ? "Starting…" : "Build the verified components"}
+                  </button>
+                ) : undefined
+              }
+            />
+          </div>
+        ) : null}
+        {!p?.explanation && p?.notCovered?.length ? (
           <div className="mt-3">
             <p className="text-sm text-muted">Not covered by the library yet:</p>
             <ul className="mt-1 list-disc pl-5 text-sm text-ice-2" data-testid="not-covered">

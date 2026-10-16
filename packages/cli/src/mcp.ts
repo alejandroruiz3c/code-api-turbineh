@@ -67,7 +67,7 @@ export const TOOLS: Tool[] = [
       approve: {
         type: "boolean",
         description:
-          "Only after the user agreed to the plan's needsApproval decisions (e.g. building only the covered part of a partially covered spec).",
+          "Only after the user agreed to the plan's needsApproval decisions (building only the covered part of a partially covered spec, or a components-only offer for an uncovered use case).",
       },
       components: COMPONENTS_ARG,
       timeoutMinutes: { type: "number", description: "Stop waiting after this (default 20)." },
@@ -86,10 +86,13 @@ export const TOOLS: Tool[] = [
   {
     name: "resume",
     description:
-      "Keep waiting for a build that timed out or was interrupted, then write and commit it (same result as build).",
+      "Keep waiting for a build that timed out or was interrupted, then write and commit it (same result as build). With approve: true, accepts the build's pending decision — e.g. a components-only offer the user agreed to.",
     inputSchema: obj({
       id: { type: "string", description: "Build id (default: the pending one here)." },
-      approve: { type: "boolean" },
+      approve: {
+        type: "boolean",
+        description: "Only after the user agreed to the decision (e.g. the components-only offer).",
+      },
     }),
     map: (a) => ({
       cmd: "resume",
@@ -162,7 +165,7 @@ export const TOOLS: Tool[] = [
 ];
 
 const INSTRUCTIONS =
-  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result. Only covered use cases are built: an uncovered request fails with error.code use_case_not_covered and error.notCovered — tell the user the library doesn't cover it yet and that they will be notified with priority; never rephrase the spec to get around it. A partially covered spec stops for a decision (exit 3): show the removed requirements and continue with approve only if the user wants the covered part. To build specific verified components, pass components (ids from search).";
+  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result. Only covered use cases are built. An uncovered use case with verified components that serve part of it stops with exitCode 3 and error.code components_only_offer: show the user error.explanation (what is not covered and why, the priority notice) and data.offer (each component and the requirements it serves, outOfScope); call resume with {id, approve: true} only if they want those components. With nothing to offer it fails with error.code use_case_not_covered and error.explanation — tell the user the library doesn't cover it yet and that they will be notified with priority; never rephrase the spec to get around it. A partially covered spec stops for a decision (exit 3): show the removed requirements and continue with approve only if the user wants the covered part. To build specific verified components, pass components (ids from search).";
 
 type Message = { jsonrpc: "2.0"; id?: string | number | null; method?: string; params?: unknown };
 

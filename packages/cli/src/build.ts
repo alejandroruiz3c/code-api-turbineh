@@ -16,7 +16,16 @@ import {
   type IntegrationEntry,
   type ProjectFile,
 } from "./context.js";
-import { bold, cyan, dim, green, red, yellow, type CommandResult } from "./output.js";
+import {
+  bold,
+  cyan,
+  dim,
+  explanationLines,
+  green,
+  red,
+  yellow,
+  type CommandResult,
+} from "./output.js";
 import { left as leftOf, missingSettings, readGuide } from "./package-guide.js";
 import { git, isGitRepo, localManifests } from "./project.js";
 
@@ -241,6 +250,26 @@ async function follow(c: Ctx, id: string, target: Target, t0: number): Promise<C
     if (r.state === "planned") {
       const p = r.plan;
       const decisions = (p?.needsApproval ?? []).filter((d) => !isGapNotice(d));
+      const offer = p?.scope?.status === "components_only" ? p.scope.explanation : undefined;
+      if (offer?.offer && c.flags.approve !== true) {
+        // ADR-0062: the use case is not covered; verified components serve part of it. The user decides.
+        return {
+          ok: false,
+          command: "build",
+          state: "planned",
+          exitCode: EXIT.decision,
+          data: { id, offer: offer.offer, explanation: offer, needsApproval: decisions, plan: p },
+          lines: explanationLines(offer),
+          error: {
+            code: "components_only_offer",
+            message: `${offer.title}. ${offer.offer.title}.`,
+            action:
+              "Show the user what is not covered and the offered components; if they want the components-only package, continue with --approve. Never rephrase the spec to get around it.",
+            resume: `${bin()} resume ${id} --approve`,
+            explanation: offer,
+          },
+        };
+      }
       if (decisions.length && c.flags.approve !== true) {
         return {
           ok: false,
@@ -397,7 +426,9 @@ async function writeApp(
   r: PlanResponse,
   project: ProjectFile,
 ): Promise<Written> {
-  const zip = await api<Buffer>(`/v1/plans/${id}/package?format=app`, {
+  // A component package (explicit components or a components-only offer, ADR-0062) has no application: its package.
+  const format = r.plan?.capability.kind === "component" ? "" : "?format=app";
+  const zip = await api<Buffer>(`/v1/plans/${id}/package${format}`, {
     workspace: project.workspace,
     raw: true,
   });

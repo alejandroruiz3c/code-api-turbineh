@@ -51,6 +51,11 @@ The flow ends `failed` with `ProductError` `use_case_not_covered` (the revived `
   `POST /v1/plans`) and the CLI (exit 5, the list printed under the message). The UI is English-only (no i18n layer), so
   the strings are English.
 
+**Addendum (ADR-0062):** the use case is still never generated, but the refusal now carries a full explanation (each
+requirement and why, the priority notice, what we can do now) and, when verified components really implement functions
+the person asked for (explicit ask, servable, proved by a verified test, confirmed by the decision engine), a
+components-only offer the person approves with one action.
+
 ### 3 · Partial coverage → explicit choice, before generating
 
 A covered recipe with at least half of its requirements covered (`PARTIAL_MIN_SHARE`) and an uncovered headline-free

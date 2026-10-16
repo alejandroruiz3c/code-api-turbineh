@@ -23,6 +23,11 @@ export interface ProductError {
   resume?: string; // e.g. "turbineh apply --resume pl_123"
   /** `use_case_not_covered` (ADR-0052): the requirements of the request the library does not cover yet. */
   notCovered?: string[];
+  /**
+   * `use_case_not_covered` (ADR-0062): the full explanation — what is not covered and why, the priority notice and
+   * what TurbineH can do now (a components-only offer when verified components serve part of the request).
+   */
+  explanation?: NotCoveredExplanation;
 }
 
 export interface Requirement {
@@ -215,7 +220,9 @@ export interface Plan {
   /**
    * Scope gate (ADR-0052): what the library covers of the request. A plan exists only when its use case is covered
    * (`covered`), or when the person must explicitly choose to build the covered part only (`partial`: the removed
-   * requirements are listed here and the choice is in `needsApproval`). Uncovered requests never get a plan.
+   * requirements are listed here and the choice is in `needsApproval`). An uncovered use case never gets a plan of
+   * itself; when verified components serve part of it, the plan is a components-only offer (`components_only`,
+   * ADR-0062) that needs the person's approval and never builds the use case.
    */
   scope?: PlanScope;
 }
@@ -229,7 +236,7 @@ export interface ScopeRequirement {
 }
 
 export interface PlanScope {
-  status: "covered" | "partial";
+  status: "covered" | "partial" | "components_only";
   /** The covered use case (recipe id) or "components" when the plan is the components the person chose. */
   useCase: string;
   /** Explicit name of what is built, e.g. "Bookings app (covered part only)". */
@@ -238,6 +245,65 @@ export interface PlanScope {
   removed: ScopeRequirement[];
   /** One sentence for people. */
   message: string;
+  /** `components_only` (ADR-0062): what is not covered, the priority notice and the offer. */
+  explanation?: NotCoveredExplanation;
+}
+
+/**
+ * A request whose use case the library does not cover, explained the same way on the web, the API, the CLI and MCP
+ * (ADR-0062): what is not covered yet and why, that the person is notified with priority, and what TurbineH can do now.
+ */
+export interface NotCoveredExplanation {
+  /** "The library doesn't cover this use case yet". */
+  title: string;
+  /** The use case in the person's own words (the request's headline). */
+  useCase: string;
+  /** Each requirement the library doesn't cover yet, with why in plain words. */
+  notCovered: ScopeRequirement[];
+  /** The priority notice (demand recorded; email when the account's address is known). */
+  priority: string;
+  /** What TurbineH can do now: the offer below, or how to continue within what is covered. */
+  canDoNow: string;
+  /** Verified components that serve part of the request; null when none applies. */
+  offer: ComponentOffer | null;
+}
+
+/** A verified component offered for an uncovered use case and the requirements it serves (ADR-0062). */
+export interface OfferedComponent {
+  id: string;
+  /** What it does (its manifest), as it was verified. */
+  does: string;
+  /** The functional result the person gets from it, in plain words (e.g. "online payments with Stripe Checkout"). */
+  gives: string;
+  /** Requirements of the request it implements (stated by the person, mapped one by one). */
+  serves: string[];
+  /** Evidence per mapped requirement: the verified test (acceptance rule or tested guarantee) that proves it. */
+  proof: { requirement: string; test: string }[];
+  /** Present when it is included because an offered component declares it (`relations.requires`). */
+  requiredBy?: string;
+}
+
+/**
+ * Components-only package offered when the use case is not covered but verified components serve part of it
+ * (ADR-0062). Built only after the person approves; delivered exactly as verified; the use case itself is never built.
+ */
+export interface ComponentOffer {
+  kind: "components_only";
+  /** "Verified components for your <need>: auth, scheduled jobs, …" */
+  title: string;
+  /** Name of the package that would be built. */
+  name: string;
+  /** "You get … working" — the functional result, plainly. */
+  youGet: string;
+  /** "Not included: …" — what of the request is not delivered, naming the core when it is the core. */
+  notIncluded: string;
+  /** True when the uncovered part is the core of the request (its use case itself). */
+  coreNotIncluded: boolean;
+  components: OfferedComponent[];
+  /** Requirements no offered component serves: out of the package's scope (never built, never faked). */
+  outOfScope: ScopeRequirement[];
+  /** How to accept it on each surface. */
+  approve: { web: string; api: string; cli: string; mcp: string };
 }
 
 export interface PlanCriterion {

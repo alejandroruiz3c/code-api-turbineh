@@ -17,7 +17,16 @@ import {
   readUserConfig,
   type IntegrationEntry,
 } from "./context.js";
-import { bold, dim, green, red, STATE_LABEL, yellow, type CommandResult } from "./output.js";
+import {
+  bold,
+  dim,
+  explanationLines,
+  green,
+  red,
+  STATE_LABEL,
+  yellow,
+  type CommandResult,
+} from "./output.js";
 import {
   AGENT_BLOCK,
   cliCommand,
@@ -334,6 +343,10 @@ export function planLines(p: Plan): string[] {
         ]
       : []),
     ...p.incompatibilities.map((i) => `  ${yellow("!")} ${i}`),
+    // ADR-0062: the use case is not covered; verified components that serve part of it are offered.
+    ...(p.scope?.status === "components_only" && p.scope.explanation
+      ? ["", ...explanationLines(p.scope.explanation)]
+      : []),
     // ADR-0052: what the library does not cover is removed from scope, never listed as work left.
     ...(p.scope?.status === "partial"
       ? [
@@ -444,7 +457,8 @@ export async function plan(c: Ctx): Promise<CommandResult> {
     ok: true,
     command: "plan",
     state: r.state,
-    data: r.plan,
+    // ADR-0062: `offer` at the top level when the use case is not covered and components are offered.
+    data: { ...r.plan, offer: r.plan.scope?.explanation?.offer ?? null },
     lines: planLines(r.plan),
     next: r.plan.needsApproval.length
       ? `turbineh apply ${r.id} --approve   (after reviewing the decisions above)`

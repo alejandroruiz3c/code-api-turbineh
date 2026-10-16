@@ -57,12 +57,13 @@ import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
 import {
   calibrateEstimate,
+  detectStack,
   notCoveredReason,
   openCriteriaLeft,
   type RunSample,
   type ScopeVerdict,
 } from "@turbineh/engine";
-import { coveredPart, gateRequest, withScope } from "./scope.js";
+import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
@@ -195,6 +196,11 @@ export async function runBuild(
      * (ADR-0052). Plans ask for that choice through `needsApproval` instead.
      */
     coveredOnly?: boolean;
+    /**
+     * Direct builds (no plan): the person accepted a components-only package for an uncovered use case (ADR-0062).
+     * Plans ask for that choice through `needsApproval` instead.
+     */
+    componentsOnly?: boolean;
   } = {},
 ): Promise<BuildOutcome> {
   // The test-only marker never reaches a model (it is honoured only through options.forceFailure).
@@ -319,13 +325,61 @@ export async function runBuild(
       verdict.status === "uncovered" ||
       (verdict.status === "partial" && !options.plan && !options.coveredOnly);
     if (refused) {
-      // Nothing is generated: the person is told the library doesn't cover it yet; the demand is recorded.
+      // The use case itself is never generated: the person is told the library doesn't cover it yet; the demand is
+      // recorded. ADR-0062: verified components that serve part of it are offered as a components-only package.
+      t = performance.now();
+      const uncovered =
+        verdict.status === "uncovered"
+          ? await explainUncovered({
+              prompt,
+              verdict,
+              componentsDir: catalogDir,
+              decider: deps.decider,
+              planId: options.plan ? buildId : null,
+            })
+          : null;
+      lap("offer", t);
+      const explanation = uncovered?.explanation;
+      if (explanation?.offer && (options.plan || options.componentsOnly)) {
+        const plan = offerPlan(
+          buildId,
+          options.plan ?? {
+            need: prompt,
+            stack: detectStack({ stack: { language: "typescript", framework: "nextjs" } }),
+          },
+          catalogDir,
+          explanation,
+        );
+        await deps.emit(buildId, "selecting", "done", {
+          componentOnly: true,
+          offer: true,
+          selected: plan.components.map((c) => c.id),
+          decidedBy: uncovered?.result?.decidedBy ?? "code",
+        });
+        return {
+          buildId,
+          status: "done",
+          spec,
+          metrics: {
+            timings,
+            plan,
+            scopeGate: verdict,
+            explanation,
+            tokens: { compiler: compiled.usage },
+          },
+        };
+      }
       return {
         buildId,
         status: "failed",
         spec,
         reason: notCoveredReason(verdict),
-        metrics: { timings, scopeGate: verdict, tokens: { compiler: compiled.usage } },
+        metrics: {
+          timings,
+          scopeGate: verdict,
+          ...(explanation ? { explanation } : {}),
+          tokens: { compiler: compiled.usage },
+        },
       };
     }
     if (candidate) {

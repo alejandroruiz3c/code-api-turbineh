@@ -1,0 +1,172 @@
+{
+  "$comment": "ADR-0062: labelled requests for the components-only offer. `acceptable`: the only component ids that may be offered (an empty list means nothing may be offered). Precision = offered components that are acceptable / offered components (dependencies declared by an offered component are not counted). Run: pnpm --filter @turbineh/worker exec tsx src/offer-bench.ts [--engine] (results in bench/offers/results/).",
+  "requests": [
+    {
+      "id": "social-publisher",
+      "need": "autonomous social media publisher with AI drafts and scheduled publishing",
+      "criteria": [
+        "Users connect their Instagram and LinkedIn accounts",
+        "AI drafts a post from a topic",
+        "Scheduled posts are published automatically to the connected social accounts",
+        "Users sign in with email and password"
+      ],
+      "acceptable": ["ai.orchestrator.turbineh", "social.publish.turbineh"],
+      "note": "Since ADR-0067 publishing to LinkedIn/Instagram with a person creating and approving each post is a verified, standalone piece of this request (proved by tests/e2e/social-publish.spec.ts); the autonomous core and connecting accounts on its own are not asked for as such (connections comes with publishing as a dependency). A generic scheduler is never acceptable here."
+    },
+    {
+      "id": "shop-shopify-stripe",
+      "need": "An online shop where buyers pay with Stripe and orders sync to Shopify",
+      "criteria": ["Buyers pay with Stripe at checkout", "Orders are synced to Shopify"],
+      "acceptable": ["payments.checkout.stripe"]
+    },
+    {
+      "id": "slack-standup",
+      "need": "A Slack bot that posts a daily standup summary",
+      "criteria": [
+        "The bot posts a summary to the team's Slack channel every morning",
+        "Team members answer the standup questions in Slack"
+      ],
+      "acceptable": []
+    },
+    {
+      "id": "ios-gym",
+      "need": "A native iOS app for a gym where members book classes",
+      "criteria": [
+        "Members book a class from their iPhone",
+        "Members get a push notification before class"
+      ],
+      "acceptable": []
+    },
+    {
+      "id": "telegram-ai-faq",
+      "need": "A Telegram bot that answers customer questions with AI",
+      "criteria": ["Customers ask questions in Telegram", "The AI answers questions from the FAQ"],
+      "acceptable": ["ai.orchestrator.turbineh"]
+    },
+    {
+      "id": "crm-hubspot-signin",
+      "need": "A CRM that syncs contacts with HubSpot, where sales reps sign in with email and password",
+      "criteria": [
+        "Contacts are synced with HubSpot both ways",
+        "Sales reps sign in with email and password"
+      ],
+      "acceptable": ["auth.session.better-auth"]
+    },
+    {
+      "id": "trading-bot",
+      "need": "An autonomous trading bot that buys crypto on Binance",
+      "criteria": [
+        "The bot places buy orders automatically when the price drops",
+        "Users see their trade history"
+      ],
+      "acceptable": []
+    },
+    {
+      "id": "invoices-quickbooks-pdf",
+      "need": "An invoicing app that sends invoices to QuickBooks and generates PDF invoices",
+      "criteria": ["Invoices are sent to QuickBooks", "Users generate a PDF of each invoice"],
+      "acceptable": ["files.pdf.pdf-lib", "files.pdf.react-pdf"]
+    },
+    {
+      "id": "events-mailchimp-qr",
+      "need": "An event app that syncs attendees to Mailchimp and shows a QR code on each ticket",
+      "criteria": [
+        "Attendees are synced to Mailchimp",
+        "Each ticket shows a QR code to scan at the door"
+      ],
+      "acceptable": ["files.qr.qrcode", "files.qr.qrcode-react"]
+    },
+    {
+      "id": "smart-home-lights",
+      "need": "A smart home dashboard that controls Bluetooth lights on a weekly schedule",
+      "criteria": [
+        "Lights turn on following a weekly schedule",
+        "Users control the lights over Bluetooth"
+      ],
+      "acceptable": []
+    },
+    {
+      "id": "whatsapp-reminders",
+      "need": "Send appointment reminders to patients on WhatsApp every day",
+      "criteria": ["Patients receive a WhatsApp reminder the day before their appointment"],
+      "acceptable": []
+    },
+    {
+      "id": "youtube-analytics-charts",
+      "need": "A dashboard that imports YouTube channel analytics and shows charts",
+      "criteria": [
+        "Channel statistics are imported from YouTube every night",
+        "Users see views per video in a chart"
+      ],
+      "acceptable": ["ui.charts.recharts"]
+    },
+    {
+      "id": "android-expense-ocr",
+      "need": "An Android app that scans receipts with the camera",
+      "criteria": [
+        "Users photograph a receipt with their phone camera",
+        "The amount is read from the photo"
+      ],
+      "acceptable": []
+    },
+    {
+      "id": "discord-community-waitlist",
+      "need": "A Discord community bot and a waitlist page for our beta",
+      "criteria": [
+        "The bot welcomes new members in Discord",
+        "Visitors join the waitlist with their email"
+      ],
+      "acceptable": ["growth.waitlist.turbineh"]
+    },
+    {
+      "id": "google-calendar-sync",
+      "need": "A tool that syncs our team's Google Calendar events into Notion",
+      "criteria": ["Events are synced from Google Calendar", "Each event becomes a Notion page"],
+      "acceptable": []
+    },
+    {
+      "id": "salesforce-csv-export",
+      "need": "Export Salesforce opportunities to CSV every week",
+      "criteria": [
+        "Opportunities are pulled from Salesforce",
+        "A CSV export is generated every week"
+      ],
+      "acceptable": [
+        "data.csv-export.turbineh",
+        "data.csv-export.csv-stringify",
+        "jobs.scheduled.turbineh"
+      ]
+    },
+    {
+      "id": "video-game-leaderboard",
+      "need": "A multiplayer video game with a leaderboard",
+      "criteria": ["Players play matches in real time", "A leaderboard ranks players by score"],
+      "acceptable": []
+    },
+    {
+      "id": "tiktok-ai-captions",
+      "need": "Auto-post TikTok videos with AI captions",
+      "criteria": [
+        "Videos are posted to TikTok automatically",
+        "AI writes a caption for each video"
+      ],
+      "acceptable": ["ai.orchestrator.turbineh"]
+    },
+    {
+      "id": "crosspost-linkedin-tiktok-likes",
+      "need": "A tool that cross-posts our announcements to LinkedIn and TikTok and shows the likes of each post",
+      "criteria": [
+        "Announcements are posted to LinkedIn",
+        "Announcements are posted to TikTok",
+        "Users see the likes of each published post"
+      ],
+      "acceptable": ["social.publish.turbineh", "social.metrics.turbineh"]
+    },
+    {
+      "id": "instagram-autoreply-bot",
+      "need": "An autonomous bot that replies to every Instagram comment without human review",
+      "criteria": ["The bot replies to every Instagram comment automatically without human review"],
+      "acceptable": []
+    }
+  ]
+}

@@ -17,3 +17,4 @@ export * from "./pr-body.js";
 export * from "./github.js";
 export * from "./app-choice.js";
 export * from "./scope-gate.js";
+export * from "./component-offer.js";

@@ -183,6 +183,8 @@ export function componentPlan(
   componentsDir: string,
   /** Components the person chose (ADR-0052): exactly these (plus what they require), nothing inferred. */
   explicit: readonly string[] = [],
+  /** Why each component is in the plan, when the caller knows better (a components-only offer, ADR-0062). */
+  why: Readonly<Record<string, string>> = {},
 ): Plan {
   // Platform services (repository integration, analysis) are discoverable in search but never packaged as code.
   const all = catalogEntries(componentsDir).filter((c) => !PLATFORM_SERVICES.has(c.id));
@@ -222,15 +224,16 @@ export function componentPlan(
     catalogToPlanned(
       c,
       c.provides[0] ?? c.category,
-      chosen.has(c.id)
-        ? `Chosen by you — certified, audited component (${c.does})`
-        : c.id.startsWith("ai.orchestrator")
-          ? "Every inference goes through TurbineH orchestration (understand intent → orchestrate decisions → execute)"
-          : c.id.startsWith("security.ai-safety")
-            ? "Always shipped with the orchestrator: input guardrails, budgets, output checks, audit"
-            : matched.has(c.id)
-              ? `Covers "${c.provides.join(", ")}" — what your need asks for (${(matched.get(c.id) ?? []).join(", ")}); certified, audited component`
-              : `Required by ${[...picked.values()].find((p) => byId(p.id)?.requires.includes(c.id))?.id ?? "a selected component"} — certified, audited component`,
+      why[c.id] ??
+        (chosen.has(c.id)
+          ? `Chosen by you — certified, audited component (${c.does})`
+          : c.id.startsWith("ai.orchestrator")
+            ? "Every inference goes through TurbineH orchestration (understand intent → orchestrate decisions → execute)"
+            : c.id.startsWith("security.ai-safety")
+              ? "Always shipped with the orchestrator: input guardrails, budgets, output checks, audit"
+              : matched.has(c.id)
+                ? `Covers "${c.provides.join(", ")}" — what your need asks for (${(matched.get(c.id) ?? []).join(", ")}); certified, audited component`
+                : `Required by ${[...picked.values()].find((p) => byId(p.id)?.requires.includes(c.id))?.id ?? "a selected component"} — certified, audited component`),
     ),
   );
   const deps = components
