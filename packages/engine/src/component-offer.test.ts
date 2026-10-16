@@ -487,3 +487,60 @@ describe("one explanation everywhere (ADR-0062)", () => {
     expect(componentsOnlyScope({})).toBe("");
   });
 });
+
+describe("social components (ADR-0067) in the offer", () => {
+  const social: OfferEntry[] = [
+    ...CATALOG,
+    entry(
+      "social.publish.turbineh",
+      ["social.publish"],
+      "Publishes social media posts to connected accounts",
+      {
+        requires: ["social.connections.turbineh"],
+        acceptance: [
+          {
+            test: "tests/e2e/social-publish.spec.ts › human approval before publishing: approved posts are published automatically at the scheduled time",
+            covers: ["schedul|automatically", "publish|post"],
+          },
+        ],
+      },
+    ),
+    entry(
+      "social.connections.turbineh",
+      ["social.oauth"],
+      "Connects social media accounts with OAuth 2.0",
+    ),
+  ];
+  const req = (requirement: string): ScopeRequirement => ({
+    requirement,
+    covered: true,
+    why: "Covered by verified components",
+  });
+
+  it("the publishing component supersedes a generic scheduler for the same requirement", () => {
+    const c = candidatesFor(
+      req("Scheduled posts are published automatically to LinkedIn"),
+      "schedule posts to LinkedIn",
+      social,
+    );
+    expect(c.map((x) => x.entry.id)).toEqual(["social.publish.turbineh"]);
+    expect(c[0]?.hint.gives).toMatch(/never autonomously$/);
+  });
+
+  it("negative: no social component for a request that never asks to publish", () => {
+    expect(
+      candidatesFor(
+        req("A report is scheduled every morning"),
+        "a daily report every morning",
+        social,
+      ).map((x) => x.entry.id),
+    ).toEqual(["jobs.scheduled.turbineh"]);
+    expect(
+      candidatesFor(
+        req("Show our Instagram handle in the footer"),
+        "a site with our Instagram handle",
+        social,
+      ),
+    ).toEqual([]);
+  });
+});

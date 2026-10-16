@@ -95,6 +95,19 @@ sends the whole approved catalogue with each component's capabilities and guide 
 budget. Code checks never use keywords (a keyword never makes a platform "connected"). Re-run of the labelled set with
 1.1.1 (JEV): 4 offered, 4 correct (precision 1.000); the owner's example is still refused with the explanation.
 
+### 7 · Social components (ADR-0067)
+
+With `social.connections`, `social.publish` and `social.metrics` in the catalogue, publishing to LinkedIn, Facebook
+Pages, Instagram and X with a person creating and (when required) approving each post is a verified, standalone piece
+of requests such as the owner's "autonomous social media publisher": it is offered (evidence:
+`tests/e2e/social-publish.spec.ts › human approval before publishing…`), with `gives` saying "never autonomously", and
+the autonomous core stays listed as not included. Hints for publishing, connecting accounts and post metrics were added;
+a hint may `supersede` generic capabilities it already includes, so a generic scheduler is never offered next to
+social publishing. Labelled set: 20 requests (two social ones added; the owner's case now accepts `social.publish`).
+Re-run on 2026-10-16 with the private engine (JEV, resource-decider 1.1.1): 6 offered, 6 correct (precision 1.000) —
+the owner's case gets `social.publish` (+ `social.connections` as its dependency); code alone 2/2; deterministic checks
+with an approve-all judge 12/13 (0.923, the Bluetooth-lights scheduler).
+
 ## Consequences
 
 - One more batched decision request for uncovered requests that have candidates.

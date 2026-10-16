@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-16T18:10:58.876Z",
+  "at": "2026-10-16T18:36:08.848Z",
   "mode": "code",
   "cases": [
     {
@@ -140,6 +140,22 @@
     },
     {
       "id": "tiktok-ai-captions",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "crosspost-linkedin-tiktok-likes",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "instagram-autoreply-bot",
       "gate": "uncovered",
       "offered": [],
       "wrong": [],

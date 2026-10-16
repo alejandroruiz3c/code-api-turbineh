@@ -43,9 +43,10 @@ describe("offer precision on the labelled set (ADR-0062)", { timeout: 60_000 }, 
   it("the deterministic checks alone, even with a judge that approves everything: ≥ 0.9 precision", async () => {
     const r = await runOfferSet(judge(true));
     expect(r.precision).toBeGreaterThanOrEqual(0.9);
-    // Generic plumbing is never offered (sign-in the person didn't ask for, schedulers for social publishing).
+    // Generic plumbing is never offered (sign-in the person didn't ask for, a scheduler for social publishing).
     const social = r.cases.find((c) => c.id === "social-publisher");
-    expect(social?.offered).toEqual(["ai.orchestrator.turbineh"]);
+    // ADR-0067: publishing with a person in the loop is a verified piece of the request; a scheduler never is.
+    expect(social?.offered).toEqual(["ai.orchestrator.turbineh", "social.publish.turbineh"]);
     for (const id of [
       "slack-standup",
       "ios-gym",

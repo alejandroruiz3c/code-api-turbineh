@@ -1,14 +1,14 @@
 {
-  "at": "2026-10-16T18:11:13.127Z",
+  "at": "2026-10-16T18:36:14.514Z",
   "mode": "jev",
   "cases": [
     {
       "id": "social-publisher",
       "gate": "uncovered",
-      "offered": [],
+      "offered": ["social.publish.turbineh"],
       "wrong": [],
-      "decidedBy": null,
-      "coreNotIncluded": null
+      "decidedBy": "decider",
+      "coreNotIncluded": true
     },
     {
       "id": "shop-shopify-stripe",
@@ -145,9 +145,25 @@
       "wrong": [],
       "decidedBy": null,
       "coreNotIncluded": null
+    },
+    {
+      "id": "crosspost-linkedin-tiktok-likes",
+      "gate": "uncovered",
+      "offered": ["social.publish.turbineh"],
+      "wrong": [],
+      "decidedBy": "decider",
+      "coreNotIncluded": false
+    },
+    {
+      "id": "instagram-autoreply-bot",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
     }
   ],
-  "offered": 4,
-  "correct": 4,
+  "offered": 6,
+  "correct": 6,
   "precision": 1
 }
