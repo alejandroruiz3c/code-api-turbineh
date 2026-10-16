@@ -7,18 +7,19 @@ source:
   purl: pkg:generic/turbineh/jobs.queue.turbineh@0.1.0
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
-  does: "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, cron-triggered runner endpoint"
+  does: "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, idempotency keys on enqueue, at-most-once side effects per job (ctx.once), cron-triggered runner endpoint safe under overlapping calls"
   does_not: "Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler)"
   use_cases: [saas-crud, internal-tool, landing-waitlist, bookings, client-portal]
   pros: ["Maintained by TurbineH", "No third-party runtime dependency", "Uses the app's own Postgres"]
   cons: ["Polling via the runner endpoint; not for sub-second latency"]
   alternatives: []
 contract:
-  inputs: ["defineJob(type, zodSchema, handler); enqueue(type, payload, { organizationId, runAt?, maxAttempts? })"]
+  inputs: ["defineJob(type, zodSchema, handler); enqueue(type, payload, { organizationId, runAt?, maxAttempts?, idempotencyKey? })"]
   outputs:
     [
       "runDueJobs(limit) → { done, retried, failed, lost }; POST /api/jobs/run with Bearer JOBS_RUNNER_SECRET",
       "handlers receive ctx.signal, aborted when the job's lease is lost",
+      "handlers receive ctx.once(key, fn) (an effect runs at most once per job, recorded in job_effects) and ctx.idempotencyKey(key) for providers' Idempotency-Key",
     ]
   errors: ["unknown or invalid job type throws; payloads failing the schema throw on enqueue and on run"]
   limits:
@@ -32,11 +33,11 @@ compat:
 effects: { network: false, fs: false, db: true, external_services: [] }
 integration:
   strategy: vendored-with-provenance
-  install: "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts, src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts"
+  install: "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts, src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts, tests/unit/jobs-concurrency.test.ts"
   config: [JOBS_RUNNER_SECRET]
   migrations: true
 quality:
-  tests: { command: "unit tests in the app (backoff, typed registry, lease recovery, heartbeat, fencing) + pipeline builds of every recipe (sandbox)", passed: true, date: 2026-10-15 }
+  tests: { command: "unit tests in the app (backoff, typed registry, lease recovery, heartbeat, fencing, at-most-once effects) + two concurrent runners and concurrent idempotent enqueues on PostgreSQL (PGlite, the app's own schema) + pipeline builds of every recipe (sandbox)", passed: true, date: 2026-10-16 }
 security:
   scanned_at: 2026-10-11
   tools: [gitleaks, semgrep, review]

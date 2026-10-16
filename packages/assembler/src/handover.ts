@@ -134,6 +134,8 @@ export interface HandoverFacts {
   verified: boolean;
   checksPassed: number;
   checksTotal: number;
+  /** Passed checks with non-blocking findings left (ADR-0065): shown as "with warnings", never as a plain pass. */
+  checksWithWarnings?: number;
   criteriaVerified: number;
   criteriaTotal: number;
   alerts: number;
@@ -371,7 +373,7 @@ export function startHereHtml(f: HandoverFacts): string {
     <div class="pills">
       ${f.live ? `<a class="pill live" href="${esc(f.live.url)}">● Live · ${esc(f.live.url.replace(/^https:\/\//, ""))} ↗</a>` : ""}
       ${pill(f.verified ? "✓ Verified" : "Needs attention", f.verified ? "ok" : "warn")}
-      ${pill(`${f.checksPassed}/${f.checksTotal} checks passed`, f.checksPassed === f.checksTotal ? "ok" : "warn")}
+      ${pill(`${f.checksPassed}/${f.checksTotal} checks passed${f.checksWithWarnings ? ` · ${f.checksWithWarnings} with warnings` : ""}`, f.checksPassed === f.checksTotal && !f.checksWithWarnings ? "ok" : "warn")}
       ${pill(`${f.criteriaVerified}/${f.criteriaTotal} requirements proven by tests`, "plain")}
       ${f.fixedBeforeDelivery ? pill(`${f.fixedBeforeDelivery} security fix(es) applied`, "ok") : ""}
       ${pill(f.alerts ? `${f.alerts} alert(s) explained` : "No open alerts", f.alerts ? "warn" : "ok")}

@@ -81,7 +81,8 @@ export interface PackageGuide {
     verifiedAt: string;
     environment: string;
     /** `note`: why a step shows no or a shared duration (ADR-0055), e.g. scans run concurrently with the build. */
-    steps: { name: string; ok: boolean; ms: number; note?: string }[];
+    /** `warnings`: passed with non-blocking findings left (ADR-0065). */
+    steps: { name: string; ok: boolean; ms: number; warnings?: number; note?: string }[];
     /** Gate steps that did not run, each with the reason (ADR-0055). */
     skipped?: { name: string; reason: string }[];
     /** Gate reports shipped in this package (`.turbineh/reports/`: gate.json, SARIF, dependency list, JUnit). */
@@ -524,7 +525,7 @@ ${crit || "| (none) | |"}
 
 ${
   g.gate
-    ? `${g.gate.steps.map((s) => `${s.ok ? "pass" : "FAIL"} ${s.name}${s.ms ? ` (${(s.ms / 1000).toFixed(1)} s)` : ""}`).join(" · ")}
+    ? `${g.gate.steps.map((s) => `${s.ok ? (s.warnings ? `pass with ${s.warnings} warning(s)` : "pass") : "FAIL"} ${s.name}${s.ms ? ` (${(s.ms / 1000).toFixed(1)} s)` : ""}`).join(" · ")}
 ${[
   ...g.gate.steps.filter((s) => s.note).map((s) => `\n- ${s.name}: ${s.note}`),
   ...(g.gate.skipped ?? []).map((s) => `\n- ${s.name}: ${s.reason}`),

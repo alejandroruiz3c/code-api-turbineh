@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { jobs } from "@/db/schema";
+import { jobEffects, jobs } from "@/db/schema";
 
 /**
  * Background jobs (component jobs.queue.turbineh). Define a job once, enqueue it from any server action, and let a
@@ -13,11 +13,27 @@ import { jobs } from "@/db/schema";
  * token still matches, so a runner whose lease expired can never overwrite the result of the runner that took over.
  * A `running` job whose lease expired (the runner crashed or was killed) is recovered by the next run: claimed again
  * while it has attempts left, otherwise marked `failed` with `LeaseExpired`.
+ *
+ * No duplicated side effects (ADR-0065), even when cron calls overlap (Vercel Cron every minute, a slow run still
+ * going): claims use FOR UPDATE SKIP LOCKED, so two runners never take the same job; `enqueue(…, { idempotencyKey })`
+ * makes repeated enqueues one job; and a handler wraps each external effect in `ctx.once(key, fn)`, recorded in
+ * `job_effects` before it runs, so a retry or a runner that lost its lease never repeats it. `ctx.idempotencyKey(key)`
+ * is the same key for providers that accept one (Stripe, Resend: `Idempotency-Key`).
  */
 export type JobContext = {
   organizationId: string;
   /** Aborted when the lease is lost (another runner took the job over): stop work and side effects. */
   signal: AbortSignal;
+  /** This job's id: stable across attempts and runners. */
+  jobId: string;
+  /**
+   * Runs `fn` at most once per job and `key` (an email, a payment, a post): recorded before it runs, so a retry, an
+   * overlapping run or a runner that lost its lease skips it (returns `{ ran: false }`). If `fn` throws, the record is
+   * removed and a retry may run it again. A crash in the middle of `fn` leaves it recorded: at most once, never twice.
+   */
+  once: <T>(key: string, fn: () => Promise<T>) => Promise<{ ran: true; value: T } | { ran: false }>;
+  /** `<jobId>:<key>` — pass it to providers that deduplicate requests (`Idempotency-Key` header). */
+  idempotencyKey: (key: string) => string;
 };
 type Handler = {
   schema: z.ZodType;
@@ -40,13 +56,23 @@ export function defineJob<T>(
 
 export const isDefined = (type: string) => handlers.has(type);
 
+const EFFECT_KEY = /^[A-Za-z0-9._:-]{1,120}$/;
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9._:@/-]{1,200}$/;
+
+/**
+ * Enqueues a job. With `idempotencyKey`, the same (workspace, type, key) is one job: a second enqueue — an
+ * overlapping cron call, a retried request, a double click — returns the existing job's id and adds nothing.
+ */
 export async function enqueue(
   type: string,
   payload: unknown,
-  opts: { organizationId: string; runAt?: Date; maxAttempts?: number },
+  opts: { organizationId: string; runAt?: Date; maxAttempts?: number; idempotencyKey?: string },
 ): Promise<string> {
   const handler = handlers.get(type);
   if (!handler) throw new Error(`unknown job type: ${type}`);
+  const key = opts.idempotencyKey;
+  if (key !== undefined && !IDEMPOTENCY_KEY.test(key))
+    throw new Error("invalid idempotency key (1–200 letters, digits or ._:@/-)");
   const [row] = await db
     .insert(jobs)
     .values({
@@ -55,9 +81,23 @@ export async function enqueue(
       payload: handler.schema.parse(payload) as object,
       runAt: opts.runAt ?? new Date(),
       maxAttempts: Math.min(Math.max(opts.maxAttempts ?? 5, 1), 20),
+      ...(key ? { idempotencyKey: key } : {}),
     })
+    .onConflictDoNothing({ target: [jobs.organizationId, jobs.type, jobs.idempotencyKey] })
     .returning({ id: jobs.id });
-  return row?.id ?? "";
+  if (row) return row.id;
+  if (!key) return "";
+  const [existing] = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.organizationId, opts.organizationId),
+        eq(jobs.type, type),
+        eq(jobs.idempotencyKey, key),
+      ),
+    );
+  return existing?.id ?? "";
 }
 
 /** 30 s, 1 min, 2 min … capped at 1 h. */
@@ -90,6 +130,10 @@ export interface JobStore {
     token: number,
     next: { status: "queued" | "failed"; runAt: Date; error: string },
   ): Promise<boolean>;
+  /** Records effect `key` of job `id` before it runs; false when it was already recorded (it ran, or is running). */
+  claimEffect(id: string, key: string): Promise<boolean>;
+  /** Removes the record of an effect whose function threw, so a retry may run it. */
+  releaseEffect(id: string, key: string): Promise<void>;
 }
 
 /** Recovery rule for a `running` job (also applied in SQL by the Postgres store). */
@@ -168,7 +212,45 @@ export const postgresStore: JobStore = {
       .returning({ id: jobs.id });
     return rows.length > 0;
   },
+  async claimEffect(id, key) {
+    const rows = await db
+      .insert(jobEffects)
+      .values({ jobId: id, key })
+      .onConflictDoNothing()
+      .returning({ key: jobEffects.key });
+    return rows.length > 0;
+  },
+  async releaseEffect(id, key) {
+    await db.delete(jobEffects).where(and(eq(jobEffects.jobId, id), eq(jobEffects.key, key)));
+  },
 };
+
+/** The context a handler gets: the lease signal and at-most-once effects for this job (ADR-0065). */
+export function jobContext(
+  store: JobStore,
+  job: Pick<ClaimedJob, "id" | "organizationId">,
+  signal: AbortSignal,
+): JobContext {
+  return {
+    organizationId: job.organizationId,
+    signal,
+    jobId: job.id,
+    idempotencyKey: (key) => `${job.id}:${key}`,
+    async once(key, fn) {
+      if (!EFFECT_KEY.test(key))
+        throw new Error("invalid effect key (1–120 letters, digits or ._:-)");
+      // A runner that lost its lease stops before any new effect.
+      if (signal.aborted) return { ran: false };
+      if (!(await store.claimEffect(job.id, key))) return { ran: false };
+      try {
+        return { ran: true, value: await fn() };
+      } catch (err) {
+        await store.releaseEffect(job.id, key).catch(() => undefined);
+        throw err;
+      }
+    },
+  };
+}
 
 export type RunSummary = { done: number; retried: number; failed: number; lost: number };
 
@@ -200,7 +282,7 @@ export async function runDueJobs(
     let error: unknown = null;
     try {
       if (!handler) throw new Error("unknown job type");
-      await handler.run(job.payload, { organizationId: job.organizationId, signal: lease.signal });
+      await handler.run(job.payload, jobContext(store, job, lease.signal));
     } catch (err) {
       error = err;
     } finally {

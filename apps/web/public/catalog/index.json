@@ -9860,7 +9860,7 @@
       "provides": [
         "jobs.queue"
       ],
-      "does": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, cron-triggered runner endpoint",
+      "does": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, leases with expiry, heartbeat and fencing token, recovery of jobs left running by a crashed runner, idempotency keys on enqueue, at-most-once side effects per job (ctx.once), cron-triggered runner endpoint safe under overlapping calls",
       "doesNot": "Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler)",
       "title": "turbineh jobs.queue",
       "summary": "Postgres-backed background job queue: typed jobs, retries with exponential backoff, safe concurrent claiming, cron-triggered runner endpoint. Does not run a long-lived worker process or schedule recurring jobs by itself (call the runner endpoint from a scheduler). Postgres-backed background job queue featuring typed jobs, exponential backoff retries, and safe concurrent claiming via a runner endpoint.",
@@ -9887,7 +9887,7 @@
       "config": [
         {
           "name": "install",
-          "description": "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts, src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts (exact version, added by TurbineH)"
+          "description": "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts, src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts, tests/unit/jobs-concurrency.test.ts (exact version, added by TurbineH)"
         },
         {
           "name": "JOBS_RUNNER_SECRET",
@@ -9923,13 +9923,18 @@
           "name": "runDueJobs",
           "signature": "async function runDueJobs( limit",
           "where": "@/lib/jobs"
+        },
+        {
+          "name": "jobContext",
+          "signature": "function jobContext( store: JobStore, job: Pick<ClaimedJob, \"id\" | \"organizationId\">, signal: AbortSignal, ): JobContext",
+          "where": "@/lib/jobs"
         }
       ],
       "extensionPoints": [
         {
           "what": "Job Handlers",
           "where": "defineJob",
-          "how": "Provide a run function that accepts a validated payload and context."
+          "how": "Provide a run function that accepts a validated payload and context; wrap every external effect (email, payment, post) in ctx.once(key, fn) and pass ctx.idempotencyKey(key) to providers that accept an Idempotency-Key, so overlapping cron calls and retries never repeat it."
         }
       ],
       "compatibility": {
@@ -9963,14 +9968,27 @@
         {
           "claim": "A runner whose lease was taken over never writes its result (fencing token)",
           "test": "files/tests/unit/jobs.test.ts › fences a runner whose lease was taken over: its result is not written and the handler is aborted"
+        },
+        {
+          "claim": "Two runners at the same time (overlapping cron calls) never run the same job twice",
+          "test": "files/tests/unit/jobs-concurrency.test.ts › two runners at the same time never run the same job twice"
+        },
+        {
+          "claim": "Enqueues with the same idempotency key in a workspace are one job",
+          "test": "files/tests/unit/jobs-concurrency.test.ts › overlapping enqueues with the same idempotency key are one job"
+        },
+        {
+          "claim": "A side effect wrapped in ctx.once runs at most once per job, across retries and runners",
+          "test": "files/tests/unit/jobs.test.ts › runs a side effect at most once per job across retries (ctx.once), with a stable idempotency key"
         }
       ],
       "limits": [
         "Max attempts per job is capped at 20",
         "Backoff delay is capped at 1 hour",
-        "Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)"
+        "Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)",
+        "ctx.once is at most once: an effect interrupted by a crash is not retried (it stays recorded in job_effects)"
       ],
-      "example": "import { defineJob, enqueue } from '@/lib/jobs';\n\ndefineJob('email', { schema: {}, run: async (p, ctx) => {} }, async (p, ctx) => {});\n\nenqueue('email', {}, { organizationId: '123' });",
+      "example": "import { z } from 'zod';\nimport { defineJob, enqueue } from '@/lib/jobs';\n\ndefineJob('email.reminder', z.object({ to: z.email() }), async (p, ctx) => {\n  await ctx.once('send', () => sendReminder(p.to, { idempotencyKey: ctx.idempotencyKey('send') }));\n});\n\nawait enqueue('email.reminder', { to: 'ana@example.com' }, { organizationId, idempotencyKey: `reminder:${bookingId}` });",
       "keywords": [
         "jobs.queue.turbineh",
         "jobs.queue",

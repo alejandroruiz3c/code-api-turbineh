@@ -57,8 +57,9 @@ export default async function EntryPage({ params }: Props) {
   }).replace(/</g, "\\u003c");
   return (
     <SitePagesFrame>
+      {/* Semgrep reports this match at the conditional's line, so its suppression sits right above that line. */}
+      {/* nosemgrep: turbineh.unsanitized-html -- JSON-LD from JSON.stringify with "<" escaped */}
       {sitePagesConfig.seo ? (
-        // nosemgrep: turbineh.unsanitized-html -- JSON-LD from JSON.stringify with "<" escaped
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ld }} />
       ) : null}
       <article className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-16">

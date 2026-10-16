@@ -201,6 +201,8 @@ export interface PlanCriterion {
 export interface CheckResult {
   name: string; // lint, typecheck, unit, build, e2e, secrets, static, dependencies, licenses
   ok: boolean;
+  /** Passed with this many non-blocking findings left (ADR-0065): "pass with warnings", never a plain pass. */
+  warnings?: number;
   detail?: string;
 }
 
@@ -267,7 +269,8 @@ export interface FlowOutcome {
    * F18 (ADR-0052): build checks and the request's requirements, kept apart. `badge` is the one line every client
    * shows ("Checks 11/11 · Requirements 6/8 met"); "verified" alone is never shown while requirements are open.
    */
-  checks?: { passed: number; total: number };
+  /** `warnings`: passed checks with non-blocking findings left (ADR-0065). */
+  checks?: { passed: number; total: number; warnings?: number };
   requirements?: { met: number; total: number };
   badge?: string;
 }

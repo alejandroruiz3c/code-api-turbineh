@@ -80,7 +80,7 @@ security:
   - "Irreversible tools never run without the person's explicit yes (deterministic reading) or a Confirm button; pending actions expire after 30 min"
   - "Tool arguments validated with Zod; unknown tools refused; errors shown to people never contain internals"
   - "Per-user rate limit and daily token allowances per user/workspace; public assistant adds per-IP limits and message size"
-  - "Answers scanned for secrets (and PII when AI_REDACT_PII=true); usage and an audit row (content hashed) for every call"
+  - "Answers scanned for secrets and PII (AI_REDACT_PII defaults to true; AI_REDACT_PII=false opts out); usage and an audit row (content hashed) for every call"
   - "Keys only from the environment; the Semgrep rule turbineh.ai-direct-model-call flags any model call outside src/lib/ai/models.ts"
   - "When the TurbineH trial of the account is used up, the gateway answers 402 and the person sees its message (who to contact), never a generic failure"
 guarantees:
@@ -93,7 +93,7 @@ guarantees:
 limits:
   - "runAgent: 6 steps by default (max 12), 60 s per run, 10 s per tool, 4 tool calls per step, 30 messages kept"
   - "Confirmation words: English, Spanish, French, German, Portuguese (short, no digits); buttons work in any language"
-  - "PII redaction (AI_REDACT_PII) also hides emails from tools: keep it off for agents that need the person's email"
+  - "PII redaction is on by default (AI_REDACT_PII) and also hides emails from tools: set AI_REDACT_PII=false explicitly for agents that need the person's email"
   - "Per-IP limits of the public assistant need TRUSTED_PROXY_HOPS off Vercel (otherwise visitors share one bucket)"
 example: |
   import { z } from "zod";

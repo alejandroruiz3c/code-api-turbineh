@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -98,6 +98,61 @@ export function revertWeakenedTests(dir: string, files: readonly string[]): Weak
     const reason = assertionWeakening(before, after, isFixedOracle(file));
     if (!reason) continue;
     execFileSync("git", ["checkout", "HEAD", "--", file], { cwd: dir });
+    out.push({ file, reason });
+  }
+  return out;
+}
+
+/**
+ * Configuration of the checks themselves (ADR-0065): lint, type-check, test runners and scanner ignore files. A repair
+ * that edits one would make a check pass without fixing the code, so it is refused.
+ */
+export function isCheckConfig(path: string): boolean {
+  return /^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.\w+)?|\.eslintignore|\.semgrepignore|\.gitleaks\.toml|\.gitleaksignore|tsconfig(\.\w+)?\.json|vitest\.config\.[cm]?[jt]s|playwright\.config\.[cm]?[jt]s)$/.test(
+    path,
+  );
+}
+
+/** Comments that silence a check (Semgrep, ESLint, TypeScript, gitleaks, coverage). */
+const SUPPRESSION =
+  /\bnosemgrep\b|\beslint-disable(?:-next-line|-line)?\b|@ts-ignore\b|@ts-nocheck\b|@ts-expect-error\b|gitleaks:allow\b/g;
+
+/** Why `after` silences a check that `before` did not (null when it adds no suppression). */
+export function suppressionAdded(before: string | null, after: string | null): string | null {
+  const was = (before ?? "").match(SUPPRESSION) ?? [];
+  const now = (after ?? "").match(SUPPRESSION) ?? [];
+  if (now.length <= was.length) return null;
+  const left = [...was];
+  const added = now.find((s) => {
+    const i = left.indexOf(s);
+    if (i < 0) return true;
+    left.splice(i, 1);
+    return false;
+  });
+  return `a check suppression was added (${added ?? now[now.length - 1]})`;
+}
+
+/**
+ * Every change a repair may not make (ADR-0054, ADR-0065), among `files` changed but not committed yet: weakened tests,
+ * edited check configuration and added suppressions (`nosemgrep`, `eslint-disable`, `@ts-ignore`…). Each one is
+ * restored from HEAD (or removed when it is new) and returned with the reason, so the report can show it. Tests and
+ * rules are the oracle of a repair, never its target.
+ */
+export function revertForbiddenChanges(dir: string, files: readonly string[]): WeakenedTest[] {
+  const out: WeakenedTest[] = revertWeakenedTests(dir, files);
+  const done = new Set(out.map((w) => w.file));
+  for (const file of files) {
+    if (done.has(file)) continue;
+    const before = committed(dir, file);
+    const path = join(dir, file);
+    const after = existsSync(path) ? readFileSync(path, "utf8") : null;
+    if (before === after) continue;
+    const reason = isCheckConfig(file)
+      ? "the configuration of a check was changed"
+      : suppressionAdded(before, after);
+    if (!reason) continue;
+    if (before === null) rmSync(path, { force: true });
+    else execFileSync("git", ["checkout", "HEAD", "--", file], { cwd: dir });
     out.push({ file, reason });
   }
   return out;

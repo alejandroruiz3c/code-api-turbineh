@@ -4,6 +4,29 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Security
+
+- Honest security gate for generated apps (ADR-0065, audit v2 N-02, F-07, F-08, F-10, F-12):
+  - A finding counts as "fixed automatically" only when the re-scan after its fix and the final scan no longer find it
+    (rule + file + line, deduplicated); attempts that did not work are listed as "Attempted, not fixed". A finding is
+    never both fixed and remaining; "Security issues fixed before delivery" (flow page, workspace summary,
+    START_HERE.html, TURBINEH_REPORT.md) is that verified count (older flows show "—").
+  - XSS (`turbineh.unsanitized-html`) and open redirects in routes, pages, layouts and components are always blocking.
+    The public-pages component's JSON-LD suppression now sits on the line Semgrep reports (the bookings CMS route of
+    the audit).
+  - Auditable corrections: TURBINEH_REPORT.md "How this build was corrected" and the flow page's Check tab list the
+    checks of the first pass, every correction (directed, Backup Coder, swap, security fix, repair) with its commit and
+    diff, and refused changes. Repairs may not weaken tests, add suppressions (`nosemgrep`, `eslint-disable`,
+    `@ts-ignore`…) or edit check configuration: such changes are reverted and reported.
+  - "Pass with warnings": passing checks with non-blocking findings are shown as such in SECURITY.md, START_HERE.html,
+    AGENTS.md, the badge (`Checks 11/11 (1 with warnings)`) and the API (`checks.warnings`); non-blocking advisories are
+    listed as accepted exceptions with the reason, the OSV patched version and a review date. Exceptions policy in
+    SECURITY.md.
+  - Job queue (`jobs.queue.turbineh`): idempotency keys on `enqueue`, at-most-once side effects per job (`ctx.once`,
+    table `job_effects`) and `ctx.idempotencyKey`; concurrency test with two runners on PostgreSQL (PGlite). Catalog test
+    that every recipe uses the PostgreSQL-backed rate limiter.
+  - `AI_REDACT_PII` defaults to `true` in generated AI apps; `AI_REDACT_PII=false` is the explicit, documented opt-out.
+
 ### Added
 
 - Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,

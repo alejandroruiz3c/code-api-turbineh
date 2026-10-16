@@ -1,6 +1,11 @@
 import type { Decider } from "@turbineh/decider";
 import { proofVerdict, proofVeto } from "@turbineh/shared";
-import type { ImprovementEstimate, RemediationChange, SecurityAlert } from "@turbineh/remediation";
+import type {
+  ImprovementEstimate,
+  RemediationAudit,
+  RemediationChange,
+  SecurityAlert,
+} from "@turbineh/remediation";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -21,7 +26,10 @@ export interface ReportFacts {
   components: { capability: string; id: string }[];
   gaps: string[];
   alerts: SecurityAlert[];
+  /** Changes the security remediation attempted (claims; never counted as fixes by themselves). */
   remediation: RemediationChange[];
+  /** How the build was corrected and which findings a new scan confirmed fixed (ADR-0065). */
+  audit?: RemediationAudit;
   reusedShare: number | null;
   /** Helpers written by the Backup Coder for capabilities without a catalog component (verified like the rest). */
   backupGenerated?: { capability: string; label: string; file: string }[];
@@ -69,8 +77,11 @@ export interface BuildReport {
     status: "clear" | "alerts";
     statusLine: string;
     points: string[];
+    /** Findings fixed automatically and confirmed by a new scan and the final one (ADR-0065). */
     fixedBeforeDelivery: number;
   };
+  /** The correction audit trail (ADR-0065), deterministic: shown as is, never rewritten by a model. */
+  audit?: RemediationAudit;
   nextSteps: string[];
   /** Deterministic (from verified facts): T3 business rules, where they live and whether they were delivered. */
   businessRules: {
@@ -345,7 +356,15 @@ export async function buildReport(
   const fb = fallbackText(facts);
   const securityFacts = {
     checks: facts.checks,
-    fixed_before_delivery: facts.remediation.map((r) => ({ what: r.target, why: r.detail })),
+    // Only findings a new scan confirmed fixed (ADR-0065); attempts that did not work are said as such.
+    fixed_before_delivery: (facts.audit?.fixed ?? []).map((f) => ({
+      what: f.where,
+      rule: f.rule,
+    })),
+    attempted_not_fixed: (facts.audit?.notFixed ?? []).map((f) => ({
+      what: f.where,
+      rule: f.rule,
+    })),
     remaining_alerts: facts.alerts.map((a) => ({
       affects: a.level === "warning" ? "what is shipped to users" : "development-only tools",
       title: a.title,
@@ -409,8 +428,9 @@ export async function buildReport(
       status: facts.alerts.length === 0 ? "clear" : "alerts",
       statusLine: security?.status_line ?? fb.statusLine,
       points: security?.points ?? fb.points,
-      fixedBeforeDelivery: facts.remediation.length,
+      fixedBeforeDelivery: facts.audit?.fixed.length ?? 0,
     },
+    ...(facts.audit ? { audit: facts.audit } : {}),
     nextSteps: steps?.next_steps ?? fb.nextSteps,
     businessRules: (facts.businessRules ?? []).map((r) => ({
       entity: r.entity,
@@ -439,7 +459,7 @@ ${r.overview}
 
 ${r.criteria.map((c) => `- ${c.verified ? "✅" : "⬜"} ${c.criterion} — _${c.evidence}_`).join("\n") || "- (none)"}
 
-${businessRulesMarkdown(r)}${backupCodeMarkdown(r)}## Security
+${businessRulesMarkdown(r)}${backupCodeMarkdown(r)}${auditMarkdown(r)}## Security
 
 **${r.security.statusLine}**${r.security.fixedBeforeDelivery ? ` (${r.security.fixedBeforeDelivery} issue(s) fixed automatically before delivery)` : ""}
 
@@ -541,4 +561,63 @@ ${r.backupCode.map((b) => `- ⚠️ ${b.label} (\`${b.capability}\`) — \`${b.f
 function improvementMarkdown(r: BuildReport): string {
   const t = improvementText(r);
   return t ? `> ${t}\n\n` : "";
+}
+
+/** A code fence longer than any backtick run in the text, so a diff is shown exactly as it is. */
+const fence = (text: string) =>
+  "`".repeat(Math.max(3, ...[...text.matchAll(/`+/g)].map((m) => m[0].length + 1)));
+
+const STATUS_TEXT = { pass: "pass", warn: "pass with warnings", fail: "FAIL" } as const;
+const PHASE_TEXT = {
+  correction: "Directed correction",
+  "backup-correction": "Backup Coder correction (T4)",
+  swap: "Removed generated part",
+  "security-fix": "Security fix",
+  repair: "Repair after a security fix",
+} as const;
+
+/**
+ * "How this build was corrected" (ADR-0065): the checks of the first pass, every correction with the commit and its
+ * diff, the changes that were refused (tests, rules and check configuration are never a repair's target) and the
+ * security findings confirmed fixed. Written by code from the audit trail; empty when nothing had to be corrected.
+ */
+export function auditMarkdown(r: Pick<BuildReport, "audit">): string {
+  const a = r.audit;
+  if (!a) return "";
+  const firstFailed = a.firstPass.filter((c) => c.status !== "pass");
+  if (
+    a.corrections.length === 0 &&
+    a.refused.length === 0 &&
+    firstFailed.every((c) => c.status === "warn")
+  )
+    return "";
+  const first = a.firstPass.map((c) => `\`${c.name}\` ${STATUS_TEXT[c.status]}`).join(" · ");
+  const problems = a.firstPassProblems.length
+    ? `\n\nBlocking on the first pass:\n\n${a.firstPassProblems.map((p) => `- ${p}`).join("\n")}`
+    : "";
+  const corrections = a.corrections.length
+    ? a.corrections
+        .map(
+          (c) =>
+            `### ${PHASE_TEXT[c.phase]} ${c.round}${c.commit ? ` · commit \`${c.commit.slice(0, 12)}\`` : ""}\n\n` +
+            `${c.why}. Files: ${c.files.map((f) => `\`${f}\``).join(", ") || "none"}.\n\n` +
+            `<details><summary>Diff${c.truncated ? ` (first lines; \`git show ${(c.commit ?? "").slice(0, 12)}\` prints all of it)` : ""}</summary>\n\n${fence(c.diff)}diff\n${c.diff}\n${fence(c.diff)}\n\n</details>`,
+        )
+        .join("\n\n")
+    : "No correction was needed.";
+  const refused = a.refused.length
+    ? `\n\n**Refused changes** — a repair may not weaken a test, silence a check (\`nosemgrep\`, \`eslint-disable\`, \`@ts-ignore\`…) or edit a check's configuration; these proposed changes were reverted:\n\n${a.refused
+        .map((x) => `- \`${x.file}\` (${PHASE_TEXT[x.phase].toLowerCase()}): ${x.reason}`)
+        .join("\n")}`
+    : "";
+  const fixed = `\n\nSecurity findings fixed automatically, confirmed by a new scan: ${a.fixed.length}${
+    a.notFixed.length ? ` (attempted but still present: ${a.notFixed.length}, see SECURITY.md)` : ""
+  }.`;
+  return `## How this build was corrected
+
+First pass: ${first}.${problems}
+
+${corrections}${refused}${fixed}
+
+`;
 }
