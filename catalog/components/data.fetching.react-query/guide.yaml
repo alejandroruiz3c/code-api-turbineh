@@ -64,6 +64,20 @@ example: |-
   import { QueryClient } from "@tanstack/react-query";
 
   const qc = new QueryClient();
+  let calls = 0;
+  const fetchFn = async () => ++calls;
+  await qc.fetchQuery({ queryKey: ["n"], queryFn: fetchFn, staleTime: 60_000 });
+  await qc.fetchQuery({ queryKey: ["n"], queryFn: fetchFn, staleTime: 60_000 });
+  console.log(calls); // → 1
+  qc.clear();
+example_check:
+  kind: typescript
+  from: contract.test.ts › caches query results
+  compiled:
+    against:
+      - "@tanstack/react-query@5.104.0"
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -80,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

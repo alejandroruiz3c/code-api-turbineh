@@ -6,6 +6,14 @@ import { TURBINEH_LOGO_SVG } from "./brand.js";
  * verified facts — no model text, no external resources.
  */
 
+/** AI connection settings: documented in their own section, as two equal choices (F-09), not in the tables. */
+const AI_CONNECTION = new Set([
+  "TURBINEH_AI_URL",
+  "TURBINEH_AI_TOKEN",
+  "AI_BASE_URL",
+  "AI_API_KEY",
+  "AI_MODEL",
+]);
 /** Plain-language notes for well-known settings (shown instead of the .env.example comment). */
 const EXPLAIN: Record<string, string> = {
   DATABASE_URL: "Connection string of your production PostgreSQL database.",
@@ -24,8 +32,12 @@ const EXPLAIN: Record<string, string> = {
   JOBS_RUNNER_SECRET:
     "Random secret (32+ characters) that your scheduler sends to run background jobs.",
   TURBINEH_AI_TOKEN:
-    "Your app's AI access token (`tbh_ai_…`): **Get AI access token** on your build page (Deploy for me sets it for you). The app uses TurbineH's AI — no AI provider or decider keys needed.",
+    "Your app's AI access token (`tbh_ai_…`): **Get AI access token** on your build page (Deploy for me sets it for you).",
   TURBINEH_AI_URL: "TurbineH AI address. Keep the default `https://software.turbineh.com/v1/ai`.",
+  AI_BASE_URL:
+    "Base URL of your OpenAI-compatible endpoint, including its version path (for example `https://host/v1`).",
+  AI_API_KEY: "Key for `AI_BASE_URL` (sent as a bearer token, never logged).",
+  AI_MODEL: "Model served by `AI_BASE_URL`.",
 };
 
 /** A setting of the app's env schema (src/env.ts + declared component settings, ADR-0064). */
@@ -38,22 +50,65 @@ export interface EnvSetting {
 export const settingNote = (e: EnvSetting) => EXPLAIN[e.name] ?? e.about;
 
 /**
+ * How the app reaches a model (component ai.orchestrator.turbineh, `src/lib/ai/models.ts`): the TurbineH gateway or the
+ * client's own OpenAI-compatible provider, presented as equal choices. Only what the shipped code does is described.
+ */
+function aiSection(vars: EnvSetting[], n: number): string {
+  const has = (k: string) => vars.some((v) => v.name === k);
+  if (!has("TURBINEH_AI_TOKEN") && !has("AI_BASE_URL")) return "";
+  const own = has("AI_BASE_URL");
+  return `
+## ${n} · AI: choose how the app reaches a model
+
+This app has AI features. Pick **one** of these options; both are supported and the code chooses by configuration only.
+
+| | Option 1 · TurbineH gateway | Option 2 · your own provider |
+|---|---|---|
+| Settings | \`TURBINEH_AI_TOKEN\` (and \`TURBINEH_AI_URL\`, keep the default \`https://software.turbineh.com/v1/ai\`) | ${own ? "`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, with `TURBINEH_AI_TOKEN` left empty" : "Not available in this app"} |
+| Where requests go | The TurbineH AI gateway, which orchestrates each request (route, safety policy, next action); the app keeps and runs its own tools | ${own ? "Any OpenAI-compatible endpoint you choose (for example a self-hosted open model), with a plain tool-calling loop and no TurbineH orchestration" : "—"} |
+| Keys in the app | Only this app's TurbineH token (\`tbh_ai_…\`, from **Get AI access token** on your build page, or set by Deploy for me) | ${own ? "Your provider's key" : "—"} |
+| Always in the app | Safety checks, limits, usage records and audit log | Safety checks, limits, usage records and audit log |
+
+When \`TURBINEH_AI_TOKEN\` is set, the gateway is used; when it is empty and \`AI_BASE_URL\` is set, your provider is used.
+${own ? "Switching is a change of environment variables and a restart; no code changes." : ""}
+
+**When the configured AI endpoint is unavailable** (network error, timeout, rate limit or server error): the app retries
+the request once, within \`AI_TIMEOUT_MS\` (default 60 seconds), then shows the person
+"The assistant is not available right now. Please try again." and records the failed call in its usage and audit
+records. There is **no automatic switch** to the other option: to keep AI working during a gateway outage, configure
+option 2 (empty \`TURBINEH_AI_TOKEN\`, set \`AI_BASE_URL\`/\`AI_API_KEY\`/\`AI_MODEL\`) and restart. Calls to a model
+only happen in the app's AI features (\`src/lib/ai/\`); the rest of the app does not depend on them.
+
+### Data processing (DPA) and service levels (SLA)
+
+The TurbineH gateway processes the text your app sends to it. A data processing agreement (DPA) and service levels
+(SLA) for the gateway are not published yet; ask for them at support@turbineh.com before sending personal data through
+it. With option 2, your own provider's terms apply.
+`;
+}
+
+/**
  * DEPLOY.md from the app's single env schema (ADR-0064): the same Required / Optional split as the plan, the result,
- * AGENTS.md and turbineh.json.
+ * AGENTS.md and turbineh.json. The AI connection settings are presented in their own section as two equal options
+ * (F-09) instead of the tables.
  */
 export function deployGuide(
   appName: string,
   env: { required: EnvSetting[]; optional: EnvSetting[] },
 ): string {
-  const { required, optional } = env;
-  const jobs = [...required, ...optional].some((v) => v.name === "JOBS_RUNNER_SECRET");
+  const all = [...env.required, ...env.optional];
+  const required = env.required.filter((v) => !AI_CONNECTION.has(v.name));
+  const optional = env.optional.filter((v) => !AI_CONNECTION.has(v.name));
+  const ai = aiSection(all, 3);
+  const step = (n: number) => (ai ? n + 1 : n);
+  const jobs = all.some((v) => v.name === "JOBS_RUNNER_SECRET");
   const row = (v: EnvSetting) => `| \`${v.name}\` | ${settingNote(v).replace(/\|/g, "\\|")} |`;
   return `# Deploy ${appName}
 
-From this package to a live app your customers can use. Takes about 30 minutes the first time.
+From this package to a live app your customers can use.
 
 > **Prefer us to do it?** On your build page, **Deploy for me** puts the app online in your own Vercel account and a
-> new database for you in about 5 minutes, and updates this package with the live address. It is optional.
+> new database for you, and updates this package with the live address. It is optional.
 
 ## 1 · What you need
 
@@ -66,8 +121,8 @@ From this package to a live app your customers can use. Takes about 30 minutes t
 Set these in your host's dashboard. Never commit them to the repository.
 
 ${required.length ? `| Required | What it is |\n|---|---|\n${required.map(row).join("\n")}\n` : "No setting is required.\n"}
-${optional.length ? `\n| Optional | What it is |\n|---|---|\n${optional.map(row).join("\n")}\n` : ""}
-## 3 · Go live — option A: Vercel + Neon (simplest)
+${optional.length ? `\n| Optional | What it is |\n|---|---|\n${optional.map(row).join("\n")}\n` : ""}${ai}
+## ${step(3)} · Go live — option A: Vercel + Neon (simplest)
 
 1. Push this repository to your GitHub (the "Push to my GitHub" button does it for you).
 2. In Neon, create a project and copy its connection string → \`DATABASE_URL\`.
@@ -75,7 +130,7 @@ ${optional.length ? `\n| Optional | What it is |\n|---|---|\n${optional.map(row)
 4. Create the tables once from your computer: \`pnpm install && DATABASE_URL="<your url>" pnpm db:migrate\`.
 5. Deploy. Then set \`BETTER_AUTH_URL\` to the final address (your domain) and redeploy.
 
-## 3 · Go live — option B: your own server
+## ${step(3)} · Go live — option B: your own server
 
 \`\`\`bash
 pnpm install --frozen-lockfile
@@ -86,7 +141,7 @@ pnpm start --port 3000 # behind a reverse proxy with HTTPS (Caddy, Nginx)
 ${
   jobs
     ? `
-## 4 · Background jobs
+## ${step(4)} · Background jobs
 
 This app runs work in the background. Ask your scheduler (Vercel Cron, a GitHub Action, or \`cron\`) to call every
 minute:
@@ -97,7 +152,7 @@ curl -X POST https://<your-app>/api/jobs/run -H "Authorization: Bearer $JOBS_RUN
 `
     : ""
 }
-## ${jobs ? "5" : "4"} · First steps in the app
+## ${step(jobs ? 5 : 4)} · First steps in the app
 
 1. Open the app and **sign up**: you become the owner of the first workspace.
 2. Invite your team from the workspace settings and give each person the right role (owner, admin, member).
@@ -172,7 +227,7 @@ ${
 | Tables | Created by the migrations, which ran inside your own Vercel build |
 | Settings | ${live.settings.map((k) => `\`${k}\``).join(", ")} — stored encrypted in your Vercel project (secrets were generated at random and are not stored anywhere else) |
 ${live.cron ? "| Background jobs | Vercel Cron calls `/api/jobs/run` daily (Hobby plan limit); on Vercel Pro you can make it every minute in `vercel.json` |\n" : ""}
-## What is left for you (about 15 minutes)
+## What is left for you
 
 1. **Open your app** at ${live.url} and **sign up**: you become the owner of the first workspace.
 2. **Invite your team** and give each person the right role.
@@ -372,7 +427,7 @@ export function startHereHtml(f: HandoverFacts): string {
       ${
         f.live
           ? `<li><b>Your app is live</b>We set up hosting, database and settings in your accounts. <a class="file" href="DEPLOYED.md">DEPLOYED.md ↗</a></li>`
-          : `<li><b>Go live</b>Database, settings and hosting in about 30 minutes — or let us do it with "Deploy for me". <a class="file" href="DEPLOY.md">DEPLOY.md ↗</a></li>`
+          : `<li><b>Go live</b>Database, settings and hosting — or let us do it with "Deploy for me". <a class="file" href="DEPLOY.md">DEPLOY.md ↗</a></li>`
       }
       <li><b>Invite your team</b>Sign up as the owner in your live app and add your team with the right roles.</li>
     </ol>

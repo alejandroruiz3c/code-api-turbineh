@@ -62,8 +62,18 @@ limits:
   - Not sortable by time
 example: |-
   import { createId, isCuid } from "@paralleldrive/cuid2";
-  const id = createId();
-  const valid = isCuid(id);
+
+  const a = createId();
+  console.log(isCuid(a)); // → true
+  console.log(a); // → not createId()
+example_check:
+  kind: typescript
+  from: contract.test.ts › creates unique, valid ids
+  compiled:
+    against:
+      - "@paralleldrive/cuid2@3.3.0"
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -80,10 +90,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

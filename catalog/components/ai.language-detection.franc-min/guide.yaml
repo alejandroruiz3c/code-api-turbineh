@@ -60,10 +60,19 @@ guarantees:
 limits:
   - Short texts (a few words) are unreliable
 example: |-
-  import { detectLanguage } from "@/integrations/ai-language-detection";
+  import { franc } from "franc-min";
 
-  const lang = detectLanguage("The customer asked for a refund because the parcel arrived damaged and late.");
-  // returns "eng"
+  console.log(franc("The customer asked for a refund because the parcel arrived damaged and late.")); // → "eng"
+  console.log(franc("El cliente pidió un reembolso porque el paquete llegó dañado y con retraso.")); // → "spa"
+  console.log(franc("ok")); // → "und"
+example_check:
+  kind: typescript
+  from: contract.test.ts › detects the language of a paragraph offline
+  compiled:
+    against:
+      - franc-min@6.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -80,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

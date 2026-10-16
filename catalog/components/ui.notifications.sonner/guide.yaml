@@ -57,16 +57,22 @@ guarantees:
 limits:
   - Does not send push or email notifications
 example: |-
-  import { Toaster, toast } from 'sonner';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { Toaster, toast } from "sonner";
 
-  function App() {
-    return (
-      <>
-        <Toaster />
-        <button onClick={() => toast('My first toast')}>Give me a toast</button>
-      </>
-    );
-  }
+  console.log(typeof toast.success); // → "function"
+  console.log(renderToString(h(Toaster))); // → contains "Notifications"
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes a toaster and an imperative API
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - sonner@2.0.8
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

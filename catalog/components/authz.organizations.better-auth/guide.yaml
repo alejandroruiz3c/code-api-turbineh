@@ -46,20 +46,14 @@ interfaces:
     signature: import { betterAuth } from "better-auth"
     where: better-auth
   - name: organizationClient
-    signature: import { organizationClient } from "better-auth"
-    where: better-auth
+    signature: import { organizationClient } from "better-auth/client/plugins"
+    where: better-auth/client/plugins
   - name: createAuthClient
-    signature: import { createAuthClient } from "better-auth"
-    where: better-auth
+    signature: import { createAuthClient } from "better-auth/react"
+    where: better-auth/react
   - name: organization
-    signature: import { organization } from "better-auth"
-    where: better-auth
-  - name: toNextJsHandler
-    signature: import { toNextJsHandler } from "better-auth"
-    where: better-auth
-  - name: nextCookies
-    signature: import { nextCookies } from "better-auth"
-    where: better-auth
+    signature: import { organization } from "better-auth/plugins"
+    where: better-auth/plugins
   - name: APIError
     signature: import { APIError } from "better-auth"
     where: better-auth
@@ -94,7 +88,33 @@ guarantees:
       default
 limits:
   - Enforces limits on specific operations
-example: import { betterAuth, createAuthClient, organizationClient } from 'better-auth';
+example: |-
+  // Server: organizations (workspaces), members and invitations on top of better-auth sessions.
+  import { betterAuth } from "better-auth";
+  import { organizationClient } from "better-auth/client/plugins";
+  import { organization } from "better-auth/plugins";
+  import { createAuthClient } from "better-auth/react";
+  import { Pool } from "pg";
+
+  export const auth = betterAuth({
+    database: new Pool({ connectionString: process.env.DATABASE_URL }),
+    emailAndPassword: { enabled: true },
+    plugins: [organization()],
+  });
+
+  // Client: create a workspace and make it the active one.
+  export const authClient = createAuthClient({ plugins: [organizationClient()] });
+  const created = await authClient.organization.create({ name: "Acme", slug: "acme" });
+  if (created.data) await authClient.organization.setActive({ organizationId: created.data.id });
+example_check:
+  kind: typescript
+  from: snippet.ts
+  compiled:
+    against:
+      - better-auth@1.7.6
+      - pg@8.23.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -111,10 +131,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

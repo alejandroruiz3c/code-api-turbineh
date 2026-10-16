@@ -497,7 +497,16 @@ export function deployFacts(markdown: string): SurfaceFacts {
     }
     return rows;
   };
-  return { surface: "DEPLOY.md", envRequired: table("Required"), envOptional: table("Optional") };
+  // AI connection settings are presented as two equal options in their own section (F-09): its "Settings" row.
+  const ai = /^\| Settings \|(.*)$/m.exec(markdown.slice(Math.max(0, markdown.indexOf("· AI: choose"))))?.[1] ?? "";
+  const aiNames = markdown.includes("· AI: choose")
+    ? [...ai.matchAll(/`([A-Z][A-Z0-9_]*)`/g)].map((x) => x[1] as string)
+    : [];
+  return {
+    surface: "DEPLOY.md",
+    envRequired: table("Required"),
+    envOptional: [...new Set([...table("Optional"), ...aiNames])],
+  };
 }
 
 /** AGENTS.md: environment, what is not included, broken promises and the criteria table. */

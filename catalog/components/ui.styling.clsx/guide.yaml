@@ -58,9 +58,17 @@ guarantees:
 limits:
   - Does not resolve conflicting Tailwind classes
 example: |-
-  import { clsx } from 'clsx';
+  import { clsx } from "clsx";
 
-  clsx('a', false && 'b', { c: true, d: false }, ['e']); // 'a c e'
+  console.log(clsx("a", false && "b", { c: true, d: false }, ["e"])); // → "a c e"
+example_check:
+  kind: typescript
+  from: contract.test.ts › joins truthy classes
+  compiled:
+    against:
+      - clsx@2.1.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -77,10 +85,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -63,10 +63,19 @@ limits:
   - Does not support alphabetic phone numbers (e.g., 1-800-GOT-MILK)
 example: |-
   import { parsePhoneNumberFromString } from "libphonenumber-js";
-  const phoneNumber = parsePhoneNumberFromString("+34 612 34 56 78");
-  if (phoneNumber && phoneNumber.isValid()) {
-    console.log(phoneNumber.format("E.164"));
-  }
+
+  const n = parsePhoneNumberFromString("+34 612 34 56 78");
+  console.log(n?.isValid()); // → true
+  console.log(n?.format("E.164")); // → "+34612345678"
+  console.log(parsePhoneNumberFromString("123")?.isValid() ?? false); // → false
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates and formats E.164
+  compiled:
+    against:
+      - libphonenumber-js@1.13.14
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

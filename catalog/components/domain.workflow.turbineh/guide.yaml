@@ -75,11 +75,24 @@ limits:
   - "One current state per record; no parallel or timed automatic transitions"
   - "Lists show up to 500 records per workflow"
   - "Stuck and overdue are computed when pages load; emails need jobs.scheduled.turbineh"
-example: |
+example: |-
+  // A server action in the app (e.g. src/app/dashboard/workflow/actions.ts).
+  import { requireMember } from "@/server/authz";
   import { createItem, transition } from "@/workflow/service";
-  const ctx = await requireMember();
-  const id = await createItem(ctx, { workflow: "loan", title: "Sony FX3 · 14–16 Oct", dueAt: new Date("2026-10-16") });
-  await transition(ctx, id, "approved", "Approved for the shoot");   // throws if the role cannot approve
+
+  export async function requestAndApprove(workflow: string, approvedState: string): Promise<string> {
+    const ctx = await requireMember();
+    const id = await createItem(ctx, {
+      workflow,
+      title: "Sony FX3 · 14–16 Oct",
+      dueAt: new Date("2026-10-16"),
+    });
+    await transition(ctx, id, approvedState, "Approved for the shoot"); // throws if the role cannot
+    return id;
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/workflow/params.json
   schema: params.schema.json

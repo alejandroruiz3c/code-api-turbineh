@@ -34,7 +34,7 @@ config:
     description: pnpm add embla-carousel-react@8.6.0 (exact version, added by TurbineH)
 interfaces:
   - name: useEmblaCarousel
-    signature: import { useEmblaCarousel } from "embla-carousel-react"
+    signature: import useEmblaCarousel from "embla-carousel-react"
     where: embla-carousel-react
 extension_points:
   - what: carousel configuration
@@ -55,17 +55,29 @@ guarantees:
 limits:
   - Does not include visual styles
 example: |-
-  import { useEmblaCarousel } from "embla-carousel-react";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import useEmblaCarousel from "embla-carousel-react";
 
   function Carousel() {
     const [ref] = useEmblaCarousel({ loop: true });
-    return (
-      <div ref={ref}>
-        <div>Slide 1</div>
-        <div>Slide 2</div>
-      </div>
+    return h(
+      "div",
+      { ref, className: "embla" },
+      h("div", null, h("div", null, "Slide 1"), h("div", null, "Slide 2")),
     );
   }
+  console.log(renderToString(h(Carousel))); // → contains "Slide 2"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders slides on the server
+  compiled:
+    against:
+      - embla-carousel-react@8.6.0
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -82,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

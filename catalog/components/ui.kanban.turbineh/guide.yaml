@@ -65,6 +65,9 @@ limits:
 example: |
   // src/kanban/params.json — a board for the "task" workflow only
   { "workflows": ["task"], "dragAndDrop": true, "highlightOverdue": true }
+example_check:
+  kind: json
+  from: params.schema.json
 params:
   file: src/kanban/params.json
   schema: params.schema.json

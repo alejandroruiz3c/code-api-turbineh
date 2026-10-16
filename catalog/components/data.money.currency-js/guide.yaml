@@ -33,7 +33,7 @@ config:
     description: pnpm add currency.js@2.0.4 (exact version, added by TurbineH)
 interfaces:
   - name: currency
-    signature: import { currency } from "currency.js"
+    signature: import currency from "currency.js"
     where: currency.js
 extension_points:
   - what: arithmetic and formatting operations
@@ -52,11 +52,18 @@ guarantees:
 limits:
   - Does not convert currencies
 example: |-
-  import { currency } from "currency.js";
+  import currency from "currency.js";
 
-  const value = currency(0.1).add(0.2);
-  console.log(value.value); // 0.3
-  console.log(currency(19.99).multiply(3).format()); // "$59.97"
+  console.log(currency(0.1).add(0.2).value); // → 0.3
+  console.log(currency(19.99).multiply(3).format()); // → "$59.97"
+example_check:
+  kind: typescript
+  from: contract.test.ts › adds money without floating point errors
+  compiled:
+    against:
+      - currency.js@2.0.4
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -73,10 +80,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

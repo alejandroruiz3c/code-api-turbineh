@@ -79,14 +79,22 @@ limits:
   - Does not persist data
   - Does not sanitize HTML
 example: |-
-  import { object, pipe, string, email, number, minValue, safeParse } from 'valibot';
+  import * as v from "valibot";
 
-  const Schema = object({
-    email: pipe(string(), email()),
-    age: pipe(number(), minValue(18)),
+  const Schema = v.object({
+    email: v.pipe(v.string(), v.email()),
+    age: v.pipe(v.number(), v.minValue(18)),
   });
-
-  const result = safeParse(Schema, { email: "a@b.co", age: 30 });
+  console.log(v.safeParse(Schema, { email: "a@b.co", age: 30 }).success); // → true
+  console.log(v.safeParse(Schema, { email: "nope", age: 3 }).issues?.length); // → 2
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates and reports issues
+  compiled:
+    against:
+      - valibot@1.5.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -103,10 +111,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

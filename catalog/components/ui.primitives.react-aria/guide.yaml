@@ -70,19 +70,30 @@ guarantees:
 limits:
   - Requires manual styling as components are unstyled out of the box
 example: |-
-  import { Button, Label, TextField, Input } from 'react-aria-components';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { Button, Label, TextField, Input } from "react-aria-components";
 
-  function Example() {
-    return (
-      <>
-        <TextField>
-          <Label>Email</Label>
-          <Input />
-        </TextField>
-        <Button>Save</Button>
-      </>
-    );
-  }
+  const html = renderToString(
+    h(
+      "div",
+      null,
+      h(TextField, null, h(Label, null, "Email"), h(Input)),
+      h(Button, null, "Save"),
+    ),
+  );
+  console.log(html); // → contains "Email"
+  console.log(html); // → contains "Save"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders accessible fields and buttons
+  compiled:
+    against:
+      - react@19.3.0
+      - react-aria-components@1.21.1
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -99,10 +110,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

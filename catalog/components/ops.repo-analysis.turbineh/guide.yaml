@@ -101,3 +101,6 @@ limits:
 example: |-
   curl $BASE/v1/repos/acme/web/analysis -H "Authorization: Bearer $TOKEN"
   # → analysis.conventions: ["Next.js 16.3.8 with the App Router in `src/app/`.", "Import alias `@/` → `src/`.", ...]
+example_check:
+  kind: shell
+  from: guide.yaml

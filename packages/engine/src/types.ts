@@ -1,3 +1,4 @@
+import type { CapabilitySummary } from "@turbineh/shared";
 /** A complete flow TurbineH builds and verifies (a catalog recipe). */
 export interface UseCase {
   id: string;
@@ -33,7 +34,11 @@ export interface CatalogDocs {
   keywords: string[];
   guarantees: number;
   example: string;
+  /** Source and compile record of the example (guide.yaml `example_check`, ADR-0066). */
+  exampleCheck?: CapabilityExampleCheck;
 }
+
+export type CapabilityExampleCheck = NonNullable<CapabilitySummary["exampleCheck"]>;
 
 /** guide.yaml (snake_case, stored in the manifest as `docs`) → the compact form the product uses. */
 export function catalogDocs(raw: unknown): CatalogDocs | null {
@@ -60,6 +65,38 @@ export function catalogDocs(raw: unknown): CatalogDocs | null {
     keywords: strings(d.keywords),
     guarantees: Array.isArray(d.guarantees) ? d.guarantees.length : 0,
     example: typeof d.example === "string" ? d.example : "",
+    ...withExampleCheck(exampleCheckOf(d.example_check)),
+  };
+}
+
+function withExampleCheck(c: CapabilityExampleCheck | undefined): {
+  exampleCheck?: CapabilityExampleCheck;
+} {
+  return c ? { exampleCheck: c } : {};
+}
+
+function exampleCheckOf(raw: unknown): CapabilityExampleCheck | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const c = raw as Record<string, unknown>;
+  const kinds = ["typescript", "app", "json", "shell"] as const;
+  const kind = kinds.find((k) => k === c.kind);
+  if (!kind || typeof c.from !== "string") return undefined;
+  const compiled = c.compiled as Record<string, unknown> | undefined;
+  return {
+    kind,
+    from: c.from,
+    ...(compiled &&
+    Array.isArray(compiled.against) &&
+    typeof compiled.typescript === "string" &&
+    typeof compiled.on === "string"
+      ? {
+          compiled: {
+            against: compiled.against.filter((x): x is string => typeof x === "string"),
+            typescript: compiled.typescript,
+            on: compiled.on,
+          },
+        }
+      : {}),
   };
 }
 

@@ -70,11 +70,19 @@ limits:
   - Does not handle time zones by itself
 example: |-
   import { addDays, differenceInCalendarDays, format, isBefore, parseISO } from "date-fns";
+
   const d = parseISO("2026-10-13T10:00:00Z");
-  const nextWeek = addDays(d, 7);
-  const diff = differenceInCalendarDays(nextWeek, d);
-  const formatted = format(new Date(2026, 9, 13), "yyyy-MM-dd");
-  const check = isBefore(d, addDays(d, 1));
+  console.log(differenceInCalendarDays(addDays(d, 7), d)); // → 7
+  console.log(isBefore(d, addDays(d, 1))); // → true
+  console.log(format(new Date(2026, 9, 13), "yyyy-MM-dd")); // → "2026-10-13"
+example_check:
+  kind: typescript
+  from: contract.test.ts › adds, compares and formats dates
+  compiled:
+    against:
+      - date-fns@4.4.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -91,10 +99,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

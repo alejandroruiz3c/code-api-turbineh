@@ -41,8 +41,8 @@ config:
     description: pnpm add csv-stringify@6.9.0 (exact version, added by TurbineH)
 interfaces:
   - name: stringify
-    signature: import { stringify } from "csv-stringify"
-    where: csv-stringify
+    signature: import { stringify } from "csv-stringify/sync"
+    where: csv-stringify/sync
 extension_points:
   - what: Custom formatters, delimiters, quotes, and escape characters
     where: stringify options
@@ -61,7 +61,16 @@ limits:
   - Does not neutralise spreadsheet formulas by default
 example: |-
   import { stringify } from "csv-stringify/sync";
-  const output = stringify([{ a: "x,y", b: 1 }], { header: true });
+
+  console.log(stringify([{ a: "x,y", b: 1 }], { header: true })); // → 'a,b\n"x,y",1\n'
+example_check:
+  kind: typescript
+  from: contract.test.ts › serialises with header and quoting
+  compiled:
+    against:
+      - csv-stringify@6.9.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -78,10 +87,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

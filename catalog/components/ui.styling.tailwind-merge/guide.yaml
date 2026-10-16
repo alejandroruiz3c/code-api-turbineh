@@ -55,7 +55,15 @@ limits:
 example: |-
   import { twMerge } from "tailwind-merge";
 
-  twMerge("px-2 py-1 bg-red-500", "px-4 bg-blue-500");
+  console.log(twMerge("px-2 py-1 bg-red-500", "px-4 bg-blue-500")); // → "py-1 px-4 bg-blue-500"
+example_check:
+  kind: typescript
+  from: contract.test.ts › keeps the last conflicting utility
+  compiled:
+    against:
+      - tailwind-merge@3.7.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -72,10 +80,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

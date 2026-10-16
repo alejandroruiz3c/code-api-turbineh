@@ -33,8 +33,8 @@ config:
     description: pnpm add zustand@5.0.15 (exact version, added by TurbineH)
 interfaces:
   - name: createStore
-    signature: import { createStore } from "zustand"
-    where: zustand
+    signature: import { createStore } from "zustand/vanilla"
+    where: zustand/vanilla
 extension_points:
   - what: state management logic
     where: createStore
@@ -57,12 +57,24 @@ guarantees:
 limits:
   - Not a database
 example: |-
-  import { createStore } from "zustand";
+  import { createStore } from "zustand/vanilla";
 
-  const store = createStore((set) => ({
+  type Cart = { items: Record<string, number>; add: (sku: string) => void };
+  const cart = createStore<Cart>()((set) => ({
     items: {},
-    add: (sku: string) => set((s) => ({ items: { ...s.items, [sku]: (s.items[sku] ?? 0) + 1 } })),
+    add: (sku) => set((s) => ({ items: { ...s.items, [sku]: (s.items[sku] ?? 0) + 1 } })),
   }));
+  cart.getState().add("SKU-1");
+  cart.getState().add("SKU-1");
+  console.log(cart.getState().items); // → { "SKU-1": 2 }
+example_check:
+  kind: typescript
+  from: contract.test.ts › keeps cart state outside React
+  compiled:
+    against:
+      - zustand@5.0.15
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +91,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

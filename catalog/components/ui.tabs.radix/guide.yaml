@@ -66,19 +66,35 @@ guarantees:
 limits:
   - Does not provide default styling
 example: |-
-  import { Root, List, Trigger, Content } from "@radix-ui/react-tabs";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import * as Tabs from "@radix-ui/react-tabs";
 
-  function TabsExample() {
-    return (
-      <Root defaultValue="a">
-        <List>
-          <Trigger value="a">A</Trigger>
-          <Trigger value="b">B</Trigger>
-        </List>
-        <Content value="a">Panel A</Content>
-      </Root>
-    );
-  }
+  const html = renderToString(
+    h(
+      Tabs.Root,
+      { defaultValue: "a" },
+      h(
+        Tabs.List,
+        null,
+        h(Tabs.Trigger, { value: "a" }, "A"),
+        h(Tabs.Trigger, { value: "b" }, "B"),
+      ),
+      h(Tabs.Content, { value: "a" }, "Panel A"),
+    ),
+  );
+  console.log(html); // → contains 'role="tablist"'
+  console.log(html); // → contains "Panel A"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders tabs with roles
+  compiled:
+    against:
+      - "@radix-ui/react-tabs@1.1.21"
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -95,10 +111,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

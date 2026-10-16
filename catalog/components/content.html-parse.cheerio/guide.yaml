@@ -64,11 +64,26 @@ limits:
   - Does not fetch pages or run scripts
   - selectTexts throws an error if HTML length exceeds 2,000,000 characters
 example: |-
-  import { selectTexts, selectLinks } from '@/integrations/content-html-parse';
+  import * as cheerio from "cheerio";
 
-  const html = '<div><a href="https://example.com">Link</a><p class="msg">Hello</p></div>';
-  const texts = selectTexts(html, '.msg');
-  const links = selectLinks(html, 'https://base.com');
+  const $ = cheerio.load(
+    '<table><tr><td class="sku">A-1</td><td class="price">9.50</td></tr><tr><td class="sku">B-2</td><td class="price">12.00</td></tr></table>',
+  );
+  const rows = $("tr")
+    .map((_, tr) => ({
+      sku: $(tr).find(".sku").text(),
+      price: Number($(tr).find(".price").text()),
+    }))
+    .get();
+  console.log(rows); // → [ { sku: "A-1", price: 9.5 }, { sku: "B-2", price: 12 }, ]
+example_check:
+  kind: typescript
+  from: contract.test.ts › extracts structured data with CSS selectors
+  compiled:
+    against:
+      - cheerio@1.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

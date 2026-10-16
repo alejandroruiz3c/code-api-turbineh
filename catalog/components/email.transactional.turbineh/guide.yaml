@@ -68,14 +68,22 @@ limits:
   - Does not provide bounce handling
   - Does not provide bulk sending
 example: |-
-  import { sendEmail } from '@/lib/email';
+  // Server code in the app (e.g. src/app/dashboard/invoices/actions.ts).
+  import { sendEmail } from "@/lib/email";
 
-  await sendEmail({
-    to: 'user@example.com',
-    subject: 'Verify your email',
-    text: 'Please click this link to verify.',
-    link: 'https://example.com/verify'
-  });
+  export async function notifyInvoiceSent(to: string, invoiceUrl: string): Promise<boolean> {
+    // Resend when RESEND_API_KEY is set; otherwise nothing is sent (development writes a local outbox file).
+    const r = await sendEmail({
+      to,
+      subject: "Your invoice is ready",
+      text: `Open your invoice: ${invoiceUrl}`,
+      link: invoiceUrl,
+    });
+    return r.delivered;
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -92,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

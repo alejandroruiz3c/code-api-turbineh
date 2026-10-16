@@ -137,3 +137,6 @@ example: |-
   # API
   curl -X POST $BASE/v1/plans/$PLAN/pull-request -H "Authorization: Bearer $TOKEN" -d '{"repo":"acme/web"}'
   curl $BASE/v1/plans/$PLAN/pull-request -H "Authorization: Bearer $TOKEN"
+example_check:
+  kind: shell
+  from: guide.yaml

@@ -53,6 +53,15 @@ export interface CapabilitySummary {
   stacks: string[]; // e.g. ["nextjs@16", "postgres"]
   requirements: Requirement[];
   example: string; // what the runnable example shows
+  /**
+   * Components: where the example comes from and, for TypeScript, the pinned packages and date it compiled against
+   * (ADR-0066). Absent when the example is a description rather than code.
+   */
+  exampleCheck?: {
+    kind: "typescript" | "app" | "json" | "shell";
+    from: string;
+    compiled?: { against: string[]; typescript: string; on: string };
+  };
   /** Components: when to use it and not, trade-offs, limits, keywords, tested guarantees (guide.yaml). */
   docs?: {
     useWhen: string[];
@@ -151,6 +160,35 @@ export interface RepositoryFit {
   namespace: string;
 }
 
+/** A p50–p90 interval of finished runs (ADR-0066). */
+export interface EstimateRange {
+  p50: number;
+  p90: number;
+}
+
+/**
+ * Where a plan's estimate comes from (ADR-0066). `history`: the last finished runs of the same recipe (time from the
+ * generation being queued to its persisted end, tracked model tokens, new lines written). `benchmark`: fewer than
+ * `minSamples` such runs, so the benchmark average is shown as a single value and labelled as such.
+ */
+export interface EstimateCalibration {
+  basis: "history" | "benchmark";
+  recipe: string | null;
+  samples: number;
+  minSamples: number;
+  /** Runs each figure was calibrated on (the most recent ones; history basis only). */
+  window?: { seconds: number; tokens: number; lines: number };
+  seconds: EstimateRange;
+  tokens: EstimateRange;
+  newLinesToMaintain: EstimateRange;
+}
+
+/** A finished flow's estimate next to what it really took (ADR-0066), from persisted values only. */
+export interface EstimateVsActual {
+  estimate: Plan["estimate"];
+  actual: { seconds: number | null; tokens: number | null; newLinesToMaintain: number | null };
+}
+
 export interface Plan {
   id: string;
   need: string;
@@ -165,7 +203,17 @@ export interface Plan {
   files: FileChange[];
   dependencies: { name: string; version: string }[];
   config: Requirement[];
-  estimate: { seconds: number; costUsd: number; tokens: number; newLinesToMaintain: number };
+  /**
+   * Point values are the median (p50). `calibration` (ADR-0066) says where they come from: finished runs of the same
+   * recipe (`history`, with the p50–p90 interval) or, with too few runs, the benchmark average (`benchmark`).
+   */
+  estimate: {
+    seconds: number;
+    costUsd: number;
+    tokens: number;
+    newLinesToMaintain: number;
+    calibration?: EstimateCalibration;
+  };
   /** Decisions that need a person (incompatibility, relevant choice, action outside the project policy). */
   needsApproval: string[];
   /** Only when the environment is a connected repository. */

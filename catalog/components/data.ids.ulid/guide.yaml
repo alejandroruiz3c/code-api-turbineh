@@ -59,8 +59,18 @@ limits:
   - Does not hide when an id was created (the time is encoded in it)
 example: |-
   import { ulid, decodeTime } from "ulid";
-  const id = ulid(1700000000000);
-  const time = decodeTime(id);
+
+  const id = ulid(1_700_000_000_000);
+  console.log(id); // → length 26
+  console.log(decodeTime(id)); // → 1_700_000_000_000
+example_check:
+  kind: typescript
+  from: contract.test.ts › creates time-sortable ids
+  compiled:
+    against:
+      - ulid@3.0.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -77,10 +87,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

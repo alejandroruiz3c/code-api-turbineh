@@ -1,12 +1,13 @@
-import { getBuild } from "@turbineh/db";
+import { eventsSince, getBuild, type BuildEvent } from "@turbineh/db";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { EngineFlow } from "@/components/engine-flow";
-import { FlowView } from "@/components/flow-view";
+import { FlowView, type BuildResult } from "@/components/flow-view";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { confirmDemandLater } from "@/server/demand-email";
+import { buildResponse } from "@/server/flow-response";
 
 export const metadata: Metadata = { title: "Flow · YES IF for Builders" };
 
@@ -33,13 +34,28 @@ export default async function FlowPage({ params }: { params: Promise<{ id: strin
   if (!build) notFound();
   // ADR-0056: a refused request gets its priority-list email after this page is sent.
   confirmDemandLater(build);
+  // N-03 (ADR-0066): the persisted state and trace are rendered on the server, so a finished flow never opens as
+  // "Generating · 0 s"; the client then follows live events from here (deduplicated by id).
+  const initial = JSON.parse(JSON.stringify(await buildResponse(build, caller))) as BuildResult;
+  const events: BuildEvent[] = [];
+  for (let page = 0; page < 25; page++) {
+    const next = await eventsSince(db, id, events.at(-1)?.id ?? 0);
+    events.push(...next);
+    if (next.length < 200) break;
+  }
   return (
     <main className="mx-auto max-w-6xl px-6 pt-8">
       <p className="eyebrow">Flow</p>
       <h1 className="display mt-2 max-w-3xl text-2xl font-semibold text-cream">{build.prompt}</h1>
       <div className="mt-6">
         <Suspense>
-          <FlowView id={id} />
+          <FlowView
+            id={id}
+            initial={{
+              result: initial,
+              events: JSON.parse(JSON.stringify(events)) as BuildEvent[],
+            }}
+          />
         </Suspense>
       </div>
     </main>

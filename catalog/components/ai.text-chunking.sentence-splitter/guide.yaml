@@ -71,12 +71,20 @@ limits:
   - Does not split nested sentences within quotes or brackets.
 example: |-
   import { split, SentenceSplitterSyntax } from "sentence-splitter";
-  import { sentences, chunkText } from "@/integrations/ai-text-chunking";
 
-  const text = "We shipped the order. It arrived on Monday!";
-  const sentenceNodes = split(text);
-  const sentenceStrings = sentences(text);
-  const chunks = chunkText(text, { maxChars: 100, overlapSentences: 1 });
+  const nodes = split("We shipped the order. It arrived on Monday! Was it damaged? No.");
+  const sentences = nodes
+    .filter((n) => n.type === SentenceSplitterSyntax.Sentence)
+    .map((n) => n.raw.trim());
+  console.log(sentences); // → [ "We shipped the order.", "It arrived on Monday!", "Was it damaged?"…
+example_check:
+  kind: typescript
+  from: contract.test.ts › splits text into sentences
+  compiled:
+    against:
+      - sentence-splitter@5.0.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -93,10 +101,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -73,6 +73,9 @@ example: |
   // src/analytics-import/params.json — Brightside Coffee
   { "entity": "DailySale", "columns": ["date", "shop", "product", "quantity", "revenue"], "periods": ["day", "week", "month"],
     "compareWithPreviousPeriod": true, "filters": ["date range", "shop"], "exportCsv": true, "atomic": true, "errorReport": true }
+example_check:
+  kind: json
+  from: params.schema.json
 params:
   file: src/analytics-import/params.json
   schema: params.schema.json

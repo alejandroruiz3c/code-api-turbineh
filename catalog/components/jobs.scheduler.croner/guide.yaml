@@ -55,9 +55,18 @@ limits:
   - Does not persist schedules across restarts
 example: |-
   import { Cron } from "croner";
+
   const job = new Cron("0 9 * * *", { paused: true, timezone: "UTC" });
-  const next = job.nextRun(new Date("2026-10-13T10:00:00Z"));
+  console.log(job.nextRun(new Date("2026-10-13T10:00:00Z"))?.toISOString()); // → "2026-10-14T09:00:00.000Z"
   job.stop();
+example_check:
+  kind: typescript
+  from: contract.test.ts › evaluates next runs without starting
+  compiled:
+    against:
+      - croner@10.0.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -74,10 +83,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

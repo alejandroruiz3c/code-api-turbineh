@@ -36,7 +36,7 @@ config:
     description: pnpm add yet-another-react-lightbox@3.32.2 (exact version, added by TurbineH)
 interfaces:
   - name: Lightbox
-    signature: import { Lightbox } from "yet-another-react-lightbox"
+    signature: import Lightbox from "yet-another-react-lightbox"
     where: yet-another-react-lightbox
 extension_points:
   - what: UI elements or custom slides
@@ -60,12 +60,24 @@ guarantees:
 limits:
   - Does not include carousel functionality
 example: |-
-  import { Lightbox } from "yet-another-react-lightbox";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import Lightbox from "yet-another-react-lightbox";
 
-  <Lightbox 
-    open={true} 
-    slides={[{ src: "/image.jpg" }]} 
-  />
+  const html = renderToString(
+    h(Lightbox, { open: false, slides: [{ src: "/a.jpg", alt: "A" }] }),
+  );
+  console.log(typeof html); // → "string"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders nothing while closed and accepts slides
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - yet-another-react-lightbox@3.32.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -82,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

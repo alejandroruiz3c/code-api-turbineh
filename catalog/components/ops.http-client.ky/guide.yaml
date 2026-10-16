@@ -47,7 +47,7 @@ interfaces:
     signature: "async function getJson<T>( client: KyInstance, path: string, schema: z.ZodType<T>, ): Promise<T>"
     where: "@/integrations/ops-http-client"
   - name: ky
-    signature: import { ky } from "ky"
+    signature: import ky from "ky"
     where: ky
   - name: KyInstance
     signature: import { KyInstance } from "ky"
@@ -71,11 +71,18 @@ guarantees:
 limits:
   - createApiClient only supports HTTPS protocols
 example: |-
-  import { createApiClient, getJson } from '@/integrations/ops-http-client';
-  import ky from 'ky';
+  import ky from "ky";
 
-  const client = createApiClient('https://api.example.com');
-  const response = await ky.get('https://api.example.com').json();
+  const api = ky.create({ prefix: "https://api.example.com", timeout: 5000, retry: 2 });
+  console.log(typeof api.get); // → "function"
+example_check:
+  kind: typescript
+  from: contract.test.ts › creates configured clients
+  compiled:
+    against:
+      - ky@2.1.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -92,10 +99,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

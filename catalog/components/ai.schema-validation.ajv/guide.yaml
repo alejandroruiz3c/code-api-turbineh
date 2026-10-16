@@ -37,7 +37,7 @@ config:
     description: pnpm add ajv@8.20.0 (exact version, added by TurbineH)
 interfaces:
   - name: Ajv
-    signature: import { Ajv } from "ajv"
+    signature: import Ajv from "ajv"
     where: ajv
   - name: ErrorObject
     signature: import { ErrorObject } from "ajv"
@@ -63,22 +63,29 @@ guarantees:
 limits:
   - Does not repair invalid data
 example: |-
-  import { validateJson } from '@/integrations/ai-schema-validation';
+  import Ajv from "ajv";
 
-  const schema = {
-    type: 'object',
+  const ajv = new Ajv({ allErrors: true });
+  const validate = ajv.compile({
+    type: "object",
     properties: {
-      id: { type: 'integer' }
+      category: { enum: ["bug", "billing", "other"] },
+      priority: { type: "integer", minimum: 1, maximum: 3 },
     },
-    required: ['id']
-  };
-
-  const result = validateJson(schema, { id: 123 });
-  if (result.ok) {
-    console.log('Valid');
-  } else {
-    console.error(result.errors);
-  }
+    required: ["category", "priority"],
+    additionalProperties: false,
+  });
+  console.log(validate({ category: "bug", priority: 2 })); // → true
+  console.log(validate({ category: "spam", priority: 9, extra: 1 })); // → false
+  console.log(validate.errors?.length); // → >= 3
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates structured output against a JSON Schema
+  compiled:
+    against:
+      - ajv@8.20.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -95,10 +102,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

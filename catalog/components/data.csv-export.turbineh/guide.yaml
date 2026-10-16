@@ -63,10 +63,23 @@ limits:
   - "maxBytes: 1,000,000"
   - "maxRows: 1,000"
 example: |-
-  import { toCsv, CSV_LIMITS } from '@/lib/csv';
+  // An export route in the app (e.g. src/app/dashboard/contacts/export/route.ts).
+  import { EXPORT_MAX_ROWS, exportTooLarge, toCsv } from "@/lib/csv";
 
-  const data = [{ id: 1, name: '=HACK' }, { id: 2, name: 'Normal' }];
-  const csv = toCsv(data, ['id', 'name']);
+  export function contactsCsv(rows: { id: number; name: string }[]): Response {
+    if (rows.length > EXPORT_MAX_ROWS) return exportTooLarge(); // refused, never silently cut
+    // "=HACK" is written as "'=HACK": spreadsheet formula injection is neutralised.
+    const csv = toCsv(rows, ["id", "name"]);
+    return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8" } });
+  }
+
+  export const sample = contactsCsv([
+    { id: 1, name: "=HACK" },
+    { id: 2, name: "Normal" },
+  ]);
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +96,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

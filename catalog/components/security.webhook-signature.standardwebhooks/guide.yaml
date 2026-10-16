@@ -53,13 +53,31 @@ limits:
   - Does not handle network delivery or retry logic
 example: |-
   import { Webhook } from "standardwebhooks";
-  const wh = new Webhook("YmFzZTY0X3NlY3JldF9oZXJl");
-  const sig = wh.sign("id", new Date(), '{"a":1}');
-  const verified = wh.verify('{"a":1}', {
-    "webhook-id": "id",
-    "webhook-timestamp": "12345678",
-    "webhook-signature": sig
-  });
+
+  const wh = new Webhook(Buffer.from("secret-for-tests").toString("base64"));
+  const id = "msg_1";
+  const ts = new Date();
+  const payload = JSON.stringify({ a: 1 });
+  const sig = wh.sign(id, ts, payload);
+  const headers = {
+    "webhook-id": id,
+    "webhook-timestamp": String(Math.floor(ts.getTime() / 1000)),
+    "webhook-signature": sig,
+  };
+  console.log(wh.verify(payload, headers)); // → { a: 1 }
+  try {
+    wh.verify(payload.replace("1", "2"), headers);
+  } catch (err) {
+    console.log(err); // → throws
+  }
+example_check:
+  kind: typescript
+  from: contract.test.ts › verifies a signed payload and rejects tampering
+  compiled:
+    against:
+      - standardwebhooks@1.1.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -76,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -65,13 +65,26 @@ guarantees:
 limits:
   - Does not render HTML to PDF
 example: |-
-  import { PDFDocument, StandardFonts } from 'pdf-lib';
+  import { PDFDocument, StandardFonts } from "pdf-lib";
 
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const page = pdfDoc.addPage();
-  page.drawText('Hello World', { font, x: 50, y: 50 });
-  const bytes = await pdfDoc.save();
+  const doc = await PDFDocument.create();
+  const page = doc.addPage();
+  page.drawText("Invoice #1", {
+    font: await doc.embedFont(StandardFonts.Helvetica),
+    x: 50,
+    y: 700,
+  });
+  const bytes = await doc.save();
+  console.log(new TextDecoder().decode(bytes.slice(0, 5))); // → "%PDF-"
+  console.log((await PDFDocument.load(bytes)).getPageCount()); // → 1
+example_check:
+  kind: typescript
+  from: contract.test.ts › creates a one-page PDF
+  compiled:
+    against:
+      - pdf-lib@1.17.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +101,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

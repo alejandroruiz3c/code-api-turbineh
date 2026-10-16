@@ -33,7 +33,7 @@ config:
     description: pnpm add reading-time@1.5.0 (exact version, added by TurbineH)
 interfaces:
   - name: readingTime
-    signature: import { readingTime } from "reading-time"
+    signature: import readingTime from "reading-time"
     where: reading-time
 extension_points:
   - what: readingTime
@@ -52,9 +52,19 @@ guarantees:
 limits:
   - Does not parse Markdown
 example: |-
-  import { readingTime } from "reading-time";
+  import readingTime from "reading-time";
 
-  const result = readingTime("word ".repeat(400));
+  const r = readingTime("word ".repeat(400));
+  console.log(r.words); // → 400
+  console.log(Math.round(r.minutes)); // → 2
+example_check:
+  kind: typescript
+  from: contract.test.ts › estimates minutes from words
+  compiled:
+    against:
+      - reading-time@1.5.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -71,10 +81,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

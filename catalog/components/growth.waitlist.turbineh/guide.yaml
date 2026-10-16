@@ -70,6 +70,9 @@ limits:
 example: |
   // src/waitlist/params.json — "every confirmed referral moves the referrer up by five positions"
   { "doubleOptIn": true, "showPosition": true, "referral": { "enabled": true, "boost": 5 }, "ownerCanExport": true, "ownerCanRemove": true }
+example_check:
+  kind: json
+  from: params.schema.json
 params:
   file: src/waitlist/params.json
   schema: params.schema.json

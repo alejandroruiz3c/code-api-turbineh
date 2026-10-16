@@ -28,6 +28,12 @@ export interface ComponentGuide {
   guarantees: { claim: string; test: string }[];
   limits: string[];
   example: string;
+  /** Source and compile record of the example (ADR-0066). */
+  example_check?: {
+    kind: "typescript" | "app" | "json" | "shell";
+    from: string;
+    compiled?: { against: string[]; typescript: string; on: string };
+  };
   /**
    * Parameters from the request (ADR-0041), for components that declare `params` in component.yaml: the app file,
    * its JSON Schema and each field in words, so a compiler (or a person) can write them from a spec.
@@ -227,12 +233,18 @@ ${list(g.limits)}
 
 ## Minimal example
 
-\`\`\`ts
+\`\`\`${g.example_check?.kind === "json" ? "jsonc" : g.example_check?.kind === "shell" ? "sh" : "ts"}
 ${g.example.trim()}
 \`\`\`
 ${
-  g.params
-    ? `
+  g.example_check?.compiled
+    ? `\nGenerated from \`${g.example_check.from}\` and compiled against ${g.example_check.compiled.against.join(", ") || "Node.js only"} (TypeScript ${g.example_check.compiled.typescript}) on ${g.example_check.compiled.on}.\n`
+    : g.example_check
+      ? `\nFrom \`${g.example_check.from}\`.\n`
+      : ""
+}${
+    g.params
+      ? `
 ## Parameters from the request
 
 Written by TurbineH to \`${g.params.file}\` (JSON Schema: \`${g.params.schema}\` in the catalogue component); edit the file to
@@ -242,6 +254,6 @@ change them, it is validated at start-up.
 | --- | --- | --- |
 ${g.params.fields.map((f) => `| \`${cell(f.name)}\` | ${cell(f.default) || "—"} | ${cell(f.description)} |`).join("\n")}
 ${g.params.example ? `\n\`\`\`json\n${g.params.example.trim()}\n\`\`\`\n` : ""}`
-    : ""
-}`;
+      : ""
+  }`;
 }

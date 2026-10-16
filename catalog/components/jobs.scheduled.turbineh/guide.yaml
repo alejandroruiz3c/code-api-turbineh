@@ -74,6 +74,9 @@ example: |
   { "jobs": [{ "id": "overdue-reminders", "kind": "overdue-digest", "cron": "0 7 * * *", "timeZone": "Europe/Madrid",
                "what": "Overdue tasks are emailed to the assignee every morning" }], "logWhenNoEmailProvider": true }
   // scheduler: curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/cron/run
+example_check:
+  kind: json
+  from: params.schema.json
 params:
   file: src/jobs/params.json
   schema: params.schema.json

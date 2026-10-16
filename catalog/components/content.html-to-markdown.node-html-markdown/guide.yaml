@@ -72,10 +72,23 @@ limits:
   - Maximum input length of 2,000,000 characters when using htmlToMarkdown.
   - Does not fetch pages or execute scripts.
 example: |-
-  import { htmlToMarkdown } from '@/integrations/content-html-to-markdown';
+  import { NodeHtmlMarkdown } from "node-html-markdown";
 
-  const markdown = htmlToMarkdown('<h1>Title</h1><p>Hello <strong>World</strong></p>');
-  console.log(markdown); // # Title\n\nHello **World**
+  const md = NodeHtmlMarkdown.translate(
+    '<h1>Pricing</h1><p>Plans start at <strong>9 EUR</strong>. <a href="https://x.test/p">Details</a></p><ul><li>One</li><li>Two</li></ul>',
+  );
+  console.log(md); // → contains "# Pricing"
+  console.log(md); // → contains "**9 EUR**"
+  console.log(md); // → contains "[Details](https://x.test/p)"
+  console.log(md); // → matches /\* One|- One/
+example_check:
+  kind: typescript
+  from: contract.test.ts › converts HTML to compact Markdown
+  compiled:
+    against:
+      - node-html-markdown@2.0.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -92,10 +105,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -33,7 +33,7 @@ config:
     description: pnpm add nodemailer@10.0.10 (exact version, added by TurbineH)
 interfaces:
   - name: nodemailer
-    signature: import { nodemailer } from "nodemailer"
+    signature: import nodemailer from "nodemailer"
     where: nodemailer
 extension_points:
   - what: JSON transport
@@ -56,13 +56,23 @@ limits:
   - Cloudflare Workers does not support sendmail transport due to child process restrictions
 example: |-
   import nodemailer from "nodemailer";
+
   const t = nodemailer.createTransport({ jsonTransport: true });
-  await t.sendMail({
+  const info = await t.sendMail({
     from: "a@example.com",
     to: "b@example.com",
     subject: "s",
     text: "t",
   });
+  console.log(JSON.parse(info.message as string).subject); // → "s"
+example_check:
+  kind: typescript
+  from: contract.test.ts › builds a message with the JSON transport
+  compiled:
+    against:
+      - nodemailer@10.0.10
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

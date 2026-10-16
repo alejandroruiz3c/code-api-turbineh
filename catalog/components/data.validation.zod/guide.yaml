@@ -57,14 +57,25 @@ guarantees:
 limits:
   - Schemas with async refinements or transforms cannot use the compiled fast path
 example: |-
-  import * as z from "zod";
+  import { z } from "zod";
 
   const Player = z.object({
-    username: z.string(),
-    xp: z.number(),
+    username: z.string().min(3),
+    xp: z.number().int().nonnegative(),
   });
+  type Player = z.infer<typeof Player>;
 
-  const data = Player.parse({ username: "billie", xp: 100 });
+  const ok: Player = Player.parse({ username: "billie", xp: 100 });
+  const bad = Player.safeParse({ username: "b", xp: -1 });
+  console.log(ok, bad.success ? "valid" : bad.error.issues.map((i) => i.path.join(".")));
+example_check:
+  kind: typescript
+  from: snippet.ts
+  compiled:
+    against:
+      - zod@4.6.5
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

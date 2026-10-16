@@ -1,6 +1,7 @@
 "use client";
 import type {
   DeliveryManifest,
+  EstimateVsActual,
   FlowOutcome,
   FlowState,
   NotCoveredExplanation,
@@ -9,11 +10,12 @@ import type {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { currentRun, isWorking } from "@/lib/flow-events";
-import { followFlow, type FollowSnapshot } from "@/lib/flow-follow";
+import { followFlow, type FollowEvent, type FollowSnapshot } from "@/lib/flow-follow";
 import { describeProgress, duration, type RunKind } from "@/lib/flow-progress";
 import { FlowFinished, FlowSteps, LiveNow, PackageResult } from "./flow-live";
 import { AGENT_INSTRUCTIONS, productApi } from "@/lib/product-api";
 import { AiAccess } from "./ai-access";
+import { EstimateComparison } from "./estimate-comparison";
 import { DeployForMe } from "./deploy-for-me";
 import { NotCovered } from "./not-covered";
 import { RepoIntegration } from "./repo-integration";
@@ -105,6 +107,12 @@ export interface BuildResult {
   } | null;
   repo_url: string | null;
   improvement_build_id: string | null;
+  /** Persisted start of the current run and its duration when finished (N-03, ADR-0066). */
+  started_at?: string | null;
+  finished_at?: string | null;
+  duration_ms?: number | null;
+  /** The plan's estimate next to what the run really took (F-06, ADR-0066). */
+  estimate_vs_actual?: EstimateVsActual | null;
   metrics: {
     plan?: Plan;
     reuse?: { reusedShare?: number; reusedLines?: number; generatedLines?: number };
@@ -135,6 +143,16 @@ export interface BuildResult {
   } | null;
 }
 
+/**
+ * "Finished in …" from the persisted duration only (N-03, ADR-0066): finished_at − started_at of the run, never the
+ * time since the page or the flow was opened. Without a persisted duration, no figure.
+ */
+export function finishedLine(durationMs: number | null | undefined): string {
+  return typeof durationMs === "number" && durationMs >= 0
+    ? `Finished in ${duration(durationMs)}.`
+    : "Finished.";
+}
+
 /** A failed gate that still delivered its package (never presented as verified). */
 const notVerified = (r: BuildResult) =>
   r.status === "failed" && r.delivery?.kind === "unverified" && Boolean(r.artifact?.zip_url);
@@ -151,16 +169,24 @@ const TABS: { key: Tab; label: string }[] = [
 const ENV_NAME = /`([A-Z][A-Z0-9_]{2,})`/g;
 const SECRETLESS_DEFAULTS = new Set(["NODE_ENV", "PORT"]);
 
-export function FlowView({ id }: { id: string }) {
+export function FlowView({
+  id,
+  initial,
+}: {
+  id: string;
+  /** Persisted row and trace rendered by the server (N-03, ADR-0066). */
+  initial?: { result: BuildResult | null; events: FollowEvent[] };
+}) {
   const [snap, setSnap] = useState<FollowSnapshot<BuildResult>>(() => ({
-    events: [],
-    result: null,
+    events: initial?.events ?? [],
+    result: initial?.result ?? null,
     connection: "connecting",
     lastEventAt: Date.now(),
   }));
   const [now, setNow] = useState(() => Date.now());
   const [typical, setTypical] = useState<Partial<Record<RunKind, Record<string, number>>>>({});
   const follower = useRef<ReturnType<typeof followFlow> | null>(null);
+  const initialRef = useRef(initial);
 
   useEffect(() => {
     // ADR-0051: the row first (late subscriber), live events, reconnects, and a safety net that polls the API when
@@ -175,6 +201,7 @@ export function FlowView({ id }: { id: string }) {
         setSnap(s);
         setNow(Date.now());
       },
+      ...(initialRef.current ? { initial: initialRef.current } : {}),
     });
     follower.current = f;
     return () => f.stop();
@@ -266,7 +293,7 @@ export function FlowView({ id }: { id: string }) {
         <StateBadge state={state} {...badgeOf(outcome)} />
         <span className="text-sm text-muted">
           {terminal
-            ? `Finished${progress.elapsedMs > 0 ? ` in ${duration(progress.elapsedMs)}` : ""}.`
+            ? finishedLine(result?.duration_ms)
             : `Live · ${duration(progress.elapsedMs)} so far — every step appears below as it happens.`}
         </span>
       </div>
@@ -765,6 +792,7 @@ function ResultScreen({
         />
         <Stat value={String(components.length)} label="Verified components used" />
       </div>
+      {result.estimate_vs_actual ? <EstimateComparison data={result.estimate_vs_actual} /> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button

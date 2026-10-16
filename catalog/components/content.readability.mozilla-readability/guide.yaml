@@ -64,14 +64,28 @@ guarantees:
 limits:
   - Requires an existing DOM document; cannot fetch URLs independently
 example: |-
-  import { readArticle, type HtmlDocument } from "@/integrations/content-readability";
+  import { Readability } from "@mozilla/readability";
+  import { parseHTML } from "linkedom";
 
-  async function process(doc: HtmlDocument) {
-    const article = readArticle(doc);
-    if (article) {
-      console.log(article.title, article.text);
-    }
-  }
+  const body =
+    "<p>" +
+    "Solar panels on schools cut energy bills by a third in the pilot. ".repeat(12) +
+    "</p>";
+  const { document } = parseHTML(
+    `<html><head><title>Pilot results</title></head><body><nav>Home | About | Contact</nav><article><h1>Pilot results</h1>${body}</article><footer>Cookie settings</footer></body></html>`,
+  );
+  const article = new Readability(document as unknown as Document).parse();
+  console.log(article?.textContent); // → contains "Solar panels on schools"
+  console.log(article?.textContent); // → does not contain "Cookie settings"
+example_check:
+  kind: typescript
+  from: contract.test.ts › extracts the main article from a page, without navigation
+  compiled:
+    against:
+      - "@mozilla/readability@0.6.0"
+      - linkedom@0.18.13
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +102,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

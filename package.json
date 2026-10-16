@@ -28,7 +28,8 @@
     "catalog:document": "pnpm --filter @turbineh/curation exec tsx src/document-cli.ts",
     "catalog:watch": "pnpm --filter @turbineh/curation exec tsx src/watch.ts",
     "catalog:sync": "pnpm --filter @turbineh/ingest run sync",
-    "load": "tsx bench/load.ts"
+    "load": "tsx bench/load.ts",
+    "catalog:snippets": "pnpm --filter @turbineh/curation exec tsx src/snippets-cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

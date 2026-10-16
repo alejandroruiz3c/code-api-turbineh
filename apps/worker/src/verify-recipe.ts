@@ -10,11 +10,22 @@
  *    to run before merging a catalog or assembler change.
  *  - `--quick`: lint + typecheck + unit only (sandbox `quickCheck`). On CI (`CI=true`: an ephemeral runner without
  *    secrets) it runs typecheck + unit directly in the assembled app instead.
+ *  - `--snippets` (ADR-0066): every assembled component with an app snippet (catalog/components/<id>/snippet.ts that
+ *    imports the app through `@/…`) is copied to src/turbineh-snippets/<id>.ts before the check, so the app's own
+ *    typecheck (and lint) compiles it. With --all, app-snippet components that none of the targets assembled are then
+ *    checked in one extra saas-crud target that adds them (`with`); any left uncompiled fails the run.
  *  - `--local-db`: no Postgres container and no DATABASE_URL for migrations and E2E (the package's zero-setup database
  *    must carry them). `--assemble-only`: print the assembled directory and stop. `--list`: print the combinations.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,10 +50,38 @@ const quick = flag("--quick");
 const all = flag("--all");
 const list = flag("--list");
 const onlyDomains = flag("--domains");
+const snippets = flag("--snippets");
 const withAt = argv.indexOf("--with");
 // --with id1,id2: extra native catalog components (files/) vendored into the app, as a build that selected them would.
 const withIds = withAt >= 0 ? (argv.splice(withAt, 2)[1] ?? "").split(",").filter(Boolean) : [];
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const componentsDir = join(repoRoot, "catalog/components");
+
+/** Components whose public example is an app snippet (snippet.ts importing the app through `@/…`). */
+function appSnippetIds(): string[] {
+  return readdirSync(componentsDir)
+    .filter((id) => existsSync(join(componentsDir, id, "snippet.ts")))
+    .filter((id) =>
+      /from\s+["']@\//.test(readFileSync(join(componentsDir, id, "snippet.ts"), "utf8")),
+    )
+    .sort();
+}
+
+/** App snippets compiled by the checks so far (component id → combination). */
+const compiledSnippets = new Map<string, string>();
+
+/** Copies the app snippets of the assembled components into the app, where its typecheck compiles them. */
+function addSnippets(outDir: string, components: string[]): string[] {
+  const ids = appSnippetIds().filter((id) => components.includes(id));
+  if (ids.length === 0) return [];
+  mkdirSync(join(outDir, "src/turbineh-snippets"), { recursive: true });
+  for (const id of ids)
+    writeFileSync(
+      join(outDir, "src/turbineh-snippets", `${id}.ts`),
+      readFileSync(join(componentsDir, id, "snippet.ts"), "utf8"),
+    );
+  return ids;
+}
 
 /** CI runners are ephemeral and hold no secrets: the quick check may run there without the sandbox container. */
 function quickOnRunner(dir: string): VerifyResult {
@@ -73,6 +112,7 @@ async function check(c: Combination) {
   const outDir = join(mkdtempSync(join(tmpdir(), `recipe-${c.recipe}-`)), "app");
   const assembled = assembleCombination(repoRoot, c, outDir, withIds);
   if (assembleOnly) return { name: c.name, outDir, ok: true, ...assembled };
+  const withSnippets = snippets ? addSnippets(outDir, assembled.components) : [];
   const git = (...args: string[]) =>
     execFileSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.com", ...args], {
       cwd: outDir,
@@ -93,6 +133,7 @@ async function check(c: Combination) {
     mode: quick ? "quick" : "full",
     localDb,
     ...assembled,
+    ...(snippets ? { snippets: withSnippets } : {}),
     ok: r.ok,
     checks: `${r.steps.filter((s) => s.ok).length}/${r.steps.length}`,
     steps: r.steps.map((s) => ({
@@ -129,11 +170,42 @@ else {
         },
   ];
 }
-const results = [];
-for (const t of targets) results.push(await check(t));
+const results: Awaited<ReturnType<typeof check>>[] = [];
+for (const t of targets) {
+  const r = await check(t);
+  results.push(r);
+  if (r.ok)
+    for (const id of ("snippets" in r ? r.snippets : undefined) ?? [])
+      compiledSnippets.set(id, r.name);
+}
+let uncompiled: string[] = [];
+if (snippets && all && !assembleOnly) {
+  // App snippets of components no target assembled: one extra saas-crud target that adds them.
+  const missing = appSnippetIds().filter(
+    (id) => !results.some((r) => "snippets" in r && r.snippets?.includes(id)),
+  );
+  if (missing.length) {
+    const extra: Combination = {
+      name: `saas-crud+${missing.join("+")}`,
+      recipe: "saas-crud",
+      prompt: "",
+      with: missing,
+    };
+    targets.push(extra);
+    const r = await check(extra);
+    results.push(r);
+    if (r.ok)
+      for (const id of ("snippets" in r ? r.snippets : undefined) ?? [])
+        compiledSnippets.set(id, r.name);
+  }
+  uncompiled = appSnippetIds().filter((id) => !compiledSnippets.has(id));
+  for (const [id, where] of compiledSnippets) console.error(`snippet ${id} compiled in ${where}`);
+  for (const id of uncompiled)
+    console.error(`FAIL snippet ${id}: not compiled in any passing target`);
+}
 console.log(JSON.stringify(targets.length === 1 ? results[0] : results, null, 2));
 if (targets.length > 1) {
   for (const r of results)
     console.error(`${r.ok ? "PASS" : "FAIL"} ${r.name}${"checks" in r ? ` ${r.checks}` : ""}`);
 }
-process.exitCode = results.every((r) => r.ok) ? 0 : 1;
+process.exitCode = results.every((r) => r.ok) && uncompiled.length === 0 ? 0 : 1;

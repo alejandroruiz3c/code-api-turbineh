@@ -54,9 +54,13 @@ export function AiAccess({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-3 text-sm">
       <p className="text-muted">
-        This app uses AI through TurbineH — no AI keys to configure. Set{" "}
-        <code className="text-teal">TURBINEH_AI_TOKEN</code> in your app (Deploy for me does it for
-        you).
+        This app reaches a model in one of two ways, by configuration only: the{" "}
+        <strong>TurbineH gateway</strong> — set <code className="text-teal">TURBINEH_AI_TOKEN</code>{" "}
+        (Deploy for me does it for you) — or <strong>your own OpenAI-compatible provider</strong> —
+        leave the token empty and set <code className="text-teal">AI_BASE_URL</code>,{" "}
+        <code className="text-teal">AI_API_KEY</code> and{" "}
+        <code className="text-teal">AI_MODEL</code>. DEPLOY.md explains both and what happens when
+        the endpoint is unavailable.
       </p>
       {token ? (
         <div className="rounded-lg border border-amber/60 p-3">

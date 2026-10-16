@@ -1,5 +1,5 @@
 import type { FlowState } from "@turbineh/shared";
-import { latestRepoIntegrations } from "@turbineh/db";
+import { latestRepoIntegrations, RUN_STARTED_AT_SQL } from "@turbineh/db";
 import { stateOfBuild } from "@/lib/states";
 import { db } from "./db";
 
@@ -50,8 +50,9 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
   const { rows } = await db.query<Row>(
     `SELECT id, prompt, status, created_at, spec->>'recipe' AS recipe, metrics,
             (artifact->>'zipKey') IS NOT NULL AS has_zip,
-            extract(epoch FROM finished_at - claimed_at)::int AS seconds
-     FROM builds WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
+            -- N-03 (ADR-0066): persisted end − start of the run (when it was last queued), as on the flow page.
+            round(extract(epoch FROM finished_at - ${RUN_STARTED_AT_SQL}))::int AS seconds
+     FROM builds b WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
     [ownerId, limit],
   );
   const prs = new Map((await latestRepoIntegrations(db, ownerId)).map((p) => [p.build_id, p]));

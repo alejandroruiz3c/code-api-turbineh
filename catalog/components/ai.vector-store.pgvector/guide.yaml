@@ -51,7 +51,7 @@ interfaces:
     signature: "function cosineSimilarity(a: number[], b: number[]): number"
     where: "@/integrations/ai-vector-store"
   - name: pgvector
-    signature: import { pgvector } from "pgvector"
+    signature: import pgvector from "pgvector"
     where: pgvector
 extension_points:
   - what: pgvector SQL format
@@ -70,11 +70,18 @@ guarantees:
 limits:
   - Does not compute embeddings; they must be provided by an orchestrator
 example: |-
-  import { toVectorSql, fromVectorSql, cosineSimilarity } from '@/integrations/ai-vector-store';
+  import pgvector from "pgvector";
 
-  const sql = toVectorSql([0.1, 0.2, 0.3]);
-  const vec = fromVectorSql('[1, 2, 3]');
-  const sim = cosineSimilarity([0.1, 0.2, 0.3], [0.1, 0.2, 0.4]);
+  console.log(pgvector.toSql([0.1, 0.2, 0.3])); // → "[0.1,0.2,0.3]"
+  console.log(pgvector.fromSql("[1,2,3]")); // → [1, 2, 3]
+example_check:
+  kind: typescript
+  from: contract.test.ts › serialises embeddings to and from the pgvector SQL format
+  compiled:
+    against:
+      - pgvector@0.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -91,10 +98,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

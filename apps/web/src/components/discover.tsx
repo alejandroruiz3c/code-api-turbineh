@@ -5,6 +5,34 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { productApi } from "@/lib/product-api";
 
+/**
+ * A component's usage example: code generated from its own contract test (or snippet.ts) and compiled against the
+ * pinned versions (ADR-0066), with what and when it compiled. Anything else is shown as plain text, never as code.
+ */
+export function ComponentExample({ c }: { c: CapabilitySummary }) {
+  const check = c.exampleCheck;
+  if (!check) return <p className="mt-2 text-[11px] text-muted">{c.example}</p>;
+  const caption =
+    check.kind === "typescript" && check.compiled
+      ? `Snippet compiled against ${check.compiled.against.join(", ") || "Node.js only"} (TypeScript ${check.compiled.typescript}) on ${check.compiled.on} · from ${check.from}`
+      : check.kind === "app"
+        ? `Compiled inside the assembled apps that include this component · from ${check.from}`
+        : check.kind === "json"
+          ? `Request parameters, validated against ${check.from}`
+          : check.kind === "shell"
+            ? "CLI and API calls; every command and route is checked to exist"
+            : `From ${check.from} · not compiled yet`;
+  return (
+    <details className="mt-2">
+      <summary className="cursor-pointer text-[11px] text-teal">Usage example</summary>
+      <pre className="mt-2 max-h-72 overflow-auto rounded-md border border-line bg-navy-900/80 p-3 text-[11px] leading-relaxed text-ice-2">
+        <code>{c.example}</code>
+      </pre>
+      <p className="mt-1 text-[10px] text-muted">{caption}</p>
+    </details>
+  );
+}
+
 /** Discover (PLAN §16): search by need → complete use cases and verified components, with what each brings. */
 export function Discover({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
@@ -140,7 +168,7 @@ export function Discover({ initialQuery }: { initialQuery: string }) {
                 <li key={c.id} className="rounded-lg border border-line px-4 py-3">
                   <p className="font-mono text-xs text-teal">{c.id}</p>
                   <p className="mt-1 text-sm text-ice-2">{c.summary}</p>
-                  <p className="mt-2 text-[11px] text-muted">{c.example}</p>
+                  <ComponentExample c={c} />
                   <Link
                     href={`/flows/new?capability=${encodeURIComponent(c.id)}&need=${encodeURIComponent(c.summary)}`}
                     className="mt-2 inline-block text-xs text-teal underline-offset-4 hover:underline"

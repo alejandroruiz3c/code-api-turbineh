@@ -92,10 +92,30 @@ limits:
   - Does not provide bot detection
   - Without TRUSTED_PROXY_HOPS (and off Vercel) anonymous visitors share one rate-limit bucket
 example: |-
-  import { securityHeaders } from '@/security/headers';
-  import { rateLimit } from '@/security/rate-limit';
-  import { UserFacingError, toUserMessage } from '@/security/errors';
-  import { CSP_IMG_EXTRA } from '@/security/csp-sources';
+  // A route handler in the app (e.g. src/app/api/contact/route.ts) using the Security Pack modules.
+  import { clientIp } from "@/security/client-ip";
+  import { UserFacingError, toUserMessage } from "@/security/errors";
+  import { securityHeaders } from "@/security/headers";
+  import { rateLimit } from "@/security/rate-limit";
+
+  export async function POST(req: Request): Promise<Response> {
+    if (!(await rateLimit(`contact:${clientIp(req.headers)}`, 5, 60_000)))
+      return new Response("Too many attempts. Try again in a minute.", { status: 429 });
+    try {
+      const body = (await req.json()) as { message?: unknown };
+      if (typeof body.message !== "string") throw new UserFacingError("Write a message.");
+      return Response.json({ ok: true });
+    } catch (err) {
+      // Users see the UserFacingError message or a generic one; internals go to server logs only.
+      return Response.json({ ok: false, error: toUserMessage(err) }, { status: 400 });
+    }
+  }
+
+  // next.config.ts applies these headers (CSP, HSTS, frame-ancestors…) to every route.
+  export const headers = securityHeaders();
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -112,10 +132,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

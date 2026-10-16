@@ -33,8 +33,8 @@ config:
     description: pnpm add @hookform/resolvers@5.9.1 (exact version, added by TurbineH)
 interfaces:
   - name: zodResolver
-    signature: import { zodResolver } from "@hookform/resolvers"
-    where: "@hookform/resolvers"
+    signature: import { zodResolver } from "@hookform/resolvers/zod"
+    where: "@hookform/resolvers/zod"
 extension_points:
   - what: external validation libraries
     where: resolver implementation
@@ -78,7 +78,25 @@ guarantees:
     test: contract.test.ts › validates form values with a Zod schema
 limits:
   - Requires react-hook-form to be functional in a form context
-example: import { zodResolver } from "@hookform/resolvers/zod";
+example: |-
+  import { zodResolver } from "@hookform/resolvers/zod";
+  import { z } from "zod";
+
+  const resolve = zodResolver(z.object({ email: z.email() }));
+  const bad = await resolve({ email: "nope" }, undefined, {
+    fields: {},
+    shouldUseNativeValidation: false,
+  });
+  console.log(Object.keys(bad.errors)); // → contains "email"
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates form values with a Zod schema
+  compiled:
+    against:
+      - "@hookform/resolvers@5.9.1"
+      - zod@4.6.5
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -95,10 +113,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest
