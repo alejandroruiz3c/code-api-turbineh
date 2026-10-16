@@ -13,7 +13,8 @@ export async function api<T>(
       redirect: "follow",
       headers: {
         Authorization: `Bearer ${token()}`,
-        "User-Agent": `turbineh-cli/${VERSION}`,
+        // ADR-0061: the API records the channel (cli, or mcp when `turbineh mcp` makes the call).
+        "User-Agent": `turbineh-cli/${VERSION}${process.env.TURBINEH_CLI_SURFACE === "mcp" ? " mcp" : ""}`,
         ...(init.workspace ? { "x-turbineh-workspace": init.workspace } : {}),
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },

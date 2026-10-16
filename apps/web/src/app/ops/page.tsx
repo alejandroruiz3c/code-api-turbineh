@@ -1,10 +1,11 @@
 import { aiUsageByApp, opsSnapshot } from "@turbineh/db";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
-import { aiUsageEur, isOps } from "@/server/ops";
+import { aiUsageEur } from "@/server/ops";
+import { getStaff } from "@/server/staff";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -27,14 +28,17 @@ function Card({ label, value, hint }: { label: string; value: string; hint?: str
 
 /** Internal operations panel (PLAN §9): TurbineH staff only — clients get a 404 and never see cost data. */
 export default async function OpsPage() {
-  if (!isOps(await getCaller())) notFound();
+  if (!(await getStaff())) notFound();
   const [s, ai] = await Promise.all([opsSnapshot(db), aiUsageByApp(db)]);
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
       <p className="eyebrow">Internal · staff only</p>
       <h1 className="mt-2 text-3xl font-semibold text-white">Operations</h1>
       <p className="mt-2 text-sm text-muted">
-        Live from the production database. Refresh to update.
+        Live from the production database. Refresh to update.{" "}
+        <Link href="/ops/report" className="text-ice-2 underline">
+          Usage by account (YES IF library + Intelligence Orchestration) →
+        </Link>
       </p>
 
       <section className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">

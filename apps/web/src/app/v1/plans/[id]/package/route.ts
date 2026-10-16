@@ -1,4 +1,6 @@
+import { recordFlowDownload } from "@turbineh/db";
 import { productError } from "@turbineh/engine";
+import { db } from "@/server/db";
 import { ownedFlow, productProblem, requireCaller } from "@/server/product";
 import { storage } from "@/server/storage";
 
@@ -38,6 +40,12 @@ export async function GET(
       ),
     );
   }
+  // ADR-0061: count the download for the owner report (numbers only); never fails the download.
+  await recordFlowDownload(db, {
+    buildId: row.id,
+    ownerId: caller.ownerId,
+    format: format === "manifest" || format === "app" ? format : "package",
+  }).catch(() => undefined);
   const url = await storage.url(key);
   // Local storage answers with an app path behind the browser session: serve the bytes here for API callers.
   if (url.startsWith("/")) {

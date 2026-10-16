@@ -83,6 +83,7 @@ async function main(): Promise<number> {
     return 0;
   }
   if (cmd === "mcp") {
+    process.env.TURBINEH_CLI_SURFACE = "mcp";
     await serve();
     return 0;
   }

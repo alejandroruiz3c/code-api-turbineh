@@ -11,6 +11,8 @@ export interface EmailMessage {
   text: string;
   /** Resend `Idempotency-Key`: a retried send with the same key is delivered once. */
   idempotencyKey?: string;
+  /** Files attached to the email (UTF-8 text content, e.g. CSV), sent base64-encoded. */
+  attachments?: { filename: string; content: string }[];
 }
 
 export type SendResult =
@@ -60,6 +62,14 @@ export function resendMailer(opts: {
             subject: m.subject,
             html: m.html,
             text: m.text,
+            ...(m.attachments?.length
+              ? {
+                  attachments: m.attachments.map((a) => ({
+                    filename: a.filename,
+                    content: Buffer.from(a.content, "utf8").toString("base64"),
+                  })),
+                }
+              : {}),
           }),
           signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000),
         });

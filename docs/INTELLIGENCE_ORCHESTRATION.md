@@ -188,3 +188,54 @@ curl https://software.turbineh.com/v1/ai/trial-signups \
 
 `201 { token, prefix, apiBase, mcpUrl, trialUsd, remainingUsd, existing, contact }`. Trial accounts:
 `pnpm --filter @turbineh/db trials` or `GET /v1/ops/trials` (staff only).
+
+## Owner report
+
+Usage per account across both products — the YES IF library and Intelligence Orchestration — with a combined view
+per person, totals and the last 7 days against the 7 before (ADR-0061). TurbineH staff only: everyone else gets a 404.
+
+**In the browser** (production):
+
+1. Open `https://software.turbineh.com/access` and enter the invitation token, if this browser does not have it yet.
+2. Open `https://software.turbineh.com/ops/sign-in` and click **Sign in with GitHub** with the GitHub account whose
+   email is in `OPS_ADMIN_EMAILS` (Vercel env of `code-frontiers-web`; staging: `code-frontiers-web-staging`).
+3. You land on `https://software.turbineh.com/ops/report` (also linked from `/ops`; short links `/ops/users` and
+   `/ops/orchestration`). Tabs: People, YES IF library, Intelligence Orchestration; windows all time / 30 d / 7 d;
+   click a column to sort; **Download CSV**; **Email me this report now**.
+
+The session lasts as long as GitHub's sign-in cookie; when the page answers 404, sign in again at `/ops/sign-in`.
+
+**By API** (an API key whose owner is in `OPS_OWNER_IDS`, or the browser session):
+
+```bash
+curl -H "Authorization: Bearer $OPS_API_KEY" \
+  "https://software.turbineh.com/v1/ops/owner-report?days=30"                     # JSON: people, library, orchestration
+curl -H "Authorization: Bearer $OPS_API_KEY" \
+  "https://software.turbineh.com/v1/ops/owner-report?format=csv&view=orchestration" -o orchestration.csv
+curl -X POST -H "Authorization: Bearer $OPS_API_KEY" https://software.turbineh.com/v1/ops/owner-report/send
+```
+
+Query: `since`, `until` (ISO dates) or `days`; `format=json|csv`; `view=people|library|orchestration` (CSV).
+
+**In the terminal** (with the database URL of the environment, e.g. production's from `.env.local`):
+
+```bash
+DATABASE_URL="$STAGING_DATABASE_URL" DATABASE_CA_CERT="$STAGING_DATABASE_CA_CERT" \
+  pnpm --filter @turbineh/db owner-report [--days 7] [--product people|library|orchestration] [--json | --csv]
+pnpm --filter @turbineh/db orchestration-report [--days 7] [--json]               # the orchestration view
+```
+
+**Weekly email**: every Monday at 08:00 Europe/Madrid to `OWNER_REPORT_EMAIL` (default `alex.ruiz@turbineh.com`):
+both products' KPIs this week vs the previous one, the top accounts, a link to `/ops/report` and three CSVs attached.
+Vercel Cron calls `GET /v1/cron/owner-report` on Mondays at 06:00 and 07:00 UTC with `Authorization: Bearer
+$CRON_SECRET`; the route sends at 08:00 Madrid time (one of the two runs, depending on summer/winter time), once per
+ISO week. Staging builds the report but does not email (set `OWNER_REPORT_CRON_SEND=1` to change that); "send now" on
+staging emails with a `[STAGING]` subject. Settings: `CRON_SECRET` (required for the cron), `OWNER_REPORT_EMAIL`,
+`RESEND_API_KEY`, `EMAIL_FROM` (ADR-0056).
+
+What the columns mean: flows per channel (`web`, `cli`, `mcp`, `api`; `unrecorded` before ADR-0061), verified /
+delivered-unverified / failed / not covered (`use_case_not_covered`), checks passed/total, requirements met/open,
+capabilities and components, mean time to a verified result, downloads (`GET /v1/plans/{id}/package`), pull requests,
+pushes, deploys, local applies, uncovered requests, AI use of generated apps; and for orchestration: requests (failed),
+model calls, tokens, p50/p95 latency, cost, frontier reference (list price), savings, trial spent/remaining/reached and
+requests per surface.

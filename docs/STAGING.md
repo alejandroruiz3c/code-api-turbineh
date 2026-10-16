@@ -13,6 +13,8 @@ staging mirrors it with its own pieces:
 
 **Operations panel:** `/ops` (and `GET /v1/ops`) shows throughput, green rate, queue, workers and cost; only the
 emails in `OPS_ADMIN_EMAILS` (session) and the API-key owners in `OPS_OWNER_IDS` see it. Cost is never shown to clients.
+Staff sign in with GitHub at `/ops/sign-in`. **Owner report** (both products, per account, weekly email): `/ops/report`, see
+[INTELLIGENCE_ORCHESTRATION.md § Owner report](INTELLIGENCE_ORCHESTRATION.md#owner-report) and ADR-0061.
 
 **AI gateway (ADR-0029):** client AI apps call `/v1/ai/v1/*` with their app token; the web app forwards with our
 model-provider and JEV keys (`AI_GATEWAY_*` in Vercel, set by `infra/staging/web.ts env`). Revoke an app's token to
