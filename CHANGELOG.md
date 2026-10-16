@@ -6,6 +6,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Orchestrator audit v2 (ADR-0068, #131): generated agents get read-only `lookup_<entity>` tools and FAQ in their
+  knowledge base; escalation emails the team (honest fallback); workspace header validated, cookie CSRF guard, one
+  problem format, AI token by API/CLI/MCP, CLI/MCP error and exit-code fixes, minimal public /health; deterministic
+  component E2E (client sign-up, public-pages filter, scheduled jobs); wording-independent components-only offers.
 - One source of truth for what a flow decides and delivers (ADR-0064, audit v2 F-03/F-11/F-05/Annex A): a delivery
   manifest (`turbineh.delivery/v1`) built from the real selection renders the plan, the result, "Next steps",
   DEPLOY.md, AGENTS.md, turbineh.json (`delivery`, `brokenPromises`), `.turbineh/delivery.json`, the web and the CLI.
