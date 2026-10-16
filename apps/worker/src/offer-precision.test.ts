@@ -61,8 +61,10 @@ describe("offer precision on the labelled set (ADR-0062)", { timeout: 60_000 }, 
     ]);
   });
 
-  it("a judge that confirms nothing → nothing is offered", async () => {
+  it("a judge that confirms nothing → only code-proven offers remain, and every one is correct", async () => {
+    // A requirement matched by a component's canonical criterion AND its tested hint is kept even when the judge
+    // returns nothing (wording-independent, see component-offer.ts); everything else needs the judge.
     const r = await runOfferSet(judge(false));
-    expect(r.offered).toBe(0);
+    expect(r.precision === null || r.precision === 1).toBe(true);
   });
 });
