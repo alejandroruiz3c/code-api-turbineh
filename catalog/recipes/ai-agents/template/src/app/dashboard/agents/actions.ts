@@ -175,20 +175,27 @@ export async function sendMessage(_prev: ChatState, formData: FormData): Promise
         .update(conversations)
         .set({ needsHuman: true })
         .where(eq(conversations.id, conversationId));
+      // The escalation note is stored even when the email fails: the user is told the truth either way.
       const team = teamEmails();
-      for (const to of team)
-        await sendEmail({
-          to,
-          subject: `Escalation from the assistant "${agent.name}"`,
-          text: `A user asked for a person to follow up.\n\nLast message:\n${text}\n\nOpen /dashboard/agents/${agent.id} to reply.`,
-        });
+      let emailed = false;
+      try {
+        for (const to of team)
+          await sendEmail({
+            to,
+            subject: `Escalation from the assistant "${agent.name}"`,
+            text: `A user asked for a person to follow up.\n\nLast message:\n${text}\n\nOpen /dashboard/agents/${agent.id} to reply.`,
+          });
+        emailed = team.length > 0;
+      } catch {
+        emailed = false;
+      }
       await db.insert(messages).values({
         organizationId: ctx.organizationId,
         conversationId,
         role: "tool",
-        content: team.length
+        content: emailed
           ? "A person from the team has been emailed and will follow up on this conversation."
-          : "A person from the team will follow up on this conversation.",
+          : "A person from the team will follow up on this conversation here in the app.",
       });
     } else if (result.tool) {
       // Read-only tools (e.g. lookup_order): tenant-scoped, the result (or "not found") is relayed to the user.

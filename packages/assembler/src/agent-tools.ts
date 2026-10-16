@@ -5,19 +5,30 @@ import { camel, entityNames } from "./naming.js";
 
 type Entity = BuildSpec["entities"][number];
 
-const LOOKUP =
-  /\b(look(?:s|ing)?\s*up|check(?:s|ing)?|consult(?:s|ing)?|track(?:s|ing)?|find(?:s|ing)?|status of)\b/i;
+/** Strong verbs: the entity name anywhere in the sentence is enough. */
+const LOOKUP = /\b(look(?:s|ing)?\s*up|lookup|consult(?:s|ing)?|track(?:s|ing)?|status of)\b/i;
+/** Weak verbs ("find", "check") count only when followed by the entity and an identifier ("order number"). */
+const WEAK = /\b(find(?:s|ing)?|check(?:s|ing)?)\b/i;
+const IDENT = "(?:number|no\\.?|#|code|reference|ref|id|tracking)";
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Entities a criterion (or the summary) says the assistant looks up: "looks up order status by order number". */
 export function lookupEntities(
   spec: Pick<BuildSpec, "acceptance_criteria" | "summary">,
   entities: Entity[],
 ): Entity[] {
-  const texts = [spec.summary, ...spec.acceptance_criteria].filter((t) => LOOKUP.test(t));
+  const texts = [spec.summary, ...spec.acceptance_criteria].map((t) => t.toLowerCase());
   return entities.filter((e) => {
     const n = entityNames(e.name);
     const words = [n.labelSingular, n.labelPlural].map((w) => w.toLowerCase());
-    return texts.some((t) => words.some((w) => t.toLowerCase().includes(w)));
+    return texts.some((t) =>
+      words.some(
+        (w) =>
+          (LOOKUP.test(t) && t.includes(w)) ||
+          (WEAK.test(t) &&
+            new RegExp(`\\b(?:find|check)\\w*\\b.*\\b${esc(w)}\\s+${IDENT}`, "i").test(t)),
+      ),
+    );
   });
 }
 
@@ -57,6 +68,8 @@ export function agentToolFiles(
       return m ? { ${k}: m[1] } : null;
     },
     run: async (ctx, args) => {
+      // Lazy: importing the registry (tests, pages) must not open the database or read env.
+      const { db } = await import("@/db/client");
       const [row] = await db
         .select()
         .from(${n.variable})
@@ -70,7 +83,6 @@ export function agentToolFiles(
     .join(",\n");
   const content = `import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db/client";
 import { ${imports} } from "@/db/schema";
 import type { ReadTool } from "@/server/tools";
 
