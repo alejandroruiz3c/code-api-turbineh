@@ -10,7 +10,8 @@
         "Scheduled posts are published automatically to the connected social accounts",
         "Users sign in with email and password"
       ],
-      "acceptable": ["ai.orchestrator.turbineh"]
+      "acceptable": ["ai.orchestrator.turbineh", "social.publish.turbineh"],
+      "note": "Since ADR-0067 publishing to LinkedIn/Instagram with a person creating and approving each post is a verified, standalone piece of this request (proved by tests/e2e/social-publish.spec.ts); the autonomous core and connecting accounts on its own are not asked for as such (connections comes with publishing as a dependency). A generic scheduler is never acceptable here."
     },
     {
       "id": "shop-shopify-stripe",
@@ -150,6 +151,22 @@
         "AI writes a caption for each video"
       ],
       "acceptable": ["ai.orchestrator.turbineh"]
+    },
+    {
+      "id": "crosspost-linkedin-tiktok-likes",
+      "need": "A tool that cross-posts our announcements to LinkedIn and TikTok and shows the likes of each post",
+      "criteria": [
+        "Announcements are posted to LinkedIn",
+        "Announcements are posted to TikTok",
+        "Users see the likes of each published post"
+      ],
+      "acceptable": ["social.publish.turbineh", "social.metrics.turbineh"]
+    },
+    {
+      "id": "instagram-autoreply-bot",
+      "need": "An autonomous bot that replies to every Instagram comment without human review",
+      "criteria": ["The bot replies to every Instagram comment automatically without human review"],
+      "acceptable": []
     }
   ]
 }
