@@ -83,7 +83,18 @@
       "limits": [
         "Does not validate the shape of the resulting object"
       ],
-      "example": "import { parseModelJson } from '@/integrations/ai-json-repair';\n\nconst repaired = parseModelJson(\"```json\\n{name: 'Ana', tags: ['vip',], active: True}\\n```\");",
+      "example": "import { jsonrepair } from \"jsonrepair\";\n\nconst raw = \"```json\\n{name: 'Ana', tags: ['vip',], active: True}\\n```\";\nconsole.log(JSON.parse(jsonrepair(raw))); // → { name: \"Ana\", tags: [\"vip\"], active: true }",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › repairs typical model JSON mistakes",
+        "compiled": {
+          "against": [
+            "jsonrepair@3.15.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "jsonrepair",
         "ai.json-repair",
@@ -183,7 +194,18 @@
       "limits": [
         "Short texts (a few words) are unreliable"
       ],
-      "example": "import { detectLanguage } from \"@/integrations/ai-language-detection\";\n\nconst lang = detectLanguage(\"The customer asked for a refund because the parcel arrived damaged and late.\");\n// returns \"eng\"",
+      "example": "import { franc } from \"franc-min\";\n\nconsole.log(franc(\"The customer asked for a refund because the parcel arrived damaged and late.\")); // → \"eng\"\nconsole.log(franc(\"El cliente pidió un reembolso porque el paquete llegó dañado y con retraso.\")); // → \"spa\"\nconsole.log(franc(\"ok\")); // → \"und\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › detects the language of a paragraph offline",
+        "compiled": {
+          "against": [
+            "franc-min@6.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "franc-min",
         "ai.language-detection",
@@ -251,18 +273,18 @@
       "interfaces": [
         {
           "name": "Client",
-          "signature": "import { Client } from \"@modelcontextprotocol/sdk\"",
-          "where": "@modelcontextprotocol/sdk"
+          "signature": "import { Client } from \"@modelcontextprotocol/sdk/client/index.js\"",
+          "where": "@modelcontextprotocol/sdk/client/index.js"
         },
         {
           "name": "InMemoryTransport",
-          "signature": "import { InMemoryTransport } from \"@modelcontextprotocol/sdk\"",
-          "where": "@modelcontextprotocol/sdk"
+          "signature": "import { InMemoryTransport } from \"@modelcontextprotocol/sdk/inMemory.js\"",
+          "where": "@modelcontextprotocol/sdk/inMemory.js"
         },
         {
           "name": "McpServer",
-          "signature": "import { McpServer } from \"@modelcontextprotocol/sdk\"",
-          "where": "@modelcontextprotocol/sdk"
+          "signature": "import { McpServer } from \"@modelcontextprotocol/sdk/server/mcp.js\"",
+          "where": "@modelcontextprotocol/sdk/server/mcp.js"
         },
         {
           "name": "createAppToolServer",
@@ -302,7 +324,19 @@
         "Does not call models directly",
         "v1.x does not support the 2026-07-28 specification"
       ],
-      "example": "import { Client, InMemoryTransport, McpServer } from \"@modelcontextprotocol/sdk\";\nimport { createAppToolServer } from \"@/integrations/ai-mcp-server\";\n\nconst server = createAppToolServer(\"app-tools\");\nconst [clientSide, serverSide] = InMemoryTransport.createLinkedPair();\nawait server.connect(serverSide);\nconst client = new Client({ name: \"test\", version: \"1.0.0\" });\nawait client.connect(clientSide);",
+      "example": "import { Client } from \"@modelcontextprotocol/sdk/client/index.js\";\nimport { InMemoryTransport } from \"@modelcontextprotocol/sdk/inMemory.js\";\nimport { McpServer } from \"@modelcontextprotocol/sdk/server/mcp.js\";\nimport { z } from \"zod\";\n\nconst server = new McpServer({ name: \"app-tools\", version: \"1.0.0\" });\nserver.registerTool(\n  \"order_status\",\n  {\n    description: \"Status of an order by id\",\n    inputSchema: { orderId: z.string().regex(/^o-[0-9]+$/) },\n  },\n  async ({ orderId }) => ({ content: [{ type: \"text\", text: `${orderId}: shipped` }] }),\n);\nconst [clientSide, serverSide] = InMemoryTransport.createLinkedPair();\nawait server.connect(serverSide);\nconst client = new Client({ name: \"test\", version: \"1.0.0\" });\nawait client.connect(clientSide);\nconst tools = await client.listTools();\nconsole.log(tools.tools.map((t) => t.name)); // → [\"order_status\"]\nconst res = await client.callTool({ name: \"order_status\", arguments: { orderId: \"o-42\" } });\nconsole.log(res.content); // → [{ type: \"text\", text: \"o-42: shipped\" }]\nconst bad = await client.callTool({ name: \"order_status\", arguments: { orderId: \"../etc\" } });\nconsole.log(bad.isError); // → true\nawait client.close();",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes an app tool to an agent through MCP (no model involved)",
+        "compiled": {
+          "against": [
+            "@modelcontextprotocol/sdk@1.31.0",
+            "zod@4.6.5"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@modelcontextprotocol/sdk",
         "ai.mcp-server",
@@ -543,7 +577,11 @@
         "PII redaction is on by default (AI_REDACT_PII) and also hides emails from tools: set AI_REDACT_PII=false explicitly for agents that need the person's email",
         "Per-IP limits of the public assistant need TRUSTED_PROXY_HOPS off Vercel (otherwise visitors share one bucket)"
       ],
-      "example": "import { z } from \"zod\";\nimport { defineTool, runAgent } from \"@/lib/ai/agent\";\n\nconst lookupOrder = defineTool({\n  name: \"lookup_order\",\n  description: \"Status of an order by its number\",\n  parameters: z.object({ order: z.string().regex(/^A-\\d+$/) }),\n  execute: async ({ order }) => ({ order, status: \"shipped\" }),\n});\nconst r = await runAgent({\n  organizationId, userId, purpose: \"support\",\n  instructions: \"You help customers with their orders.\",\n  input: \"Where is order A-12?\", tools: [lookupOrder], state,\n});\n// r.reply → show it; r.state → store it; r.pending → show Confirm / Cancel\n",
+      "example": "// Server code in the app (e.g. src/app/api/support/route.ts): an agent turn with one tool that runs in the app.\nimport { z } from \"zod\";\nimport { defineTool, runAgent, type AgentState } from \"@/lib/ai/agent\";\n\nconst lookupOrder = defineTool({\n  name: \"lookup_order\",\n  description: \"Status of an order by its number\",\n  parameters: z.object({ order: z.string().regex(/^A-\\d+$/) }),\n  execute: async ({ order }) => ({ order, status: \"shipped\" }),\n});\n\nexport async function supportTurn(\n  caller: { organizationId: string; userId: string },\n  input: string,\n  state: AgentState | null,\n) {\n  const r = await runAgent({\n    ...caller,\n    purpose: \"support\",\n    instructions: \"You help customers with their orders.\",\n    input,\n    tools: [lookupOrder],\n    state,\n  });\n  // r.reply → show it; r.state → store it for the next turn; r.pending → show Confirm / Cancel.\n  return { reply: r.reply, state: r.state, pending: r.pending };\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "ai",
         "llm",
@@ -674,7 +712,18 @@
       "limits": [
         "Throws an error if the JSON string is malformed and not simply incomplete."
       ],
-      "example": "import { parseStreamingJson } from '@/integrations/ai-partial-json';\n\nconst result = parseStreamingJson('{\"title\": \"Week');\n// result: { title: 'Week' }",
+      "example": "import { parse } from \"partial-json\";\n\nconsole.log(parse('{\"title\": \"Weekly summary\", \"items\": [1, 2')); // → { title: \"Weekly summary\", items: [1, 2], }\nconsole.log(parse('{\"title\": \"Week')); // → { title: \"Week\" }",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses JSON that is still streaming",
+        "compiled": {
+          "against": [
+            "partial-json@0.1.7"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "partial-json",
         "ai.partial-json",
@@ -748,7 +797,7 @@
         },
         {
           "name": "Mustache",
-          "signature": "import { Mustache } from \"mustache\"",
+          "signature": "import Mustache from \"mustache\"",
           "where": "mustache"
         }
       ],
@@ -779,7 +828,18 @@
         "Missing values render as empty strings.",
         "No support for conditional logic or loops beyond tag expansion."
       ],
-      "example": "import { renderPrompt } from '@/integrations/ai-prompt-templates';\n\nconst template = 'Classify: {{text}}';\nconst values = { text: 'Hello world' };\nconst prompt = renderPrompt(template, values);",
+      "example": "import Mustache from \"mustache\";\n\nconst tpl = \"Classify the ticket from {{customer.name}}:\\n{{#lines}}- {{.}}\\n{{/lines}}\";\nconst out = Mustache.render(\n  tpl,\n  { customer: { name: \"Ana\" }, lines: [\"late {{delivery}}\", \"<b>broken</b>\"] },\n  {},\n  {\n    escape: (s: string) => s,\n  },\n);\nconsole.log(out); // → \"Classify the ticket from Ana:\\n- late {{delivery}}\\n- <b>broken</b>\\…",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders logic-less templates; values are inserted, never executed",
+        "compiled": {
+          "against": [
+            "mustache@4.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "mustache",
         "ai.prompt-templates",
@@ -843,7 +903,7 @@
       "interfaces": [
         {
           "name": "Ajv",
-          "signature": "import { Ajv } from \"ajv\"",
+          "signature": "import Ajv from \"ajv\"",
           "where": "ajv"
         },
         {
@@ -883,7 +943,18 @@
       "limits": [
         "Does not repair invalid data"
       ],
-      "example": "import { validateJson } from '@/integrations/ai-schema-validation';\n\nconst schema = {\n  type: 'object',\n  properties: {\n    id: { type: 'integer' }\n  },\n  required: ['id']\n};\n\nconst result = validateJson(schema, { id: 123 });\nif (result.ok) {\n  console.log('Valid');\n} else {\n  console.error(result.errors);\n}",
+      "example": "import Ajv from \"ajv\";\n\nconst ajv = new Ajv({ allErrors: true });\nconst validate = ajv.compile({\n  type: \"object\",\n  properties: {\n    category: { enum: [\"bug\", \"billing\", \"other\"] },\n    priority: { type: \"integer\", minimum: 1, maximum: 3 },\n  },\n  required: [\"category\", \"priority\"],\n  additionalProperties: false,\n});\nconsole.log(validate({ category: \"bug\", priority: 2 })); // → true\nconsole.log(validate({ category: \"spam\", priority: 9, extra: 1 })); // → false\nconsole.log(validate.errors?.length); // → >= 3",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates structured output against a JSON Schema",
+        "compiled": {
+          "against": [
+            "ajv@8.20.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "ajv",
         "ai.schema-validation",
@@ -952,7 +1023,7 @@
         },
         {
           "name": "EventSourceMessage",
-          "signature": "import { EventSourceMessage } from \"eventsource-parser\"",
+          "signature": "import type { EventSourceMessage } from \"eventsource-parser\"",
           "where": "eventsource-parser"
         },
         {
@@ -986,7 +1057,18 @@
       "limits": [
         "Does not open network connections; requires manual feeding of bytes."
       ],
-      "example": "import { createParser, type EventSourceMessage } from 'eventsource-parser';\nconst parser = createParser({\n  onEvent: (event: EventSourceMessage) => {\n    console.log(event.data);\n  }\n});\nparser.feed('data: hello\\n\\n');",
+      "example": "import { createParser, type EventSourceMessage } from \"eventsource-parser\";\n\nconst events: EventSourceMessage[] = [];\nconst parser = createParser({ onEvent: (e) => events.push(e) });\nparser.feed('data: {\"delta\":\"Hel');\nparser.feed('lo\"}\\n\\nevent: done\\ndata: [DONE]\\n\\n');\nconsole.log(events.map((e) => e.data)); // → ['{\"delta\":\"Hello\"}', \"[DONE]\"]\nconsole.log(events[1]?.event); // → \"done\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses a Server-Sent Events stream fed in arbitrary chunks",
+        "compiled": {
+          "against": [
+            "eventsource-parser@4.1.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "eventsource-parser",
         "ai.sse-parsing",
@@ -1095,7 +1177,18 @@
       "limits": [
         "No stemming or lemmatisation"
       ],
-      "example": "import { eng, removeStopwords, spa } from \"stopword\";\nimport { keywords } from \"@/integrations/ai-stopwords\";\n\nconst words = [\"the\", \"invoice\", \"is\", \"late\"];\nconst filtered = removeStopwords(words, eng);\nconst tags = keywords(\"The invoice is late\");",
+      "example": "import { eng, removeStopwords, spa } from \"stopword\";\n\nconsole.log(removeStopwords(\"the invoice for the customer is late\".split(\" \"), eng)); // → [ \"invoice\", \"customer\", \"late\", ]\nconsole.log(removeStopwords(\"la factura del cliente llega tarde\".split(\" \"), spa)); // → [ \"factura\", \"cliente\", \"llega\", \"tarde\", ]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › removes stopwords in several languages",
+        "compiled": {
+          "against": [
+            "stopword@3.1.5"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "stopword",
         "ai.stopwords",
@@ -1204,7 +1297,18 @@
         "Chunk sizes are measured in characters, not tokens.",
         "Does not split nested sentences within quotes or brackets."
       ],
-      "example": "import { split, SentenceSplitterSyntax } from \"sentence-splitter\";\nimport { sentences, chunkText } from \"@/integrations/ai-text-chunking\";\n\nconst text = \"We shipped the order. It arrived on Monday!\";\nconst sentenceNodes = split(text);\nconst sentenceStrings = sentences(text);\nconst chunks = chunkText(text, { maxChars: 100, overlapSentences: 1 });",
+      "example": "import { split, SentenceSplitterSyntax } from \"sentence-splitter\";\n\nconst nodes = split(\"We shipped the order. It arrived on Monday! Was it damaged? No.\");\nconst sentences = nodes\n  .filter((n) => n.type === SentenceSplitterSyntax.Sentence)\n  .map((n) => n.raw.trim());\nconsole.log(sentences); // → [ \"We shipped the order.\", \"It arrived on Monday!\", \"Was it damaged?\"…",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › splits text into sentences",
+        "compiled": {
+          "against": [
+            "sentence-splitter@5.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "sentence-splitter",
         "ai.text-chunking",
@@ -1320,7 +1424,18 @@
       "limits": [
         "Counts are only estimates for non-BPE model families"
       ],
-      "example": "import { decode, encode, isWithinTokenLimit } from 'gpt-tokenizer';\nimport { countTokens, truncateToTokens } from '@/integrations/ai-token-count';",
+      "example": "import { decode, encode, isWithinTokenLimit } from \"gpt-tokenizer\";\n\nconst text = \"Summarise the attached contract in three bullet points.\";\nconst tokens = encode(text);\nconsole.log(tokens.length); // → > 5\nconsole.log(decode(tokens)); // → text\nconsole.log(isWithinTokenLimit(text, 1000)); // → tokens.length\nconsole.log(isWithinTokenLimit(text, 2)); // → false",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › encodes, decodes and checks a token budget",
+        "compiled": {
+          "against": [
+            "gpt-tokenizer@4.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "gpt-tokenizer",
         "ai.token-count",
@@ -1403,7 +1518,7 @@
         },
         {
           "name": "pgvector",
-          "signature": "import { pgvector } from \"pgvector\"",
+          "signature": "import pgvector from \"pgvector\"",
           "where": "pgvector"
         }
       ],
@@ -1432,7 +1547,18 @@
       "limits": [
         "Does not compute embeddings; they must be provided by an orchestrator"
       ],
-      "example": "import { toVectorSql, fromVectorSql, cosineSimilarity } from '@/integrations/ai-vector-store';\n\nconst sql = toVectorSql([0.1, 0.2, 0.3]);\nconst vec = fromVectorSql('[1, 2, 3]');\nconst sim = cosineSimilarity([0.1, 0.2, 0.3], [0.1, 0.2, 0.4]);",
+      "example": "import pgvector from \"pgvector\";\n\nconsole.log(pgvector.toSql([0.1, 0.2, 0.3])); // → \"[0.1,0.2,0.3]\"\nconsole.log(pgvector.fromSql(\"[1,2,3]\")); // → [1, 2, 3]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › serialises embeddings to and from the pgvector SQL format",
+        "compiled": {
+          "against": [
+            "pgvector@0.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "pgvector",
         "ai.vector-store",
@@ -1535,7 +1661,18 @@
         "Does not store secrets",
         "Does not render QR codes"
       ],
-      "example": "import { TOTP, Secret } from \"otpauth\";\nconst secret = new Secret({ size: 20 });\nconst totp = new TOTP({ secret, digits: 6, period: 30 });\nconst token = totp.generate();\nconst isValid = totp.validate({ token, window: 1 });",
+      "example": "import { TOTP, Secret } from \"otpauth\";\n\nconst totp = new TOTP({ secret: new Secret({ size: 20 }), digits: 6, period: 30 });\nconst token = totp.generate();\nconsole.log(token); // → matches /^\\d{6}$/\nconsole.log(totp.validate({ token, window: 1 })); // → 0\nconsole.log(totp.toString()); // → contains \"otpauth://totp/\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › generates and validates a TOTP code",
+        "compiled": {
+          "against": [
+            "otpauth@9.5.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "otpauth",
         "auth.mfa",
@@ -1611,23 +1748,13 @@
         },
         {
           "name": "createAuthClient",
-          "signature": "import { createAuthClient } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { createAuthClient } from \"better-auth/react\"",
+          "where": "better-auth/react"
         },
         {
           "name": "toNextJsHandler",
-          "signature": "import { toNextJsHandler } from \"better-auth\"",
-          "where": "better-auth"
-        },
-        {
-          "name": "organizationClient",
-          "signature": "import { organizationClient } from \"better-auth\"",
-          "where": "better-auth"
-        },
-        {
-          "name": "organization",
-          "signature": "import { organization } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { toNextJsHandler } from \"better-auth/next-js\"",
+          "where": "better-auth/next-js"
         },
         {
           "name": "APIError",
@@ -1636,8 +1763,8 @@
         },
         {
           "name": "nextCookies",
-          "signature": "import { nextCookies } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { nextCookies } from \"better-auth/next-js\"",
+          "where": "better-auth/next-js"
         }
       ],
       "extensionPoints": [
@@ -1685,7 +1812,19 @@
       "limits": [
         "Does not implement enterprise SSO (SAML) in the core package"
       ],
-      "example": "import { betterAuth, createAuthClient } from 'better-auth';",
+      "example": "// Server (src/lib/auth.ts): email and password sessions stored in PostgreSQL.\nimport { betterAuth } from \"better-auth\";\nimport { nextCookies, toNextJsHandler } from \"better-auth/next-js\";\nimport { createAuthClient } from \"better-auth/react\";\nimport { Pool } from \"pg\";\n\nexport const auth = betterAuth({\n  database: new Pool({ connectionString: process.env.DATABASE_URL }),\n  secret: process.env.BETTER_AUTH_SECRET,\n  baseURL: process.env.BETTER_AUTH_URL,\n  emailAndPassword: { enabled: true, minPasswordLength: 10 },\n  plugins: [nextCookies()],\n});\n\n// Route handler (src/app/api/auth/[...all]/route.ts).\nexport const { GET, POST } = toNextJsHandler(auth);\n\n// Client (src/lib/auth-client.ts): sign in from a React component.\nexport const authClient = createAuthClient();\nawait authClient.signIn.email({ email: \"ana@example.com\", password: \"correct horse battery\" });",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "snippet.ts",
+        "compiled": {
+          "against": [
+            "better-auth@1.7.6",
+            "pg@8.23.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "better-auth",
         "auth.session",
@@ -1763,28 +1902,18 @@
         },
         {
           "name": "organizationClient",
-          "signature": "import { organizationClient } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { organizationClient } from \"better-auth/client/plugins\"",
+          "where": "better-auth/client/plugins"
         },
         {
           "name": "createAuthClient",
-          "signature": "import { createAuthClient } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { createAuthClient } from \"better-auth/react\"",
+          "where": "better-auth/react"
         },
         {
           "name": "organization",
-          "signature": "import { organization } from \"better-auth\"",
-          "where": "better-auth"
-        },
-        {
-          "name": "toNextJsHandler",
-          "signature": "import { toNextJsHandler } from \"better-auth\"",
-          "where": "better-auth"
-        },
-        {
-          "name": "nextCookies",
-          "signature": "import { nextCookies } from \"better-auth\"",
-          "where": "better-auth"
+          "signature": "import { organization } from \"better-auth/plugins\"",
+          "where": "better-auth/plugins"
         },
         {
           "name": "APIError",
@@ -1836,7 +1965,19 @@
       "limits": [
         "Enforces limits on specific operations"
       ],
-      "example": "import { betterAuth, createAuthClient, organizationClient } from 'better-auth';",
+      "example": "// Server: organizations (workspaces), members and invitations on top of better-auth sessions.\nimport { betterAuth } from \"better-auth\";\nimport { organizationClient } from \"better-auth/client/plugins\";\nimport { organization } from \"better-auth/plugins\";\nimport { createAuthClient } from \"better-auth/react\";\nimport { Pool } from \"pg\";\n\nexport const auth = betterAuth({\n  database: new Pool({ connectionString: process.env.DATABASE_URL }),\n  emailAndPassword: { enabled: true },\n  plugins: [organization()],\n});\n\n// Client: create a workspace and make it the active one.\nexport const authClient = createAuthClient({ plugins: [organizationClient()] });\nconst created = await authClient.organization.create({ name: \"Acme\", slug: \"acme\" });\nif (created.data) await authClient.organization.setActive({ organizationId: created.data.id });",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "snippet.ts",
+        "compiled": {
+          "against": [
+            "better-auth@1.7.6",
+            "pg@8.23.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "better-auth",
         "authz.organizations",
@@ -2011,7 +2152,11 @@
       "limits": [
         "Does not support fine-grained per-record permissions"
       ],
-      "example": "import { Role, Action, can, requireMember } from '@/server/authz';",
+      "example": "// A server action in the app (e.g. src/app/dashboard/notes/actions.ts): signed-in member, role checked, deny by default.\nimport { can, requireMember } from \"@/server/authz\";\nimport { UserFacingError } from \"@/security/errors\";\n\nexport async function archiveNote(\n  noteId: string,\n): Promise<{ ok: true; by: string; noteId: string }> {\n  const ctx = await requireMember(); // redirects to /sign-in without a session or workspace\n  if (!can(ctx.role, \"update\", \"notes\")) throw new UserFacingError(\"Your role cannot edit notes.\");\n  return { ok: true, by: ctx.userId, noteId };\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "authz.roles.turbineh",
         "authz.roles",
@@ -2074,8 +2219,8 @@
       "interfaces": [
         {
           "name": "createStore",
-          "signature": "import { createStore } from \"zustand\"",
-          "where": "zustand"
+          "signature": "import { createStore } from \"zustand/vanilla\"",
+          "where": "zustand/vanilla"
         }
       ],
       "extensionPoints": [
@@ -2109,7 +2254,18 @@
       "limits": [
         "Not a database"
       ],
-      "example": "import { createStore } from \"zustand\";\n\nconst store = createStore((set) => ({\n  items: {},\n  add: (sku: string) => set((s) => ({ items: { ...s.items, [sku]: (s.items[sku] ?? 0) + 1 } })),\n}));",
+      "example": "import { createStore } from \"zustand/vanilla\";\n\ntype Cart = { items: Record<string, number>; add: (sku: string) => void };\nconst cart = createStore<Cart>()((set) => ({\n  items: {},\n  add: (sku) => set((s) => ({ items: { ...s.items, [sku]: (s.items[sku] ?? 0) + 1 } })),\n}));\ncart.getState().add(\"SKU-1\");\ncart.getState().add(\"SKU-1\");\nconsole.log(cart.getState().items); // → { \"SKU-1\": 2 }",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › keeps cart state outside React",
+        "compiled": {
+          "against": [
+            "zustand@5.0.15"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "zustand",
         "commerce.cart",
@@ -2173,7 +2329,7 @@
       "interfaces": [
         {
           "name": "matter",
-          "signature": "import { matter } from \"gray-matter\"",
+          "signature": "import matter from \"gray-matter\"",
           "where": "gray-matter"
         }
       ],
@@ -2202,7 +2358,18 @@
       "limits": [
         "Does not render Markdown to HTML"
       ],
-      "example": "import { matter } from 'gray-matter';\nconst f = matter('---\\ntitle: Hello\\ntags: [a, b]\\n---\\n# Body');",
+      "example": "import matter from \"gray-matter\";\n\nconst f = matter(\"---\\ntitle: Hello\\ntags: [a, b]\\n---\\n# Body\");\nconsole.log(f.data); // → { title: \"Hello\", tags: [\"a\", \"b\"] }\nconsole.log(f.content.trim()); // → \"# Body\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › splits front matter from the Markdown body",
+        "compiled": {
+          "against": [
+            "gray-matter@4.0.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "gray-matter",
         "content.blog",
@@ -2306,7 +2473,18 @@
         "Does not run scripts or lay out pages",
         "parseHtmlDocument throws if HTML length exceeds 2,000,000 characters"
       ],
-      "example": "import { parseHtmlDocument } from '@/integrations/content-html-dom';\n\nconst doc = parseHtmlDocument('<ul><li class=\"item\">A</li></ul>');\nconst text = doc.querySelector('.item')?.textContent;",
+      "example": "import { parseHTML } from \"linkedom\";\n\nconst { document } = parseHTML(\n  '<ul><li class=\"item\">A</li><li class=\"item\">B</li></ul><script>alert(1)</script>',\n);\nconsole.log([...document.querySelectorAll(\".item\")].map((n) => n.textContent)); // → [\"A\", \"B\"]\nconsole.log(document.querySelector(\"script\")?.textContent); // → \"alert(1)\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses HTML into a queryable DOM on the server",
+        "compiled": {
+          "against": [
+            "linkedom@0.18.13"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "linkedom",
         "content.html-dom",
@@ -2412,7 +2590,18 @@
         "Does not fetch pages or run scripts",
         "selectTexts throws an error if HTML length exceeds 2,000,000 characters"
       ],
-      "example": "import { selectTexts, selectLinks } from '@/integrations/content-html-parse';\n\nconst html = '<div><a href=\"https://example.com\">Link</a><p class=\"msg\">Hello</p></div>';\nconst texts = selectTexts(html, '.msg');\nconst links = selectLinks(html, 'https://base.com');",
+      "example": "import * as cheerio from \"cheerio\";\n\nconst $ = cheerio.load(\n  '<table><tr><td class=\"sku\">A-1</td><td class=\"price\">9.50</td></tr><tr><td class=\"sku\">B-2</td><td class=\"price\">12.00</td></tr></table>',\n);\nconst rows = $(\"tr\")\n  .map((_, tr) => ({\n    sku: $(tr).find(\".sku\").text(),\n    price: Number($(tr).find(\".price\").text()),\n  }))\n  .get();\nconsole.log(rows); // → [ { sku: \"A-1\", price: 9.5 }, { sku: \"B-2\", price: 12 }, ]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › extracts structured data with CSS selectors",
+        "compiled": {
+          "against": [
+            "cheerio@1.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "cheerio",
         "content.html-parse",
@@ -2528,7 +2717,18 @@
         "Maximum input length of 2,000,000 characters when using htmlToMarkdown.",
         "Does not fetch pages or execute scripts."
       ],
-      "example": "import { htmlToMarkdown } from '@/integrations/content-html-to-markdown';\n\nconst markdown = htmlToMarkdown('<h1>Title</h1><p>Hello <strong>World</strong></p>');\nconsole.log(markdown); // # Title\\n\\nHello **World**",
+      "example": "import { NodeHtmlMarkdown } from \"node-html-markdown\";\n\nconst md = NodeHtmlMarkdown.translate(\n  '<h1>Pricing</h1><p>Plans start at <strong>9 EUR</strong>. <a href=\"https://x.test/p\">Details</a></p><ul><li>One</li><li>Two</li></ul>',\n);\nconsole.log(md); // → contains \"# Pricing\"\nconsole.log(md); // → contains \"**9 EUR**\"\nconsole.log(md); // → contains \"[Details](https://x.test/p)\"\nconsole.log(md); // → matches /\\* One|- One/",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › converts HTML to compact Markdown",
+        "compiled": {
+          "against": [
+            "node-html-markdown@2.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "node-html-markdown",
         "content.html-to-markdown",
@@ -2600,7 +2800,7 @@
         },
         {
           "name": "removeMd",
-          "signature": "import { removeMd } from \"remove-markdown\"",
+          "signature": "import removeMd from \"remove-markdown\"",
           "where": "remove-markdown"
         }
       ],
@@ -2630,7 +2830,18 @@
       "limits": [
         "Does not sanitize HTML content."
       ],
-      "example": "import { markdownToPlainText } from '@/integrations/content-markdown-to-text';\n\nconst text = markdownToPlainText('# Status\\n\\nYour order **o-42** is [shipped](https://x.test).');\n// 'Status\\n\\nYour order o-42 is shipped.'",
+      "example": "import removeMd from \"remove-markdown\";\n\nconsole.log(removeMd(\"# Status\\n\\nYour order **o-42** is [shipped](https://x.test).\").trim()); // → \"Status\\n\\nYour order o-42 is shipped.\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › turns Markdown into plain text",
+        "compiled": {
+          "against": [
+            "remove-markdown@0.7.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "remove-markdown",
         "content.markdown-to-text",
@@ -2699,7 +2910,7 @@
       "interfaces": [
         {
           "name": "Markdown",
-          "signature": "import { Markdown } from \"react-markdown\"",
+          "signature": "import Markdown from \"react-markdown\"",
           "where": "react-markdown"
         }
       ],
@@ -2738,7 +2949,20 @@
       "limits": [
         "Does not edit Markdown content"
       ],
-      "example": "import { Markdown } from 'react-markdown';\n\nconst MyComponent = () => <Markdown># Title</Markdown>;",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport Markdown from \"react-markdown\";\n\nconst html = renderToString(h(Markdown, null, \"# Title\\n\\n<script>alert(1)</script>\"));\nconsole.log(html); // → contains \"<h1>Title</h1>\"\nconsole.log(html); // → does not contain \"<script>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders Markdown and does not execute raw HTML",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "react-markdown@10.1.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-markdown",
         "ui.markdown",
@@ -2845,7 +3069,19 @@
       "limits": [
         "Requires an existing DOM document; cannot fetch URLs independently"
       ],
-      "example": "import { readArticle, type HtmlDocument } from \"@/integrations/content-readability\";\n\nasync function process(doc: HtmlDocument) {\n  const article = readArticle(doc);\n  if (article) {\n    console.log(article.title, article.text);\n  }\n}",
+      "example": "import { Readability } from \"@mozilla/readability\";\nimport { parseHTML } from \"linkedom\";\n\nconst body =\n  \"<p>\" +\n  \"Solar panels on schools cut energy bills by a third in the pilot. \".repeat(12) +\n  \"</p>\";\nconst { document } = parseHTML(\n  `<html><head><title>Pilot results</title></head><body><nav>Home | About | Contact</nav><article><h1>Pilot results</h1>${body}</article><footer>Cookie settings</footer></body></html>`,\n);\nconst article = new Readability(document as unknown as Document).parse();\nconsole.log(article?.textContent); // → contains \"Solar panels on schools\"\nconsole.log(article?.textContent); // → does not contain \"Cookie settings\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › extracts the main article from a page, without navigation",
+        "compiled": {
+          "against": [
+            "@mozilla/readability@0.6.0",
+            "linkedom@0.18.13"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@mozilla/readability",
         "content.readability",
@@ -2909,7 +3145,7 @@
       "interfaces": [
         {
           "name": "readingTime",
-          "signature": "import { readingTime } from \"reading-time\"",
+          "signature": "import readingTime from \"reading-time\"",
           "where": "reading-time"
         }
       ],
@@ -2938,7 +3174,18 @@
       "limits": [
         "Does not parse Markdown"
       ],
-      "example": "import { readingTime } from \"reading-time\";\n\nconst result = readingTime(\"word \".repeat(400));",
+      "example": "import readingTime from \"reading-time\";\n\nconst r = readingTime(\"word \".repeat(400));\nconsole.log(r.words); // → 400\nconsole.log(Math.round(r.minutes)); // → 2",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › estimates minutes from words",
+        "compiled": {
+          "against": [
+            "reading-time@1.5.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "reading-time",
         "content.blog",
@@ -3030,7 +3277,18 @@
       "limits": [
         "Does not fetch or parse external feeds."
       ],
-      "example": "import { Feed } from \"feed\";\n\nconst f = new Feed({\n  title: \"Blog\",\n  id: \"https://example.com\",\n  link: \"https://example.com\",\n});\nf.addItem({\n  title: \"First post\",\n  link: \"https://example.com/p/1\",\n  date: new Date(\"2026-01-01\"),\n});\nconst xml = f.rss2();",
+      "example": "import { Feed } from \"feed\";\n\nconst f = new Feed({\n  title: \"Blog\",\n  id: \"https://example.com\",\n  link: \"https://example.com\",\n  copyright: \"©\",\n});\nf.addItem({\n  title: \"First post\",\n  link: \"https://example.com/p/1\",\n  date: new Date(\"2026-01-01\"),\n});\nconst xml = f.rss2();\nconsole.log(xml); // → contains \"<rss\"\nconsole.log(xml); // → contains \"First post\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an RSS 2.0 document with items",
+        "compiled": {
+          "against": [
+            "feed@6.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "feed",
         "content.rss",
@@ -3200,6 +3458,10 @@
         "Bars and tables only (no line or pie charts)"
       ],
       "example": "// src/analytics-import/params.json — Brightside Coffee\n{ \"entity\": \"DailySale\", \"columns\": [\"date\", \"shop\", \"product\", \"quantity\", \"revenue\"], \"periods\": [\"day\", \"week\", \"month\"],\n  \"compareWithPreviousPeriod\": true, \"filters\": [\"date range\", \"shop\"], \"exportCsv\": true, \"atomic\": true, \"errorReport\": true }\n",
+      "exampleCheck": {
+        "kind": "json",
+        "from": "params.schema.json"
+      },
       "keywords": [
         "analytics",
         "dashboard",
@@ -3331,7 +3593,18 @@
       "limits": [
         "Does not validate postal addresses"
       ],
-      "example": "import { isCountryCode, countryName, countryOptions, CountryLang } from '@/integrations/data-countries';\n\nconst code: string = 'ES';\nconst lang: CountryLang = 'en';\n\nif (isCountryCode(code)) {\n  console.log(countryName(code, lang));\n  console.log(countryOptions(lang));\n}",
+      "example": "import countries from \"i18n-iso-countries\";\nimport en from \"i18n-iso-countries/langs/en.json\";\n\ncountries.registerLocale(en);\nconsole.log(countries.getName(\"ES\", \"en\")); // → \"Spain\"\nconsole.log(countries.isValid(\"XX\")); // → false",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › returns localised country names from ISO codes",
+        "compiled": {
+          "against": [
+            "i18n-iso-countries@7.14.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "i18n-iso-countries",
         "data.countries",
@@ -3403,8 +3676,8 @@
       "interfaces": [
         {
           "name": "stringify",
-          "signature": "import { stringify } from \"csv-stringify\"",
-          "where": "csv-stringify"
+          "signature": "import { stringify } from \"csv-stringify/sync\"",
+          "where": "csv-stringify/sync"
         }
       ],
       "extensionPoints": [
@@ -3432,7 +3705,18 @@
       "limits": [
         "Does not neutralise spreadsheet formulas by default"
       ],
-      "example": "import { stringify } from \"csv-stringify/sync\";\nconst output = stringify([{ a: \"x,y\", b: 1 }], { header: true });",
+      "example": "import { stringify } from \"csv-stringify/sync\";\n\nconsole.log(stringify([{ a: \"x,y\", b: 1 }], { header: true })); // → 'a,b\\n\"x,y\",1\\n'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › serialises with header and quoting",
+        "compiled": {
+          "against": [
+            "csv-stringify@6.9.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "csv-stringify",
         "data.csv-export",
@@ -3546,7 +3830,11 @@
         "maxBytes: 1,000,000",
         "maxRows: 1,000"
       ],
-      "example": "import { toCsv, CSV_LIMITS } from '@/lib/csv';\n\nconst data = [{ id: 1, name: '=HACK' }, { id: 2, name: 'Normal' }];\nconst csv = toCsv(data, ['id', 'name']);",
+      "example": "// An export route in the app (e.g. src/app/dashboard/contacts/export/route.ts).\nimport { EXPORT_MAX_ROWS, exportTooLarge, toCsv } from \"@/lib/csv\";\n\nexport function contactsCsv(rows: { id: number; name: string }[]): Response {\n  if (rows.length > EXPORT_MAX_ROWS) return exportTooLarge(); // refused, never silently cut\n  // \"=HACK\" is written as \"'=HACK\": spreadsheet formula injection is neutralised.\n  const csv = toCsv(rows, [\"id\", \"name\"]);\n  return new Response(csv, { headers: { \"Content-Type\": \"text/csv; charset=utf-8\" } });\n}\n\nexport const sample = contactsCsv([\n  { id: 1, name: \"=HACK\" },\n  { id: 2, name: \"Normal\" },\n]);",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "data.csv-export.turbineh",
         "data.csv-export",
@@ -3607,7 +3895,7 @@
       "interfaces": [
         {
           "name": "Papa",
-          "signature": "import { Papa } from \"papaparse\"",
+          "signature": "import Papa from \"papaparse\"",
           "where": "papaparse"
         }
       ],
@@ -3637,7 +3925,18 @@
         "Does not validate rows against a schema",
         "Certain config options like download and worker are unavailable when parsing Node.js streams via .pipe()"
       ],
-      "example": "import { Papa } from 'papaparse';\n\nconst r = Papa.parse('name,notes\\n\"Doe, J\",\"a \"\"b\"\"\"\\n', {\n  header: true,\n  skipEmptyLines: true,\n});",
+      "example": "import Papa from \"papaparse\";\n\nconst r = Papa.parse<{ name: string; notes: string }>('name,notes\\n\"Doe, J\",\"a \"\"b\"\"\"\\n', {\n  header: true,\n  skipEmptyLines: true,\n});\nconsole.log(r.errors); // → []\nconsole.log(r.data); // → [{ name: \"Doe, J\", notes: 'a \"b\"' }]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses quoted CSV with headers",
+        "compiled": {
+          "against": [
+            "papaparse@5.7.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "papaparse",
         "data.csv-import",
@@ -3752,7 +4051,11 @@
         "maxBytes defaults to 1,000,000",
         "maxRows defaults to 1,000"
       ],
-      "example": "import { parseCsv, CSV_LIMITS } from '@/lib/csv';\n\nconst data = parseCsv('name,age\\nAlice,30\\nBob,25', CSV_LIMITS);",
+      "example": "// An import action in the app (e.g. src/app/dashboard/contacts/import/actions.ts).\nimport { CSV_LIMITS, parseCsv } from \"@/lib/csv\";\n\nexport function importPeople(text: string): { name: string; age: number }[] {\n  // Bounded: throws on files over CSV_LIMITS.maxBytes / maxRows.\n  const rows = parseCsv(text, CSV_LIMITS);\n  return rows.map((r) => ({ name: r.name ?? \"\", age: Number(r.age ?? 0) }));\n}\n\nexport const people = importPeople(\"name,age\\nAlice,30\\nBob,25\"); // → [{ name: \"Alice\", age: 30 }, …]",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "data.csv-import.turbineh",
         "data.csv-import",
@@ -3865,7 +4168,18 @@
       "limits": [
         "Does not handle time zones by itself"
       ],
-      "example": "import { addDays, differenceInCalendarDays, format, isBefore, parseISO } from \"date-fns\";\nconst d = parseISO(\"2026-10-13T10:00:00Z\");\nconst nextWeek = addDays(d, 7);\nconst diff = differenceInCalendarDays(nextWeek, d);\nconst formatted = format(new Date(2026, 9, 13), \"yyyy-MM-dd\");\nconst check = isBefore(d, addDays(d, 1));",
+      "example": "import { addDays, differenceInCalendarDays, format, isBefore, parseISO } from \"date-fns\";\n\nconst d = parseISO(\"2026-10-13T10:00:00Z\");\nconsole.log(differenceInCalendarDays(addDays(d, 7), d)); // → 7\nconsole.log(isBefore(d, addDays(d, 1))); // → true\nconsole.log(format(new Date(2026, 9, 13), \"yyyy-MM-dd\")); // → \"2026-10-13\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › adds, compares and formats dates",
+        "compiled": {
+          "against": [
+            "date-fns@4.4.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "date-fns",
         "data.dates",
@@ -3938,7 +4252,7 @@
       "interfaces": [
         {
           "name": "dayjs",
-          "signature": "import { dayjs } from \"dayjs\"",
+          "signature": "import dayjs from \"dayjs\"",
           "where": "dayjs"
         }
       ],
@@ -3967,7 +4281,18 @@
       "limits": [
         "Does not ship time-zone support without plugins"
       ],
-      "example": "import { dayjs } from \"dayjs\";\n\nconst date = dayjs(\"2018-08-08\");\nconst nextMonth = date.add(1, \"month\");\nconst formatted = nextMonth.format(\"YYYY-MM-DD\");",
+      "example": "import dayjs from \"dayjs\";\n\nconst a = dayjs(\"2026-10-13\");\nconst b = a.add(1, \"month\");\nconsole.log(a.format(\"YYYY-MM-DD\")); // → \"2026-10-13\"\nconsole.log(b.format(\"YYYY-MM-DD\")); // → \"2026-11-13\"\nconsole.log(b.diff(a, \"day\")); // → 31",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › is immutable and formats",
+        "compiled": {
+          "against": [
+            "dayjs@1.11.23"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "dayjs",
         "data.dates",
@@ -4060,7 +4385,18 @@
       "limits": [
         "Does not merge conflicting edits"
       ],
-      "example": "import { diffLines } from \"diff\";\nconst parts = diffLines(\"a\\nb\\n\", \"a\\nc\\n\");",
+      "example": "import { diffLines } from \"diff\";\n\nconst parts = diffLines(\"a\\nb\\n\", \"a\\nc\\n\");\nconsole.log(parts.filter((p) => p.added).map((p) => p.value)); // → [\"c\\n\"]\nconsole.log(parts.filter((p) => p.removed).map((p) => p.value)); // → [\"b\\n\"]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › reports added and removed lines",
+        "compiled": {
+          "against": [
+            "diff@9.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "diff",
         "data.diff",
@@ -4121,7 +4457,7 @@
       "interfaces": [
         {
           "name": "ms",
-          "signature": "import { ms } from \"ms\"",
+          "signature": "import ms from \"ms\"",
           "where": "ms"
         }
       ],
@@ -4150,7 +4486,18 @@
       "limits": [
         "Does not handle calendar months"
       ],
-      "example": "import ms from 'ms';\n\nms('2h');\nms(60000);",
+      "example": "import ms from \"ms\";\n\nconsole.log(ms(\"2h\")); // → 7_200_000\nconsole.log(ms(60_000)); // → \"1m\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses and formats durations",
+        "compiled": {
+          "against": [
+            "ms@2.1.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "ms",
         "data.dates",
@@ -4250,7 +4597,18 @@
       "limits": [
         "Does not define the API"
       ],
-      "example": "import { QueryClient } from \"@tanstack/react-query\";\n\nconst qc = new QueryClient();",
+      "example": "import { QueryClient } from \"@tanstack/react-query\";\n\nconst qc = new QueryClient();\nlet calls = 0;\nconst fetchFn = async () => ++calls;\nawait qc.fetchQuery({ queryKey: [\"n\"], queryFn: fetchFn, staleTime: 60_000 });\nawait qc.fetchQuery({ queryKey: [\"n\"], queryFn: fetchFn, staleTime: 60_000 });\nconsole.log(calls); // → 1\nqc.clear();",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › caches query results",
+        "compiled": {
+          "against": [
+            "@tanstack/react-query@5.104.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@tanstack/react-query",
         "data.fetching",
@@ -4314,7 +4672,7 @@
       "interfaces": [
         {
           "name": "Fuse",
-          "signature": "import { Fuse } from \"fuse.js\"",
+          "signature": "import Fuse from \"fuse.js\"",
           "where": "fuse.js"
         }
       ],
@@ -4343,7 +4701,18 @@
       "limits": [
         "Not suitable for large datasets"
       ],
-      "example": "import { Fuse } from \"fuse.js\";\nconst fuse = new Fuse([{ name: \"Physiotherapy\" }, { name: \"Dentistry\" }], { keys: [\"name\"] });\nconst results = fuse.search(\"physio\");",
+      "example": "import Fuse from \"fuse.js\";\n\nconst fuse = new Fuse([{ name: \"Physiotherapy\" }, { name: \"Dentistry\" }], { keys: [\"name\"] });\nconsole.log(fuse.search(\"physio\")[0]?.item.name); // → \"Physiotherapy\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › finds approximate matches",
+        "compiled": {
+          "against": [
+            "fuse.js@7.5.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "fuse.js",
         "data.fuzzy-search",
@@ -4406,7 +4775,7 @@
       "interfaces": [
         {
           "name": "ical",
-          "signature": "import { ical } from \"ical-generator\"",
+          "signature": "import ical from \"ical-generator\"",
           "where": "ical-generator"
         }
       ],
@@ -4445,7 +4814,18 @@
       "limits": [
         "Does not sync with external calendars"
       ],
-      "example": "import { ical } from \"ical-generator\";\nconst cal = ical({ name: \"Bookings\" });\ncal.createEvent({\n  start: new Date(Date.UTC(2026, 9, 13, 9)),\n  end: new Date(Date.UTC(2026, 9, 13, 10)),\n  summary: \"Physio session\",\n});\nconst out = cal.toString();",
+      "example": "import ical from \"ical-generator\";\n\nconst cal = ical({ name: \"Bookings\" });\ncal.createEvent({\n  start: new Date(Date.UTC(2026, 9, 13, 9)),\n  end: new Date(Date.UTC(2026, 9, 13, 10)),\n  summary: \"Physio session\",\n});\nconst out = cal.toString();\nconsole.log(out); // → contains \"BEGIN:VCALENDAR\"\nconsole.log(out); // → contains \"SUMMARY:Physio session\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a VEVENT",
+        "compiled": {
+          "against": [
+            "ical-generator@11.1.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "ical-generator",
         "data.ics-export",
@@ -4547,7 +4927,18 @@
       "limits": [
         "Not sortable by time"
       ],
-      "example": "import { createId, isCuid } from \"@paralleldrive/cuid2\";\nconst id = createId();\nconst valid = isCuid(id);",
+      "example": "import { createId, isCuid } from \"@paralleldrive/cuid2\";\n\nconst a = createId();\nconsole.log(isCuid(a)); // → true\nconsole.log(a); // → not createId()",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates unique, valid ids",
+        "compiled": {
+          "against": [
+            "@paralleldrive/cuid2@3.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@paralleldrive/cuid2",
         "data.ids",
@@ -4647,7 +5038,18 @@
       "limits": [
         "Does not guarantee ordering by creation time"
       ],
-      "example": "import { nanoid, customAlphabet } from \"nanoid\";\nconst id = nanoid();\nconst customId = customAlphabet(\"0123456789\", 6)();",
+      "example": "import { nanoid, customAlphabet } from \"nanoid\";\n\nconst ids = new Set(Array.from({ length: 1000 }, () => nanoid()));\nconsole.log(ids.size); // → 1000\nfor (const id of ids) console.log(id); // → matches /^[A-Za-z0-9_-]{21}$/\nconsole.log(customAlphabet(\"0123456789\", 6)()); // → matches /^\\d{6}$/",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › generates url-safe unique ids",
+        "compiled": {
+          "against": [
+            "nanoid@6.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "nanoid",
         "data.ids",
@@ -4745,7 +5147,18 @@
       "limits": [
         "Does not hide when an id was created (the time is encoded in it)"
       ],
-      "example": "import { ulid, decodeTime } from \"ulid\";\nconst id = ulid(1700000000000);\nconst time = decodeTime(id);",
+      "example": "import { ulid, decodeTime } from \"ulid\";\n\nconst id = ulid(1_700_000_000_000);\nconsole.log(id); // → length 26\nconsole.log(decodeTime(id)); // → 1_700_000_000_000",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates time-sortable ids",
+        "compiled": {
+          "against": [
+            "ulid@3.0.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "ulid",
         "data.ids",
@@ -4854,7 +5267,18 @@
       "limits": [
         "Does not shorten ids for URLs"
       ],
-      "example": "import { v4, v7, validate, version } from 'uuid';\n\nconst id = v4();\nconst is_valid = validate(id);\nconst ver = version(v7());",
+      "example": "import { v4, v7, validate, version } from \"uuid\";\n\nconsole.log(validate(v4())); // → true\nconsole.log(version(v7())); // → 7\nconsole.log(validate(\"not-a-uuid\")); // → false",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › generates and validates v4 and v7",
+        "compiled": {
+          "against": [
+            "uuid@14.0.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "uuid",
         "data.ids",
@@ -4916,7 +5340,7 @@
       "interfaces": [
         {
           "name": "currency",
-          "signature": "import { currency } from \"currency.js\"",
+          "signature": "import currency from \"currency.js\"",
           "where": "currency.js"
         }
       ],
@@ -4945,7 +5369,18 @@
       "limits": [
         "Does not convert currencies"
       ],
-      "example": "import { currency } from \"currency.js\";\n\nconst value = currency(0.1).add(0.2);\nconsole.log(value.value); // 0.3\nconsole.log(currency(19.99).multiply(3).format()); // \"$59.97\"",
+      "example": "import currency from \"currency.js\";\n\nconsole.log(currency(0.1).add(0.2).value); // → 0.3\nconsole.log(currency(19.99).multiply(3).format()); // → \"$59.97\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › adds money without floating point errors",
+        "compiled": {
+          "against": [
+            "currency.js@2.0.4"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "currency.js",
         "data.money",
@@ -5009,7 +5444,7 @@
       "interfaces": [
         {
           "name": "Decimal",
-          "signature": "import { Decimal } from \"decimal.js\"",
+          "signature": "import Decimal from \"decimal.js\"",
           "where": "decimal.js"
         }
       ],
@@ -5038,7 +5473,18 @@
       "limits": [
         "Precision loss occurs when using numeric literals with more than 15 significant digits or outside the range of Number values."
       ],
-      "example": "import { Decimal } from 'decimal.js';\nconst x = new Decimal('0.1');\nconst y = new Decimal('0.2');\nconst result = x.plus(y);\nconsole.log(result.toString()); // '0.3'",
+      "example": "import Decimal from \"decimal.js\";\n\nconsole.log(new Decimal(\"0.1\").plus(\"0.2\").toString()); // → \"0.3\"\nconsole.log(new Decimal(\"19.99\").times(3).toFixed(2)); // → \"59.97\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › avoids binary floating point errors",
+        "compiled": {
+          "against": [
+            "decimal.js@10.6.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "decimal.js",
         "data.money",
@@ -5121,8 +5567,8 @@
         },
         {
           "name": "EUR",
-          "signature": "import { EUR } from \"dinero.js\"",
-          "where": "dinero.js"
+          "signature": "import { EUR } from \"dinero.js/currencies\"",
+          "where": "dinero.js/currencies"
         }
       ],
       "extensionPoints": [
@@ -5150,7 +5596,18 @@
       "limits": [
         "Does not fetch exchange rates"
       ],
-      "example": "import { dinero, add, allocate, toSnapshot, EUR } from 'dinero.js';\nconst d1 = dinero({ amount: 1000, currency: EUR });\nconst d2 = dinero({ amount: 99, currency: EUR });\nconst total = add(d1, d2);\nconst distributed = allocate(d1, [1, 2]);\nconst snapshot = toSnapshot(total);",
+      "example": "import { dinero, add, allocate, toSnapshot } from \"dinero.js\";\nimport { EUR } from \"dinero.js/currencies\";\n\nconst total = add(\n  dinero({ amount: 1000, currency: EUR }),\n  dinero({ amount: 99, currency: EUR }),\n);\nconsole.log(toSnapshot(total).amount); // → 1099\nconsole.log(allocate(dinero({ amount: 100, currency: EUR }), [1, 2]).map((d) => toSnapshot(d).amount)); // → [33, 67]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › adds and allocates money in minor units",
+        "compiled": {
+          "against": [
+            "dinero.js@2.0.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "dinero.js",
         "data.money",
@@ -5221,8 +5678,8 @@
       "interfaces": [
         {
           "name": "pgTable",
-          "signature": "import { pgTable } from \"drizzle-orm\"",
-          "where": "drizzle-orm"
+          "signature": "import { pgTable } from \"drizzle-orm/pg-core\"",
+          "where": "drizzle-orm/pg-core"
         },
         {
           "name": "sql",
@@ -5274,7 +5731,19 @@
       "limits": [
         "Does not include built-in connection pooling, authentication, or row-level authorization."
       ],
-      "example": "import { pgTable, text, uuid, eq, and } from 'drizzle-orm';\n\nexport const users = pgTable('users', {\n  id: uuid('id').primaryKey(),\n  name: text('name').notNull(),\n});",
+      "example": "// Schema (src/db/schema.ts) and a typed query with drizzle-orm on node-postgres.\nimport { and, desc, eq } from \"drizzle-orm\";\nimport { drizzle } from \"drizzle-orm/node-postgres\";\nimport { integer, pgTable, text, timestamp, uuid } from \"drizzle-orm/pg-core\";\nimport { Pool } from \"pg\";\n\nexport const projects = pgTable(\"projects\", {\n  id: uuid(\"id\").primaryKey().defaultRandom(),\n  organizationId: text(\"organization_id\").notNull(),\n  name: text(\"name\").notNull(),\n  budget: integer(\"budget\").notNull().default(0),\n  createdAt: timestamp(\"created_at\", { withTimezone: true }).notNull().defaultNow(),\n});\n\nconst db = drizzle(new Pool({ connectionString: process.env.DATABASE_URL }));\nconst rows = await db\n  .select({ id: projects.id, name: projects.name })\n  .from(projects)\n  .where(and(eq(projects.organizationId, \"org_1\"), eq(projects.name, \"Website\")))\n  .orderBy(desc(projects.createdAt));\nconsole.log(rows);",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "snippet.ts",
+        "compiled": {
+          "against": [
+            "drizzle-orm@0.45.3",
+            "pg@8.23.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "drizzle-orm",
         "data.orm",
@@ -5387,7 +5856,11 @@
         "Maximum page value is 9,999",
         "Maximum search query length is 100 characters"
       ],
-      "example": "import { PAGE_SIZE, parsePage, parseQuery } from '@/lib/pagination';\n\nconst pageInfo = parsePage('2');\nconst query = parseQuery('  search term  ');\nconsole.log(pageInfo.offset); // 20\nconsole.log(query); // 'search term'",
+      "example": "// A server-rendered list page in the app (e.g. src/app/dashboard/projects/page.tsx).\nimport { PAGE_SIZE, parsePage, parseQuery } from \"@/lib/pagination\";\n\nexport function listParams(searchParams: { page?: string | string[]; q?: string | string[] }) {\n  const { page, offset, limit } = parsePage(searchParams.page); // invalid or missing → page 1\n  const q = parseQuery(searchParams.q); // trimmed, at most 100 characters\n  return { page, offset, limit, q, pageSize: PAGE_SIZE };\n}\n\nexport const second = listParams({ page: \"2\", q: \"  search term  \" }); // offset = PAGE_SIZE, q = \"search term\"",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "data.pagination.turbineh",
         "data.pagination",
@@ -5484,7 +5957,18 @@
         "Does not support short SMS codes",
         "Does not support alphabetic phone numbers (e.g., 1-800-GOT-MILK)"
       ],
-      "example": "import { parsePhoneNumberFromString } from \"libphonenumber-js\";\nconst phoneNumber = parsePhoneNumberFromString(\"+34 612 34 56 78\");\nif (phoneNumber && phoneNumber.isValid()) {\n  console.log(phoneNumber.format(\"E.164\"));\n}",
+      "example": "import { parsePhoneNumberFromString } from \"libphonenumber-js\";\n\nconst n = parsePhoneNumberFromString(\"+34 612 34 56 78\");\nconsole.log(n?.isValid()); // → true\nconsole.log(n?.format(\"E.164\")); // → \"+34612345678\"\nconsole.log(parsePhoneNumberFromString(\"123\")?.isValid() ?? false); // → false",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates and formats E.164",
+        "compiled": {
+          "against": [
+            "libphonenumber-js@1.13.14"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "libphonenumber-js",
         "data.phone",
@@ -5582,7 +6066,18 @@
         "Does not store events",
         "Does not send reminders"
       ],
-      "example": "import { RRule } from 'rrule';\n\nconst rule = new RRule({\n  freq: RRule.WEEKLY,\n  count: 3,\n  dtstart: new Date(Date.UTC(2026, 9, 13, 9)),\n});\n\nconst occurrences = rule.all();",
+      "example": "import { RRule } from \"rrule\";\n\nconst rule = new RRule({\n  freq: RRule.WEEKLY,\n  count: 3,\n  dtstart: new Date(Date.UTC(2026, 9, 13, 9)),\n});\nconsole.log(rule.all().map((d) => d.toISOString().slice(0, 10))); // → [ \"2026-10-13\", \"2026-10-20\", \"2026-10-27\", ]\nconsole.log(rule.toString()); // → contains \"FREQ=WEEKLY\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › expands weekly occurrences",
+        "compiled": {
+          "against": [
+            "rrule@2.8.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "rrule",
         "data.recurrence",
@@ -5648,7 +6143,7 @@
       "interfaces": [
         {
           "name": "MiniSearch",
-          "signature": "import { MiniSearch } from \"minisearch\"",
+          "signature": "import MiniSearch from \"minisearch\"",
           "where": "minisearch"
         }
       ],
@@ -5677,7 +6172,18 @@
       "limits": [
         "Not for millions of records"
       ],
-      "example": "import { MiniSearch } from 'minisearch';\nconst ms = new MiniSearch({ fields: ['name'], storeFields: ['name'] });\nms.addAll([{ id: 1, name: 'Red running shoes' }, { id: 2, name: 'Blue jacket' }]);\nconst results = ms.search('runing', { fuzzy: 0.2 });",
+      "example": "import MiniSearch from \"minisearch\";\n\nconst ms = new MiniSearch({ fields: [\"name\"], storeFields: [\"name\"] });\nms.addAll([\n  { id: 1, name: \"Red running shoes\" },\n  { id: 2, name: \"Blue jacket\" },\n]);\nconsole.log(ms.search(\"runing\", { fuzzy: 0.2 })[0]?.id); // → 1\nconsole.log(ms.search(\"jack\", { prefix: true })[0]?.id); // → 2",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › finds documents with typos and prefixes",
+        "compiled": {
+          "against": [
+            "minisearch@7.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "minisearch",
         "data.search-index",
@@ -5743,7 +6249,7 @@
       "interfaces": [
         {
           "name": "superjson",
-          "signature": "import { superjson } from \"superjson\"",
+          "signature": "import superjson from \"superjson\"",
           "where": "superjson"
         }
       ],
@@ -5772,7 +6278,18 @@
       "limits": [
         "Does not validate data"
       ],
-      "example": "import superjson from 'superjson';\n\nconst v = { at: new Date(\"2026-10-13T00:00:00Z\"), m: new Map([[\"a\", 1]]) };\nconst jsonString = superjson.stringify(v);\nconst back = superjson.parse(jsonString);",
+      "example": "import superjson from \"superjson\";\n\nconst v = { at: new Date(\"2026-10-13T00:00:00Z\"), m: new Map([[\"a\", 1]]) };\nconst back = superjson.parse<typeof v>(superjson.stringify(v));\nconsole.log(back.at instanceof Date); // → true\nconsole.log(back.m.get(\"a\")); // → 1",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › round-trips dates and maps",
+        "compiled": {
+          "against": [
+            "superjson@2.2.6"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "superjson",
         "data.serialization",
@@ -5838,7 +6355,7 @@
       "interfaces": [
         {
           "name": "slugify",
-          "signature": "import { slugify } from \"slugify\"",
+          "signature": "import slugify from \"slugify\"",
           "where": "slugify"
         }
       ],
@@ -5867,7 +6384,18 @@
       "limits": [
         "Does not ensure uniqueness against a database"
       ],
-      "example": "import slugify from \"slugify\";\n\nslugify(\"Café Niño & Co!\", { lower: true, strict: true }); // \"cafe-nino-and-co\"",
+      "example": "import slugify from \"slugify\";\n\nconsole.log(slugify(\"Café Niño & Co!\", { lower: true, strict: true })); // → \"cafe-nino-and-co\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates lowercase strict slugs",
+        "compiled": {
+          "against": [
+            "slugify@1.6.9"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "slugify",
         "data.slug",
@@ -5971,7 +6499,18 @@
         "Requires date-fns as a peer dependency",
         "IANA names require Intl API support; otherwise, only offsets can be used"
       ],
-      "example": "import { formatInTimeZone, fromZonedTime } from \"date-fns-tz\";\nconst utc = new Date(\"2026-10-13T08:00:00Z\");\nconst formatted = formatInTimeZone(utc, \"Europe/Madrid\", \"HH:mm\");\nconst zoned = fromZonedTime(\"2026-10-13 10:00\", \"Europe/Madrid\");",
+      "example": "import { formatInTimeZone, fromZonedTime } from \"date-fns-tz\";\n\nconst utc = new Date(\"2026-10-13T08:00:00Z\");\nconsole.log(formatInTimeZone(utc, \"Europe/Madrid\", \"HH:mm\")); // → \"10:00\"\nconsole.log(fromZonedTime(\"2026-10-13 10:00\", \"Europe/Madrid\").toISOString()); // → \"2026-10-13T08:00:00.000Z\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › formats and converts across time zones",
+        "compiled": {
+          "against": [
+            "date-fns-tz@3.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "date-fns-tz",
         "data.timezones",
@@ -6033,7 +6572,7 @@
       "interfaces": [
         {
           "name": "validator",
-          "signature": "import { validator } from \"validator\"",
+          "signature": "import validator from \"validator\"",
           "where": "validator"
         }
       ],
@@ -6064,7 +6603,18 @@
         "Only accepts strings; passing other types results in an error.",
         "Does not validate structured objects."
       ],
-      "example": "import validator from 'validator';\n\nvalidator.isEmail('a@b.co');\nvalidator.isURL('https://example.com');\nvalidator.isIBAN('ES9121000418450200051332');\nvalidator.escape('<b>');",
+      "example": "import validator from \"validator\";\n\nconsole.log(validator.isEmail(\"a@b.co\")); // → true\nconsole.log(validator.isURL(\"https://example.com\")); // → true\nconsole.log(validator.isIBAN(\"ES9121000418450200051332\")); // → true\nconsole.log(validator.escape(\"<b>\")); // → \"&lt;b&gt;\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates common string formats",
+        "compiled": {
+          "against": [
+            "validator@13.15.35"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "validator",
         "data.validation",
@@ -6195,7 +6745,18 @@
         "Does not persist data",
         "Does not sanitize HTML"
       ],
-      "example": "import { object, pipe, string, email, number, minValue, safeParse } from 'valibot';\n\nconst Schema = object({\n  email: pipe(string(), email()),\n  age: pipe(number(), minValue(18)),\n});\n\nconst result = safeParse(Schema, { email: \"a@b.co\", age: 30 });",
+      "example": "import * as v from \"valibot\";\n\nconst Schema = v.object({\n  email: v.pipe(v.string(), v.email()),\n  age: v.pipe(v.number(), v.minValue(18)),\n});\nconsole.log(v.safeParse(Schema, { email: \"a@b.co\", age: 30 }).success); // → true\nconsole.log(v.safeParse(Schema, { email: \"nope\", age: 3 }).issues?.length); // → 2",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates and reports issues",
+        "compiled": {
+          "against": [
+            "valibot@1.5.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "valibot",
         "data.validation",
@@ -6300,7 +6861,18 @@
       "limits": [
         "Compile-time type inference is not as strong as zod"
       ],
-      "example": "import { number, object, string } from 'yup';\nconst schema = object({ name: string().required(), qty: number().min(1).required() });\nconst result = await schema.validate({ name: 'x', qty: '2' });",
+      "example": "import { number, object, string } from \"yup\";\n\nconst schema = object({ name: string().required(), qty: number().min(1).required() });\nconsole.log(await schema.validate({ name: \"x\", qty: \"2\" })); // → { name: \"x\", qty: 2 }\nawait schema.validate({ name: \"\", qty: 0 }).catch((err: unknown) => console.log(err)); // → rejects: throws",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates and casts",
+        "compiled": {
+          "against": [
+            "yup@1.7.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "yup",
         "data.validation",
@@ -6390,7 +6962,18 @@
       "limits": [
         "Schemas with async refinements or transforms cannot use the compiled fast path"
       ],
-      "example": "import * as z from \"zod\";\n\nconst Player = z.object({\n  username: z.string(),\n  xp: z.number(),\n});\n\nconst data = Player.parse({ username: \"billie\", xp: 100 });",
+      "example": "import { z } from \"zod\";\n\nconst Player = z.object({\n  username: z.string().min(3),\n  xp: z.number().int().nonnegative(),\n});\ntype Player = z.infer<typeof Player>;\n\nconst ok: Player = Player.parse({ username: \"billie\", xp: 100 });\nconst bad = Player.safeParse({ username: \"b\", xp: -1 });\nconsole.log(ok, bad.success ? \"valid\" : bad.error.issues.map((i) => i.path.join(\".\")));",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "snippet.ts",
+        "compiled": {
+          "against": [
+            "zod@4.6.5"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "zod",
         "data.validation",
@@ -6454,7 +7037,7 @@
       "interfaces": [
         {
           "name": "ExcelJS",
-          "signature": "import { ExcelJS } from \"exceljs\"",
+          "signature": "import ExcelJS from \"exceljs\"",
           "where": "exceljs"
         }
       ],
@@ -6483,7 +7066,18 @@
       "limits": [
         "Does not evaluate formulas"
       ],
-      "example": "import { ExcelJS } from 'exceljs';\nconst wb = new ExcelJS.Workbook();\nconst sheet = wb.addWorksheet('Items');\nsheet.addRows([['sku', 'qty'], ['A-1', 3]]);\nconst buf = await wb.xlsx.writeBuffer();\nconst back = new ExcelJS.Workbook();\nawait back.xlsx.load(buf);",
+      "example": "import ExcelJS from \"exceljs\";\n\nconst wb = new ExcelJS.Workbook();\nwb.addWorksheet(\"Items\").addRows([\n  [\"sku\", \"qty\"],\n  [\"A-1\", 3],\n]);\nconst buf = await wb.xlsx.writeBuffer();\nconst back = new ExcelJS.Workbook();\nawait back.xlsx.load(buf);\nconsole.log(back.getWorksheet(\"Items\")?.getCell(\"B2\").value); // → 3",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › writes and reads back an xlsx buffer",
+        "compiled": {
+          "against": [
+            "exceljs@4.4.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "exceljs",
         "data.xlsx-export",
@@ -6586,7 +7180,18 @@
       "limits": [
         "No XSLT support"
       ],
-      "example": "import { XMLBuilder, XMLParser } from \"fast-xml-parser\";\nconst parser = new XMLParser();\nconst data = parser.parse(\"<product><sku>A1</sku><price>9.5</price></product>\");\nconst builder = new XMLBuilder();\nconst xml = builder.build({ a: { b: 1 } });",
+      "example": "import { XMLBuilder, XMLParser } from \"fast-xml-parser\";\n\nconst data = new XMLParser().parse(\"<product><sku>A1</sku><price>9.5</price></product>\");\nconsole.log(data.product.sku); // → \"A1\"\nconsole.log(new XMLBuilder().build({ a: { b: 1 } })); // → \"<a><b>1</b></a>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses and builds XML without external entities",
+        "compiled": {
+          "against": [
+            "fast-xml-parser@5.11.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "fast-xml-parser",
         "data.xml",
@@ -6697,7 +7302,18 @@
         "Maximum input length is 500,000 characters in parseYaml",
         "Alias expansion is limited to 50 in parseYaml"
       ],
-      "example": "import { parseYaml, toYaml } from '@/integrations/data-yaml';\nconst obj = parseYaml('agent: triage\\nsteps:\\n  - classify');\nconst yaml = toYaml(obj);",
+      "example": "import { parse, stringify } from \"yaml\";\n\nconst value = parse(\"agent: triage\\nsteps:\\n  - classify\\n  - reply\\nmax_tokens: 512\\n\");\nconsole.log(value); // → { agent: \"triage\", steps: [\"classify\", \"reply\"], max_tokens: 512 }\nconsole.log(parse(stringify(value))); // → value\nparse(\"a: !!js/function 'return 1'\"); // does not throw\nconsole.log(typeof parse(\"a: !!js/function 'return 1'\").a); // → not \"function\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses and writes YAML safely",
+        "compiled": {
+          "against": [
+            "yaml@2.9.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "yaml",
         "data.yaml",
@@ -6890,6 +7506,10 @@
         "The install phase has network without an egress allow-list (only the package manager runs)"
       ],
       "example": "# CLI\nturbineh connect github --private\nturbineh plan \"AI assistant that answers from our help centre\"\nturbineh apply <plan> --pr --repo acme/web\n\n# API\ncurl -X POST $BASE/v1/plans/$PLAN/pull-request -H \"Authorization: Bearer $TOKEN\" -d '{\"repo\":\"acme/web\"}'\ncurl $BASE/v1/plans/$PLAN/pull-request -H \"Authorization: Bearer $TOKEN\"",
+      "exampleCheck": {
+        "kind": "shell",
+        "from": "guide.yaml"
+      },
       "keywords": [
         "deploy.github-pull-request.turbineh",
         "github",
@@ -7077,7 +7697,11 @@
         "No retention job: entries are kept until a deliberate migration removes them",
         "Values longer than 300 characters are shortened in the log"
       ],
-      "example": "import { audit } from \"@/lib/audit\";\nawait audit({\n  organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email,\n  action: \"note.updated\", subjectType: \"Note\", subjectId: note.id,\n  before: previous, after: { ...previous, title: \"New title\" },\n});\n",
+      "example": "// A server action in the app (e.g. src/app/dashboard/notes/actions.ts): the change and its audit entry together.\nimport { audit } from \"@/lib/audit\";\n\nexport async function recordTitleChange(\n  ctx: { organizationId: string; userId: string; email: string },\n  note: { id: string; title: string },\n  title: string,\n): Promise<void> {\n  await audit({\n    organizationId: ctx.organizationId,\n    actorId: ctx.userId,\n    actorEmail: ctx.email,\n    action: \"note.updated\",\n    subjectType: \"Note\",\n    subjectId: note.id,\n    before: { title: note.title },\n    after: { title },\n  });\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "audit log",
         "audit trail",
@@ -7330,7 +7954,11 @@
         "Time off is checked when times are offered and booked; a booking racing a time-off change in the same instant is not locked out",
         "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
       ],
-      "example": "import { availability, createAppointment } from \"@/bookings/service\";\nconst day = await availability({ day: \"2026-11-02\" });            // real free times\nconst first = day.slots[0];\nif (first) await createAppointment({ day: \"2026-11-02\", time: first.time, name: \"Ana García\", email: \"ana@example.com\", via: \"staff\" });\n",
+      "example": "// Server code in the app (e.g. a staff action in src/app/dashboard/appointments/actions.ts).\nimport { availability, createAppointment } from \"@/bookings/service\";\n\nexport async function bookFirstFreeSlot(day: string, name: string, email: string) {\n  const free = await availability({ day }); // real free times: hours, duration, time zone, existing bookings\n  const first = free.slots[0];\n  if (!first) return null;\n  return createAppointment({ day, time: first.time, name, email, via: \"staff\" });\n}\n\nexport const example = () => bookFirstFreeSlot(\"2026-11-02\", \"Ana García\", \"ana@example.com\");",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "booking",
         "bookings",
@@ -7565,7 +8193,11 @@
         "Invitation links are for one workspace and one email address",
         "In staff-only sign-up apps the invited email must be allowlisted (ADMIN_EMAILS)"
       ],
-      "example": "import { can, requireMember } from \"@/server/authz\";\nimport { visibleScopes } from \"@/server/record-access\";\nconst ctx = await requireMember();\nif (!can(ctx.role, \"update\")) throw new UserFacingError(\"Viewers cannot edit notes.\");\nconst scopes = await visibleScopes(ctx); // \"all\" or the ids of the member's companies\n",
+      "example": "// A server action in the app: role check plus the per-record scopes this member may see.\nimport { can, requireMember } from \"@/server/authz\";\nimport { visibleScopes } from \"@/server/record-access\";\nimport { UserFacingError } from \"@/security/errors\";\n\nexport async function editableScopes(): Promise<string[] | \"all\"> {\n  const ctx = await requireMember();\n  if (!can(ctx.role, \"update\")) throw new UserFacingError(\"Viewers cannot edit notes.\");\n  return visibleScopes(ctx); // \"all\" or the ids of the member's companies\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "roles",
         "permissions",
@@ -7782,7 +8414,11 @@
         "Lists show up to 500 records per workflow",
         "Stuck and overdue are computed when pages load; emails need jobs.scheduled.turbineh"
       ],
-      "example": "import { createItem, transition } from \"@/workflow/service\";\nconst ctx = await requireMember();\nconst id = await createItem(ctx, { workflow: \"loan\", title: \"Sony FX3 · 14–16 Oct\", dueAt: new Date(\"2026-10-16\") });\nawait transition(ctx, id, \"approved\", \"Approved for the shoot\");   // throws if the role cannot approve\n",
+      "example": "// A server action in the app (e.g. src/app/dashboard/workflow/actions.ts).\nimport { requireMember } from \"@/server/authz\";\nimport { createItem, transition } from \"@/workflow/service\";\n\nexport async function requestAndApprove(workflow: string, approvedState: string): Promise<string> {\n  const ctx = await requireMember();\n  const id = await createItem(ctx, {\n    workflow,\n    title: \"Sony FX3 · 14–16 Oct\",\n    dueAt: new Date(\"2026-10-16\"),\n  });\n  await transition(ctx, id, approvedState, \"Approved for the shoot\"); // throws if the role cannot\n  return id;\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "workflow",
         "status",
@@ -7909,7 +8545,18 @@
         "In maintenance mode; no new features will be added.",
         "Inlined images are capped by maxInlinedImagesSize (default 20 MB)."
       ],
-      "example": "import { parseEmail } from \"@/integrations/email-parsing\";\n\nconst raw = \"From: user@example.com\\r\\nSubject: test\\r\\n\\r\\nbody\";\nconst parsed = await parseEmail(raw);",
+      "example": "import { simpleParser } from \"mailparser\";\n\nconst raw = [\n  \"From: Ana <ana@example.test>\",\n  \"To: support@example.test\",\n  \"Subject: Refund for order o-42\",\n  \"MIME-Version: 1.0\",\n  'Content-Type: multipart/mixed; boundary=\"b1\"',\n  \"\",\n  \"--b1\",\n  \"Content-Type: text/plain; charset=utf-8\",\n  \"\",\n  \"The parcel arrived damaged.\",\n  \"--b1\",\n  'Content-Type: text/plain; name=\"note.txt\"',\n  'Content-Disposition: attachment; filename=\"note.txt\"',\n  \"\",\n  \"photo to follow\",\n  \"--b1--\",\n  \"\",\n].join(\"\\r\\n\");\nconst mail = await simpleParser(raw);\nconsole.log(mail.subject); // → \"Refund for order o-42\"\nconsole.log(mail.from?.value[0]?.address); // → \"ana@example.test\"\nconsole.log(mail.text?.trim()); // → \"The parcel arrived damaged.\"\nconsole.log(mail.attachments.map((a) => a.filename)); // → [\"note.txt\"]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses a raw MIME email with an attachment",
+        "compiled": {
+          "against": [
+            "mailparser@3.9.31"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "mailparser",
         "email.parsing",
@@ -8009,7 +8656,18 @@
       "limits": [
         "Input HTML length is limited to 500,000 characters in the curated integration."
       ],
-      "example": "import { convert } from 'html-to-text';\nconst text = convert('<h1>Order confirmed</h1><p>Total: <b>€20</b></p>', { wordwrap: false });",
+      "example": "import { convert } from \"html-to-text\";\n\nconsole.log(convert(\"<h1>Order confirmed</h1><p>Total: <b>€20</b></p>\", { wordwrap: false })); // → contains \"Total: €20\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › turns an HTML email into readable plain text",
+        "compiled": {
+          "against": [
+            "html-to-text@10.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "html-to-text",
         "email.plain-text",
@@ -8074,7 +8732,7 @@
       "interfaces": [
         {
           "name": "nodemailer",
-          "signature": "import { nodemailer } from \"nodemailer\"",
+          "signature": "import nodemailer from \"nodemailer\"",
           "where": "nodemailer"
         }
       ],
@@ -8106,7 +8764,18 @@
         "Requires Node.js 20 or newer for version 10+",
         "Cloudflare Workers does not support sendmail transport due to child process restrictions"
       ],
-      "example": "import nodemailer from \"nodemailer\";\nconst t = nodemailer.createTransport({ jsonTransport: true });\nawait t.sendMail({\n  from: \"a@example.com\",\n  to: \"b@example.com\",\n  subject: \"s\",\n  text: \"t\",\n});",
+      "example": "import nodemailer from \"nodemailer\";\n\nconst t = nodemailer.createTransport({ jsonTransport: true });\nconst info = await t.sendMail({\n  from: \"a@example.com\",\n  to: \"b@example.com\",\n  subject: \"s\",\n  text: \"t\",\n});\nconsole.log(JSON.parse(info.message as string).subject); // → \"s\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › builds a message with the JSON transport",
+        "compiled": {
+          "against": [
+            "nodemailer@10.0.10"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "nodemailer",
         "email.transactional",
@@ -8201,7 +8870,18 @@
         "Does not provide templates",
         "Does not provide a local outbox"
       ],
-      "example": "import { Resend } from \"resend\";\n\nconst resend = new Resend(\"re_test_key\");\nawait resend.emails.send({\n  from: \"a@example.com\",\n  to: \"b@example.com\",\n  subject: \"s\",\n  text: \"t\"\n});",
+      "example": "import { Resend } from \"resend\";\n\nconst r = new Resend(\"re_test_key\");\nconsole.log(typeof r.emails.send); // → \"function\"\nconst res = await r.emails\n  .send({ from: \"a@example.com\", to: \"b@example.com\", subject: \"s\", text: \"t\" })\n  .catch((e: unknown) => ({ data: null, error: e }));\nconsole.log(res.data); // → null",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › builds a client and fails cleanly without network",
+        "compiled": {
+          "against": [
+            "resend@6.30.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "resend",
         "email.transactional",
@@ -8313,7 +8993,11 @@
         "Does not provide bounce handling",
         "Does not provide bulk sending"
       ],
-      "example": "import { sendEmail } from '@/lib/email';\n\nawait sendEmail({\n  to: 'user@example.com',\n  subject: 'Verify your email',\n  text: 'Please click this link to verify.',\n  link: 'https://example.com/verify'\n});",
+      "example": "// Server code in the app (e.g. src/app/dashboard/invoices/actions.ts).\nimport { sendEmail } from \"@/lib/email\";\n\nexport async function notifyInvoiceSent(to: string, invoiceUrl: string): Promise<boolean> {\n  // Resend when RESEND_API_KEY is set; otherwise nothing is sent (development writes a local outbox file).\n  const r = await sendEmail({\n    to,\n    subject: \"Your invoice is ready\",\n    text: `Open your invoice: ${invoiceUrl}`,\n    link: invoiceUrl,\n  });\n  return r.delivered;\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "email.transactional.turbineh",
         "email.transactional",
@@ -8376,8 +9060,8 @@
       "interfaces": [
         {
           "name": "bwipjs",
-          "signature": "import { bwipjs } from \"bwip-js\"",
-          "where": "bwip-js"
+          "signature": "import bwipjs from \"bwip-js/node\"",
+          "where": "bwip-js/node"
         }
       ],
       "extensionPoints": [
@@ -8405,7 +9089,18 @@
       "limits": [
         "Does not scan barcodes"
       ],
-      "example": "import { bwipjs } from \"bwip-js\";\n// Note: bwipjs is the import name from the specifier\n// The code uses bwipjs.toSVG\nconst svg = bwipjs.toSVG({ bcid: \"ean13\", text: \"5901234123457\" });",
+      "example": "import bwipjs from \"bwip-js/node\";\n\nconst svg = bwipjs.toSVG({ bcid: \"ean13\", text: \"5901234123457\" });\nconsole.log(svg); // → contains \"<svg\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an EAN-13 barcode as SVG",
+        "compiled": {
+          "against": [
+            "bwip-js@4.11.4"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "bwip-js",
         "files.barcode",
@@ -8476,7 +9171,7 @@
         },
         {
           "name": "mammoth",
-          "signature": "import { mammoth } from \"mammoth\"",
+          "signature": "import mammoth from \"mammoth\"",
           "where": "mammoth"
         }
       ],
@@ -8512,7 +9207,18 @@
         "Does not keep complex layout",
         "Maximum file size is 20MB"
       ],
-      "example": "import { docxToText } from '@/integrations/files-docx-text';\n\nconst text = await docxToText(buffer);",
+      "example": "import mammoth from \"mammoth\";\n\nfunction crc32(buf: Uint8Array): number {\n  let c = ~0;\n  for (const b of buf) {\n    c ^= b;\n    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));\n  }\n  return ~c >>> 0;\n}\nfunction zip(files: Record<string, string>): Buffer {\n  const parts: Buffer[] = [];\n  const central: Buffer[] = [];\n  let offset = 0;\n  for (const [name, text] of Object.entries(files)) {\n    const data = Buffer.from(text, \"utf8\");\n    const nameBuf = Buffer.from(name, \"utf8\");\n    const crc = crc32(data);\n    const local = Buffer.alloc(30);\n    local.writeUInt32LE(0x04034b50, 0);\n    local.writeUInt16LE(20, 4);\n    local.writeUInt32LE(crc, 14);\n    local.writeUInt32LE(data.length, 18);\n    local.writeUInt32LE(data.length, 22);\n    local.writeUInt16LE(nameBuf.length, 26);\n    parts.push(local, nameBuf, data);\n    const cen = Buffer.alloc(46);\n    cen.writeUInt32LE(0x02014b50, 0);\n    cen.writeUInt16LE(20, 4);\n    cen.writeUInt16LE(20, 6);\n    cen.writeUInt32LE(crc, 16);\n    cen.writeUInt32LE(data.length, 20);\n    cen.writeUInt32LE(data.length, 24);\n    cen.writeUInt16LE(nameBuf.length, 28);\n    cen.writeUInt32LE(offset, 42);\n    central.push(cen, nameBuf);\n    offset += 30 + nameBuf.length + data.length;\n  }\n  const cd = Buffer.concat(central);\n  const end = Buffer.alloc(22);\n  end.writeUInt32LE(0x06054b50, 0);\n  end.writeUInt16LE(Object.keys(files).length, 8);\n  end.writeUInt16LE(Object.keys(files).length, 10);\n  end.writeUInt32LE(cd.length, 12);\n  end.writeUInt32LE(offset, 16);\n  return Buffer.concat([...parts, cd, end]);\n}\nconst DOCX = {\n  \"[Content_Types].xml\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>',\n  \"_rels/.rels\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>',\n  \"word/document.xml\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Quarterly report for Acme</w:t></w:r></w:p><w:p><w:r><w:t>Revenue grew 12 percent.</w:t></w:r></w:p></w:body></w:document>',\n};\nconst { value } = await mammoth.extractRawText({ buffer: zip(DOCX) });\nconsole.log(value); // → contains \"Quarterly report for Acme\"\nconsole.log(value); // → contains \"Revenue grew 12 percent.\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › extracts raw text from a .docx",
+        "compiled": {
+          "against": [
+            "mammoth@1.13.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "mammoth",
         "files.docx-text",
@@ -8610,7 +9316,20 @@
       "limits": [
         "Client-side only; requires server-side validation."
       ],
-      "example": "import { useDropzone } from \"react-dropzone\";\n\nfunction MyComponent() {\n  const { getRootProps, getInputProps } = useDropzone();\n  return (\n    <div {...getRootProps()}>\n      <input {...getInputProps()} />\n      <span>Drop files here</span>\n    </div\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { useDropzone } from \"react-dropzone\";\n\nfunction Drop() {\n  const { getRootProps, getInputProps } = useDropzone({\n    accept: { \"application/pdf\": [\".pdf\"] },\n    maxSize: 5_000_000,\n  });\n  return h(\"div\", getRootProps(), h(\"input\", getInputProps()), \"Drop files\");\n}\nconst html = renderToString(h(Drop));\nconsole.log(html); // → contains 'type=\"file\"'\nconsole.log(html); // → contains \"Drop files\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a drop area with a file input",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "react-dropzone@20.1.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-dropzone",
         "files.upload",
@@ -8711,7 +9430,18 @@
         "Input buffers larger than 15MB are rejected",
         "Image dimensions exceeding 8000px on any side are rejected"
       ],
-      "example": "import { Jimp } from \"jimp\";\n\nconst img = await Jimp.read(inputBuffer);\nimg.resize({ w: 100 });\nconst png = await img.getBuffer(\"image/png\");",
+      "example": "import { Jimp } from \"jimp\";\n\nconst img = new Jimp({ width: 400, height: 200, color: 0xff0000ff });\nimg.resize({ w: 100 });\nconsole.log(img.bitmap.width); // → 100\nconsole.log(img.bitmap.height); // → 50\nconst png = await img.getBuffer(\"image/png\");\nconsole.log(png.subarray(1, 4).toString()); // → \"PNG\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates, resizes and encodes an image",
+        "compiled": {
+          "against": [
+            "jimp@1.6.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "jimp",
         "files.image-processing",
@@ -8777,7 +9507,7 @@
       "interfaces": [
         {
           "name": "mime",
-          "signature": "import { mime } from \"mime\"",
+          "signature": "import mime from \"mime\"",
           "where": "mime"
         }
       ],
@@ -8806,7 +9536,18 @@
       "limits": [
         "Does not inspect file contents"
       ],
-      "example": "import mime from 'mime';\n\nmime.getType('report.pdf');\nmime.getExtension('text/csv');",
+      "example": "import mime from \"mime\";\n\nconsole.log(mime.getType(\"report.pdf\")); // → \"application/pdf\"\nconsole.log(mime.getExtension(\"text/csv\")); // → \"csv\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › maps extensions and types",
+        "compiled": {
+          "against": [
+            "mime@4.1.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "mime",
         "files.type-detection",
@@ -8912,7 +9653,18 @@
       "limits": [
         "Text only: no formatting, charts or images"
       ],
-      "example": "import { officeToText } from \"@/integrations/files-office-text\";\n\nconst textData = await officeToText(buffer);",
+      "example": "import { OfficeParser } from \"officeparser\";\n\nfunction crc32(buf: Uint8Array): number {\n  let c = ~0;\n  for (const b of buf) {\n    c ^= b;\n    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));\n  }\n  return ~c >>> 0;\n}\nfunction zip(files: Record<string, string>): Buffer {\n  const parts: Buffer[] = [];\n  const central: Buffer[] = [];\n  let offset = 0;\n  for (const [name, text] of Object.entries(files)) {\n    const data = Buffer.from(text, \"utf8\");\n    const nameBuf = Buffer.from(name, \"utf8\");\n    const crc = crc32(data);\n    const local = Buffer.alloc(30);\n    local.writeUInt32LE(0x04034b50, 0);\n    local.writeUInt16LE(20, 4);\n    local.writeUInt32LE(crc, 14);\n    local.writeUInt32LE(data.length, 18);\n    local.writeUInt32LE(data.length, 22);\n    local.writeUInt16LE(nameBuf.length, 26);\n    parts.push(local, nameBuf, data);\n    const cen = Buffer.alloc(46);\n    cen.writeUInt32LE(0x02014b50, 0);\n    cen.writeUInt16LE(20, 4);\n    cen.writeUInt16LE(20, 6);\n    cen.writeUInt32LE(crc, 16);\n    cen.writeUInt32LE(data.length, 20);\n    cen.writeUInt32LE(data.length, 24);\n    cen.writeUInt16LE(nameBuf.length, 28);\n    cen.writeUInt32LE(offset, 42);\n    central.push(cen, nameBuf);\n    offset += 30 + nameBuf.length + data.length;\n  }\n  const cd = Buffer.concat(central);\n  const end = Buffer.alloc(22);\n  end.writeUInt32LE(0x06054b50, 0);\n  end.writeUInt16LE(Object.keys(files).length, 8);\n  end.writeUInt16LE(Object.keys(files).length, 10);\n  end.writeUInt32LE(cd.length, 12);\n  end.writeUInt32LE(offset, 16);\n  return Buffer.concat([...parts, cd, end]);\n}\nconst DOCX = {\n  \"[Content_Types].xml\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>',\n  \"_rels/.rels\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>',\n  \"word/document.xml\":\n    '<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Quarterly report for Acme</w:t></w:r></w:p><w:p><w:r><w:t>Revenue grew 12 percent.</w:t></w:r></w:p></w:body></w:document>',\n};\nconst ast = await OfficeParser.parseOffice(zip(DOCX));\nconsole.log(ast.type); // → \"docx\"\nconst { value } = await ast.to(\"text\");\nconst text = String(value);\nconsole.log(text); // → contains \"Quarterly report for Acme\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses an Office document buffer into an AST with plain text",
+        "compiled": {
+          "against": [
+            "officeparser@8.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "officeparser",
         "files.office-text",
@@ -9024,7 +9776,18 @@
         "Does not run OCR; scanned PDFs return no text",
         "Maximum file size is bounded at 25MB in the pdfToText integration"
       ],
-      "example": "import { extractText, getDocumentProxy } from 'unpdf';\n\nconst pdf = await getDocumentProxy(new Uint8Array(buffer));\nconst { totalPages, text } = await extractText(pdf, { mergePages: true });",
+      "example": "import { extractText, getDocumentProxy } from \"unpdf\";\n\nfunction pdfWithText(): Uint8Array {\n  const objs = [\n    \"<< /Type /Catalog /Pages 2 0 R >>\",\n    \"<< /Type /Pages /Kids [3 0 R] /Count 1 >>\",\n    \"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\",\n    \"\",\n    \"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\",\n  ];\n  const stream = \"BT /F1 18 Tf 20 60 Td (Hello invoice 42) Tj ET\";\n  objs[3] = `<< /Length ${stream.length} >>\\nstream\\n${stream}\\nendstream`;\n  let out = \"%PDF-1.4\\n\";\n  const offsets: number[] = [];\n  objs.forEach((o, i) => {\n    offsets.push(out.length);\n    out += `${i + 1} 0 obj\\n${o}\\nendobj\\n`;\n  });\n  const xref = out.length;\n  out += `xref\\n0 ${objs.length + 1}\\n0000000000 65535 f \\n`;\n  for (const off of offsets) out += `${String(off).padStart(10, \"0\")} 00000 n \\n`;\n  out += `trailer\\n<< /Size ${objs.length + 1} /Root 1 0 R >>\\nstartxref\\n${xref}\\n%%EOF\\n`;\n  return new TextEncoder().encode(out);\n}\nconst pdf = await getDocumentProxy(pdfWithText());\nconst { totalPages, text } = await extractText(pdf, { mergePages: true });\nconsole.log(totalPages); // → 1\nconsole.log(text); // → contains \"Hello invoice 42\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › extracts the text layer of a PDF",
+        "compiled": {
+          "against": [
+            "unpdf@1.8.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "unpdf",
         "files.pdf-text",
@@ -9136,7 +9899,18 @@
       "limits": [
         "Does not render HTML to PDF"
       ],
-      "example": "import { PDFDocument, StandardFonts } from 'pdf-lib';\n\nconst pdfDoc = await PDFDocument.create();\nconst font = await pdfDoc.embedFont(StandardFonts.Helvetica);\nconst page = pdfDoc.addPage();\npage.drawText('Hello World', { font, x: 50, y: 50 });\nconst bytes = await pdfDoc.save();",
+      "example": "import { PDFDocument, StandardFonts } from \"pdf-lib\";\n\nconst doc = await PDFDocument.create();\nconst page = doc.addPage();\npage.drawText(\"Invoice #1\", {\n  font: await doc.embedFont(StandardFonts.Helvetica),\n  x: 50,\n  y: 700,\n});\nconst bytes = await doc.save();\nconsole.log(new TextDecoder().decode(bytes.slice(0, 5))); // → \"%PDF-\"\nconsole.log((await PDFDocument.load(bytes)).getPageCount()); // → 1",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates a one-page PDF",
+        "compiled": {
+          "against": [
+            "pdf-lib@1.17.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "pdf-lib",
         "files.pdf",
@@ -9242,7 +10016,19 @@
       "limits": [
         "Not an HTML-to-PDF converter"
       ],
-      "example": "import { Document, Page, Text, renderToBuffer } from '@react-pdf/renderer';\n\nconst doc = (\n  <Document>\n    <Page>\n      <Text>Hello World</Text>\n    </Page>\n  </Document>\n);\n\nrenderToBuffer(doc).then(buffer => console.log(buffer));",
+      "example": "import { createElement as h } from \"react\";\nimport { Document, Page, Text, renderToBuffer } from \"@react-pdf/renderer\";\n\nconst pdf = await renderToBuffer(\n  h(Document, null, h(Page, { size: \"A4\" }, h(Text, null, \"Invoice #1001\"))),\n);\nconsole.log(pdf.subarray(0, 5).toString()); // → \"%PDF-\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an invoice-like PDF on the server",
+        "compiled": {
+          "against": [
+            "@react-pdf/renderer@4.9.0",
+            "react@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@react-pdf/renderer",
         "files.pdf",
@@ -9312,7 +10098,7 @@
       "interfaces": [
         {
           "name": "QRCode",
-          "signature": "import { QRCode } from \"qrcode\"",
+          "signature": "import QRCode from \"qrcode\"",
           "where": "qrcode"
         }
       ],
@@ -9341,7 +10127,18 @@
       "limits": [
         "Does not scan or decode QR codes"
       ],
-      "example": "import { QRCode } from \"qrcode\";\n\nawait QRCode.toString(\"https://example.com\", { type: \"svg\" });",
+      "example": "import QRCode from \"qrcode\";\n\nconst svg = await QRCode.toString(\"https://example.com\", { type: \"svg\" });\nconsole.log(svg.startsWith(\"<svg\")); // → true",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an SVG QR code",
+        "compiled": {
+          "against": [
+            "qrcode@1.5.4"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "qrcode",
         "files.qr",
@@ -9444,7 +10241,20 @@
       "limits": [
         "Does not scan QR codes"
       ],
-      "example": "import { QRCodeSVG } from 'qrcode.react';\n\nfunction App() {\n  return <QRCodeSVG value=\"https://example.com/t/123\" />;\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { QRCodeSVG } from \"qrcode.react\";\n\nconsole.log(renderToString(h(QRCodeSVG, { value: \"https://example.com/t/123\" }))); // → contains \"<svg\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a QR code as SVG",
+        "compiled": {
+          "against": [
+            "qrcode.react@4.2.0",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "qrcode.react",
         "files.qr",
@@ -9552,7 +10362,18 @@
         "Does not support text-based formats like .txt, .csv, or .svg",
         "Detection is a best-effort hint and does not guarantee file validity"
       ],
-      "example": "import { detectFileType, isAllowedFileType } from '@/integrations/files-type-detection';\n\nconst data = new Uint8Array([0x89, 0x50, 0x4E, 0x47]);\nconst type = await detectFileType(data);\nconst allowed = await isAllowedFileType(data, ['image/png']);",
+      "example": "import { fileTypeFromBuffer } from \"file-type\";\n\nconst png = new Uint8Array(\n  Buffer.from(\n    \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==\",\n    \"base64\",\n  ),\n);\nconsole.log((await fileTypeFromBuffer(png))?.mime); // → \"image/png\"\nconsole.log((await fileTypeFromBuffer(new TextEncoder().encode(\"%PDF-1.7\\n\")))?.ext); // → \"pdf\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › detects PNG and PDF by magic bytes",
+        "compiled": {
+          "against": [
+            "file-type@22.1.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "file-type",
         "files.type-detection",
@@ -9620,7 +10441,7 @@
       "interfaces": [
         {
           "name": "busboy",
-          "signature": "import { busboy } from \"busboy\"",
+          "signature": "import busboy from \"busboy\"",
           "where": "busboy"
         }
       ],
@@ -9649,7 +10470,18 @@
       "limits": [
         "Does not store files automatically"
       ],
-      "example": "import busboy from \"busboy\";\nconst bb = busboy({ headers: { \"content-type\": \"multipart/form-data; boundary=X\" } });\nbb.on(\"field\", (name, val) => console.log(name, val));\nbb.on(\"file\", (name, file, info) => {\n  file.on(\"data\", (data) => console.log(data));\n});\nbb.on(\"close\", () => console.log(\"done\"));",
+      "example": "import busboy from \"busboy\";\n\nconst boundary = \"X\";\nconst body = `--X\\r\\nContent-Disposition: form-data; name=\"a\"\\r\\n\\r\\n1\\r\\n--X--\\r\\n`;\nconst bb = busboy({ headers: { \"content-type\": `multipart/form-data; boundary=${boundary}` } });\nconst fields: Record<string, string> = {};\nawait new Promise<void>((resolve) => {\n  bb.on(\"field\", (n: string, v: string) => (fields[n] = v));\n  bb.on(\"close\", () => resolve());\n  bb.end(body);\n});\nconsole.log(fields); // → { a: \"1\" }",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses a multipart field",
+        "compiled": {
+          "against": [
+            "busboy@1.6.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "busboy",
         "files.upload",
@@ -9814,6 +10646,10 @@
         "No launch invitations or reminder emails"
       ],
       "example": "// src/waitlist/params.json — \"every confirmed referral moves the referrer up by five positions\"\n{ \"doubleOptIn\": true, \"showPosition\": true, \"referral\": { \"enabled\": true, \"boost\": 5 }, \"ownerCanExport\": true, \"ownerCanRemove\": true }\n",
+      "exampleCheck": {
+        "kind": "json",
+        "from": "params.schema.json"
+      },
       "keywords": [
         "waitlist",
         "wait list",
@@ -9988,7 +10824,11 @@
         "Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)",
         "ctx.once is at most once: an effect interrupted by a crash is not retried (it stays recorded in job_effects)"
       ],
-      "example": "import { z } from 'zod';\nimport { defineJob, enqueue } from '@/lib/jobs';\n\ndefineJob('email.reminder', z.object({ to: z.email() }), async (p, ctx) => {\n  await ctx.once('send', () => sendReminder(p.to, { idempotencyKey: ctx.idempotencyKey('send') }));\n});\n\nawait enqueue('email.reminder', { to: 'ana@example.com' }, { organizationId, idempotencyKey: `reminder:${bookingId}` });",
+      "example": "// Server code in the app (e.g. src/jobs/reminder.ts): a typed background job with retries, leases and idempotency.\nimport { z } from \"zod\";\nimport { defineJob, enqueue } from \"@/lib/jobs\";\n\nconst Reminder = z.object({ email: z.email() });\n\ndefineJob(\"email.reminder\", Reminder, async (payload, ctx) => {\n  if (ctx.signal.aborted) return; // the lease was lost: another runner took the job over\n  // At most once per job, even if the job is retried or another runner takes it over.\n  await ctx.once(\"send\", async () => {\n    console.info(`reminder for ${payload.email}`, ctx.idempotencyKey(\"send\"));\n  });\n});\n\n// The same (workspace, type, key) is one job: a double click or an overlapping cron call adds nothing.\nexport const queueReminder = (organizationId: string, bookingId: string, email: string) =>\n  enqueue(\"email.reminder\", { email }, { organizationId, idempotencyKey: `reminder:${bookingId}` });",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "jobs.queue.turbineh",
         "jobs.queue",
@@ -10157,6 +10997,10 @@
         "Email only (no SMS or push)"
       ],
       "example": "// src/jobs/params.json\n{ \"jobs\": [{ \"id\": \"overdue-reminders\", \"kind\": \"overdue-digest\", \"cron\": \"0 7 * * *\", \"timeZone\": \"Europe/Madrid\",\n             \"what\": \"Overdue tasks are emailed to the assignee every morning\" }], \"logWhenNoEmailProvider\": true }\n// scheduler: curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/cron/run\n",
+      "exampleCheck": {
+        "kind": "json",
+        "from": "params.schema.json"
+      },
       "keywords": [
         "cron",
         "scheduled jobs",
@@ -10267,7 +11111,18 @@
       "limits": [
         "Does not execute jobs"
       ],
-      "example": "import { CronExpressionParser } from \"cron-parser\";\n\nconst parser = CronExpressionParser.parse(\"0 9 * * 1\", {\n  currentDate: new Date(\"2026-10-13T00:00:00Z\"),\n  tz: \"UTC\",\n});\nconst nextRun = parser.next();",
+      "example": "import { CronExpressionParser } from \"cron-parser\";\n\nconst it2 = CronExpressionParser.parse(\"0 9 * * 1\", {\n  currentDate: new Date(\"2026-10-13T00:00:00Z\"),\n  tz: \"UTC\",\n});\nconsole.log(it2.next().toISOString()); // → \"2026-10-19T09:00:00.000Z\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › computes the next run in a time zone",
+        "compiled": {
+          "against": [
+            "cron-parser@5.10.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "cron-parser",
         "jobs.scheduler",
@@ -10361,7 +11216,18 @@
       "limits": [
         "Does not persist schedules across restarts"
       ],
-      "example": "import { Cron } from \"croner\";\nconst job = new Cron(\"0 9 * * *\", { paused: true, timezone: \"UTC\" });\nconst next = job.nextRun(new Date(\"2026-10-13T10:00:00Z\"));\njob.stop();",
+      "example": "import { Cron } from \"croner\";\n\nconst job = new Cron(\"0 9 * * *\", { paused: true, timezone: \"UTC\" });\nconsole.log(job.nextRun(new Date(\"2026-10-13T10:00:00Z\"))?.toISOString()); // → \"2026-10-14T09:00:00.000Z\"\njob.stop();",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › evaluates next runs without starting",
+        "compiled": {
+          "against": [
+            "croner@10.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "croner",
         "jobs.scheduler",
@@ -10425,7 +11291,7 @@
       "interfaces": [
         {
           "name": "pino",
-          "signature": "import { pino } from \"pino\"",
+          "signature": "import pino from \"pino\"",
           "where": "pino"
         }
       ],
@@ -10455,7 +11321,18 @@
       "limits": [
         "Does not include built-in log transport to backends"
       ],
-      "example": "import pino from 'pino';\nconst logger = pino({ redact: ['password'] });\nlogger.info({ password: '123', user: 'admin' }, 'login');",
+      "example": "import pino from \"pino\";\nimport { Writable } from \"node:stream\";\n\nconst lines: string[] = [];\nconst log = pino(\n  { redact: [\"password\"] },\n  new Writable({\n    write(c, _e, cb) {\n      lines.push(c.toString());\n      cb();\n    },\n  }),\n);\nlog.info({ password: \"p\", user: \"u\" }, \"login\");\nconst rec = JSON.parse(lines[0] ?? \"{}\");\nconsole.log(rec.msg); // → \"login\"\nconsole.log(rec.password); // → \"[Redacted]\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › writes structured JSON and redacts secrets",
+        "compiled": {
+          "against": [
+            "pino@10.3.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "pino",
         "observability.logging",
@@ -10526,7 +11403,7 @@
       "interfaces": [
         {
           "name": "pLimit",
-          "signature": "import { pLimit } from \"p-limit\"",
+          "signature": "import pLimit from \"p-limit\"",
           "where": "p-limit"
         }
       ],
@@ -10556,7 +11433,18 @@
         "Does not persist queued work",
         "Does not cancel promises that are already running"
       ],
-      "example": "import { pLimit } from 'p-limit';\n\nconst limit = pLimit(2);\nconst results = await Promise.all([\n  limit(() => fetch('https://api.example.com/1')),\n  limit(() => fetch('https://api.example.com/2'))\n]);",
+      "example": "import pLimit from \"p-limit\";\n\nconst limit = pLimit(2);\nlet active = 0;\nlet peak = 0;\nawait Promise.all(\n  Array.from({ length: 6 }, () =>\n    limit(async () => {\n      active++;\n      peak = Math.max(peak, active);\n      await new Promise((r) => setTimeout(r, 5));\n      active--;\n    }),\n  ),\n);\nconsole.log(peak); // → 2",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › never exceeds the concurrency limit",
+        "compiled": {
+          "against": [
+            "p-limit@7.3.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "p-limit",
         "ops.concurrency",
@@ -10636,7 +11524,7 @@
         },
         {
           "name": "ky",
-          "signature": "import { ky } from \"ky\"",
+          "signature": "import ky from \"ky\"",
           "where": "ky"
         },
         {
@@ -10672,7 +11560,18 @@
       "limits": [
         "createApiClient only supports HTTPS protocols"
       ],
-      "example": "import { createApiClient, getJson } from '@/integrations/ops-http-client';\nimport ky from 'ky';\n\nconst client = createApiClient('https://api.example.com');\nconst response = await ky.get('https://api.example.com').json();",
+      "example": "import ky from \"ky\";\n\nconst api = ky.create({ prefix: \"https://api.example.com\", timeout: 5000, retry: 2 });\nconsole.log(typeof api.get); // → \"function\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates configured clients",
+        "compiled": {
+          "against": [
+            "ky@2.1.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "ky",
         "ops.http-client",
@@ -10737,7 +11636,7 @@
       "interfaces": [
         {
           "name": "PQueue",
-          "signature": "import { PQueue } from \"p-queue\"",
+          "signature": "import PQueue from \"p-queue\"",
           "where": "p-queue"
         },
         {
@@ -10775,7 +11674,18 @@
       "limits": [
         "Tasks are not durable across process restarts"
       ],
-      "example": "import { createBatchQueue } from '@/integrations/ops-queue-throttle';\n\nconst queue = createBatchQueue({ concurrency: 2, perMinute: 10 });\nawait queue.add(async () => {\n  // task logic\n});",
+      "example": "import PQueue from \"p-queue\";\n\nconst queue = new PQueue({ concurrency: 2 });\nlet running = 0;\nlet max = 0;\nconst job = async (n: number) => {\n  running++;\n  max = Math.max(max, running);\n  await new Promise((r) => setTimeout(r, 10));\n  running--;\n  return n * 2;\n};\nconst results = await Promise.all([1, 2, 3, 4, 5].map((n) => queue.add(() => job(n))));\nconsole.log(results); // → [2, 4, 6, 8, 10]\nconsole.log(max); // → 2",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › limits concurrency for batch work",
+        "compiled": {
+          "against": [
+            "p-queue@9.3.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "p-queue",
         "ops.queue-throttle",
@@ -10876,7 +11786,18 @@
       "limits": [
         "Does not block bots by fingerprint"
       ],
-      "example": "import { RateLimiterMemory } from \"rate-limiter-flexible\";\nconst rl = new RateLimiterMemory({ points: 2, duration: 60 });\nawait rl.consume(\"ip\");",
+      "example": "import { RateLimiterMemory } from \"rate-limiter-flexible\";\n\nconst rl = new RateLimiterMemory({ points: 2, duration: 60 });\nawait rl.consume(\"ip\");\nawait rl.consume(\"ip\");\nawait rl.consume(\"ip\").catch((err: unknown) => console.log(err)); // → rejects: has property \"remainingPoints\", 0",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › consumes points and rejects over the limit",
+        "compiled": {
+          "against": [
+            "rate-limiter-flexible@11.2.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "rate-limiter-flexible",
         "ops.rate-limit",
@@ -11027,6 +11948,10 @@
         "The database client module is found among db/database/drizzle modules in src/, lib/ and server/"
       ],
       "example": "curl $BASE/v1/repos/acme/web/analysis -H \"Authorization: Bearer $TOKEN\"\n# → analysis.conventions: [\"Next.js 16.3.8 with the App Router in `src/app/`.\", \"Import alias `@/` → `src/`.\", ...]",
+      "exampleCheck": {
+        "kind": "shell",
+        "from": "guide.yaml"
+      },
       "keywords": [
         "ops.repo-analysis.turbineh",
         "analyse repository",
@@ -11103,7 +12028,7 @@
         },
         {
           "name": "pRetry",
-          "signature": "import { pRetry } from \"p-retry\"",
+          "signature": "import pRetry from \"p-retry\"",
           "where": "p-retry"
         },
         {
@@ -11137,7 +12062,18 @@
       "limits": [
         "Maximum of 10 retries allowed via withRetry"
       ],
-      "example": "import { withRetry } from '@/integrations/ops-retry';\n\nasync function task() {\n  return await withRetry(\n    async (attempt) => {\n      if (attempt < 2) throw new Error('fail');\n      return 'success';\n    },\n    { retries: 5 }\n  );\n}",
+      "example": "import pRetry from \"p-retry\";\n\nlet n = 0;\nconst r = await pRetry(\n  async () => {\n    n++;\n    if (n < 3) throw new Error(\"x\");\n    return \"ok\";\n  },\n  { retries: 3, minTimeout: 1, factor: 1 },\n);\nconsole.log(r); // → \"ok\"\nconsole.log(n); // → 3",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › retries until success",
+        "compiled": {
+          "against": [
+            "p-retry@8.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "p-retry",
         "ops.retry",
@@ -11200,7 +12136,7 @@
       "interfaces": [
         {
           "name": "Stripe",
-          "signature": "import { Stripe } from \"stripe\"",
+          "signature": "import Stripe from \"stripe\"",
           "where": "stripe"
         }
       ],
@@ -11233,7 +12169,18 @@
       "limits": [
         "Does not hold card data"
       ],
-      "example": "import { Stripe } from \"stripe\";\nconst stripe = new Stripe(\"sk_test_dummy\");",
+      "example": "import Stripe from \"stripe\";\n\nconst stripe = new Stripe(\"sk_test_dummy\");\nconst secret = \"whsec_test\";\nconst payload = JSON.stringify({\n  id: \"evt_1\",\n  object: \"event\",\n  type: \"checkout.session.completed\",\n});\nconst header = stripe.webhooks.generateTestHeaderString({ payload, secret });\nconsole.log(stripe.webhooks.constructEvent(payload, header, secret).type); // → \"checkout.session.completed\"\ntry {\n  stripe.webhooks.constructEvent(payload, header, \"whsec_other\");\n} catch (err) {\n  console.log(err); // → throws\n}",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › verifies webhook signatures and rejects forged ones",
+        "compiled": {
+          "against": [
+            "stripe@22.6.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "stripe",
         "payments.checkout",
@@ -11390,7 +12337,11 @@
         "Supports only one Pro plan tier out of the box",
         "Does not handle usage-based billing or taxes"
       ],
-      "example": "import { billingEnv, stripePost } from \"@/lib/billing\";\nimport { hasPaidAccess } from \"@/lib/billing-rules\";\n\nconst config = billingEnv;\nconst isPro = hasPaidAccess('pro', 'active');\nconst response = await stripePost('/v1/customers/sub_123', new URLSearchParams({}));",
+      "example": "// Server code in the app (e.g. src/app/dashboard/reports/page.tsx): a paid-only feature.\nimport { billingConfigured, requirePlan, workspacePlan } from \"@/lib/billing\";\nimport { hasPaidAccess } from \"@/lib/billing-rules\";\n\nexport async function proReport() {\n  const ctx = await requirePlan(\"pro\"); // members without an active Pro plan go to /dashboard/billing\n  const plan = await workspacePlan(ctx.organizationId);\n  return { organizationId: ctx.organizationId, plan: plan.plan, stripeReady: billingConfigured() };\n}\n\nexport const isPro = hasPaidAccess(\"pro\", \"active\"); // → true",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "payments.subscriptions.turbineh",
         "payments.subscriptions",
@@ -11567,7 +12518,11 @@
         "Daily user token allowances (AI_DAILY_TOKENS_PER_USER)",
         "Daily workspace token allowances (AI_DAILY_TOKENS_PER_WORKSPACE)"
       ],
-      "example": "import { guardInput, redactPii, scanOutput } from '@/lib/ai/guard';\n\nconst safeInput = guardInput(userInput);\nconst redacted = redactPii(safeInput);\nconst output = await aiCaller.call(redacted);\nconst cleanOutput = scanOutput(output);",
+      "example": "// Server code in the app around any model call (src/lib/ai/* already does this for the orchestrator).\nimport { guardInput, redactPii, scanOutput } from \"@/lib/ai/guard\";\n\nexport async function safeAsk(userInput: string, ask: (prompt: string) => Promise<string>) {\n  const input = guardInput(userInput); // throws AiSafetyError on injection attempts or oversize input\n  const answer = await ask(input.text);\n  const output = scanOutput(answer); // secrets always redacted; personal data when AI_REDACT_PII=true\n  return { text: output.text, flags: [...input.flags, ...output.flags] };\n}\n\nexport const redacted = redactPii(\"Write to ana@example.com or call +34 600 000 000\"); // → \"[email]\", \"[phone]\"",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "security.ai-safety.turbineh",
         "security.ai-safety",
@@ -11640,7 +12595,7 @@
       "interfaces": [
         {
           "name": "he",
-          "signature": "import { he } from \"he\"",
+          "signature": "import he from \"he\"",
           "where": "he"
         }
       ],
@@ -11670,7 +12625,18 @@
       "limits": [
         "Does not sanitize full HTML documents."
       ],
-      "example": "import * as he from 'he';\n\nhe.escape(\"<a href='x'>&</a>\");\nhe.decode(\"&eacute;&amp;\");",
+      "example": "import he from \"he\";\n\nconsole.log(he.escape(\"<a href='x'>&</a>\")); // → \"&lt;a href=&#x27;x&#x27;&gt;&amp;&lt;/a&gt;\"\nconsole.log(he.decode(\"&eacute;&amp;\")); // → \"é&\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › escapes and decodes entities",
+        "compiled": {
+          "against": [
+            "he@1.2.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "he",
         "security.html-escape",
@@ -11772,7 +12738,18 @@
       "limits": [
         "Does not manage key rotation or storage"
       ],
-      "example": "import { SignJWT, jwtVerify } from 'jose';\n\nconst key = new TextEncoder().encode('k'.repeat(32));\nconst jwt = await new SignJWT({ sub: 'u1' })\n  .setProtectedHeader({ alg: 'HS256' })\n  .setExpirationTime('5m')\n  .sign(key);\n\nconst { payload } = await jwtVerify(jwt, key);",
+      "example": "import { SignJWT, jwtVerify } from \"jose\";\n\nconst key = new TextEncoder().encode(\"k\".repeat(32));\nconst jwt = await new SignJWT({ sub: \"u1\" })\n  .setProtectedHeader({ alg: \"HS256\" })\n  .setExpirationTime(\"5m\")\n  .sign(key);\nconsole.log((await jwtVerify(jwt, key)).payload.sub); // → \"u1\"\nawait jwtVerify(jwt, new TextEncoder().encode(\"x\".repeat(32))).catch((err: unknown) => console.log(err)); // → rejects: throws",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › signs and verifies, rejecting a wrong key",
+        "compiled": {
+          "against": [
+            "jose@6.2.12"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "jose",
         "security.jwt",
@@ -11917,7 +12894,11 @@
         "Does not provide bot detection",
         "Without TRUSTED_PROXY_HOPS (and off Vercel) anonymous visitors share one rate-limit bucket"
       ],
-      "example": "import { securityHeaders } from '@/security/headers';\nimport { rateLimit } from '@/security/rate-limit';\nimport { UserFacingError, toUserMessage } from '@/security/errors';\nimport { CSP_IMG_EXTRA } from '@/security/csp-sources';",
+      "example": "// A route handler in the app (e.g. src/app/api/contact/route.ts) using the Security Pack modules.\nimport { clientIp } from \"@/security/client-ip\";\nimport { UserFacingError, toUserMessage } from \"@/security/errors\";\nimport { securityHeaders } from \"@/security/headers\";\nimport { rateLimit } from \"@/security/rate-limit\";\n\nexport async function POST(req: Request): Promise<Response> {\n  if (!(await rateLimit(`contact:${clientIp(req.headers)}`, 5, 60_000)))\n    return new Response(\"Too many attempts. Try again in a minute.\", { status: 429 });\n  try {\n    const body = (await req.json()) as { message?: unknown };\n    if (typeof body.message !== \"string\") throw new UserFacingError(\"Write a message.\");\n    return Response.json({ ok: true });\n  } catch (err) {\n    // Users see the UserFacingError message or a generic one; internals go to server logs only.\n    return Response.json({ ok: false, error: toUserMessage(err) }, { status: 400 });\n  }\n}\n\n// next.config.ts applies these headers (CSP, HSTS, frame-ancestors…) to every route.\nexport const headers = securityHeaders();",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "security.pack.turbineh",
         "security.headers",
@@ -11986,7 +12967,7 @@
       "interfaces": [
         {
           "name": "bcrypt",
-          "signature": "import { bcrypt } from \"bcryptjs\"",
+          "signature": "import bcrypt from \"bcryptjs\"",
           "where": "bcryptjs"
         }
       ],
@@ -12018,7 +12999,18 @@
         "Maximum input length is 72 bytes",
         "Generated hashes are 60 characters long"
       ],
-      "example": "import bcrypt from \"bcryptjs\";\n\nconst hash = await bcrypt.hash(\"correct horse\", 10);\nconst isValid = await bcrypt.compare(\"correct horse\", hash);",
+      "example": "import bcrypt from \"bcryptjs\";\n\nconst hash = await bcrypt.hash(\"correct horse\", 10);\nconsole.log(await bcrypt.compare(\"correct horse\", hash)); // → true\nconsole.log(await bcrypt.compare(\"wrong\", hash)); // → false",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › hashes and verifies",
+        "compiled": {
+          "against": [
+            "bcryptjs@3.0.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "bcryptjs",
         "security.password-hash",
@@ -12083,7 +13075,7 @@
       "interfaces": [
         {
           "name": "sanitizeHtml",
-          "signature": "import { sanitizeHtml } from \"sanitize-html\"",
+          "signature": "import sanitizeHtml from \"sanitize-html\"",
           "where": "sanitize-html"
         }
       ],
@@ -12115,7 +13107,18 @@
         "Does not sanitize CSS in style attributes unless configured",
         "HTML comments are not preserved"
       ],
-      "example": "import { sanitizeHtml } from 'sanitize-html';\n\nconst clean = sanitizeHtml('<p onclick=\"x()\">hi<script>alert(1)</script><a href=\"javascript:x\">l</a></p>');",
+      "example": "import sanitizeHtml from \"sanitize-html\";\n\nconst out = sanitizeHtml(\n  '<p onclick=\"x()\">hi<script>alert(1)</script><a href=\"javascript:x\">l</a></p>',\n);\nconsole.log(out); // → \"<p>hi<a>l</a></p>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › strips scripts and event handlers",
+        "compiled": {
+          "against": [
+            "sanitize-html@2.17.7"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "sanitize-html",
         "security.sanitize-html",
@@ -12209,7 +13212,18 @@
       "limits": [
         "Does not handle network delivery or retry logic"
       ],
-      "example": "import { Webhook } from \"standardwebhooks\";\nconst wh = new Webhook(\"YmFzZTY0X3NlY3JldF9oZXJl\");\nconst sig = wh.sign(\"id\", new Date(), '{\"a\":1}');\nconst verified = wh.verify('{\"a\":1}', {\n  \"webhook-id\": \"id\",\n  \"webhook-timestamp\": \"12345678\",\n  \"webhook-signature\": sig\n});",
+      "example": "import { Webhook } from \"standardwebhooks\";\n\nconst wh = new Webhook(Buffer.from(\"secret-for-tests\").toString(\"base64\"));\nconst id = \"msg_1\";\nconst ts = new Date();\nconst payload = JSON.stringify({ a: 1 });\nconst sig = wh.sign(id, ts, payload);\nconst headers = {\n  \"webhook-id\": id,\n  \"webhook-timestamp\": String(Math.floor(ts.getTime() / 1000)),\n  \"webhook-signature\": sig,\n};\nconsole.log(wh.verify(payload, headers)); // → { a: 1 }\ntry {\n  wh.verify(payload.replace(\"1\", \"2\"), headers);\n} catch (err) {\n  console.log(err); // → throws\n}",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › verifies a signed payload and rejects tampering",
+        "compiled": {
+          "against": [
+            "standardwebhooks@1.1.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "standardwebhooks",
         "security.webhook-signature",
@@ -12301,7 +13315,18 @@
       "limits": [
         "Does not crawl the site"
       ],
-      "example": "import { SitemapStream, streamToPromise } from \"sitemap\";\n\n// Note: Requires external Readable stream to pipe into SitemapStream",
+      "example": "import { Readable } from \"node:stream\";\nimport { SitemapStream, streamToPromise } from \"sitemap\";\n\nconst s = new SitemapStream({ hostname: \"https://example.com\" });\nconst xml = (\n  await streamToPromise(Readable.from([{ url: \"/about\", changefreq: \"monthly\" }]).pipe(s))\n).toString();\nconsole.log(xml); // → contains \"<loc>https://example.com/about</loc>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › builds an XML sitemap",
+        "compiled": {
+          "against": [
+            "sitemap@9.0.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "sitemap",
         "seo.sitemap",
@@ -12362,12 +13387,12 @@
       "interfaces": [
         {
           "name": "Organization",
-          "signature": "import { Organization } from \"schema-dts\"",
+          "signature": "import type { Organization } from \"schema-dts\"",
           "where": "schema-dts"
         },
         {
           "name": "WithContext",
-          "signature": "import { WithContext } from \"schema-dts\"",
+          "signature": "import type { WithContext } from \"schema-dts\"",
           "where": "schema-dts"
         }
       ],
@@ -12396,7 +13421,18 @@
       "limits": [
         "Does not inject tags into the document"
       ],
-      "example": "import type { Organization, WithContext } from \"schema-dts\";\n\nconst org: WithContext<Organization> = {\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Organization\",\n  name: \"Acme\",\n  url: \"https://acme.test\",\n};",
+      "example": "import type { Organization, WithContext } from \"schema-dts\";\n\nconst org: WithContext<Organization> = {\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Organization\",\n  name: \"Acme\",\n  url: \"https://acme.test\",\n};\nconsole.log(JSON.parse(JSON.stringify(org))[\"@type\"]); // → \"Organization\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › types schema.org JSON-LD objects",
+        "compiled": {
+          "against": [
+            "schema-dts@2.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "schema-dts",
         "seo.structured-data",
@@ -12558,6 +13594,10 @@
         "500 entries listed per collection"
       ],
       "example": "// src/site-pages/params.json — \"projects portfolio with filters by sector and a page per project\"\n{ \"pages\": [{ \"entity\": \"Project\", \"path\": \"/projects\", \"detail\": true, \"filters\": [\"sector\"] }], \"seo\": true }\n",
+      "exampleCheck": {
+        "kind": "json",
+        "from": "params.schema.json"
+      },
       "keywords": [
         "portfolio",
         "projects",
@@ -13307,7 +14347,18 @@
       "limits": [
         "Does not resize images"
       ],
-      "example": "import { PutObjectCommand, S3Client } from \"@aws-sdk/client-s3\";\n\nconst client = new S3Client({\n  region: \"fr-par\",\n  endpoint: \"https://s3.fr-par.scw.cloud\",\n  credentials: { accessKeyId: \"x\", secretAccessKey: \"y\" },\n});\nconst cmd = new PutObjectCommand({\n  Bucket: \"b\",\n  Key: \"k.txt\",\n  Body: \"hi\",\n  ContentType: \"text/plain\",\n});\nawait client.send(cmd);",
+      "example": "import { PutObjectCommand, S3Client } from \"@aws-sdk/client-s3\";\n\nconst client = new S3Client({\n  region: \"fr-par\",\n  endpoint: \"https://s3.fr-par.scw.cloud\",\n  credentials: { accessKeyId: \"x\", secretAccessKey: \"y\" },\n});\nconst cmd = new PutObjectCommand({\n  Bucket: \"b\",\n  Key: \"k.txt\",\n  Body: \"hi\",\n  ContentType: \"text/plain\",\n});\nconsole.log(cmd.input.Key); // → \"k.txt\"\nconsole.log(await client.config.region()); // → \"fr-par\"\nclient.destroy();",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › builds S3-compatible commands without network access",
+        "compiled": {
+          "against": [
+            "@aws-sdk/client-s3@3.1141.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@aws-sdk/client-s3",
         "storage.objects",
@@ -13413,7 +14464,19 @@
       "limits": [
         "Requires an S3 client instance to generate URLs via getSignedUrl"
       ],
-      "example": "import { getSignedUrl } from \"@aws-sdk/s3-request-presigner\";\n\n// Note: Requires an S3Client and Command from @aws-sdk/client-s3\nconst url = await getSignedUrl(client, command, { expiresIn: 3600 });",
+      "example": "import { GetObjectCommand, S3Client } from \"@aws-sdk/client-s3\";\nimport { getSignedUrl } from \"@aws-sdk/s3-request-presigner\";\n\nconst client = new S3Client({\n  region: \"fr-par\",\n  endpoint: \"https://s3.fr-par.scw.cloud\",\n  forcePathStyle: true,\n  credentials: { accessKeyId: \"AKID\", secretAccessKey: \"SECRET\" },\n});\nconst url = await getSignedUrl(client, new GetObjectCommand({ Bucket: \"b\", Key: \"doc.pdf\" }), {\n  expiresIn: 300,\n});\nconsole.log(url); // → contains \"X-Amz-Signature=\"\nconsole.log(url); // → contains \"X-Amz-Expires=300\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › creates a short-lived signed URL offline",
+        "compiled": {
+          "against": [
+            "@aws-sdk/client-s3@3.1141.0",
+            "@aws-sdk/s3-request-presigner@3.1141.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@aws-sdk/s3-request-presigner",
         "storage.objects",
@@ -13523,7 +14586,18 @@
       "limits": [
         "Server uploads are limited to 4.5 MB on Vercel-hosted websites."
       ],
-      "example": "import { put, del, list } from \"@vercel/blob\";",
+      "example": "import { put, del, list } from \"@vercel/blob\";\n\nconsole.log([put, del, list].every((f) => typeof f === \"function\")); // → true",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes put, list and delete",
+        "compiled": {
+          "against": [
+            "@vercel/blob@2.8.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@vercel/blob",
         "storage.objects",
@@ -13745,7 +14819,11 @@
         "No image processing or virus scanning",
         "Local-disk storage is for one server; serverless hosts need the S3 driver"
       ],
-      "example": "import { Attachments } from \"@/components/uploads/attachments\";\nconst ctx = await requireMember();\n// On a record page (the record's scope is read on the server by src/uploads/subjects.ts):\n<Attachments ctx={ctx} subjectType=\"workflow:request\" subjectId={item.id} back={`/dashboard/workflow/request/${item.id}`} />\n",
+      "example": "// A record page in the app (e.g. src/app/dashboard/workflow/request/[id]/page.tsx), written without JSX here.\nimport { createElement as h } from \"react\";\nimport { Attachments } from \"@/components/uploads/attachments\";\nimport { requireMember } from \"@/server/authz\";\n\nexport async function RequestFiles({ id }: { id: string }) {\n  const ctx = await requireMember();\n  // The record's scope is checked on the server (src/uploads/subjects.ts); downloads go through an authorised route.\n  return h(Attachments, {\n    ctx,\n    subjectType: \"workflow:request\",\n    subjectId: id,\n    back: `/dashboard/workflow/request/${id}`,\n  });\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "upload",
         "file upload",
@@ -13886,7 +14964,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Item, Header, Trigger, Content } from \"@radix-ui/react-accordion\";\n\nconst Accordion = () => (\n  <Root type=\"single\" collapsible defaultValue=\"q1\">\n    <Item value=\"q1\">\n      <Header>\n        <Trigger>Question?</Trigger>\n      </Header>\n      <Content>Answer.</Content>\n    </Item>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Accordion from \"@radix-ui/react-accordion\";\n\nconst html = renderToString(\n  h(\n    Accordion.Root,\n    { type: \"single\", collapsible: true, defaultValue: \"q1\" },\n    h(\n      Accordion.Item,\n      { value: \"q1\" },\n      h(Accordion.Header, null, h(Accordion.Trigger, null, \"Question?\")),\n      h(Accordion.Content, null, \"Answer.\"),\n    ),\n  ),\n);\nconsole.log(html); // → contains \"Question?\"\nconsole.log(html); // → contains 'aria-expanded=\"true\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an accessible accordion",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-accordion@1.2.20",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-accordion",
         "ui.accordion",
@@ -13989,7 +15080,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Trigger } from \"@radix-ui/react-alert-dialog\";\n\nfunction Example() {\n  return (\n    <Root>\n      <Trigger>Delete</Trigger>\n    </Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-alert-dialog\";\n\nconsole.log(renderToString(h(X.Root, null, h(X.Trigger, null, \"Delete\")))); // → contains \"Delete\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-alert-dialog@1.1.23",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-alert-dialog",
         "ui.alert-dialog",
@@ -14054,7 +15158,7 @@
       "interfaces": [
         {
           "name": "autoAnimate",
-          "signature": "import { autoAnimate } from \"@formkit/auto-animate\"",
+          "signature": "import autoAnimate from \"@formkit/auto-animate\"",
           "where": "@formkit/auto-animate"
         }
       ],
@@ -14083,7 +15187,18 @@
       "limits": [
         "Not for complex timelines"
       ],
-      "example": "import { autoAnimate } from \"@formkit/auto-animate\";",
+      "example": "import autoAnimate from \"@formkit/auto-animate\";\n\nconsole.log(typeof autoAnimate); // → \"function\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes the animate function",
+        "compiled": {
+          "against": [
+            "@formkit/auto-animate@0.10.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@formkit/auto-animate",
         "ui.animation",
@@ -14151,8 +15266,8 @@
       "interfaces": [
         {
           "name": "motion",
-          "signature": "import { motion } from \"motion\"",
-          "where": "motion"
+          "signature": "import { motion } from \"motion/react\"",
+          "where": "motion/react"
         }
       ],
       "extensionPoints": [
@@ -14184,7 +15299,20 @@
       "limits": [
         "Not for canvas or 3D"
       ],
-      "example": "import { motion } from \"motion/react\";\n\nfunction App() {\n  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>Hello</motion.div>;\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { motion } from \"motion/react\";\n\nconst html = renderToString(\n  h(motion.div, { initial: { opacity: 0 }, animate: { opacity: 1 } }, \"Hello\"),\n);\nconsole.log(html); // → contains \"Hello\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders animated elements on the server",
+        "compiled": {
+          "against": [
+            "motion@13.4.4",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "motion",
         "ui.animation",
@@ -14287,7 +15415,20 @@
       "limits": [
         "Does not provide default styles."
       ],
-      "example": "import { Root, Fallback } from \"@radix-ui/react-avatar\";\n\nconst Avatar = () => (\n  <Root>\n    <Fallback>AR</Fallback>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-avatar\";\n\nconsole.log(renderToString(h(X.Root, null, h(X.Fallback, null, \"AR\")))); // → contains \"AR\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-avatar@1.2.6",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-avatar",
         "ui.avatar",
@@ -14385,7 +15526,20 @@
       "limits": [
         "Does not manage availability or bookings"
       ],
-      "example": "import { DayPicker } from \"react-day-picker\";\n\nfunction MyDatePicker() {\n  return <DayPicker mode=\"single\" defaultMonth={new Date(2026, 9, 1)} />;\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { DayPicker } from \"react-day-picker\";\n\nconst html = renderToString(\n  h(DayPicker, { mode: \"single\", defaultMonth: new Date(2026, 9, 1) }),\n);\nconsole.log(html); // → contains 'role=\"grid\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › server-renders an accessible month grid",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-day-picker@10.0.1",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-day-picker",
         "ui.calendar",
@@ -14451,7 +15605,7 @@
       "interfaces": [
         {
           "name": "useEmblaCarousel",
-          "signature": "import { useEmblaCarousel } from \"embla-carousel-react\"",
+          "signature": "import useEmblaCarousel from \"embla-carousel-react\"",
           "where": "embla-carousel-react"
         }
       ],
@@ -14483,7 +15637,20 @@
       "limits": [
         "Does not include visual styles"
       ],
-      "example": "import { useEmblaCarousel } from \"embla-carousel-react\";\n\nfunction Carousel() {\n  const [ref] = useEmblaCarousel({ loop: true });\n  return (\n    <div ref={ref}>\n      <div>Slide 1</div>\n      <div>Slide 2</div>\n    </div>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport useEmblaCarousel from \"embla-carousel-react\";\n\nfunction Carousel() {\n  const [ref] = useEmblaCarousel({ loop: true });\n  return h(\n    \"div\",\n    { ref, className: \"embla\" },\n    h(\"div\", null, h(\"div\", null, \"Slide 1\"), h(\"div\", null, \"Slide 2\")),\n  );\n}\nconsole.log(renderToString(h(Carousel))); // → contains \"Slide 2\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders slides on the server",
+        "compiled": {
+          "against": [
+            "embla-carousel-react@8.6.0",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "embla-carousel-react",
         "ui.carousel",
@@ -14588,7 +15755,20 @@
         "Does not provide dashboards",
         "Does not provide data fetching"
       ],
-      "example": "import { Bar, BarChart } from \"recharts\";\n\nconst MyChart = () => (\n  <BarChart width={300} height={200} data={[{ v: 1 }, { v: 2 }]}>\n    <Bar dataKey=\"v\" />\n  </BarChart>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Bar, BarChart } from \"recharts\";\n\nconst html = renderToString(\n  h(\n    BarChart,\n    { width: 300, height: 200, data: [{ v: 1 }, { v: 2 }] },\n    h(Bar, { dataKey: \"v\" }),\n  ),\n);\nconsole.log(html); // → contains \"recharts\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › server-renders a chart without throwing",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "recharts@3.10.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "recharts",
         "ui.charts",
@@ -14692,7 +15872,20 @@
       "limits": [
         "Does not provide default styles"
       ],
-      "example": "import { Root, Indicator } from \"@radix-ui/react-checkbox\";\n\nconst Checkbox = () => (\n  <Root defaultChecked={true} aria-label=\"Accept\">\n    <Indicator>✓</Indicator>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-checkbox\";\n\nconsole.log(renderToString(\n    h(X.Root, { defaultChecked: true, \"aria-label\": \"Accept\" }, h(X.Indicator, null, \"✓\")),\n  )); // → contains 'role=\"checkbox\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-checkbox@1.3.11",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-checkbox",
         "ui.checkbox",
@@ -14796,7 +15989,20 @@
       "limits": [
         "Unstyled beyond defaults"
       ],
-      "example": "import { HexColorPicker } from \"react-colorful\";\n\nconst ColorPicker = () => {\n  const [color, setColor] = useState(\"#aabbcc\");\n  return <HexColorPicker color={color} onChange={setColor} />;\n};",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { HexColorPicker } from \"react-colorful\";\n\nconsole.log(renderToString(h(HexColorPicker, { color: \"#0e7c6b\" }))); // → contains 'role=\"slider\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an accessible colour picker",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-colorful@5.8.1",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-colorful",
         "ui.color-picker",
@@ -14896,7 +16102,20 @@
       "limits": [
         "Does not provide search indexing."
       ],
-      "example": "import { Command } from 'cmdk';\n\nconst Example = () => (\n  <Command>\n    <Command.Input />\n    <Command.List>\n      <Command.Item>Apple</Command.Item>\n    </Command.List>\n  </Command>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Command } from \"cmdk\";\n\nconst html = renderToString(\n  h(\n    Command,\n    { label: \"Menu\" },\n    h(Command.Input),\n    h(Command.List, null, h(Command.Item, null, \"Open\")),\n  ),\n);\nconsole.log(html); // → contains \"cmdk-input\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › server-renders a command list",
+        "compiled": {
+          "against": [
+            "cmdk@1.1.1",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "cmdk",
         "ui.command-palette",
@@ -14998,7 +16217,18 @@
       "limits": [
         "Does not block third-party scripts automatically without configuration"
       ],
-      "example": "import { run, acceptedCategory } from 'vanilla-cookieconsent';\n\nrun();\nconst isAccepted = acceptedCategory('analytics');",
+      "example": "import * as CookieConsent from \"vanilla-cookieconsent\";\n\nconsole.log(typeof CookieConsent.run); // → \"function\"\nconsole.log(typeof CookieConsent.acceptedCategory); // → \"function\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes the consent API",
+        "compiled": {
+          "against": [
+            "vanilla-cookieconsent@3.1.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "vanilla-cookieconsent",
         "privacy.cookie-consent",
@@ -15104,7 +16334,20 @@
       "limits": [
         "Does not style the dialog"
       ],
-      "example": "import { Root, Trigger } from \"@radix-ui/react-dialog\";\n\nconst Example = () => (\n  <Root>\n    <Trigger>Open</Trigger>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Dialog from \"@radix-ui/react-dialog\";\n\nconst html = renderToString(h(Dialog.Root, null, h(Dialog.Trigger, null, \"Open\")));\nconsole.log(html); // → contains 'aria-haspopup=\"dialog\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an accessible trigger",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-dialog@1.1.23",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-dialog",
         "ui.dialog",
@@ -15206,7 +16449,20 @@
       "limits": [
         "Does not include sortable presets."
       ],
-      "example": "import { DndContext, useDraggable } from \"@dnd-kit/core\";\n\nfunction Card() {\n  const { attributes, setNodeRef } = useDraggable({ id: \"card-1\" });\n  return <div ref={setNodeRef} {...attributes}>Card</div>;\n}\n\nfunction App() {\n  return (\n    <DndContext>\n      <Card />\n    </DndContext>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { DndContext, useDraggable } from \"@dnd-kit/core\";\n\nfunction Card() {\n  const { attributes, setNodeRef } = useDraggable({ id: \"card-1\" });\n  return h(\"div\", { ref: setNodeRef, ...attributes }, \"Card\");\n}\nconst html = renderToString(h(DndContext, null, h(Card)));\nconsole.log(html); // → contains 'role=\"button\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders draggable items with accessibility attributes",
+        "compiled": {
+          "against": [
+            "@dnd-kit/core@6.3.1",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@dnd-kit/core",
         "ui.drag-drop",
@@ -15307,7 +16563,18 @@
       "limits": [
         "Requires @dnd-kit/core"
       ],
-      "example": "import { arrayMove } from \"@dnd-kit/sortable\";\n\nconst newItems = arrayMove(['a', 'b', 'c'], 0, 2);",
+      "example": "import { arrayMove } from \"@dnd-kit/sortable\";\n\nconsole.log(arrayMove([\"a\", \"b\", \"c\"], 0, 2)); // → [\"b\", \"c\", \"a\"]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › reorders items",
+        "compiled": {
+          "against": [
+            "@dnd-kit/sortable@10.0.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@dnd-kit/sortable",
         "ui.drag-drop",
@@ -15406,7 +16673,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Drawer } from 'vaul';\n\nfunction MyComponent() {\n  return (\n    <Drawer.Root>\n      <Drawer.Trigger>Open</Drawer.Trigger>\n      <Drawer.Portal>\n        <Drawer.Content>\n          <Drawer.Title>Title</Drawer.Title>\n        </Drawer.Content>\n      </Drawer.Portal>\n    </Drawer.Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Drawer } from \"vaul\";\n\nconst html = renderToString(h(Drawer.Root, null, h(Drawer.Trigger, null, \"Cart\")));\nconsole.log(html); // → contains \"Cart\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a drawer trigger",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "vaul@1.1.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "vaul",
         "ui.drawer",
@@ -15467,8 +16747,8 @@
       "interfaces": [
         {
           "name": "zodResolver",
-          "signature": "import { zodResolver } from \"@hookform/resolvers\"",
-          "where": "@hookform/resolvers"
+          "signature": "import { zodResolver } from \"@hookform/resolvers/zod\"",
+          "where": "@hookform/resolvers/zod"
         }
       ],
       "extensionPoints": [
@@ -15523,7 +16803,19 @@
       "limits": [
         "Requires react-hook-form to be functional in a form context"
       ],
-      "example": "import { zodResolver } from \"@hookform/resolvers/zod\";",
+      "example": "import { zodResolver } from \"@hookform/resolvers/zod\";\nimport { z } from \"zod\";\n\nconst resolve = zodResolver(z.object({ email: z.email() }));\nconst bad = await resolve({ email: \"nope\" }, undefined, {\n  fields: {},\n  shouldUseNativeValidation: false,\n});\nconsole.log(Object.keys(bad.errors)); // → contains \"email\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › validates form values with a Zod schema",
+        "compiled": {
+          "against": [
+            "@hookform/resolvers@5.9.1",
+            "zod@4.6.5"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@hookform/resolvers",
         "ui.form",
@@ -15621,7 +16913,20 @@
       "limits": [
         "Does not provide input components or styling"
       ],
-      "example": "import { useForm } from 'react-hook-form';\n\nfunction App() {\n  const { register, handleSubmit } = useForm();\n  const onSubmit = data => console.log(data);\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('email')} />\n      <input type='submit' />\n    </form>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { useForm } from \"react-hook-form\";\n\nfunction F() {\n  const { register } = useForm({ defaultValues: { email: \"a@b.co\" } });\n  return h(\"input\", register(\"email\"));\n}\nconsole.log(renderToString(h(F))); // → contains 'name=\"email\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › registers fields during server render",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "react-hook-form@7.89.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-hook-form",
         "ui.form",
@@ -15726,7 +17031,20 @@
         "Unstyled; requires external styling",
         "Not for touch-only interactions"
       ],
-      "example": "import { Root, Trigger } from \"@radix-ui/react-hover-card\";\n\nconst Example = () => (\n  <Root>\n    <Trigger href=\"/u/1\">Ada</Trigger>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-hover-card\";\n\nconsole.log(renderToString(h(X.Root, null, h(X.Trigger, { href: \"/u/1\" }, \"Ada\")))); // → contains \"Ada\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-hover-card@1.1.23",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-hover-card",
         "ui.hover-card",
@@ -15793,7 +17111,7 @@
       "interfaces": [
         {
           "name": "i18next",
-          "signature": "import { i18next } from \"i18next\"",
+          "signature": "import i18next from \"i18next\"",
           "where": "i18next"
         }
       ],
@@ -15830,7 +17148,18 @@
       "limits": [
         "Does not translate content automatically"
       ],
-      "example": "import { i18next } from \"i18next\";\nconst i = i18next.createInstance();\nawait i.init({\n  lng: \"es\",\n  resources: {\n    es: {\n      translation: {\n        hi: \"Hola {{name}}\",\n        item_one: \"{{count}} elemento\",\n        item_other: \"{{count}} elementos\",\n      },\n    },\n  },\n});\ni.t(\"hi\", { name: \"Ana\" });\ni.t(\"item\", { count: 3 });",
+      "example": "import i18next from \"i18next\";\n\nconst i = i18next.createInstance();\nawait i.init({\n  lng: \"es\",\n  resources: {\n    es: {\n      translation: {\n        hi: \"Hola {{name}}\",\n        item_one: \"{{count}} elemento\",\n        item_other: \"{{count}} elementos\",\n      },\n    },\n  },\n});\nconsole.log(i.t(\"hi\", { name: \"Ana\" })); // → \"Hola Ana\"\nconsole.log(i.t(\"item\", { count: 3 })); // → \"3 elementos\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › translates with interpolation and plurals",
+        "compiled": {
+          "against": [
+            "i18next@26.4.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "i18next",
         "ui.i18n",
@@ -15924,7 +17253,20 @@
       "limits": [
         "Does not include brand logos"
       ],
-      "example": "import { Check } from \"lucide-react\";\n\nconst Icon = () => <Check aria-label=\"done\" />;",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Check } from \"lucide-react\";\n\nconsole.log(renderToString(h(Check, { \"aria-label\": \"done\" }))); // → matches /^<svg/",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders an accessible SVG icon",
+        "compiled": {
+          "against": [
+            "lucide-react@1.48.0",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "lucide-react",
         "ui.icons",
@@ -16076,6 +17418,10 @@
         "Touch devices drag through the record page's buttons"
       ],
       "example": "// src/kanban/params.json — a board for the \"task\" workflow only\n{ \"workflows\": [\"task\"], \"dragAndDrop\": true, \"highlightOverdue\": true }\n",
+      "exampleCheck": {
+        "kind": "json",
+        "from": "params.schema.json"
+      },
       "keywords": [
         "kanban",
         "board",
@@ -16150,7 +17496,7 @@
       "interfaces": [
         {
           "name": "Lightbox",
-          "signature": "import { Lightbox } from \"yet-another-react-lightbox\"",
+          "signature": "import Lightbox from \"yet-another-react-lightbox\"",
           "where": "yet-another-react-lightbox"
         }
       ],
@@ -16185,7 +17531,20 @@
       "limits": [
         "Does not include carousel functionality"
       ],
-      "example": "import { Lightbox } from \"yet-another-react-lightbox\";\n\n<Lightbox \n  open={true} \n  slides={[{ src: \"/image.jpg\" }]} \n/>",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport Lightbox from \"yet-another-react-lightbox\";\n\nconst html = renderToString(\n  h(Lightbox, { open: false, slides: [{ src: \"/a.jpg\", alt: \"A\" }] }),\n);\nconsole.log(typeof html); // → \"string\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders nothing while closed and accepts slides",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "yet-another-react-lightbox@3.32.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "yet-another-react-lightbox",
         "ui.lightbox",
@@ -16286,7 +17645,18 @@
       "limits": [
         "Requires a tile source (style URL) chosen by the client"
       ],
-      "example": "import { LngLat, LngLatBounds } from 'maplibre-gl';\n\nconst madrid = new LngLat(-3.7038, 40.4168);\nconst bounds = new LngLatBounds(madrid, new LngLat(2.1734, 41.3851));",
+      "example": "import { LngLat, LngLatBounds } from \"maplibre-gl\";\n\nconst madrid = new LngLat(-3.7038, 40.4168);\nconst bounds = new LngLatBounds(madrid, new LngLat(2.1734, 41.3851));\nconsole.log(bounds.contains(new LngLat(0, 41))); // → true\nconsole.log(madrid.toArray()); // → [-3.7038, 40.4168]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › handles coordinates and bounds without a browser",
+        "compiled": {
+          "against": [
+            "maplibre-gl@6.11.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "maplibre-gl",
         "ui.map",
@@ -16351,7 +17721,7 @@
       "interfaces": [
         {
           "name": "MarkdownIt",
-          "signature": "import { MarkdownIt } from \"markdown-it\"",
+          "signature": "import MarkdownIt from \"markdown-it\"",
           "where": "markdown-it"
         }
       ],
@@ -16381,7 +17751,18 @@
       "limits": [
         "Does not render MDX components"
       ],
-      "example": "import { MarkdownIt } from \"markdown-it\";\nconst md = new MarkdownIt();\nconst html = md.render(\"# hello\");",
+      "example": "import MarkdownIt from \"markdown-it\";\n\nconst md = new MarkdownIt();\nconsole.log(md.render(\"<script>x</script> *a*\")); // → does not contain \"<script>\"\nconsole.log(md.render(\"*a*\")); // → contains \"<em>a</em>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › escapes raw html by default",
+        "compiled": {
+          "against": [
+            "markdown-it@15.0.2"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "markdown-it",
         "ui.markdown",
@@ -16474,7 +17855,18 @@
       "limits": [
         "Does not provide built-in HTML sanitization."
       ],
-      "example": "import { marked } from 'marked';\nconst html = marked.parse('# Title\\n\\n**bold**');",
+      "example": "import { marked } from \"marked\";\n\nconsole.log(await marked.parse(\"# Title\\n\\n**bold**\")); // → contains \"<strong>bold</strong>\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders markdown to html",
+        "compiled": {
+          "against": [
+            "marked@18.0.14"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "marked",
         "ui.markdown",
@@ -16576,7 +17968,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Trigger } from \"@radix-ui/react-dropdown-menu\";\n\nconst Menu = () => (\n  <Root>\n    <Trigger>Options</Trigger>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Menu from \"@radix-ui/react-dropdown-menu\";\n\nconst html = renderToString(h(Menu.Root, null, h(Menu.Trigger, null, \"Options\")));\nconsole.log(html); // → contains 'aria-haspopup=\"menu\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a trigger with menu semantics",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-dropdown-menu@2.1.24",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-dropdown-menu",
         "ui.menu",
@@ -16687,7 +18092,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, List, Item, Link } from \"@radix-ui/react-navigation-menu\";\n\nfunction Nav() {\n  return (\n    <Root>\n      <List>\n        <Item>\n          <Link href=\"/about\">About</Link>\n        </Item>\n      </List>\n    </Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Nav from \"@radix-ui/react-navigation-menu\";\n\nconst html = renderToString(\n  h(\n    Nav.Root,\n    null,\n    h(Nav.List, null, h(Nav.Item, null, h(Nav.Link, { href: \"/about\" }, \"About\"))),\n  ),\n);\nconsole.log(html); // → contains \"<nav\"\nconsole.log(html); // → contains 'href=\"/about\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders site navigation",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-navigation-menu@1.2.22",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-navigation-menu",
         "ui.navigation",
@@ -16753,7 +18171,7 @@
       "interfaces": [
         {
           "name": "toast",
-          "signature": "import { toast } from \"react-hot-toast\"",
+          "signature": "import toast from \"react-hot-toast\"",
           "where": "react-hot-toast"
         },
         {
@@ -16793,7 +18211,20 @@
       "limits": [
         "Not for persistent alerts"
       ],
-      "example": "import { toast, Toaster } from 'react-hot-toast';\n\nconst App = () => (\n  <>\n    <Toaster />\n    <button onClick={() => toast('Here is your toast.')}>\n      Make me a toast\n    </button>\n  </>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport toast, { Toaster } from \"react-hot-toast\";\n\nconsole.log(typeof toast.success); // → \"function\"\nconsole.log(renderToString(h(Toaster))); // → contains \"div\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes the toaster and toast API",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "react-hot-toast@2.6.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-hot-toast",
         "ui.notifications",
@@ -16895,7 +18326,20 @@
       "limits": [
         "Does not send push or email notifications"
       ],
-      "example": "import { Toaster, toast } from 'sonner';\n\nfunction App() {\n  return (\n    <>\n      <Toaster />\n      <button onClick={() => toast('My first toast')}>Give me a toast</button>\n    </>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Toaster, toast } from \"sonner\";\n\nconsole.log(typeof toast.success); // → \"function\"\nconsole.log(renderToString(h(Toaster))); // → contains \"Notifications\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › exposes a toaster and an imperative API",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-dom@19.3.0",
+            "sonner@2.0.8"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "sonner",
         "ui.notifications",
@@ -16996,7 +18440,20 @@
       "limits": [
         "Does not send codes."
       ],
-      "example": "import { OTPInput, REGEXP_ONLY_DIGITS } from 'input-otp';\n\nexport function VerificationCode() {\n  return (\n    <OTPInput\n      maxLength={6}\n      pattern={REGEXP_ONLY_DIGITS}\n      render={({ slots }) => (\n        <div className=\"flex gap-2\">\n          {slots.map((slot, idx) => (\n            <div key={idx} className=\"border p-2\">{slot}\n            </div>\n          ))}\n        </div>\n      )}\n    />\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { OTPInput, REGEXP_ONLY_DIGITS } from \"input-otp\";\n\nconst html = renderToString(\n  h(OTPInput, {\n    maxLength: 6,\n    pattern: REGEXP_ONLY_DIGITS,\n    render: () => h(\"span\", null, \"slots\"),\n  }),\n);\nconsole.log(html); // → contains 'maxLength=\"6\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a one-time code input limited to digits",
+        "compiled": {
+          "against": [
+            "input-otp@1.5.0",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "input-otp",
         "ui.otp-input",
@@ -17101,7 +18558,20 @@
       "limits": [
         "Component is unstyled"
       ],
-      "example": "import { Root, Trigger } from \"@radix-ui/react-popover\";\n\nconst Popover = () => (\n  <Root>\n    <Trigger>Open</Trigger>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Popover from \"@radix-ui/react-popover\";\n\nconst html = renderToString(h(Popover.Root, null, h(Popover.Trigger, null, \"Open\")));\nconsole.log(html); // → contains 'aria-haspopup=\"dialog\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a dialog trigger",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-popover@1.1.23",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-popover",
         "ui.popover",
@@ -17215,7 +18685,20 @@
       "limits": [
         "Requires manual styling as components are unstyled out of the box"
       ],
-      "example": "import { Button, Label, TextField, Input } from 'react-aria-components';\n\nfunction Example() {\n  return (\n    <>\n      <TextField>\n        <Label>Email</Label>\n        <Input />\n      </TextField>\n      <Button>Save</Button>\n    </>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport { Button, Label, TextField, Input } from \"react-aria-components\";\n\nconst html = renderToString(\n  h(\n    \"div\",\n    null,\n    h(TextField, null, h(Label, null, \"Email\"), h(Input)),\n    h(Button, null, \"Save\"),\n  ),\n);\nconsole.log(html); // → contains \"Email\"\nconsole.log(html); // → contains \"Save\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessible fields and buttons",
+        "compiled": {
+          "against": [
+            "react@19.3.0",
+            "react-aria-components@1.21.1",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "react-aria-components",
         "ui.primitives",
@@ -17334,7 +18817,11 @@
       "limits": [
         "Does not provide complex widgets such as date pickers, charts or data grids"
       ],
-      "example": "import { Button } from '@/components/ui/button';\nimport { Card } from '@/components/ui/card';\nimport { Input } from '@/components/ui/input';\nimport { Label } from '@/components/ui/label';\nimport { Table } from '@/components/ui/table';",
+      "example": "// A server component in the app (e.g. src/app/dashboard/contacts/new/page.tsx), written without JSX here.\nimport { createElement as h } from \"react\";\nimport { Button } from \"@/components/ui/button\";\nimport { Card } from \"@/components/ui/card\";\nimport { Input } from \"@/components/ui/input\";\nimport { Label } from \"@/components/ui/label\";\nimport { Table } from \"@/components/ui/table\";\n\nexport function NewContact() {\n  const row = h(\"tr\", null, h(\"td\", null, \"Ana\"), h(\"td\", null, \"ana@example.com\"));\n  return h(Card, {\n    title: \"New contact\",\n    children: [\n      h(Label, { key: \"label\", htmlFor: \"name\" }, \"Name\"),\n      h(Input, { key: \"input\", id: \"name\", name: \"name\", required: true }),\n      h(Button, { key: \"save\", type: \"submit\" }, \"Save\"),\n      h(Table, { key: \"table\", head: [\"Name\", \"Email\"], children: row }),\n    ],\n  });\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "ui.primitives.turbineh",
         "ui.table",
@@ -17442,7 +18929,20 @@
       "limits": [
         "Does not provide default styles."
       ],
-      "example": "import { Root, Indicator } from \"@radix-ui/react-progress\";\n\nconst ProgressBar = () => (\n  <Root value={40}>\n    <Indicator />\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-progress\";\n\nconsole.log(renderToString(h(X.Root, { value: 40 }, h(X.Indicator)))); // → contains 'role=\"progressbar\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-progress@1.1.16",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-progress",
         "ui.progress",
@@ -17545,7 +19045,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Viewport } from \"@radix-ui/react-scroll-area\";\n\nfunction Example() {\n  return (\n    <Root>\n      <Viewport>Long content</Viewport>\n    </Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-scroll-area\";\n\nconsole.log(renderToString(h(X.Root, null, h(X.Viewport, null, \"Long content\")))); // → contains \"Long content\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-scroll-area@1.2.18",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-scroll-area",
         "ui.scroll-area",
@@ -17653,7 +19166,20 @@
       "limits": [
         "Does not provide default styles"
       ],
-      "example": "import { Root, Trigger, Value } from \"@radix-ui/react-select\";\n\nfunction SelectExample() {\n  return (\n    <Root defaultValue=\"eu\">\n      <Trigger aria-label=\"Region\">\n        <Value placeholder=\"Pick\" />\n      </Trigger>\n    </Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Select from \"@radix-ui/react-select\";\n\nconst html = renderToString(\n  h(\n    Select.Root,\n    { defaultValue: \"eu\" },\n    h(Select.Trigger, { \"aria-label\": \"Region\" }, h(Select.Value, { placeholder: \"Pick\" })),\n  ),\n);\nconsole.log(html); // → contains 'role=\"combobox\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders a combobox trigger with its value",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-select@2.3.7",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-select",
         "ui.select",
@@ -17765,7 +19291,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Track, Range, Thumb } from \"@radix-ui/react-slider\";\n\nconst Slider = () => (\n  <Root defaultValue={[20]} max={100} aria-label=\"Price\">\n    <Track>\n      <Range />\n    </Track>\n    <Thumb />\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-slider\";\n\nconsole.log(renderToString(\n    h(\n      X.Root,\n      { defaultValue: [20], max: 100, \"aria-label\": \"Price\" },\n      h(X.Track, null, h(X.Range)),\n      h(X.Thumb),\n    ),\n  )); // → contains 'role=\"slider\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-slider@1.4.7",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-slider",
         "ui.slider",
@@ -17856,7 +19395,18 @@
       "limits": [
         "Does not include styles itself"
       ],
-      "example": "import { cva } from \"class-variance-authority\";\n\nconst button = cva(\"btn\", {\n  variants: {\n    size: { sm: \"text-sm\", lg: \"text-lg\" }\n  },\n  defaultVariants: { size: \"sm\" }\n});",
+      "example": "import { cva } from \"class-variance-authority\";\n\nconst button = cva(\"btn\", {\n  variants: { size: { sm: \"text-sm\", lg: \"text-lg\" } },\n  defaultVariants: { size: \"sm\" },\n});\nconsole.log(button()); // → \"btn text-sm\"\nconsole.log(button({ size: \"lg\" })); // → \"btn text-lg\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › composes variant classes",
+        "compiled": {
+          "against": [
+            "class-variance-authority@0.7.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "class-variance-authority",
         "ui.styling",
@@ -17956,7 +19506,18 @@
       "limits": [
         "Does not resolve conflicting Tailwind classes"
       ],
-      "example": "import { clsx } from 'clsx';\n\nclsx('a', false && 'b', { c: true, d: false }, ['e']); // 'a c e'",
+      "example": "import { clsx } from \"clsx\";\n\nconsole.log(clsx(\"a\", false && \"b\", { c: true, d: false }, [\"e\"])); // → \"a c e\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › joins truthy classes",
+        "compiled": {
+          "against": [
+            "clsx@2.1.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "clsx",
         "ui.styling",
@@ -18047,7 +19608,18 @@
       "limits": [
         "Does not generate CSS"
       ],
-      "example": "import { twMerge } from \"tailwind-merge\";\n\ntwMerge(\"px-2 py-1 bg-red-500\", \"px-4 bg-blue-500\");",
+      "example": "import { twMerge } from \"tailwind-merge\";\n\nconsole.log(twMerge(\"px-2 py-1 bg-red-500\", \"px-4 bg-blue-500\")); // → \"py-1 px-4 bg-blue-500\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › keeps the last conflicting utility",
+        "compiled": {
+          "against": [
+            "tailwind-merge@3.7.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "tailwind-merge",
         "ui.styling",
@@ -18150,7 +19722,20 @@
       "limits": [
         "The component is unstyled"
       ],
-      "example": "import { Root, Thumb } from \"@radix-ui/react-switch\";\n\nconst Switch = () => (\n  <Root>\n    <Thumb />\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-switch\";\n\nconsole.log(renderToString(h(X.Root, { \"aria-label\": \"Notifications\" }, h(X.Thumb)))); // → contains 'role=\"switch\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-switch@1.3.7",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-switch",
         "ui.switch",
@@ -18257,7 +19842,18 @@
       "limits": [
         "Does not render markup or styles"
       ],
-      "example": "import { createTable, getCoreRowModel, getSortedRowModel } from \"@tanstack/react-table\";\n\nconst table = createTable({\n  data: [{ n: \"b\" }, { n: \"a\" }],\n  columns: [{ accessorKey: \"n\" }],\n  getCoreRowModel: getCoreRowModel(),\n  getSortedRowModel: getSortedRowModel(),\n  state: { sorting: [{ id: \"n\", desc: false }] },\n  onStateChange: () => {},\n  renderFallbackValue: null,\n});",
+      "example": "import { createTable, getCoreRowModel, getSortedRowModel } from \"@tanstack/react-table\";\n\nconst data = [{ n: \"b\" }, { n: \"a\" }];\nconst table = createTable({\n  data,\n  columns: [{ accessorKey: \"n\" }],\n  getCoreRowModel: getCoreRowModel(),\n  getSortedRowModel: getSortedRowModel(),\n  state: { sorting: [{ id: \"n\", desc: false }] },\n  onStateChange: () => {},\n  renderFallbackValue: null,\n});\nconsole.log(table.getSortedRowModel().rows.map((r) => r.original.n)); // → [\"a\", \"b\"]",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › sorts rows headlessly",
+        "compiled": {
+          "against": [
+            "@tanstack/react-table@8.21.3"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@tanstack/react-table",
         "ui.table",
@@ -18370,7 +19966,20 @@
       "limits": [
         "Does not provide default styling"
       ],
-      "example": "import { Root, List, Trigger, Content } from \"@radix-ui/react-tabs\";\n\nfunction TabsExample() {\n  return (\n    <Root defaultValue=\"a\">\n      <List>\n        <Trigger value=\"a\">A</Trigger>\n        <Trigger value=\"b\">B</Trigger>\n      </List>\n      <Content value=\"a\">Panel A</Content>\n    </Root>\n  );\n}",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Tabs from \"@radix-ui/react-tabs\";\n\nconst html = renderToString(\n  h(\n    Tabs.Root,\n    { defaultValue: \"a\" },\n    h(\n      Tabs.List,\n      null,\n      h(Tabs.Trigger, { value: \"a\" }, \"A\"),\n      h(Tabs.Trigger, { value: \"b\" }, \"B\"),\n    ),\n    h(Tabs.Content, { value: \"a\" }, \"Panel A\"),\n  ),\n);\nconsole.log(html); // → contains 'role=\"tablist\"'\nconsole.log(html); // → contains \"Panel A\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders tabs with roles",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-tabs@1.1.21",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-tabs",
         "ui.tabs",
@@ -18474,7 +20083,20 @@
       "limits": [
         "Unstyled"
       ],
-      "example": "import { Root, Item } from \"@radix-ui/react-toggle-group\";\n\nconst ToggleGroup = () => (\n  <Root type=\"single\" defaultValue=\"grid\">\n    <Item value=\"grid\">Grid</Item>\n    <Item value=\"list\">List</Item>\n  </Root>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as X from \"@radix-ui/react-toggle-group\";\n\nconsole.log(renderToString(\n    h(\n      X.Root,\n      { type: \"single\", defaultValue: \"grid\" },\n      h(X.Item, { value: \"grid\" }, \"Grid\"),\n      h(X.Item, { value: \"list\" }, \"List\"),\n    ),\n  )); // → contains 'role=\"radiogroup\"'",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders accessibly on the server",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-toggle-group@1.1.19",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-toggle-group",
         "ui.toggle-group",
@@ -18582,7 +20204,20 @@
       "limits": [
         "Does not provide default styles"
       ],
-      "example": "import { Provider, Root, Trigger } from \"@radix-ui/react-tooltip\";\n\nconst TooltipExample = () => (\n  <Provider>\n    <Root>\n      <Trigger>Help</Trigger>\n    </Root>\n  </Provider>\n);",
+      "example": "import { createElement as h } from \"react\";\nimport { renderToString } from \"react-dom/server\";\nimport * as Tooltip from \"@radix-ui/react-tooltip\";\n\nconst html = renderToString(\n  h(Tooltip.Provider, null, h(Tooltip.Root, null, h(Tooltip.Trigger, null, \"Help\"))),\n);\nconsole.log(html); // → contains \"Help\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › renders the trigger inside a provider",
+        "compiled": {
+          "against": [
+            "@radix-ui/react-tooltip@1.2.16",
+            "react@19.3.0",
+            "react-dom@19.3.0"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@radix-ui/react-tooltip",
         "ui.tooltip",
@@ -18696,7 +20331,18 @@
       "limits": [
         "Not suitable for private data."
       ],
-      "example": "import { parseAsInteger, parseAsString, createSerializer } from 'nuqs';\n\nconst serialize = createSerializer({ page: parseAsInteger, q: parseAsString });\nconst url = serialize('/list', { page: 2, q: 'red shoes' }); // '/list?page=2&q=red+shoes'",
+      "example": "import { parseAsInteger, parseAsString, createSerializer } from \"nuqs\";\n\nconsole.log(parseAsInteger.parse(\"3\")); // → 3\nconst serialize = createSerializer({ page: parseAsInteger, q: parseAsString });\nconsole.log(serialize(\"/list\", { page: 2, q: \"red shoes\" })); // → \"/list?page=2&q=red+shoes\"",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › parses and serialises typed URL state",
+        "compiled": {
+          "against": [
+            "nuqs@2.10.1"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "nuqs",
         "ui.url-state",
@@ -18809,7 +20455,18 @@
       "limits": [
         "Does not fetch data"
       ],
-      "example": "import { Virtualizer, observeElementOffset, observeElementRect, elementScroll } from \"@tanstack/react-virtual\";\n\nconst v = new Virtualizer<HTMLDivElement, HTMLDivElement>({\n  count: 10_000,\n  getScrollElement: () => null,\n  estimateSize: () => 32,\n  scrollToFn: elementScroll,\n  observeElementRect,\n  observeElementOffset,\n});",
+      "example": "import { Virtualizer, observeElementOffset, observeElementRect, elementScroll } from \"@tanstack/react-virtual\";\n\nconst v = new Virtualizer<HTMLDivElement, HTMLDivElement>({\n  count: 10_000,\n  getScrollElement: () => null,\n  estimateSize: () => 32,\n  scrollToFn: elementScroll,\n  observeElementRect,\n  observeElementOffset,\n});\nconsole.log(v.getTotalSize()); // → 320_000",
+      "exampleCheck": {
+        "kind": "typescript",
+        "from": "contract.test.ts › computes the total size of a long list",
+        "compiled": {
+          "against": [
+            "@tanstack/react-virtual@3.14.13"
+          ],
+          "typescript": "6.0.3",
+          "on": "2026-10-16"
+        }
+      },
       "keywords": [
         "@tanstack/react-virtual",
         "ui.virtual-list",

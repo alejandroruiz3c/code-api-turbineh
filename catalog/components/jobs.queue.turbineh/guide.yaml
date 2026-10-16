@@ -103,14 +103,26 @@ limits:
   - Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)
   - "ctx.once is at most once: an effect interrupted by a crash is not retried (it stays recorded in job_effects)"
 example: |-
-  import { z } from 'zod';
-  import { defineJob, enqueue } from '@/lib/jobs';
+  // Server code in the app (e.g. src/jobs/reminder.ts): a typed background job with retries, leases and idempotency.
+  import { z } from "zod";
+  import { defineJob, enqueue } from "@/lib/jobs";
 
-  defineJob('email.reminder', z.object({ to: z.email() }), async (p, ctx) => {
-    await ctx.once('send', () => sendReminder(p.to, { idempotencyKey: ctx.idempotencyKey('send') }));
+  const Reminder = z.object({ email: z.email() });
+
+  defineJob("email.reminder", Reminder, async (payload, ctx) => {
+    if (ctx.signal.aborted) return; // the lease was lost: another runner took the job over
+    // At most once per job, even if the job is retried or another runner takes it over.
+    await ctx.once("send", async () => {
+      console.info(`reminder for ${payload.email}`, ctx.idempotencyKey("send"));
+    });
   });
 
-  await enqueue('email.reminder', { to: 'ana@example.com' }, { organizationId, idempotencyKey: `reminder:${bookingId}` });
+  // The same (workspace, type, key) is one job: a double click or an overlapping cron call adds nothing.
+  export const queueReminder = (organizationId: string, bookingId: string, email: string) =>
+    enqueue("email.reminder", { email }, { organizationId, idempotencyKey: `reminder:${bookingId}` });
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -127,10 +139,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest
