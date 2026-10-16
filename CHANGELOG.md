@@ -29,6 +29,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Uncovered use cases explained and, only when real, a components-only offer (ADR-0062): every surface shows what the
+  library doesn't cover yet and why, the priority notice and what we can do now (`explanation`). Verified components
+  are offered only for functions the person asked for, servable, proved by a verified test (recorded per requirement)
+  and confirmed by the resource decision engine (new decision point `componentsServe`; private engine 1.1.0) — never
+  generic plumbing, never the use case itself. The offer says plainly what you get and what is not included (the core,
+  when it is the core); one action builds it through the component path (`{"approve": true}`, `components_only: true`
+  on `/v1/builds`, `--approve`, MCP `resume`), with an honest badge. Labelled set `bench/offers/` (18 requests). A
+  refused `POST /v1/plans` (422) now returns the flow `id`.
+
 - Go-validation benchmark (`bench/validation/`, audit report v2 section 9): 30 new labelled statements (band A in a
   covered use case, B a use case plus 1–2 new capabilities, C an uncovered core) with the reviewer's canonical
   requirements and the gaps to warn about, 20 Discover reference queries, a resumable runner over the public API
@@ -71,6 +80,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Scope gate: the private engine's question saw only the first 60 catalogue components, so requirements served by
+  later ones (payments, PDF, QR…) were judged outside the library; the worker now sends the whole catalogue with
+  capabilities and keywords and the engine (resource-decider 1.1.1) picks the relevant components per requirement.
 - Staff pages and `/v1/ops/*` recognise a staff GitHub sign-in in a browser that also has the invitation cookie
   (before, `/ops` was a 404 for staff in the browser).
 

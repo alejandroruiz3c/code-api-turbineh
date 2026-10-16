@@ -104,6 +104,7 @@ export const openDecider: Decider = {
   classifyIntent: async (input) => openIntent(input),
   entityKinds: async () => null,
   scopeOutside: async () => null,
+  componentsServe: async () => null,
   chooseApp: async () => null,
   triageFindings: async () => null,
   fixableFindings: async () => null,

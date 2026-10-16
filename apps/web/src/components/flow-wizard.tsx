@@ -1,11 +1,12 @@
 "use client";
-import type { EnvironmentInput, Plan, PlanAction } from "@turbineh/shared";
+import type { EnvironmentInput, NotCoveredExplanation, Plan, PlanAction } from "@turbineh/shared";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { environmentFor, stackNote, type EnvMode } from "@/lib/flow-environment";
 import { productApi } from "@/lib/product-api";
 import { matchUseCases, USE_CASES, type UseCase } from "@/lib/use-cases";
 import { GithubConnect, RepoAnalysisView, RepoPicker, useGithub } from "./github-connect";
+import { COMPONENTS_ONLY_APPROVAL, NotCovered } from "./not-covered";
 import { PlanReview } from "./plan-review";
 import { Panel } from "./ui";
 
@@ -53,6 +54,7 @@ export function FlowWizard({
     message: string;
     action: string;
     notCovered?: string[];
+    explanation?: NotCoveredExplanation;
   } | null>(null);
   const github = useGithub();
   const params = useSearchParams();
@@ -146,7 +148,13 @@ export function FlowWizard({
     setError(r.error ?? { message: "Generation could not start.", action: "Try again." });
   }
 
-  const pendingApprovals = (plan?.needsApproval ?? []).filter((a) => !approved[a]);
+  // ADR-0062: "Build the verified components" names the choice itself, so pressing it approves the components-only
+  // offer (one action); any other decision still needs its own checkbox.
+  const offerChoice = (a: string) =>
+    plan?.scope?.status === "components_only" && a.startsWith(COMPONENTS_ONLY_APPROVAL);
+  const pendingApprovals = (plan?.needsApproval ?? []).filter(
+    (a) => !approved[a] && !offerChoice(a),
+  );
 
   /** The plan's one-click next steps (ADR-0050). */
   function onAction(a: PlanAction) {
@@ -201,8 +209,13 @@ export function FlowWizard({
       <div className="flex flex-col gap-6">
         {error ? (
           <div role="alert" className="rounded-lg border border-bad/60 p-4 text-sm">
-            <p className="text-bad">{error.message}</p>
-            {error.notCovered?.length ? (
+            {error.explanation ? (
+              // ADR-0062: what is not covered and why, the priority notice and what we can do now.
+              <NotCovered explanation={error.explanation} />
+            ) : (
+              <p className="text-bad">{error.message}</p>
+            )}
+            {!error.explanation && error.notCovered?.length ? (
               // ADR-0052: what the library doesn't cover yet, so the person knows what was asked for.
               <ul className="mt-2 list-disc pl-5 text-ice-2" data-testid="not-covered">
                 {error.notCovered.map((n) => (

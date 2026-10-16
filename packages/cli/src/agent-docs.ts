@@ -27,8 +27,8 @@ dashboards, client portals, CRUD SaaS, landing pages). Before writing one of the
   Before handing over: \`turbineh verify --full --json\` (the gate's security and policy checks, here).
 - Exit: 0 green · 3 ask the user, then \`--approve\` · 4 timeout → \`turbineh resume <id> --json\` · 5 failed · 6 gate
   not green · 7 local conflict (message names the files).
-- Only covered use cases are built: else \`use_case_not_covered\` + \`notCovered[]\` — tell the user it isn't covered yet
-  (priority notice when it is); never rephrase to get around it. Own picks: \`turbineh search\`, then \`--components a,b\`.
+- Uncovered use case: exit 5 \`use_case_not_covered\` + \`explanation\`, or exit 3 \`components_only_offer\` + \`offer\` —
+  show it; \`--approve\` only if the user wants it; never rephrase around it. Own picks: \`--components a,b\`.
 ${END}
 `;
 
@@ -56,10 +56,14 @@ allowed-tools: Bash(turbineh *)
    checks (secrets, Semgrep rules, OSV, licences; same pinned versions) with file:line and the fix; exit 1 = fix first.
 
 Scope: TurbineH builds only the use cases and components its library covers, as they were verified. A request it
-does not cover fails with \`error.code: "use_case_not_covered"\` and \`error.notCovered\` (nothing is built): tell the
-user the library doesn't cover it yet and that they will be notified with priority — do not rephrase the spec to get
-around it. A partially covered spec stops with exit 3: the plan's \`scope.removed\` lists what is out of scope; continue
-with \`--approve\` only if the user wants the covered part. To use specific verified components, find them with
+does not cover is never built. If verified components serve part of it, the build stops with exit 3 and
+\`error.code: "components_only_offer"\`: \`data.offer\` lists each component, the requirements it serves and
+\`outOfScope\`; show it to the user with \`error.explanation\` (what is not covered and why, the priority notice) and
+continue with \`turbineh resume <id> --approve --json\` only if they want those components. With nothing to offer it
+fails with \`error.code: "use_case_not_covered"\` and \`error.explanation\` (exit 5): tell the user the library doesn't
+cover it yet and that they will be notified with priority — do not rephrase the spec to get around it. A partially
+covered spec stops with exit 3: the plan's \`scope.removed\` lists what is out of scope; continue with \`--approve\`
+only if the user wants the covered part. To use specific verified components, find them with
 \`turbineh search "<need>"\` and pass \`--components id1,id2\`.
 
 Exit codes: 0 green · 2 usage · 3 a decision for the user (re-run with \`--approve\` once they agree) · 4 still

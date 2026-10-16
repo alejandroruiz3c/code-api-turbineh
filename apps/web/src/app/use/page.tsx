@@ -98,11 +98,14 @@ const EXIT_CODES: [code: string, meaning: string][] = [
   ["0", "Written, committed and green"],
   ["1", "Error (the message says what to do)"],
   ["2", "Usage"],
-  ["3", "A decision for the user: show it, then re-run with --approve"],
+  [
+    "3",
+    "A decision for the user: show it, then re-run with --approve. error.code components_only_offer: the use case isn't covered but verified components serve part of it — show offer (components, what each serves, outOfScope); --approve builds only those components",
+  ],
   ["4", "Timeout: run the resume command it prints"],
   [
     "5",
-    "Not built: generation failed (rephrase the spec), or use_case_not_covered — tell the user it isn't covered yet",
+    "Not built: generation failed (rephrase the spec), or use_case_not_covered with nothing to offer — tell the user it isn't covered yet (error.explanation: why, priority notice)",
   ],
   ["6", "Written and committed, but the gate is not green: read left"],
   ["7", "Local conflict: the message names the files"],
@@ -135,14 +138,18 @@ const ENDPOINTS: [method: string, path: string, what: string][] = [
   [
     "POST",
     "/v1/plans",
-    "Plan a need against your stack; generate: true continues on its own; components: [ids] for explicit components. Uncovered needs: 422 use_case_not_covered with notCovered",
+    "Plan a need against your stack; generate: true continues on its own; components: [ids] for explicit components. Uncovered use case: a components-only offer (plan with scope.status components_only and offer; approve with generate) or, with nothing to offer, 422 use_case_not_covered with explanation",
   ],
   ["GET", "/v1/plans/{id}", "State and result: what works, what needs configuration, checks"],
   ["POST", "/v1/plans/{id}/generate", 'Generate and verify; { "approve": true } after a decision'],
   ["GET", "/v1/plans/{id}/events", "Live progress (Server-Sent Events)"],
   ["GET", "/v1/plans/{id}/package", "The package ZIP (?format=manifest, ?format=app)"],
   ["POST", "/v1/plans/{id}/pull-request", "Verified pull request on a connected GitHub repository"],
-  ["POST", "/v1/builds", "Complete flow from a description (Idempotency-Key supported)"],
+  [
+    "POST",
+    "/v1/builds",
+    "Complete flow from a description (Idempotency-Key supported); components_only: true accepts the components-only offer of an uncovered use case",
+  ],
   ["GET", "/v1/builds/{id}", "Flow status, evidence, package links and documents"],
   ["GET", "/v1/activity", "Your workspace history"],
   ["GET", "/catalog/index.json", "Every verified component: does, use when, interfaces, example"],
@@ -248,12 +255,20 @@ export default function UsePage() {
           <Link href="/catalog" className="text-teal underline">
             Catalogue
           </Link>
-          , exactly as each one was verified. A request it does not cover is not built: you are told
-          &ldquo;The library doesn&rsquo;t cover this use case yet. We&rsquo;ll notify you with
-          priority as soon as it does.&rdquo;, with the requirements that are missing. When only
-          part of a request is covered, the plan lists what is removed from scope and you choose
-          whether to build the covered part. You can also pick verified components yourself (
-          <Code>--components</Code> in the CLI, <Code>components</Code> in the API).
+          , exactly as each one was verified. A use case it does not cover is never built: you are
+          told &ldquo;The library doesn&rsquo;t cover this use case yet. We&rsquo;ll notify you with
+          priority as soon as it does.&rdquo;, with each missing requirement and why, and what we
+          can do now. Only when verified components really implement a function you asked for — each
+          mapped to your requirement with the test that proves it — you get a{" "}
+          <strong>components-only offer</strong>: what you get working and, plainly, what is not
+          included (the core of your request, when it is the core). Nothing is offered for the sake
+          of offering. Nothing is built until you approve it (the web button,{" "}
+          <Code>{`{"approve": true}`}</Code> on the plan, <Code>--approve</Code> in the CLI,{" "}
+          <Code>approve</Code> in MCP); the components are then packaged and checked like any other
+          package. When only part of a covered use case is missing, the plan lists what is removed
+          from scope and you choose whether to build the covered part. You can also pick verified
+          components yourself (<Code>--components</Code> in the CLI, <Code>components</Code> in the
+          API).
         </p>
       </div>
 

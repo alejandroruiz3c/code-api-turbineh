@@ -105,6 +105,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
           ...(body.resume ? { resume: body.resume } : {}),
           // ADR-0052: `use_case_not_covered` lists the requirements the library doesn't cover yet.
           ...(Array.isArray(body.notCovered) ? { notCovered: body.notCovered } : {}),
+          // ADR-0062: why each requirement is not covered, the priority notice and what we can do now.
+          ...(body.explanation ? { explanation: body.explanation } : {}),
         }
       : null,
   };
@@ -148,11 +150,12 @@ export const productApi = {
       `/v1/plans/${encodeURIComponent(planId)}/pull-request`,
     ),
   /** Today's build path (kept for the demo while the engine lands). */
-  startBuild: (prompt: string) =>
+  /** `componentsOnly`: accept the components-only offer of an uncovered use case (ADR-0062). */
+  startBuild: (prompt: string, opts: { componentsOnly?: boolean } = {}) =>
     call<{ build_id: string }>("/v1/builds", {
       method: "POST",
       headers: { "Idempotency-Key": crypto.randomUUID() },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, ...(opts.componentsOnly ? { components_only: true } : {}) }),
     }),
 };
 

@@ -55,6 +55,11 @@ const spec = {
                     description:
                       "Build only the covered part of a partially covered request (explicit choice). Uncovered requests are refused: use_case_not_covered.",
                   },
+                  components_only: {
+                    type: "boolean",
+                    description:
+                      "ADR-0062: the use case is not covered but verified components serve part of it — build that components-only package (explicit choice; the use case itself is never built). Without it such a request fails with use_case_not_covered and `problem.explanation.offer`.",
+                  },
                   options: { type: "object" },
                 },
               },
@@ -172,11 +177,14 @@ const spec = {
       post: {
         summary: "Plan a need against your stack (nothing is generated)",
         description:
-          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate?, components? }. Scope gate (ADR-0052): only use cases the library covers are planned. An uncovered need answers 422 `use_case_not_covered` with `notCovered` (the requirements not covered; the demand is recorded for a priority notice); a partially covered one returns a plan whose `scope.removed` lists what is out of scope and whose first `needsApproval` entry is the explicit choice to build only the covered part. `components: ["id", …]` (verified ids from /v1/components) plans exactly those components. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
+          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate?, components? }. Scope gate (ADR-0052): only use cases the library covers are planned. An uncovered use case is never built (the demand is recorded for a priority notice). When verified components serve part of it (ADR-0062), the answer is a components-only offer: a plan with `scope.status: "components_only"`, `scope.explanation` (what is not covered and why, the priority notice, what we can do now) and `offer` (each component with the requirements it serves, `outOfScope`, how to approve); its first `needsApproval` entry is the explicit choice and `POST /v1/plans/{id}/generate {"approve": true}` builds exactly those components. With nothing to offer it answers 422 `use_case_not_covered` with `notCovered`, `explanation` and the flow `id`; a partially covered one returns a plan whose `scope.removed` lists what is out of scope and whose first `needsApproval` entry is the explicit choice to build only the covered part. `components: ["id", …]` (verified ids from /v1/components) plans exactly those components. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace keeps projects apart. Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
         responses: {
           "200": { description: "Plan" },
           "202": { description: "{ id, state: planning, status_url }" },
-          "4XX": { description: "ProductError { code, message, action, resume? }" },
+          "4XX": {
+            description:
+              "ProductError { code, message, action, resume?, notCovered?, explanation? } — explanation (use_case_not_covered): { title, useCase, notCovered[{ requirement, why }], priority, canDoNow, offer }",
+          },
         },
       },
     },

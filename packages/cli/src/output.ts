@@ -1,4 +1,4 @@
-import type { ProductError } from "@turbineh/shared";
+import type { NotCoveredExplanation, ProductError } from "@turbineh/shared";
 
 /**
  * One result object per command. `--json` prints it as is (for Claude Code / Codex); the human view renders the same
@@ -53,9 +53,42 @@ export function print(result: CommandResult, json: boolean, compact = false): vo
     process.stderr.write(
       `\n${red("✖")} ${result.error.message}\n  ${bold("Do:")} ${result.error.action}\n`,
     );
-    // ADR-0052: an uncovered request lists the requirements the library does not cover yet.
-    for (const r of result.error.notCovered ?? []) process.stderr.write(`  ${yellow("✗")} ${r}\n`);
+    // ADR-0052/0062: an uncovered request lists what the library does not cover yet and why, the priority notice and
+    // what TurbineH can do now (the components-only offer, when any).
+    if (result.error.explanation)
+      for (const l of explanationLines(result.error.explanation)) process.stderr.write(`  ${l}\n`);
+    else
+      for (const r of result.error.notCovered ?? [])
+        process.stderr.write(`  ${yellow("✗")} ${r}\n`);
     if (result.error.resume) process.stderr.write(`  ${bold("Resume:")} ${result.error.resume}\n`);
   }
   if (result.next) process.stdout.write(`\n${cyan("→")} ${result.next}\n`);
+}
+
+/** An uncovered request in plain lines (ADR-0062): the same content as the web and the API. */
+export function explanationLines(e: NotCoveredExplanation): string[] {
+  const offer = e.offer;
+  return [
+    yellow(bold(e.title)) + (e.useCase ? `: ${e.useCase}` : ""),
+    ...e.notCovered.map((r) => `${yellow("✗")} ${r.requirement} ${dim(`— ${r.why}`)}`),
+    e.priority,
+    `${bold("What we can do now:")} ${e.canDoNow}`,
+    ...(offer
+      ? [
+          bold(offer.title),
+          offer.youGet,
+          yellow(offer.notIncluded),
+          ...offer.components.flatMap((c) => [
+            `${green("+")} ${c.id} ${dim(
+              c.serves.length
+                ? `— gives ${c.gives}, for: ${c.serves.join(" · ")}`
+                : `— required by ${c.requiredBy ?? "another component"}`,
+            )}`,
+            ...c.proof.map((p) => `    ${dim(`proved by: ${p.test}`)}`),
+          ]),
+          ...offer.outOfScope.map((r) => `${dim("-")} ${dim(`out of scope: ${r.requirement}`)}`),
+          `${bold("To build it:")} ${offer.approve.cli}`,
+        ]
+      : []),
+  ];
 }
