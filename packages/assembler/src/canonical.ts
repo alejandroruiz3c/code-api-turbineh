@@ -322,7 +322,9 @@ const NARRATIVE = salientStems(
     "distinct within historical automatically automatic correct one two three four five several various multiple " +
     "given exists exist specified certain additional exactly during provided provide visually personalized " +
     "personalised immediately where whose which include included includes organized organised access " +
-    "accesses accessed address addresses non",
+    "accesses accessed address addresses non select selects selected choose chooses chosen render renders " +
+    "rendered generate generates generated populated active apply applies applied tab summary between alongside " +
+    "button attached",
 );
 
 const leftover = (
@@ -336,7 +338,10 @@ const leftover = (
 
 /** Phrasings that read like another function's words: "reserves a 30-minute block" is a slot, not a time-off block. */
 const normalize = (text: string): string =>
-  text.replace(/\b(\d+[- ]?(?:min|mins|minutes?|hours?|h))\s+(?:time\s+)?block\b/gi, "$1 slot");
+  text
+    .replace(/\b(\d+[- ]?(?:min|mins|minutes?|hours?|h))\s+(?:time\s+)?block\b/gi, "$1 slot")
+    // Quantities with their unit ("250g", "1 kg", "55-minute") are the request's facts, not functions.
+    .replace(/\b\d+(?:[.,]\d+)?[- ]?(?:g|kg|mg|ml|l|cm|mm|oz|lb|gb|mb)\b/gi, " ");
 
 /** How much of a canonical criterion's own wording the request criterion expresses (0–1). */
 const closeness = (derived: string, c: ResolvedCanonical): number => {
@@ -369,8 +374,16 @@ export function mapToCanonical(
   const alone = cands.filter((c) => leftover(derived, [c], absorbedAlso).length === 0);
   if (alone.length > 0) {
     // Several functions each describe it: the one(s) whose own wording it expresses most.
-    const best = Math.max(...alone.map((c) => closeness(derived, c)));
-    const top = alone.filter((c) => closeness(derived, c) === best);
+    // Then, on a tie, the one whose own words (wording, tests, terms) the request uses most.
+    const ownHits = (c: ResolvedCanonical) => {
+      const own = salientStems(
+        [c.criterion, ...c.tests.map((t) => splitTestRef(t).title), ...c.terms].join("\n"),
+      );
+      return [...salientStems(derived)].filter((w) => own.has(w)).length;
+    };
+    const score = (c: ResolvedCanonical) => closeness(derived, c) * 1000 + ownHits(c);
+    const best = Math.max(...alone.map(score));
+    const top = alone.filter((c) => score(c) === best);
     // One generated function for several entities ("delete a contact from their workspace"): the entity named first
     // is its object.
     const at = (c: ResolvedCanonical) => {

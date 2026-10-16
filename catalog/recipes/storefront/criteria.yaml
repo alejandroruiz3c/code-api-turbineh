@@ -1,5 +1,9 @@
 # Canonical acceptance criteria (ADR-0063): one per function the storefront use case advertises, each linked to the
 # test that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The shop's nouns, absorbed by every criterion below.
+- vocabulary: >-
+    product products item items catalogue catalog variant variants weight weights size bag bags detail details transaction customer customers shopper shoppers store shop
+
 - id: storefront.catalog
   criterion: "A shopper clicks a product in the list and lands on that product's detail page with its price"
   advertises: "product catalog"
@@ -34,6 +38,7 @@
     product products add adds create creates new show shows shown page detail catalog catalogue
     view views each
     available availability all
+    resolution high
   actors: [admin, owner, staff, manager, shopper, customer, visitor]
   tests:
     - "tests/e2e/shop.spec.ts › the admin creates a product with an image"
@@ -109,6 +114,7 @@
   terms: >-
     shipping ship ships delivery deliver option options rate rates cost costs fee fees country countries
     currency currencies free threshold set sets add adds admin cart checkout order
+    destination summary calculate calculated based selected
   actors: [admin, owner, staff, manager, shopper, customer]
   tests:
     - "tests/e2e/shop.spec.ts › the admin sets shipping by country and a tax rate"
@@ -146,6 +152,7 @@
     stripe checkout pay pays paid payment payments card cards purchase purchases buy buys order orders amount
     amounts server computed total totals webhook webhooks signed confirm confirmed confirmation email cart
     secure online
+    transaction send sends sent email confirmation
   actors: [shopper, customer, visitor, guest, buyer, client]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"

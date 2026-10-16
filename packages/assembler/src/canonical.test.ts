@@ -873,3 +873,78 @@ describe("canonical criteria: staging bench r5, FB02 and FA10 (ADR-0063)", () =>
     ).toEqual(["saas-crud.roles"]);
   });
 });
+
+// Staging functional bench r5, band B (the covered part of each request): criteria left open by missing domain nouns.
+describe("canonical criteria: staging bench r5 band B (ADR-0063)", () => {
+  it.each([
+    [
+      "analytics-dashboard",
+      "marketing KPI dashboard",
+      "Given imported campaign data, when the user views a KPI, then the system displays the value alongside the percentage change from the previous period.",
+      ["analytics-dashboard.period-comparison"],
+    ],
+    [
+      "analytics-dashboard",
+      "marketing KPI dashboard",
+      "Given a selected date range, when the user views the dashboard, then the system renders a time series chart of the KPIs.",
+      ["analytics-dashboard.charts"],
+    ],
+    [
+      "analytics-dashboard",
+      "marketing KPI dashboard",
+      "Given the dashboard is populated, when the user clicks the export button, then the system generates and downloads a CSV file of the current view.",
+      ["analytics-dashboard.filter-export"],
+    ],
+    [
+      "tracker",
+      "habit tracker",
+      "Given a user has set a daily goal, when they complete the task, then the goal is marked as finished for that day.",
+      ["tracker.goals"],
+    ],
+    [
+      "tracker",
+      "habit tracker",
+      "Given a user views the history tab, then they can see a log of their habit completions for the last 30 days.",
+      ["tracker.history"],
+    ],
+    [
+      "tracker",
+      "habit tracker",
+      "Given a user views the weekly summary, then the app displays the total number of completions for the current week.",
+      ["tracker.weekly-totals"],
+    ],
+    [
+      "storefront",
+      "coffee roaster store selling bags",
+      "Given a user views the catalogue, when they select a coffee bag, then they can choose between 250g and 1kg variants.",
+      ["storefront.variants"],
+    ],
+    [
+      "storefront",
+      "coffee roaster store",
+      "Given a successful Stripe payment, when the transaction completes, then an order confirmation email is sent to the customer.",
+      ["storefront.checkout"],
+    ],
+    [
+      "storefront",
+      "posters shop",
+      "Given a user selects a shipping destination, when they view the checkout summary, then the shipping rate must be calculated based on the selected country.",
+      ["storefront.shipping"],
+    ],
+  ])("%s maps %j", (recipe, about, asked, ids) => {
+    expect(
+      mapToCanonical(asked, canonicalForPlan({ recipesDir, recipe }), [], requestWords(about)).map(
+        (c) => c.id,
+      ),
+    ).toEqual(ids);
+  });
+  it("the portal's status functions are not absorbed by submitting a request", () => {
+    const ids = mapToCanonical(
+      "Given a lawyer is logged in, when they select a pending document request, then they can update the status to 'In Progress' or 'Completed'.",
+      canonicalForPlan({ recipesDir, recipe: "client-portal" }),
+      [],
+      requestWords("law firm portal"),
+    ).map((c) => c.id);
+    expect(ids).not.toContain("client-portal.submit-request");
+  });
+});

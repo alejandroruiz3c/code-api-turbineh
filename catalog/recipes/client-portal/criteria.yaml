@@ -1,6 +1,10 @@
 # Canonical acceptance criteria (ADR-0063) of the client-portal use case: one per function its catalogue text
 # advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
 # Clients are members of the business's workspace; staff are its owners and admins.
+# The portal's nouns, absorbed by every criterion below.
+- vocabulary: >-
+    request requests document documents file files attach attached client clients portal
+
 - id: client-portal.submit-request
   criterion: "A client submits a request and follows its status"
   advertises: "submit requests"

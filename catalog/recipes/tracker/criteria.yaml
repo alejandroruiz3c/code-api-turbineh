@@ -1,5 +1,9 @@
 # Canonical acceptance criteria (ADR-0063): one per function the tracker use case advertises, each linked to the test
 # that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The tracker domain's nouns, absorbed by every criterion below.
+- vocabulary: >-
+    habit habits task tasks completion completions day daily week weekly tab log logs entry entries number amount tracker trackers
+
 - id: tracker.goals
   criterion: "Amounts are compared with the daily goal"
   advertises: "goals"
@@ -9,6 +13,7 @@
     quantities progress towards reach reached reaches meet meets met total totals tracker trackers habit habits
     health money unit units km step steps glass glasses
     set sets update updates updated current total immediately log logs amount
+    mark marked finish finished complete completed
   actors: [owner, member]
   tests:
     - "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"

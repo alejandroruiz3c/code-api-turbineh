@@ -1,5 +1,9 @@
 # Canonical acceptance criteria (ADR-0063) of the analytics-dashboard use case: one per function its catalogue text
 # advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The analytics domain's nouns, absorbed by every criterion below.
+- vocabulary: >-
+    data dataset datasets campaign campaigns kpi kpis metric metrics value values dashboard dimension dimensions segment segments date dates range record records view imported
+
 - id: analytics-dashboard.csv-import
   criterion: "The owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
   advertises: "import data from CSV"
@@ -32,6 +36,7 @@
     kpi kpis metric metrics indicator indicators key figures figure total totals average averages entries
     compare compares comparison previous prior period periods last month week year change changes percentage
     percent growth trend versus vs same length dashboard show shows owner
+    percentage percent change alongside previous period
   actors: [owner, admin, manager, member, analyst]
   tests:
     - "tests/e2e/analytics.spec.ts › the owner enters a value by hand and the KPIs compare the period with the previous period of the same length"
@@ -45,6 +50,7 @@
     chart charts graph graphs time series timeline trend trends breakdown breakdowns category categories
     visualise visualize visualisation visualization plot plots line bar daily day days over dashboard show
     shows display displays kpi kpis exact data owner
+    time series render renders date range
   actors: [owner, admin, manager, member, analyst]
   tests:
     - "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
@@ -57,6 +63,7 @@
   terms: >-
     breakdown breakdowns category categories segment segments split group groups grouped per by chart charts
     bar other small dashboard show shows exact kpi kpis
+    dimension segmented segment render renders
   actors: [owner, admin, manager, member, analyst]
   tests:
     - "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
@@ -69,6 +76,7 @@
   terms: >-
     filter filters filtered filtering export exports exported download downloads csv file data date range
     period from to category categories segment dashboard kpi kpis only matching selected
+    populated generate generates current view button active apply applies applied update updates chart charts
   actors: [owner, admin, manager, member, analyst]
   tests:
     - "tests/e2e/analytics.spec.ts › the dashboard filters by category and exports the filtered data as a CSV file"
