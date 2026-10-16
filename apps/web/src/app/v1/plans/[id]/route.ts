@@ -29,6 +29,8 @@ export async function GET(
       need: row.prompt,
       state: result.state,
       plan,
+      // ADR-0062: an uncovered use case with verified components that serve part of it (approve to build them).
+      offer: plan?.scope?.explanation?.offer ?? null,
       result,
       created_at: row.created_at,
       finished_at: row.finished_at,

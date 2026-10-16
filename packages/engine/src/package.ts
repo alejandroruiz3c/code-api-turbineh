@@ -166,6 +166,39 @@ function manifest(
   };
 }
 
+/**
+ * Scope of a components-only package (ADR-0062): which requirement each component serves and what is out of scope —
+ * so neither a person nor a coding agent presents the package as the use case that was asked for.
+ */
+export function componentsOnlyScope(info: Pick<PackageInfo, "plan">): string {
+  const scope = info.plan?.scope;
+  const offer = scope?.status === "components_only" ? scope.explanation?.offer : null;
+  if (!offer) return "";
+  const lines = [
+    "## Scope: verified components only",
+    "",
+    `${scope?.explanation?.title ?? "The library doesn't cover this use case yet"}: **${scope?.explanation?.useCase ?? info.plan?.need ?? ""}** is not built, and this package must not be presented as it. Each component below is delivered exactly as it was verified.`,
+    "",
+    offer.youGet,
+    "",
+    `**${offer.notIncluded}**`,
+    "",
+    "| Component | Gives | For the requirement | Proved by |",
+    "|---|---|---|---|",
+    ...offer.components.map((c) =>
+      c.serves.length
+        ? `| \`${c.id}\` | ${c.gives} | ${c.serves.join("; ")} | ${c.proof.map((p) => p.test).join("; ")} |`
+        : `| \`${c.id}\` | required by \`${c.requiredBy ?? ""}\` | | |`,
+    ),
+    "",
+    "Out of scope (not built, never faked):",
+    "",
+    ...offer.outOfScope.map((r) => `- ${r.requirement} — ${r.why}`),
+    "",
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
 function readme(info: PackageInfo, entries: string[], env: string[], full: boolean): string {
   const ok = info.checks.filter((c) => c.ok).length;
   const stateLine =
@@ -180,7 +213,7 @@ ${productText(info.summary)}
 
 ${stateLine}
 
-## Try it (2 minutes)
+${componentsOnlyScope(info)}## Try it (2 minutes)
 
 ${
   full
@@ -336,6 +369,7 @@ function agentDoc(info: PackageInfo, entries: string[], env: string[], full: boo
 
 Goal: integrate **${info.name}** into this project, verified, keeping the project's conventions.
 
+${componentsOnlyScope(info)}
 1. Read \`manifest.json\` (stack, dependencies, components, settings) and \`docs/integration.md\`.
 2. Check compatibility with the project (framework, versions, auth and database layers). If something does not fit,
    stop and explain the adaptation you propose before changing code.

@@ -1,4 +1,5 @@
-import type { ProductError } from "@turbineh/shared";
+import type { NotCoveredExplanation, ProductError, ScopeRequirement } from "@turbineh/shared";
+import { notCoveredExplanation } from "./component-offer.js";
 import { productError } from "./errors.js";
 import {
   NOT_COVERED_ACTION,
@@ -25,6 +26,8 @@ interface Ctx {
   id: string;
   /** The row is an approved plan (generation can be requested again on the same flow). */
   fromPlan?: boolean;
+  /** The row's metrics: the scope gate's verdict and a components-only offer explain an uncovered request. */
+  metrics?: Record<string, unknown>;
 }
 
 const problem = (
@@ -45,6 +48,7 @@ export const asProductError = (p: FlowProblem): ProductError => ({
   action: p.action,
   ...(p.resume ? { resume: p.resume } : {}),
   ...(p.notCovered ? { notCovered: p.notCovered } : {}),
+  ...(p.explanation ? { explanation: p.explanation } : {}),
 });
 
 /** The person-facing explanation of a failed flow. `raw` is the worker's reason (`builds.error`). */
@@ -72,13 +76,35 @@ export function explainFailure(raw: string | null | undefined, ctx: Ctx): FlowPr
   }
   const notCovered = parseNotCoveredReason(r);
   if (notCovered !== null || /out of scope/i.test(r)) {
-    // ADR-0052: the library doesn't cover the use case; nothing was built and the demand was recorded.
+    // ADR-0052: the library doesn't cover the use case; nothing was built and the demand was recorded. ADR-0062: the
+    // explanation says why for each requirement and what TurbineH can do now (a components-only offer, when any).
+    const list = notCovered ?? [];
+    const explanation =
+      (ctx.metrics?.explanation as NotCoveredExplanation | undefined) ??
+      notCoveredExplanation({
+        need: "",
+        notCovered:
+          (ctx.metrics?.scopeGate as { notCovered?: ScopeRequirement[] } | undefined)?.notCovered ??
+          list.map((requirement) => ({
+            requirement,
+            covered: false,
+            why: "Not covered by the library yet",
+          })),
+        offer: null,
+      });
+    const offer = explanation.offer;
     return {
-      ...problem("use_case_not_covered", NOT_COVERED_TITLE, NOT_COVERED_WHY, NOT_COVERED_ACTION, {
-        label: "Start a new flow",
-        kind: "new_flow",
-      }),
-      notCovered: notCovered ?? [],
+      ...problem(
+        "use_case_not_covered",
+        NOT_COVERED_TITLE,
+        NOT_COVERED_WHY,
+        offer
+          ? `Nothing was built yet. ${explanation.canDoNow} To accept it: ${offer.approve.api} (CLI: ${offer.approve.cli}).`
+          : NOT_COVERED_ACTION,
+        { label: "Start a new flow", kind: "new_flow" },
+      ),
+      notCovered: list,
+      explanation,
     };
   }
   if (/^Not delivered: a security or policy check blocks/i.test(r)) {

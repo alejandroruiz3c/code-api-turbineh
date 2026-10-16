@@ -225,7 +225,16 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
     const plan = row?.status === "done" ? (row.metrics.plan as Plan | undefined) : undefined;
-    if (plan) return Response.json({ ...plan, id, created, ...links });
+    // ADR-0062: an uncovered use case answers a components-only offer (a plan to approve) when verified components
+    // serve part of it; `offer` is at the top level for coding agents.
+    if (plan)
+      return Response.json({
+        ...plan,
+        id,
+        created,
+        offer: plan.scope?.explanation?.offer ?? null,
+        ...links,
+      });
   }
   return Response.json(
     {

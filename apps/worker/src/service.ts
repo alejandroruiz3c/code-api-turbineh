@@ -169,7 +169,7 @@ async function handle(build: BuildRow): Promise<void> {
   // Product flows (PLAN §16.4): the same row first carries the plan, then the generation from that plan.
   const plan = build.metrics.plan as Plan | undefined;
   const componentOnly = mode === "generate" && plan?.capability.kind === "component";
-  const outcome =
+  let outcome =
     componentOnly && plan
       ? await generateComponentPackage(build.id, plan, {
           repoRoot,
@@ -185,10 +185,29 @@ async function handle(build: BuildRow): Promise<void> {
             ...(mode === "generate" && build.spec ? { spec: build.spec as BuildSpec } : {}),
             ...(forcedFailureRequested(build.prompt, process.env) ? { forceFailure: true } : {}),
             ...(build.options.covered_only === true ? { coveredOnly: true } : {}),
+            ...(build.options.components_only === true ? { componentsOnly: true } : {}),
           });
   if (mode === "generate" && plan) outcome.metrics = { ...outcome.metrics, plan };
+  // ADR-0062: a direct build that accepted the components-only offer (`components_only: true`) is packaged at once,
+  // through the same component path as an approved plan (contract tests in the sandbox, honest state).
+  const offered = outcome.metrics.plan as Plan | undefined;
+  const offerAccepted =
+    !componentOnly &&
+    mode !== "plan" &&
+    build.options.components_only === true &&
+    outcome.status === "done" &&
+    offered?.scope?.status === "components_only";
+  if (offerAccepted && offered) {
+    const pkg = await generateComponentPackage(build.id, offered, {
+      repoRoot,
+      storage,
+      emit: (phase, type, data) => emitEvent(db, build.id, phase, type, data),
+      runContracts,
+    });
+    outcome = { ...pkg, metrics: { ...outcome.metrics, ...pkg.metrics, plan: offered } };
+  }
   let artifact: Record<string, unknown> | undefined;
-  if (componentOnly) {
+  if (componentOnly || offerAccepted) {
     artifact = outcome.metrics.artifact as Record<string, unknown>;
     delete outcome.metrics.artifact;
   }

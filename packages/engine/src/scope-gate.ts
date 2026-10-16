@@ -144,6 +144,9 @@ function requestParts(need: string): string[] {
     .filter((s) => s.length > 2 && !NOT_ASKED.test(s));
 }
 
+/** The request's headline in its own words: what the product is (the use case named by the person). */
+export const headlineOf = (need: string): string => requestParts(need)[0] ?? need.trim();
+
 /** Parts of a specification that exclude something ("out of scope: Slack") are not asked for. */
 const NOT_ASKED =
   /\b(out of scope|not (required|needed|in scope|included|part of)|no need|won'?t|will not|excluded|future|later phase|phase 2|nice to have|don'?t|do not|never)\b/i;

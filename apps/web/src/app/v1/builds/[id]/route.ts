@@ -77,6 +77,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         ? explainFailure(build.error, {
             id: build.id,
             fromPlan: build.options.mode === "generate" && Boolean(build.metrics.plan),
+            metrics: build.metrics,
           })
         : null,
     verified: build.status === "done" || build.status === "failed" ? verified : null,

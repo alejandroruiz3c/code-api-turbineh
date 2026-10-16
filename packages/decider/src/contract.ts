@@ -164,6 +164,31 @@ export interface ScopeAnswer {
   meta: { model: string; latencyMs: number };
 }
 
+/**
+ * Uncovered use case (ADR-0062): which verified components implement a concrete function each requirement asks for.
+ * The candidates are a deterministic shortlist from the approved catalogue (explicit capability match + evidence); the
+ * engine judges each pair with a high bar — precision over recall, a wrong offer is worse than none.
+ */
+export interface ServeInput {
+  /** The request in the person's words. */
+  need: string;
+  requirements: {
+    index: number;
+    text: string;
+    /**
+     * Shortlisted approved components: id, what they do (manifest) and the verified test that proves the function
+     * (acceptance rule or tested guarantee). Only explicitly requested functions with such evidence are shortlisted.
+     */
+    candidates: { id: string; does: string; evidence: string }[];
+  }[];
+}
+
+export interface ServeAnswer {
+  /** index → ids of the candidates that implement the requirement's function. Absent = no answer. */
+  serves: Record<number, string[]>;
+  meta: { model: string; latencyMs: number };
+}
+
 /** Which app of a monorepo receives a capability. */
 export interface AppChoiceInput {
   /** Next.js apps ("" = repository root) and their dependencies. */
@@ -251,6 +276,7 @@ export interface Decider {
   classifyIntent(input: IntentInput): Promise<IntentVerdict>;
   entityKinds(input: EntityKindsInput): Promise<EntityKindsVerdict | null>;
   scopeOutside(input: ScopeInput): Promise<ScopeAnswer | null>;
+  componentsServe(input: ServeInput): Promise<ServeAnswer | null>;
   chooseApp(input: AppChoiceInput): Promise<AppChoiceAnswer | null>;
   triageFindings(findings: FindingInput[]): Promise<FixStrategy[] | null>;
   fixableFindings(findings: FindingInput[]): Promise<boolean[] | null>;

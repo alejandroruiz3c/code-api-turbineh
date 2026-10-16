@@ -116,11 +116,28 @@ export function checksAndRequirements(
         ? { passed: verify.filter((c) => c.ok).length, total: verify.length }
         : undefined;
   const a = m.acceptance as { met?: number; covered?: number; open?: string[] } | undefined;
-  const total = a ? (a.met ?? 0) + (a.covered ?? 0) + (a.open?.length ?? 0) : 0;
-  const requirements = a && total > 0 ? { met: a.met ?? 0, total } : undefined;
+  // ADR-0062: a components-only package (uncovered use case) meets none of the request's requirements by itself —
+  // its components serve some of them as verified building blocks; the rest are out of scope. Said as such.
+  const offer = (m.plan as Plan | undefined)?.scope?.explanation?.offer;
+  const servedCount = offer ? new Set(offer.components.flatMap((c) => c.serves)).size : 0;
+  const total = offer
+    ? servedCount + offer.outOfScope.length
+    : a
+      ? (a.met ?? 0) + (a.covered ?? 0) + (a.open?.length ?? 0)
+      : 0;
+  const requirements = offer
+    ? total > 0
+      ? { met: 0, total }
+      : undefined
+    : a && total > 0
+      ? { met: a.met ?? 0, total }
+      : undefined;
   const parts = [
     checks ? `Checks ${checks.passed}/${checks.total}` : null,
     requirements ? `Requirements ${requirements.met}/${requirements.total} met` : null,
+    offer
+      ? `components only: ${servedCount} served by a component, ${offer.outOfScope.length} out of scope`
+      : null,
   ].filter((x): x is string => x !== null);
   return {
     ...(checks ? { checks } : {}),
@@ -193,7 +210,10 @@ function stateOutcome(row: FlowRow): FlowOutcome {
   const pkg = row.artifact?.package as { slug?: string } | undefined;
   const slug = String(pkg?.slug ?? plan?.capability.id ?? "capability");
   const short = row.id.slice(0, 8);
-  const componentOnly = plan?.capability.kind === "component" && row.options.mode === "generate";
+  // Generated from a component plan, or a direct build that accepted a components-only offer (ADR-0062).
+  const componentOnly =
+    plan?.capability.kind === "component" &&
+    (row.options.mode === "generate" || row.options.components_only === true);
   const pv = row.metrics.packageVerification as
     | { ran?: boolean; ok?: boolean; summary?: string; failures?: { component: string }[] }
     | undefined;
@@ -250,6 +270,7 @@ function stateOutcome(row: FlowRow): FlowOutcome {
     const p = explainFailure(row.error, {
       id: row.id,
       fromPlan: row.options.mode === "generate" && Boolean(plan),
+      metrics: row.metrics,
     });
     return {
       kind: "failed",
@@ -285,6 +306,16 @@ function stateOutcome(row: FlowRow): FlowOutcome {
     };
   }
   if (componentOnly) {
+    const offer = plan?.scope?.status === "components_only" ? plan.scope.explanation?.offer : null;
+    const o = componentPackageOutcome();
+    return offer
+      ? {
+          ...o,
+          meaning: `Components only (ADR-0062): ${offer.components.length} verified component(s), delivered exactly as verified. The use case you asked for is not built — the library doesn't cover it yet and you'll be notified with priority. ${offer.outOfScope.length} requirement(s) are out of scope. ${o.meaning}`,
+        }
+      : o;
+  }
+  function componentPackageOutcome(): FlowOutcome {
     const verified = state === "verified";
     const failed = pv?.ran === true && pv.ok === false;
     return {
@@ -382,6 +413,7 @@ export function flowResult(
         explainFailure(row.error, {
           id: row.id,
           fromPlan: row.options.mode === "generate" && Boolean(plan),
+          metrics: row.metrics,
         }),
       ),
     );

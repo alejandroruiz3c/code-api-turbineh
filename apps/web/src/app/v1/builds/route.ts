@@ -27,13 +27,26 @@ const Body = z.object({
    * is refused like an uncovered one (`use_case_not_covered`, with the requirements not covered).
    */
   covered_only: z.boolean().optional(),
+  /**
+   * ADR-0062: the use case is not covered but verified components serve part of it — build that components-only
+   * package (explicit choice). Without it such a request is refused with `use_case_not_covered` and the offer.
+   */
+  components_only: z.boolean().optional(),
   // `mode` and `parent` are reserved for POST /v1/builds/{id}/improve.
   options: z
     .record(z.string(), z.unknown())
     .transform((o) =>
       Object.fromEntries(
         Object.entries(o).filter(
-          ([k]) => !["mode", "parent", "brand", "covered_only", "contact_email", "channel"].includes(k),
+          ([k]) => ![
+            "mode",
+            "parent",
+            "brand",
+            "covered_only",
+            "components_only",
+            "contact_email",
+            "channel",
+          ].includes(k),
         ),
       ),
     )
@@ -68,6 +81,7 @@ export async function POST(req: Request): Promise<Response> {
     options: { ...parsed.data.options, ...(parsed.data.github_username ? { github_username: parsed.data.github_username } : {}),
       ...(parsed.data.brand ? { brand: parsed.data.brand } : {}),
       ...(parsed.data.covered_only ? { covered_only: true } : {}),
+      ...(parsed.data.components_only ? { components_only: true } : {}),
       ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
       // ADR-0061: web, CLI, MCP or API, for the owner report.
       channel: requestChannel(req.headers),

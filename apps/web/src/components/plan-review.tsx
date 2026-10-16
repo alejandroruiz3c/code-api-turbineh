@@ -1,4 +1,5 @@
 import type { Plan, PlanAction } from "@turbineh/shared";
+import { COMPONENTS_ONLY_APPROVAL, NotCovered } from "./not-covered";
 import { Panel } from "./ui";
 
 /**
@@ -22,6 +23,11 @@ export function PlanReview({
   blockGenerate?: boolean;
 }) {
   const standalone = plan.stack.source === "declared";
+  // ADR-0062: the components-only choice is the offer's own button ("Build the verified components"), not a checkbox.
+  const approvals =
+    plan.scope?.status === "components_only"
+      ? plan.needsApproval.filter((a) => !a.startsWith(COMPONENTS_ONLY_APPROVAL))
+      : plan.needsApproval;
   const left =
     plan.left && plan.left.length > 0
       ? plan.left
@@ -71,6 +77,28 @@ export function PlanReview({
             </div>
             <p className="mt-2 text-xs text-muted">{plan.outcome.actions[0]?.detail}</p>
           </section>
+        ) : null}
+        {plan.scope?.status === "components_only" && plan.scope.explanation ? (
+          // ADR-0062: the use case is not covered; verified components that serve part of it are offered.
+          <div className="mt-4">
+            <NotCovered
+              explanation={plan.scope.explanation}
+              action={
+                <button
+                  type="button"
+                  disabled={busy}
+                  data-action="build_components"
+                  onClick={() => {
+                    const generate = plan.outcome?.actions.find((a) => a.id === "generate");
+                    if (generate) onAction(generate);
+                  }}
+                  className="rounded-full bg-amber px-5 py-2 text-sm font-semibold text-navy disabled:opacity-40"
+                >
+                  Build the verified components
+                </button>
+              }
+            />
+          </div>
         ) : null}
         {plan.scope?.status === "partial" ? (
           <section
@@ -212,10 +240,10 @@ export function PlanReview({
         </Panel>
       </div>
 
-      {plan.needsApproval.length > 0 ? (
+      {approvals.length > 0 ? (
         <Panel title="Needs your approval">
           <ul className="flex flex-col gap-2 text-sm">
-            {plan.needsApproval.map((a) => (
+            {approvals.map((a) => (
               <li key={a}>
                 <label className="flex items-start gap-2">
                   <input

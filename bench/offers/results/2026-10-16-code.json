@@ -1,0 +1,153 @@
+{
+  "at": "2026-10-16T17:28:42.348Z",
+  "mode": "code",
+  "cases": [
+    {
+      "id": "social-publisher",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "shop-shopify-stripe",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "slack-standup",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "ios-gym",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "telegram-ai-faq",
+      "gate": "uncovered",
+      "offered": ["ai.orchestrator.turbineh"],
+      "wrong": [],
+      "decidedBy": "code",
+      "coreNotIncluded": false
+    },
+    {
+      "id": "crm-hubspot-signin",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "trading-bot",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "invoices-quickbooks-pdf",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "events-mailchimp-qr",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "smart-home-lights",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "whatsapp-reminders",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "youtube-analytics-charts",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "android-expense-ocr",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "discord-community-waitlist",
+      "gate": "uncovered",
+      "offered": ["growth.waitlist.turbineh"],
+      "wrong": [],
+      "decidedBy": "code",
+      "coreNotIncluded": false
+    },
+    {
+      "id": "google-calendar-sync",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "salesforce-csv-export",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "video-game-leaderboard",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    },
+    {
+      "id": "tiktok-ai-captions",
+      "gate": "uncovered",
+      "offered": [],
+      "wrong": [],
+      "decidedBy": null,
+      "coreNotIncluded": null
+    }
+  ],
+  "offered": 2,
+  "correct": 2,
+  "precision": 1
+}

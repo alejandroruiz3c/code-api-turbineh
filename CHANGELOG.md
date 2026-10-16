@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Uncovered use cases explained and, only when real, a components-only offer (ADR-0062): every surface shows what the
+  library doesn't cover yet and why, the priority notice and what we can do now (`explanation`). Verified components
+  are offered only for functions the person asked for, servable, proved by a verified test (recorded per requirement)
+  and confirmed by the resource decision engine (new decision point `componentsServe`; private engine 1.1.0) — never
+  generic plumbing, never the use case itself. The offer says plainly what you get and what is not included (the core,
+  when it is the core); one action builds it through the component path (`{"approve": true}`, `components_only: true`
+  on `/v1/builds`, `--approve`, MCP `resume`), with an honest badge. Labelled set `bench/offers/` (18 requests).
+
 - Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,
   outcomes, checks, requirements, capabilities/components, time to verified, downloads, pull requests, deploys,
   uncovered requests, AI use of generated apps) and Intelligence Orchestration (requests, tokens, p50/p95, cost,

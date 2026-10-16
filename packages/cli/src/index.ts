@@ -10,8 +10,10 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh build "<spec>" | @spec.md  spec → verified code written and committed here (empty folder: whole app;
                                     project: capability in its own folder) + summary of what is left
          [--approve] [--timeout <min>] [--components id,id] [--json]
-                                    only covered use cases are built: an uncovered request is refused
-                                    (use_case_not_covered); --components builds exactly these verified components
+                                    only covered use cases are built: an uncovered one is refused with why
+                                    (use_case_not_covered, exit 5) or, when verified components serve part of
+                                    it, offered as a components-only package (components_only_offer, exit 3;
+                                    --approve builds only those components); --components builds exactly these
   turbineh resume [id]              keep waiting for a build that timed out or was interrupted, then write it
   turbineh status [id]              flows, states, pending build and integrations
   turbineh left                     in a delivered package: what is left (open criteria with where, gate, settings)
@@ -38,7 +40,8 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   --json   structured output for coding agents (build/resume: one JSON event per line, the last line is the result)
   --yes    do not ask for confirmation (respects .turbineh/project.json policy)
 
-  Exit codes: 0 ok · 1 error · 2 usage · 3 needs the user's decision (--approve) · 4 timeout (resume)
+  Exit codes: 0 ok · 1 error · 2 usage · 3 needs the user's decision (--approve; incl. components_only_offer)
+              · 4 timeout (resume)
               5 generation failed · 6 written, gate not green · 7 local conflict
 `;
 
