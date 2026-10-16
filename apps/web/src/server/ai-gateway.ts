@@ -242,15 +242,46 @@ const usd = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 export const trialLimitMessage = (capUsd: number) =>
   `You've reached the trial limit of the TurbineH orchestration ($${usd(capUsd)}). Contact ${TRIAL_CONTACT} to continue.`;
 
+/** Remaining trial balance of the account after a call, in USD (ADR-0059); absent for uncapped accounts. */
+export const TRIAL_REMAINING_HEADER = "X-TurbineH-Trial-Remaining-USD";
+
 /** 402 with a stable code, so generated apps can show the message instead of a generic failure. */
 export function trialLimitResponse(capUsd: number): Response {
   const message = trialLimitMessage(capUsd);
-  return problem(402, message, {
+  const res = problem(402, message, {
     type: "https://software.turbineh.com/problems/trial-limit-reached",
     code: TRIAL_LIMIT_CODE,
     detail: message,
     contact: TRIAL_CONTACT,
   });
+  res.headers.set(TRIAL_REMAINING_HEADER, "0");
+  return res;
+}
+
+/** The account's trial balance: spent, cap and remaining USD; null for uncapped accounts. */
+export async function trialBalance(
+  app: AiApp,
+  deps: GatewayDeps,
+): Promise<{ spentUsd: number; capUsd: number; remainingUsd: number; reached: boolean } | null> {
+  const cfg = deps.config;
+  if (trialExempt(cfg, app.ownerId)) return null;
+  const spentUsd = await deps.trialSpent(app.ownerId);
+  return {
+    spentUsd,
+    capUsd: cfg.AI_TRIAL_CAP_USD,
+    remainingUsd: Math.max(0, cfg.AI_TRIAL_CAP_USD - spentUsd),
+    reached: spentUsd >= cfg.AI_TRIAL_CAP_USD,
+  };
+}
+
+/** The remaining-balance header of a capped account (never fails the call it is attached to). */
+export async function trialHeaders(app: AiApp, deps: GatewayDeps): Promise<Record<string, string>> {
+  try {
+    const b = await trialBalance(app, deps);
+    return b ? { [TRIAL_REMAINING_HEADER]: b.remainingUsd.toFixed(4) } : {};
+  } catch {
+    return {};
+  }
 }
 
 /** True when the account has no trial cap (cap 0, or an internal owner). */
@@ -412,11 +443,13 @@ export async function handleGateway(
   const sent = Date.now();
   const result = await forward(app, kind, body, deps);
   if (!result.ok) return upstreamProblem(result.status);
+  const upstreamMs = Date.now() - sent;
   return Response.json(result.json, {
     headers: {
       "Cache-Control": "no-store",
-      "Server-Timing": `upstream;dur=${Date.now() - sent}`,
+      "Server-Timing": `upstream;dur=${upstreamMs}`,
       ...(kind === "chat" ? { "X-TurbineH-Hedge": result.hedge } : {}),
+      ...(await trialHeaders(app, deps)),
     },
   });
 }

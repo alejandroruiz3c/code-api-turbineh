@@ -17,45 +17,64 @@ export interface AiApp {
   requestsPerMinute: number;
 }
 
+/** A new app token (plaintext, shown once), its display prefix and the hash that is stored. */
+export function mintAiToken(): { token: string; prefix: string; tokenHash: string } {
+  const token = `${AI_TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+  return { token, prefix: token.slice(0, 12), tokenHash: hash(token) };
+}
+
+export interface AiAppInput {
+  ownerId: string;
+  buildId: string | null;
+  name: string;
+  dailyTokenQuota: number;
+  requestsPerMinute: number;
+}
+
+/**
+ * Inside a transaction: revokes the owner's active token for the same build (when `buildId` is set) and inserts a new
+ * one. Returns the plaintext once.
+ */
+export async function insertAiAppToken(
+  client: pg.PoolClient,
+  input: AiAppInput,
+): Promise<{ id: string; token: string; prefix: string }> {
+  const { token, prefix, tokenHash } = mintAiToken();
+  if (input.buildId) {
+    await client.query(
+      "UPDATE ai_apps SET revoked_at = now() WHERE owner_id = $1 AND build_id = $2 AND revoked_at IS NULL",
+      [input.ownerId, input.buildId],
+    );
+  }
+  const res = await client.query<{ id: string }>(
+    `INSERT INTO ai_apps (owner_id, build_id, name, token_hash, prefix, daily_token_quota, requests_per_minute)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    [
+      input.ownerId,
+      input.buildId,
+      input.name.slice(0, 80),
+      tokenHash,
+      prefix,
+      input.dailyTokenQuota,
+      input.requestsPerMinute,
+    ],
+  );
+  return { id: res.rows[0]?.id ?? "", token, prefix };
+}
+
 /**
  * Creates the app token of a build, revoking any previous one (rotation). Returns the plaintext once.
  */
 export async function createAiAppToken(
   db: pg.Pool,
-  input: {
-    ownerId: string;
-    buildId: string | null;
-    name: string;
-    dailyTokenQuota: number;
-    requestsPerMinute: number;
-  },
+  input: AiAppInput,
 ): Promise<{ id: string; token: string; prefix: string }> {
-  const token = `${AI_TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
-  const prefix = token.slice(0, 12);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
-    if (input.buildId) {
-      await client.query(
-        "UPDATE ai_apps SET revoked_at = now() WHERE owner_id = $1 AND build_id = $2 AND revoked_at IS NULL",
-        [input.ownerId, input.buildId],
-      );
-    }
-    const res = await client.query<{ id: string }>(
-      `INSERT INTO ai_apps (owner_id, build_id, name, token_hash, prefix, daily_token_quota, requests_per_minute)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [
-        input.ownerId,
-        input.buildId,
-        input.name.slice(0, 80),
-        hash(token),
-        prefix,
-        input.dailyTokenQuota,
-        input.requestsPerMinute,
-      ],
-    );
+    const created = await insertAiAppToken(client, input);
     await client.query("COMMIT");
-    return { id: res.rows[0]?.id ?? "", token, prefix };
+    return created;
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;

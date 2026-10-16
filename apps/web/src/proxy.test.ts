@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { proxy } from "./proxy";
+import { config, proxy } from "./proxy";
 import { ACCESS_COOKIE, cookieSecret, signAccessCookie } from "./server/access-token";
 
 const TOKEN = "proxy-test-invitation-token";
@@ -77,5 +77,12 @@ describe("proxy (ADR-0030 gate)", () => {
       const r = await proxy(req("/catalog", { authorization: `Bearer ${TOKEN}` }));
       expect(r.status).toBe(307);
     });
+  });
+
+  it("the orchestration API, its MCP server and trial signups are outside the gate (own Bearer auth, ADR-0059)", () => {
+    const matcher = new RegExp(`^${config.matcher[0] ?? ""}$`);
+    for (const p of ["/v1/ai/mcp", "/v1/ai/trial-signups", "/v1/ai/v1/chat/completions"])
+      expect(matcher.test(p), p).toBe(false);
+    expect(matcher.test("/flows/new")).toBe(true);
   });
 });

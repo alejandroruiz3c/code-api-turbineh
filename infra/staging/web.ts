@@ -111,6 +111,9 @@ async function env(): Promise<void> {
     ...sharedOptional("RESEND_API_KEY"),
     EMAIL_FROM: process.env.EMAIL_FROM || "TurbineH <support@turbineh.com>",
     ...sharedOptional("DEMAND_ALERT_EMAIL"),
+    // Intelligence Orchestration trials (ADR-0059): the landing server's secret for POST /v1/ai/trial-signups.
+    // Staging may use its own (STG_ORCHESTRATION_SIGNUP_SECRET). Without it the endpoint answers 404.
+    ...sharedOptional("ORCHESTRATION_SIGNUP_SECRET"),
   };
   const body = Object.entries(vars).map(([key, value]) => ({
     key,
