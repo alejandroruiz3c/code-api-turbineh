@@ -186,3 +186,84 @@ describe("Backup Coder section (ADR-0055)", () => {
     expect(backupCodeMarkdown({})).toBe("");
   });
 });
+
+describe("auditable corrections (ADR-0065)", () => {
+  const audit = {
+    firstPass: [
+      { name: "unit", status: "fail" as const },
+      { name: "static", status: "fail" as const },
+      { name: "dependencies", status: "warn" as const },
+    ],
+    firstPassProblems: [
+      "unit at tests/unit/x.test.ts:3",
+      "turbineh.unsanitized-html (security) at src/app/p.tsx:60",
+    ],
+    corrections: [
+      {
+        phase: "security-fix" as const,
+        round: 1,
+        commit: "0123456789abcdef",
+        files: ["src/app/p.tsx"],
+        why: "findings: turbineh.unsanitized-html at src/app/p.tsx:60",
+        diff: "-  <div dangerouslySetInnerHTML={{ __html: body }} />\n+  <div>{body}</div>\n``` inside",
+        truncated: false,
+      },
+    ],
+    refused: [
+      {
+        phase: "repair" as const,
+        file: "tests/unit/x.test.ts",
+        reason: "assertions removed (3 → 2)",
+      },
+    ],
+    fixed: [],
+    notFixed: [
+      {
+        kind: "code" as const,
+        rule: "turbineh.unsanitized-html",
+        where: "src/app/p.tsx:60",
+        unit: "src/app/p.tsx",
+        severity: "ERROR",
+      },
+    ],
+  };
+
+  it("counts only re-scanned fixes and lists first-pass failures, diffs and refused changes", async () => {
+    const r = await buildReport(
+      {
+        ...facts,
+        remediation: [
+          {
+            kind: "code",
+            target: "src/app/p.tsx:60",
+            reason: "turbineh.unsanitized-html",
+            detail: "x",
+          },
+          {
+            kind: "code",
+            target: "src/app/p.tsx:60",
+            reason: "turbineh.unsanitized-html",
+            detail: "x",
+          },
+        ],
+        audit,
+      },
+      openDecider,
+      offline,
+    );
+    // Two fixer claims, zero findings gone from the new scan: zero fixed.
+    expect(r.security.fixedBeforeDelivery).toBe(0);
+    const md = reportMarkdown(r, "{}");
+    expect(md).toContain("## How this build was corrected");
+    expect(md).toContain("`unit` FAIL · `static` FAIL · `dependencies` pass with warnings");
+    expect(md).toContain("Security fix 1 · commit `0123456789ab`");
+    expect(md).toContain("+  <div>{body}</div>");
+    // The diff is shown exactly as it is, inside a fence longer than any backtick run in it.
+    expect(md).toContain("````diff");
+    expect(md).toContain(
+      "`tests/unit/x.test.ts` (repair after a security fix): assertions removed (3 → 2)",
+    );
+    expect(md).toContain("confirmed by a new scan: 0 (attempted but still present: 1");
+    expect(md).not.toMatch(/issue\(s\) fixed automatically before delivery/);
+  });
+});

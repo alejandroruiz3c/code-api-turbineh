@@ -105,16 +105,30 @@ export function checksAndRequirements(
   row: Pick<FlowRow, "metrics">,
 ): Pick<FlowOutcome, "checks" | "requirements" | "badge"> {
   const m = row.metrics;
-  const h = m.handover as { checksPassed?: number; checksTotal?: number } | undefined;
+  const h = m.handover as
+    { checksPassed?: number; checksTotal?: number; checksWithWarnings?: number } | undefined;
   const verify = ((m.verify as CheckResult[] | undefined) ?? []).filter(
     (c) => c.name !== "certification",
   );
-  const checks =
+  // ADR-0065: passed checks with non-blocking findings left are counted, so the badge never reads as a plain pass.
+  const warned = verify.filter((c) => c.ok && (c.warnings ?? 0) > 0).length;
+  const base =
     typeof h?.checksTotal === "number" && h.checksTotal > 0
-      ? { passed: h.checksPassed ?? 0, total: h.checksTotal }
+      ? {
+          passed: h.checksPassed ?? 0,
+          total: h.checksTotal,
+          warnings: h.checksWithWarnings ?? warned,
+        }
       : verify.length > 0
-        ? { passed: verify.filter((c) => c.ok).length, total: verify.length }
+        ? { passed: verify.filter((c) => c.ok).length, total: verify.length, warnings: warned }
         : undefined;
+  const checks = base
+    ? {
+        passed: base.passed,
+        total: base.total,
+        ...(base.warnings ? { warnings: base.warnings } : {}),
+      }
+    : undefined;
   const a = m.acceptance as { met?: number; covered?: number; open?: string[] } | undefined;
   // ADR-0062: a components-only package (uncovered use case) meets none of the request's requirements by itself —
   // its components serve some of them as verified building blocks; the rest are out of scope. Said as such.
@@ -133,7 +147,9 @@ export function checksAndRequirements(
       ? { met: a.met ?? 0, total }
       : undefined;
   const parts = [
-    checks ? `Checks ${checks.passed}/${checks.total}` : null,
+    checks
+      ? `Checks ${checks.passed}/${checks.total}${checks.warnings ? ` (${checks.warnings} with warnings)` : ""}`
+      : null,
     requirements ? `Requirements ${requirements.met}/${requirements.total} met` : null,
     offer
       ? `components only: ${servedCount} served by a component, ${offer.outOfScope.length} out of scope`

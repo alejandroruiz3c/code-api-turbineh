@@ -266,7 +266,14 @@ async function handle(build: BuildRow): Promise<void> {
       ...outcome.metrics,
       // Capability packages record their own checks in metrics.verify (ADR-0051): keep them.
       ...(outcome.verify
-        ? { verify: outcome.verify.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms })) }
+        ? {
+            verify: outcome.verify.steps.map((s) => ({
+              name: s.name,
+              ok: s.ok,
+              ms: s.ms,
+              ...(s.warnings ? { warnings: s.warnings } : {}),
+            })),
+          }
         : {}),
     },
     ...(artifact ? { artifact } : {}),
@@ -316,7 +323,11 @@ async function packageFlow(
   artifact: Record<string, unknown>,
   plan: Plan | undefined,
 ): Promise<Record<string, unknown>> {
-  const verify = (outcome.verify?.steps ?? []).map((x) => ({ name: x.name, ok: x.ok }));
+  const verify = (outcome.verify?.steps ?? []).map((x) => ({
+    name: x.name,
+    ok: x.ok,
+    ...(x.warnings ? { warnings: x.warnings } : {}),
+  }));
   const spec = outcome.spec as { slug?: string; app_name?: string; summary?: string } | undefined;
   const m = outcome.metrics;
   const docs = Object.fromEntries(

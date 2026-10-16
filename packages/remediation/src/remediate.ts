@@ -7,8 +7,9 @@ import {
   isFixedOracle,
   isTestFile,
   leakingFiles,
-  revertWeakenedTests,
+  revertForbiddenChanges,
   sandbox,
+  suppressionAdded,
   type StaticFinding,
   type VerifyResult,
 } from "@turbineh/verifier";
@@ -40,6 +41,11 @@ export interface RemediationOptions {
   reasoningEffort?: string;
   /** Routes findings in one batched request before fixing (optional; without it every finding is attempted). */
   decider?: Decider;
+  /**
+   * Called for every change the fixer proposed that was refused (ADR-0065): a weakened test, an added suppression
+   * (`nosemgrep`, `eslint-disable`, `@ts-ignore`…) or an edited check configuration. Shown in the report.
+   */
+  onRefused?: (r: { file: string; reason: string }) => void;
 }
 
 type Advisory = VerifyResult["findings"]["advisories"][number];
@@ -50,7 +56,8 @@ const SYSTEM = `You are an application-security engineer fixing ONE TypeScript/N
 Fix exactly the reported findings with the smallest safe change. Keep behaviour, exports, imports that are still used,
 and the "use server"/"use client" directive (it must stay the first statement). Prefer existing helpers:
 requireMember()/can() from "@/server/authz", "await rateLimit()" from "@/security/rate-limit", Zod schemas, Drizzle query
-builders (never raw SQL strings), environment variables via "@/env". Never add secrets.
+builders (never raw SQL strings), environment variables via "@/env". Never add secrets. Never silence a check: no
+nosemgrep, eslint-disable, @ts-ignore or @ts-expect-error comments (such a change is refused).
 Return JSON only: {"content": "<the full corrected file>"}.`;
 
 const FixedFile = z.object({ content: z.string().min(1) });
@@ -210,8 +217,14 @@ async function fixCode(
         .replace(new RegExp(`\\n?${FIX_MARKER}.*$`, "m"), "")
         .trimEnd();
       if (!after || after === before.trimEnd()) return [];
-      // A security fix never weakens a test either (ADR-0054).
-      if (isTestFile(file) && assertionWeakening(before, after, isFixedOracle(file))) return [];
+      // A security fix never weakens a test (ADR-0054) and never silences the check it should satisfy (ADR-0065).
+      const refused =
+        (isTestFile(file) ? assertionWeakening(before, after, isFixedOracle(file)) : null) ??
+        suppressionAdded(before, after);
+      if (refused) {
+        opts.onRefused?.({ file, reason: refused });
+        return [];
+      }
       writeFileSync(
         p,
         `${after}\n${FIX_MARKER} ${[...new Set(fs.map((f) => f.rule))].join(", ")}\n`,
@@ -275,8 +288,9 @@ export async function remediateOnce(
 const REPAIR_SYSTEM = `You are a senior TypeScript/Next.js engineer. A security fix was just applied to this file and one of
 the quality gates (lint, typecheck, build, unit or end-to-end tests) now fails. Fix ONLY what the error log reports for
 this file (for example unused imports or type errors) with the smallest change. Do NOT reintroduce eval, raw SQL
-strings, unsanitized HTML, missing authorization checks or hardcoded secrets. Keep the "use server"/"use client"
-directive first. Return JSON only: {"content": "<the full corrected file>"}.`;
+strings, unsanitized HTML, missing authorization checks or hardcoded secrets. Never silence a check (nosemgrep,
+eslint-disable, @ts-ignore, @ts-expect-error) and never edit tests or check configuration: such a change is refused.
+Keep the "use server"/"use client" directive first. Return JSON only: {"content": "<the full corrected file>"}.`;
 
 /**
  * Repairs files that a security remediation changed when a quality gate fails afterwards. Only files the
@@ -340,13 +354,14 @@ export async function repairAfterRemediation(
       detail: `quality gate fixed after security remediation (${failing.map((x) => x.name).join(", ")})`,
     });
   }
-  // A repair never weakens a test (ADR-0054): weakened test files are restored from HEAD and not committed.
-  const weakened = new Set(
-    revertWeakenedTests(
-      dir,
-      changes.map((c) => c.target),
-    ).map((w) => w.file),
+  // A repair never weakens a test (ADR-0054) nor silences a check (ADR-0065): such files are restored from HEAD and
+  // not committed; each refusal is reported.
+  const refusedFiles = revertForbiddenChanges(
+    dir,
+    changes.map((c) => c.target),
   );
+  for (const r of refusedFiles) opts.onRefused?.(r);
+  const weakened = new Set(refusedFiles.map((w) => w.file));
   changes.splice(0, changes.length, ...changes.filter((c) => !weakened.has(c.target)));
   const repairLeaks = new Set(
     leakingFiles(

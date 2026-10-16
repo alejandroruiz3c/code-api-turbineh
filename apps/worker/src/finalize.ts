@@ -14,15 +14,26 @@ import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
   alertsOf,
+  attempted,
+  commitRecord,
   estimateImprovement,
   fixedVersion,
+  headCommit,
   needsRemediation,
+  notFixedFinally,
+  reconcileFixes,
   remediateOnce,
   repairAfterRemediation,
+  settleRound,
+  type CorrectionRecord,
+  type FindingRef,
   type FixerSlot,
   type ImprovementEstimate,
+  type RefusedChange,
+  type RemediationAudit,
   type RemediationChange,
   type SecurityAlert,
+  type SecurityFix,
 } from "@turbineh/remediation";
 import {
   buildReport,
@@ -44,6 +55,8 @@ import {
   type SwapPart,
 } from "@turbineh/integrator";
 import {
+  advisoryBlocks,
+  checkStatus,
   gateFailures,
   gateFindings,
   quickCheck,
@@ -73,7 +86,7 @@ export interface FinalizeInput {
   scope: "auto" | "improve";
   facts: Omit<
     ReportFacts,
-    "evidence" | "checks" | "alerts" | "remediation" | "improvement" | "finalVersion"
+    "evidence" | "checks" | "alerts" | "remediation" | "improvement" | "finalVersion" | "audit"
   >;
   metrics: Record<string, unknown>;
   /**
@@ -95,7 +108,15 @@ export interface FinalizeResult {
   ok: boolean;
   verify: VerifyResult;
   alerts: SecurityAlert[];
+  /** Every change the security remediation attempted (the fixer's claims; see `audit.fixed` for what is verified). */
   remediation: RemediationChange[];
+  /**
+   * How the build was corrected (ADR-0065): first-pass checks, every correction with its diff, refused changes, and
+   * the security findings fixed — counted only when a new scan and the final one no longer find them.
+   */
+  audit: RemediationAudit;
+  /** Non-blocking advisories delivered as accepted exceptions (ADR-0065), with their review date. */
+  exceptions: AdvisoryException[];
   report: BuildReport;
   verifyMs: number;
   /** Offered once, only on normal builds with remaining alerts. */
@@ -158,7 +179,68 @@ export function publicMetrics(metrics: Record<string, unknown>): Record<string, 
   };
 }
 
-const stepsView = (v: VerifyResult) => v.steps.map((s) => ({ name: s.name, ok: s.ok, ms: s.ms }));
+const stepsView = (v: VerifyResult) =>
+  v.steps.map((s) => ({
+    name: s.name,
+    ok: s.ok,
+    ms: s.ms,
+    ...(s.warnings ? { warnings: s.warnings } : {}),
+  }));
+
+/** A non-blocking advisory delivered as an accepted exception (ADR-0065): why, until when, and whether a fix exists. */
+export interface AdvisoryException {
+  id: string;
+  pkg: string;
+  severity: string;
+  scope: "production" | "development";
+  /** Patched version from OSV; null when none exists; undefined when the lookup failed. */
+  patched?: string | null;
+  reason: string;
+  /** Date by which the exception must be reviewed again (scan date + EXCEPTION_REVIEW_DAYS). */
+  reviewBy: string;
+}
+
+/** Accepted exceptions are reviewed again after this many days (SECURITY.md "Exceptions"). */
+export const EXCEPTION_REVIEW_DAYS = 30;
+
+/** Non-blocking advisories of the final scan as accepted exceptions, with an OSV lookup of a patched version. */
+export async function advisoryExceptions(
+  v: VerifyResult,
+  patchedVersion: (id: string, name: string) => Promise<string | null>,
+): Promise<AdvisoryException[]> {
+  const reviewBy = new Date(Date.parse(v.scannedAt) + EXCEPTION_REVIEW_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const open = v.findings.advisories.filter((a) => !advisoryBlocks(a));
+  return Promise.all(
+    open.map(async (a) => {
+      const patched = await patchedVersion(a.id, a.pkg.slice(0, a.pkg.lastIndexOf("@"))).then(
+        (x) => x,
+        () => undefined,
+      );
+      const reason =
+        a.scope === "development"
+          ? "development-only (used to build or test the app; not shipped to users, not reachable at runtime)"
+          : `${a.severity.toLowerCase()} severity in a shipped library (only high and critical block delivery)`;
+      return {
+        id: a.id,
+        pkg: a.pkg,
+        severity: a.severity,
+        scope: a.scope,
+        ...(patched === undefined ? {} : { patched }),
+        reason,
+        reviewBy,
+      };
+    }),
+  );
+}
+
+/** "static: turbineh.unsanitized-html at src/app/x.tsx:60" — blocking findings and failing checks of a result. */
+function problemsOf(v: VerifyResult): string[] {
+  return gateFindings(v)
+    .filter((f) => f.blocking)
+    .map((f) => `${f.category === "quality" ? f.rule : `${f.rule} (${f.category})`} at ${f.where}`);
+}
 
 /**
  * Evidence actually produced by this build's checks: E2E and unit test titles found in the repository, with each
@@ -252,6 +334,37 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   };
   let result = await timedVerify();
   await deps.emit("verifying", "done", { ok: result.ok, steps: stepsView(result) });
+  // The audit trail (ADR-0065): what failed on the first pass, every correction with its diff, refused changes.
+  const audit: RemediationAudit = {
+    firstPass: result.steps.map((s) => ({ name: s.name, status: checkStatus(s) })),
+    firstPassProblems: problemsOf(result),
+    corrections: [],
+    refused: [],
+    fixed: [],
+    notFixed: [],
+  };
+  const refusedIn =
+    (phase: RefusedChange["phase"]) =>
+    (r: { file: string; reason: string }): void => {
+      audit.refused.push({ phase, ...r });
+    };
+  const record = (
+    phase: CorrectionRecord["phase"],
+    round: number,
+    since: string | null,
+    why: string,
+  ): CorrectionRecord | null => {
+    const c = commitRecord(input.repoDir, since);
+    if (!c) return null;
+    const r: CorrectionRecord = { phase, round, why, ...c };
+    audit.corrections.push(r);
+    return r;
+  };
+  const failingChecks = (v: VerifyResult) =>
+    v.steps
+      .filter((s) => !s.ok)
+      .map((s) => s.name)
+      .join(", ") || "none";
 
   // WP10 corrector (PLAN §4: correcting ↺ max 3) → swap → Backup Coder (T4). Full verification after every step.
   const corrections: CorrectionStep[] = [];
@@ -270,9 +383,18 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     // quick check is green, so build/E2E failures are still caught and nothing is accepted without it.
     for (let attempt = 1; attempt <= 3 && qualityFailed(result); attempt++) {
       await deps.emit("correcting", "start", { attempt });
-      const step = await patchOnce(input.repoDir, result, deps.correction.compiler, attempt);
+      const since = headCommit(input.repoDir);
+      const why = `failing: ${failingChecks(result)}`;
+      const step = await patchOnce(
+        input.repoDir,
+        result,
+        deps.correction.compiler,
+        attempt,
+        refusedIn("correction"),
+      );
       await deps.emit("correcting", "done", { attempt, step });
       if (!step) break;
+      record("correction", attempt, since, why);
       corrections.push(step);
       const quick = await quickCheck(input.repoDir);
       if (!quick.ok) {
@@ -307,6 +429,8 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
         })),
       });
       if (culprits.length === 0) break;
+      const swapSince = headCommit(input.repoDir);
+      const swapWhy = `failing: ${failingChecks(result)}; removed: ${culprits.map((c) => c.capability).join(", ")}`;
       for (const c of culprits) remaining.splice(remaining.indexOf(c), 1);
       const toCommit = input.swap?.toCommit ?? "HEAD";
       for (const p of culprits)
@@ -338,20 +462,25 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       swappedOut.push(
         ...new Set(culprits.filter((p) => p.kind !== "glue").map((p) => p.capability)),
       );
+      record("swap", round, swapSince, swapWhy);
       await deps.emit("correcting", "swap", { removed: culprits });
       await reverify({ afterSwap: round });
     }
     if (qualityFailed(result)) {
       await deps.emit("correcting", "start", { trigger: "T4" });
+      const since = headCommit(input.repoDir);
+      const why = `failing: ${failingChecks(result)}`;
       const step = await backupPatch(
         input.repoDir,
         result,
         deps.correction.backupCoder,
         input.buildId,
         corrections.length + 1,
+        refusedIn("backup-correction"),
       );
       await deps.emit("correcting", "done", { trigger: "T4", step });
       if (step) {
+        record("backup-correction", corrections.length + 1, since, why);
         corrections.push(step);
         await reverify({ afterCorrection: "T4" });
       }
@@ -361,16 +490,23 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   if (!full) await reverify({ afterCorrection: "final" });
 
   const remediation: RemediationChange[] = [];
+  // Security ledger (ADR-0065): the scan before the first round is the baseline; every round is settled by a new scan.
+  const baseline = result;
+  const candidates: SecurityFix[] = [];
+  const tried: FindingRef[] = [];
   const maxRounds = input.scope === "improve" ? 3 : 2;
   for (let round = 1; round <= maxRounds && needsRemediation(result, input.scope); round++) {
     await deps.emit("remediating", "start", {
       round,
       findings: result.findings.static.length + result.findings.advisories.length,
     });
+    const before = result;
+    const since = headCommit(input.repoDir);
     const changes = await remediateOnce(input.repoDir, result, {
       decider: deps.decider,
       fixers: deps.fixers,
       scope: input.scope,
+      onRefused: refusedIn("security-fix"),
       ...(deps.reasoningEffort ? { reasoningEffort: deps.reasoningEffort } : {}),
     }).catch(async (err: unknown) => {
       await deps.emit("remediating", "error", {
@@ -379,15 +515,33 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       });
       return [] as RemediationChange[];
     });
-    await deps.emit("remediating", "done", { round, changes });
-    if (changes.length === 0) break;
+    if (changes.length === 0) {
+      await deps.emit("remediating", "done", { round, changes, fixed: 0 });
+      break;
+    }
     remediation.push(...changes);
+    tried.push(...attempted(before, changes));
+    const fixRecord = record(
+      "security-fix",
+      round,
+      since,
+      `findings: ${[...new Set(changes.map((c) => `${c.reason} at ${c.target}`))].join("; ")}`,
+    );
     await deps.emit("verifying", "start", { afterRemediation: round });
     result = await timedVerify();
     await deps.emit("verifying", "done", {
       ok: result.ok,
       steps: stepsView(result),
       afterRemediation: round,
+    });
+    // Counted as fixed only when the new scan no longer finds it (never on the fixer's claim).
+    const settled = settleRound(round, before, result, changes, fixRecord?.commit ?? null);
+    candidates.push(...settled.fixed);
+    await deps.emit("remediating", "done", {
+      round,
+      changes,
+      fixed: settled.fixed.length,
+      notFixed: settled.notFixed.map((f) => `${f.rule} at ${f.where}`),
     });
     // A fix must never break the app: repair only the files the remediation touched, then verify everything again.
     const touched = [
@@ -396,13 +550,17 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       ),
     ].filter(Boolean);
     for (let repair = 1; repair <= 2 && !result.ok && touched.length > 0; repair++) {
+      const repairSince = headCommit(input.repoDir);
+      const repairWhy = `failing after the security fix: ${failingChecks(result)}`;
       const fixes = await repairAfterRemediation(input.repoDir, result, touched, {
         fixers: deps.fixers,
         scope: input.scope,
+        onRefused: refusedIn("repair"),
         ...(deps.reasoningEffort ? { reasoningEffort: deps.reasoningEffort } : {}),
       }).catch(() => [] as RemediationChange[]);
       await deps.emit("remediating", "repair", { repair, fixes });
       if (fixes.length === 0) break;
+      record("repair", repair, repairSince, repairWhy);
       remediation.push(...fixes);
       result = await timedVerify();
       await deps.emit("verifying", "done", {
@@ -412,6 +570,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       });
     }
   }
+  // Final reconciliation: a finding still present in the delivered scan is never "fixed" (and fixes are deduplicated).
+  audit.fixed = reconcileFixes(candidates, baseline, result);
+  audit.notFixed = notFixedFinally(tried, audit.fixed);
   const verifyMs = Math.round(performance.now() - t);
   // What is delivered (ADR-0037 §D1): decided by code from the final gate result. Each failure is attributed to the
   // owner of its file and gets an exact place and a suggested fix.
@@ -427,6 +588,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       : attributeFailures(input.repoDir, gateFailures(result), keptParts, failureLog(result)),
   );
   const alerts = alertsOf(result);
+  const exceptions = await advisoryExceptions(result, fixedVersion);
   // "Improve & redeliver" is offered once: never on an improvement build, never when nothing can be fixed.
   const improvement =
     input.scope === "auto" && result.ok && alerts.length > 0
@@ -452,6 +614,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,
     remediation,
+    audit,
     improvement,
     finalVersion: input.scope === "improve",
   };
@@ -468,10 +631,12 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     verified: result.ok,
     checksPassed: result.steps.filter((s) => s.ok).length,
     checksTotal: result.steps.length,
+    checksWithWarnings: result.steps.filter((s) => checkStatus(s) === "warn").length,
     criteriaVerified: report.criteria.filter((c) => c.verified).length,
     criteriaTotal: report.criteria.length,
     alerts: alerts.length,
-    fixedBeforeDelivery: remediation.filter((r) => r.reason !== "repair").length,
+    // Verified by a new scan and by the final one (ADR-0065), never the number of changes the fixer made.
+    fixedBeforeDelivery: audit.fixed.length,
   };
   // AGENTS.md + turbineh.json: the verified gate results and, per acceptance criterion, the passing test that proves
   // it or where to implement and prove it — so a coding agent knows at once what is left. ACCEPTANCE.md is rewritten
@@ -485,6 +650,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
         name: s.name,
         ok: s.ok,
         ms: s.ms,
+        ...(s.warnings ? { warnings: s.warnings } : {}),
         ...(s.note ? { note: s.note } : {}),
       })),
       ...(result.skipped?.length ? { skipped: result.skipped } : {}),
@@ -514,7 +680,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     glueRemoved,
     attribution,
     alerts,
-    remediation,
+    // What the fixer changed, and how many findings a new scan confirmed fixed (ADR-0065): never the same number.
+    remediationAttempted: remediation,
+    securityFixesVerified: audit.fixed.length,
     improvement,
     report: { writer: report.writer },
   };
@@ -535,7 +703,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   writeStartHere(input.repoDir, handover);
   writeReports(
     input.repoDir,
-    securityMarkdown(result, alerts, remediation),
+    securityMarkdown(result, alerts, audit, exceptions),
     notVerifiedMarkdown(delivery) +
       reportMarkdown(report, JSON.stringify(publicMetrics(metrics), null, 2)),
   );
@@ -560,6 +728,8 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     verify: result,
     alerts,
     remediation,
+    audit,
+    exceptions,
     report,
     verifyMs,
     improvement,
@@ -582,15 +752,44 @@ function policyFindings(v: VerifyResult): string {
   return `\n## Policy findings\n\n${lines.join("\n")}\n`;
 }
 
-function securityMarkdown(
+export function securityMarkdown(
   v: VerifyResult,
   alerts: SecurityAlert[],
-  fixed: RemediationChange[],
+  audit: Pick<RemediationAudit, "fixed" | "notFixed" | "refused">,
+  exceptions: AdvisoryException[],
 ): string {
   const row = (n: string) => {
     const s = v.steps.find((x) => x.name === n);
-    return s ? (s.ok ? "pass" : "FAIL") : "not run";
+    if (!s) return "not run";
+    const st = checkStatus(s);
+    return st === "fail" ? "FAIL" : st === "warn" ? `pass with warnings (${s.warnings})` : "pass";
   };
+  const fixed = audit.fixed.length
+    ? audit.fixed
+        .map(
+          (f) =>
+            `- ${f.kind === "dependency" ? "Dependency" : "Code"} · \`${f.rule}\` at \`${f.where}\` — fixed in round ${f.round}${f.commit ? ` (commit \`${f.commit.slice(0, 12)}\`)` : ""}: ${f.kind === "dependency" ? `pinned ${f.change}` : `changed \`${f.change}\``}`,
+        )
+        .join("\n")
+    : "- Nothing was fixed automatically.";
+  const notFixed = audit.notFixed.length
+    ? `\n## Attempted, not fixed\n\nA fix was attempted, but the new scan still finds these. They are not counted as fixed.\n\n${audit.notFixed
+        .map((f) => `- \`${f.rule}\` at \`${f.where}\` (${f.severity.toLowerCase()})`)
+        .join("\n")}\n`
+    : "";
+  const refused = audit.refused.length
+    ? `\n## Refused changes\n\nAutomatic repairs may not weaken tests, silence a check or edit its configuration. These proposed changes were reverted:\n\n${audit.refused
+        .map((r) => `- \`${r.file}\` (${r.phase}): ${r.reason}`)
+        .join("\n")}\n`
+    : "";
+  const exceptionList = exceptions.length
+    ? exceptions
+        .map(
+          (e) =>
+            `- **${e.id}** · ${e.severity.toLowerCase()} · \`${e.pkg}\` — ${e.reason}; patched version: ${e.patched === undefined ? "unknown (OSV lookup failed)" : (e.patched ?? "none published yet")}. Review by ${e.reviewBy}.`,
+        )
+        .join("\n")
+    : "- None.";
   return `# Security report
 
 - Date: ${v.scannedAt}
@@ -609,15 +808,26 @@ function securityMarkdown(
 | End-to-end (sign-up, access control, data flows) | quality | Playwright | ${row("e2e")} |
 
 Security = a weakness an attacker could use. Policy = TurbineH delivery policy (licence list, no secret-shaped literals
-in tracked files): it can block delivery but is not a vulnerability. Quality = the app's own checks.
+in tracked files): it can block delivery but is not a vulnerability. Quality = the app's own checks. "Pass with
+warnings" = nothing blocking, but non-blocking findings remain (listed below); it is never shown as a plain pass.
+XSS and open redirects in routes, pages and components always block.
 ${policyFindings(v)}
 ## Fixed automatically before delivery
 
-${fixed.length ? fixed.map((c) => `- ${c.kind === "dependency" ? "Dependency" : "Code"} · ${c.target} — ${c.detail} (${c.reason})`).join("\n") : "- Nothing needed fixing."}
+Counted only when a new scan after the fix, and the final scan, no longer find the finding (rule, file and line).
 
+${fixed}
+${notFixed}${refused}
 ## Remaining alerts (non-blocking)
 
 ${alerts.length ? alerts.map((a) => `- **${a.title}** (${a.where}) — ${a.explain}`).join("\n") : "- None."}
+
+## Accepted exceptions
+
+Known advisories that do not block delivery under TurbineH's policy (only high or critical advisories in shipped
+libraries block): each one is listed with why it is accepted and the date it must be reviewed again.
+
+${exceptionList}
 
 ## Not checked
 

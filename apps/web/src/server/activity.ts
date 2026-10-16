@@ -40,6 +40,8 @@ type Row = {
     };
     deployment?: unknown;
     delivery?: { kind?: string };
+    /** ADR-0065: present when fixes were counted by a re-scan (flows before it only recorded the fixer's claims). */
+    audit?: { fixed?: unknown[] };
   } | null;
   has_zip: boolean;
 };
@@ -73,7 +75,8 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
       generatedLines: m.reuse?.generatedLines ?? null,
       checksPassed: m.handover?.checksPassed ?? null,
       checksTotal: m.handover?.checksTotal ?? null,
-      securityFixed: m.handover?.fixedBeforeDelivery ?? 0,
+      // Only fixes a new scan confirmed (ADR-0065); earlier flows recorded the fixer's claims and are not counted.
+      securityFixed: m.audit?.fixed?.length ?? 0,
       alerts: m.handover?.alerts ?? 0,
       deployed,
       pullRequest: pr

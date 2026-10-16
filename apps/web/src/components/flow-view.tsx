@@ -27,6 +27,24 @@ interface BuildReport {
   improvement: ImprovementEstimate | null;
 }
 
+/** How the build was corrected (ADR-0065): written by code from the gate's own results. */
+interface CorrectionAudit {
+  firstPass: { name: string; status: "pass" | "warn" | "fail" }[];
+  firstPassProblems: string[];
+  corrections: {
+    phase: "correction" | "backup-correction" | "swap" | "security-fix" | "repair";
+    round: number;
+    commit: string | null;
+    files: string[];
+    why: string;
+    diff: string;
+    truncated: boolean;
+  }[];
+  refused: { phase: string; file: string; reason: string }[];
+  fixed: { rule: string; where: string; round: number }[];
+  notFixed: { rule: string; where: string }[];
+}
+
 interface ImprovementEstimate {
   total: number;
   fixable: number;
@@ -88,7 +106,13 @@ export interface BuildResult {
     alerts?: { id: string; level: string; title: string; explain: string; where: string }[];
     report?: BuildReport;
     improved?: boolean;
-    handover?: { checksPassed?: number; checksTotal?: number; fixedBeforeDelivery?: number };
+    handover?: {
+      checksPassed?: number;
+      checksTotal?: number;
+      checksWithWarnings?: number;
+      fixedBeforeDelivery?: number;
+    };
+    audit?: CorrectionAudit;
     deployment?: { url?: string } | null;
     timings?: Record<string, number>;
   };
@@ -605,8 +629,12 @@ function ResultScreen({
           label="New lines to maintain (the glue)"
         />
         <Stat
-          value={String(h?.fixedBeforeDelivery ?? 0)}
-          label="Security issues fixed before delivery"
+          value={result.metrics.audit ? String(result.metrics.audit.fixed.length) : "—"}
+          label={
+            result.metrics.audit
+              ? "Security issues fixed before delivery (confirmed by a new scan)"
+              : "Security fixes (not re-scanned in flows before this was counted)"
+          }
         />
         <Stat value={String(components.length)} label="Verified components used" />
       </div>
@@ -754,6 +782,7 @@ function ResultScreen({
                   ) : null}
                 </Panel>
               ) : null}
+              {result.metrics.audit ? <CorrectionPanel audit={result.metrics.audit} /> : null}
               <DocsPanel docs={docs} order={["SECURITY.md", "TURBINEH_REPORT.md"]} />
             </>
           ) : null}
@@ -803,6 +832,90 @@ function ResultScreen({
         </div>
       </div>
     </>
+  );
+}
+
+const PHASE_LABEL: Record<CorrectionAudit["corrections"][number]["phase"], string> = {
+  correction: "Directed correction",
+  "backup-correction": "Backup Coder correction",
+  swap: "Removed generated part",
+  "security-fix": "Security fix",
+  repair: "Repair after a security fix",
+};
+const STATUS_LABEL = { pass: "pass", warn: "pass with warnings", fail: "failed" } as const;
+
+/** ADR-0065: the checks of the first pass, each correction with its diff, refused changes and verified fixes. */
+function CorrectionPanel({ audit }: { audit: CorrectionAudit }) {
+  const failed = audit.firstPass.filter((c) => c.status === "fail");
+  const warned = audit.firstPass.filter((c) => c.status === "warn");
+  return (
+    <Panel title="How this build was corrected">
+      <p className="text-sm text-ice-2">
+        First pass:{" "}
+        {failed.length === 0
+          ? "every check passed"
+          : `${failed.length} check(s) failed (${failed.map((c) => c.name).join(", ")})`}
+        {warned.length > 0
+          ? ` · ${warned.length} passed with warnings (${warned.map((c) => c.name).join(", ")})`
+          : ""}
+        .
+      </p>
+      {audit.firstPassProblems.length > 0 ? (
+        <ul className="mt-2 list-disc pl-5 font-mono text-xs text-muted">
+          {audit.firstPassProblems.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      ) : null}
+      {audit.corrections.length === 0 ? (
+        <p className="mt-3 text-sm text-muted">No correction was needed.</p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-3 text-sm">
+          {audit.corrections.map((c) => (
+            <li key={`${c.phase}-${c.round}-${c.commit ?? ""}`}>
+              <details>
+                <summary className="cursor-pointer text-ice-2">
+                  {PHASE_LABEL[c.phase]} {c.round}
+                  {c.commit ? (
+                    <span className="font-mono text-xs text-muted"> · {c.commit.slice(0, 12)}</span>
+                  ) : null}{" "}
+                  <span className="text-xs text-muted">— {c.why}</span>
+                </summary>
+                <pre className="mt-2 max-h-[360px] overflow-auto rounded-lg bg-navy-900/80 p-3 text-xs text-ice-2">
+                  {c.diff}
+                  {c.truncated ? `\n… (git show ${c.commit?.slice(0, 12) ?? ""} for the rest)` : ""}
+                </pre>
+              </details>
+            </li>
+          ))}
+        </ul>
+      )}
+      {audit.refused.length > 0 ? (
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-amber">
+            Refused changes · tests, rules and check configuration are never a repair&rsquo;s target
+          </p>
+          <ul className="mt-2 list-disc pl-5 text-xs text-muted">
+            {audit.refused.map((r) => (
+              <li key={`${r.phase}-${r.file}-${r.reason}`}>
+                <span className="font-mono">{r.file}</span> ({r.phase}): {r.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="mt-4 text-xs text-muted">
+        Security findings fixed automatically and confirmed by a new scan: {audit.fixed.length}
+        {audit.notFixed.length > 0
+          ? ` · attempted but still present: ${audit.notFixed.length} (${audit.notFixed.map((f) => `${f.rule} at ${f.where}`).join("; ")})`
+          : ""}
+        .
+      </p>
+      <p className="mt-1 text-xs text-muted">
+        First-pass status per check:{" "}
+        {audit.firstPass.map((c) => `${c.name} ${STATUS_LABEL[c.status]}`).join(" · ")}
+      </p>
+    </Panel>
   );
 }
 

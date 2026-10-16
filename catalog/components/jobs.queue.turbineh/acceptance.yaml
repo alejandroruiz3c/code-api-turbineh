@@ -11,3 +11,10 @@
   covers: ["job|task|queue|background", "fenc|twice|duplicate|exactly once|concurren|overwrite"]
 - test: "tests/unit/jobs.test.ts › retries a failing job with backoff and fails it after maxAttempts, fenced by its token"
   covers: ["job|task|queue|background", "retr|backoff"]
+# Overlapping cron calls (ADR-0065): two runners never run a job twice, repeated enqueues are one job, an effect runs once.
+- test: "tests/unit/jobs-concurrency.test.ts › two runners at the same time never run the same job twice"
+  covers: ["job|task|queue|background|cron|schedul", "twice|duplicate|exactly once|at most once|concurren|overlap|parallel"]
+- test: "tests/unit/jobs-concurrency.test.ts › overlapping enqueues with the same idempotency key are one job"
+  covers: ["job|task|queue|background|cron|schedul", "idempoten|twice|duplicate|once"]
+- test: "tests/unit/jobs.test.ts › runs a side effect at most once per job across retries (ctx.once), with a stable idempotency key"
+  covers: ["job|task|queue|background|publish|post|send|email", "twice|duplicate|at most once|exactly once|idempoten|retr"]

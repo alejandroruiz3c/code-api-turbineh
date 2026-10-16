@@ -56,6 +56,11 @@ export interface StaticFinding {
    * a tracked file) — it still blocks when its severity says so, but it is reported as what it is.
    */
   category?: FindingCategory;
+  /**
+   * Set when the gate raised a WARNING rule to ERROR because the finding sits in code a visitor can reach (ADR-0065):
+   * XSS and open redirects in routes, pages, layouts and components always block.
+   */
+  escalated?: "exposed-route";
 }
 
 export type FindingCategory = "security" | "policy";
@@ -79,7 +84,17 @@ export interface StepResult {
   detail: string;
   /** Why the step shows no (or a shared) duration (ADR-0055): never an unexplained 0 ms. */
   note?: string;
+  /**
+   * Passed with warnings (ADR-0065): non-blocking findings that remain on a passing step (static warnings, advisories
+   * that do not block). A step with warnings is never shown as a plain pass.
+   */
+  warnings?: number;
 }
+
+/** pass, pass with warnings (non-blocking findings remain) or fail: the three states every surface shows. */
+export type CheckStatus = "pass" | "warn" | "fail";
+export const checkStatus = (s: { ok: boolean; warnings?: number }): CheckStatus =>
+  !s.ok ? "fail" : (s.warnings ?? 0) > 0 ? "warn" : "pass";
 
 export interface VerifyResult {
   ok: boolean;
@@ -94,6 +109,11 @@ export interface VerifyResult {
     }[];
     licenses: string[];
     static: StaticFinding[];
+    /**
+     * False when the static scanner gave no result: an empty `static` list then means "not scanned", never "clean",
+     * so nothing can be counted as fixed from it (ADR-0065). Undefined in results recorded before this field.
+     */
+    staticScanned?: boolean;
   };
   scannedAt: string;
   /** Gate steps that did not run, with the reason (ADR-0055). */
@@ -116,6 +136,27 @@ export function findingCategory(f: StaticFinding, lineText = ""): FindingCategor
   return TEST_FILE.test(f.path) || PLACEHOLDER.test(lineText) ? "policy" : "security";
 }
 
+/**
+ * Injection rules that are always blocking in code a visitor can reach (ADR-0065): raw HTML (XSS) and open redirects.
+ * Their Semgrep severity stays WARNING for scripts and server-only helpers; in routes, pages, layouts and components
+ * the gate raises them to ERROR, so they are fixed (and the fix verified by a new scan) or the build is not verified.
+ */
+export const EXPOSED_INJECTION_RULES: ReadonlySet<string> = new Set([
+  "turbineh.unsanitized-html",
+  "turbineh.open-redirect",
+]);
+
+/** Shipped code a visitor's request reaches: App Router routes, Pages Router pages and UI components. */
+export const isExposedRoute = (path: string): boolean =>
+  /^(src\/)?(app|pages|components)\//.test(path) && !TEST_FILE.test(path);
+
+/** The gate's severity for a finding: exposed XSS / open redirect → ERROR (blocking), everything else unchanged. */
+export function gateSeverity(f: StaticFinding): StaticFinding {
+  if (f.severity === "ERROR" || !EXPOSED_INJECTION_RULES.has(f.rule) || !isExposedRoute(f.path))
+    return f;
+  return { ...f, severity: "ERROR", escalated: "exposed-route" };
+}
+
 /** Every gate finding with its honest category (security / policy / quality), blocking or not. */
 export function gateFindings(v: VerifyResult): GateFinding[] {
   const out: GateFinding[] = [];
@@ -125,7 +166,9 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       rule: f.rule,
       where: `${f.path}:${f.line}`,
       blocking: f.severity === "ERROR",
-      message: f.message,
+      message: f.escalated
+        ? `${f.message} Blocking: this code is reachable by visitors (exposed route).`
+        : f.message,
       fix: findingFix(f.rule),
     });
   }
@@ -134,7 +177,7 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
       category: "security",
       rule: a.id,
       where: a.pkg,
-      blocking: a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH"),
+      blocking: advisoryBlocks(a),
       message: `${a.severity} advisory (${a.scope})`,
       fix: advisoryFix(a),
     });
@@ -174,6 +217,10 @@ export function gateFindings(v: VerifyResult): GateFinding[] {
   }
   return out;
 }
+
+/** Only production HIGH/CRITICAL advisories block delivery; the rest pass with warnings (ADR-0065). */
+export const advisoryBlocks = (a: { scope: string; severity: string }): boolean =>
+  a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH");
 
 /** First "file:line" a failing step points to (tsc, eslint, vitest or Playwright output), if any. */
 export function failureLocation(detail: string): string | null {
@@ -460,10 +507,14 @@ export async function verify(
     .filter(licenseLineBlocks)
     .map((l) => l.slice("LICENSE_BAD ".length));
   steps.push(secrets);
+  const staticWarnings = (staticFindings ?? []).filter((f) => f.severity === "WARNING").length;
+  // Advisories that do not block (development-only, or not high/critical): the step passes with warnings.
+  const advisoryWarnings = advisories.filter((a) => !advisoryBlocks(a)).length;
   steps.push({
     name: "static",
     ok: staticFindings !== null && !staticFindings.some((f) => f.severity === "ERROR"),
     ms: scanMs,
+    ...(staticWarnings ? { warnings: staticWarnings } : {}),
     detail:
       staticFindings === null
         ? "static scanner gave no result (retried once)"
@@ -473,10 +524,9 @@ export async function verify(
   });
   steps.push({
     name: "dependencies",
-    ok: !advisories.some(
-      (a) => a.scope === "production" && (a.severity === "CRITICAL" || a.severity === "HIGH"),
-    ),
+    ok: !advisories.some(advisoryBlocks),
     ms: scanMs,
+    ...(advisoryWarnings ? { warnings: advisoryWarnings } : {}),
     detail: advisories.map((a) => `${a.id} ${a.pkg} ${a.severity} ${a.scope}`).join("\n"),
   });
   steps.push({
@@ -498,6 +548,7 @@ export async function verify(
       advisories,
       licenses: blockingLicenses,
       static: staticFindings ?? [],
+      staticScanned: staticFindings !== null,
     },
     scannedAt: new Date().toISOString(),
     skipped: skippedSteps(explained),
@@ -772,7 +823,7 @@ export function labelFindings(dir: string, findings: StaticFinding[]): StaticFin
     } catch {
       // unreadable file: categorised from its path only
     }
-    return { ...f, category: findingCategory(f, line) };
+    return gateSeverity({ ...f, category: findingCategory(f, line) });
   });
 }
 
