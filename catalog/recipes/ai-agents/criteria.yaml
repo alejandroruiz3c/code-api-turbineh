@@ -111,3 +111,14 @@
   tests:
     - "tests/e2e/ai-agents.spec.ts › refuses a prompt-injection attempt with a safe message"
     - "tests/unit/ai-agent.test.ts › refuses prompt injection before any model call"
+
+- id: ai-agents.escalate-email
+  criterion: "Escalating to a human emails the team"
+  advertises: "escalate to a human"
+  says: ["escalat|hand ?off|human|person|staff", "email|mail|notif|team"]
+  terms: >-
+    escalate escalates escalation human person staff team email emails notify notifies hand off handoff
+    support follow up assistant agent
+  actors: [owner, admin, member, user, customer]
+  tests:
+    - "tests/unit/ai-agents.test.ts › escalating to a human emails the team on ADMIN_EMAILS"

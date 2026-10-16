@@ -1,3 +1,4 @@
+import { agentToolFiles } from "./agent-tools.js";
 import {
   appendFileSync,
   cpSync,
@@ -300,6 +301,10 @@ export function assemble(input: AssembleInput): AssembleResult {
     ...entityFiles.flatMap((e) => e.files),
     ...(kinds?.files ?? []),
     ...(fidelityOut?.files ?? []),
+    // Read-only agent tools (lookup_<entity>) when a criterion says the assistant looks an entity up.
+    ...(aiApp && existsSync(join(outDir, "src/server/agent-tools.ts"))
+      ? agentToolFiles(spec, entities)
+      : []),
     ...generateIndexes(entities, {
       recipeTables: existsSync(join(outDir, "src/db/recipe-tables.ts")),
       componentTables,
