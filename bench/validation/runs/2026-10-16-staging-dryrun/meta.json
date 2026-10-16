@@ -1,0 +1,10 @@
+{
+  "runId": "2026-10-16-staging-dryrun",
+  "env": "staging",
+  "api": "https://staging.software.turbineh.com",
+  "startedAt": "2026-10-16T17:50:13.819Z",
+  "statements": ["A01", "B01", "C01"],
+  "concurrency": 3,
+  "generateOffers": false,
+  "noGenerate": false
+}

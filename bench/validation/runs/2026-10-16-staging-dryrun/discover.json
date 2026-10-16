@@ -1,0 +1,231 @@
+{
+  "at": "2026-10-16T17:58:42.986Z",
+  "api": "https://staging.software.turbineh.com",
+  "rows": [
+    {
+      "q": "support agent",
+      "httpStatus": 200,
+      "returned": [
+        "ai-agents",
+        "ai.mcp-server.modelcontextprotocol-sdk",
+        "ai.orchestrator.turbineh",
+        "deploy.github-pull-request.turbineh",
+        "ai.stopwords.stopword"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "online shop with card payments",
+      "httpStatus": 200,
+      "returned": [
+        "storefront",
+        "payments.checkout.stripe",
+        "ui.hover-card.radix",
+        "payments.subscriptions.turbineh",
+        "data.analytics-import.turbineh"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "appointment booking",
+      "httpStatus": 200,
+      "returned": [
+        "domain.bookings.turbineh",
+        "bookings",
+        "ai.orchestrator.turbineh",
+        "data.ics-export.ical-generator"
+      ],
+      "p5": 0.75
+    },
+    {
+      "q": "export table to excel",
+      "httpStatus": 200,
+      "returned": [
+        "data.xlsx-export.exceljs",
+        "data.csv-export.turbineh",
+        "ui.table.tanstack-table",
+        "ui.primitives.turbineh",
+        "data.csv-export.csv-stringify"
+      ],
+      "p5": 0.8
+    },
+    {
+      "q": "import csv file",
+      "httpStatus": 200,
+      "returned": [
+        "data.csv-import.turbineh",
+        "data.analytics-import.turbineh",
+        "data.csv-import.papaparse",
+        "data.csv-export.turbineh",
+        "data.csv-export.csv-stringify"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "send transactional email",
+      "httpStatus": 200,
+      "returned": [
+        "email.transactional.resend",
+        "email.transactional.turbineh",
+        "email.parsing.mailparser",
+        "email.plain-text.html-to-text",
+        "data.validation-strings.validator"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "sign in with teams and roles",
+      "httpStatus": 200,
+      "returned": [
+        "domain.membership-access.turbineh",
+        "authz.roles.turbineh",
+        "authz.organizations.better-auth",
+        "site.public-pages.turbineh",
+        "projects"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "two-factor authentication",
+      "httpStatus": 200,
+      "returned": [
+        "ui.otp-input.input-otp",
+        "auth.mfa.otpauth",
+        "auth.session.better-auth",
+        "data.recurrence.rrule",
+        "files.barcode.bwip-js"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "upload files to s3",
+      "httpStatus": 200,
+      "returned": [
+        "storage.private-uploads.turbineh",
+        "files.dropzone.react-dropzone",
+        "storage.objects.vercel-blob",
+        "files.office-text.officeparser",
+        "storage.objects.aws-s3"
+      ],
+      "p5": 0.8
+    },
+    {
+      "q": "generate pdf invoice",
+      "httpStatus": 200,
+      "returned": [
+        "files.pdf.pdf-lib",
+        "files.pdf.react-pdf",
+        "files.pdf-text.unpdf",
+        "storage.private-uploads.turbineh",
+        "files.office-text.officeparser"
+      ],
+      "p5": 0.4
+    },
+    {
+      "q": "kanban board",
+      "httpStatus": 200,
+      "returned": [
+        "ui.kanban.turbineh",
+        "projects",
+        "ui.drag-drop.dnd-kit-sortable",
+        "ui.drag-drop.dnd-kit"
+      ],
+      "p5": 1
+    },
+    {
+      "q": "dashboard with kpi charts",
+      "httpStatus": 200,
+      "returned": [
+        "analytics-dashboard",
+        "data.analytics-import.turbineh",
+        "ui.charts.recharts",
+        "domain.bookings.turbineh"
+      ],
+      "p5": 0.75
+    },
+    {
+      "q": "rate limit an api",
+      "httpStatus": 200,
+      "returned": [
+        "ops.rate-limit.rate-limiter-flexible",
+        "security.pack.turbineh",
+        "ai.orchestrator.turbineh",
+        "ops.queue-throttle.p-queue",
+        "ops.concurrency.p-limit"
+      ],
+      "p5": 0.8
+    },
+    {
+      "q": "scheduled background jobs",
+      "httpStatus": 200,
+      "returned": [
+        "jobs.scheduled.turbineh",
+        "jobs.queue.turbineh",
+        "jobs.scheduler.croner",
+        "jobs.scheduler.cron-parser",
+        "site.public-pages.turbineh"
+      ],
+      "p5": 0.8
+    },
+    {
+      "q": "waitlist landing page",
+      "httpStatus": 200,
+      "returned": [
+        "landing-waitlist",
+        "growth.waitlist.turbineh",
+        "site.public-pages.turbineh",
+        "bookings",
+        "authz.roles.turbineh"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "blog with rss feed",
+      "httpStatus": 200,
+      "returned": [
+        "content.rss.feed",
+        "content.frontmatter.gray-matter",
+        "content.reading-time.reading-time",
+        "corporate-site",
+        "data.xml.fast-xml-parser"
+      ],
+      "p5": 0.8
+    },
+    {
+      "q": "subscription billing",
+      "httpStatus": 200,
+      "returned": ["payments.subscriptions.turbineh", "payments.checkout.stripe"],
+      "p5": 1
+    },
+    {
+      "q": "habit tracker with streaks",
+      "httpStatus": 200,
+      "returned": ["tracker", "domain.workflow.turbineh"],
+      "p5": 0.5
+    },
+    {
+      "q": "validate phone numbers",
+      "httpStatus": 200,
+      "returned": [
+        "data.phone.libphonenumber-js",
+        "data.validation-strings.validator",
+        "data.analytics-import.turbineh",
+        "data.countries.i18n-iso-countries",
+        "data.csv-import.papaparse"
+      ],
+      "p5": 0.6
+    },
+    {
+      "q": "sanitize user html",
+      "httpStatus": 200,
+      "returned": [
+        "security.sanitize-html.sanitize-html",
+        "content.html-dom.linkedom",
+        "content.html-parse.cheerio",
+        "content.html-to-markdown.node-html-markdown",
+        "security.html-escape.he"
+      ],
+      "p5": 0.6
+    }
+  ]
+}

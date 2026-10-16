@@ -1,0 +1,55 @@
+{
+  "id": "C01",
+  "band": "C",
+  "env": "staging",
+  "api": "https://staging.software.turbineh.com",
+  "runId": "2026-10-16-staging-dryrun",
+  "startedAt": "2026-10-16T17:50:13.847Z",
+  "finishedAt": "2026-10-16T17:50:25.000Z",
+  "phase": "done",
+  "error": null,
+  "flowId": null,
+  "plan": {
+    "httpStatus": 422,
+    "problem": {
+      "type": "about:blank",
+      "title": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+      "status": 422,
+      "code": "use_case_not_covered",
+      "message": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+      "action": "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+      "notCovered": [
+        "Given a user provides a short brief, when they trigger the AI draft function, then the system generates a caption draft.",
+        "Given a scheduled post time has passed, when the system executes the task, then the post is published to LinkedIn, Instagram, and X.",
+        "Given a post has been live on social media, when the user views the dashboard, then the system displays the total number of likes for that post per network.",
+        "Given a post has been live on social media, when the user views the dashboard, then the system displays the total number of comments for that post per network.",
+        "publishes our posts to LinkedIn (stated in the request)"
+      ],
+      "error": {
+        "code": "use_case_not_covered",
+        "message": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+        "action": "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+        "notCovered": [
+          "Given a user provides a short brief, when they trigger the AI draft function, then the system generates a caption draft.",
+          "Given a scheduled post time has passed, when the system executes the task, then the post is published to LinkedIn, Instagram, and X.",
+          "Given a post has been live on social media, when the user views the dashboard, then the system displays the total number of likes for that post per network.",
+          "Given a post has been live on social media, when the user views the dashboard, then the system displays the total number of comments for that post per network.",
+          "publishes our posts to LinkedIn (stated in the request)"
+        ]
+      }
+    },
+    "body": null,
+    "ms": 11153
+  },
+  "approved": null,
+  "generate": null,
+  "final": null,
+  "build": null,
+  "manifest": null,
+  "guide": null,
+  "timings": {
+    "planMs": 11153,
+    "generateMs": null,
+    "wallMs": 11153
+  }
+}
