@@ -8,7 +8,7 @@
     booking bookings appointment appointments reservation reservations session sessions visit visits class classes
     lesson lessons slot slots time times date dates day days hour hours minute minutes service services treatment
     treatments customer customers client clients patient patients team member members staff resource resources
-    calendar schedule existing system app website page online
+    calendar schedule existing system app website page online select selects selected selection choose chooses
 
 - id: bookings.public-booking
   criterion: "A customer books a free time on the public page without an account and the booking is created"

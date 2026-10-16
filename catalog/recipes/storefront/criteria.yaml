@@ -187,6 +187,7 @@
     item items catalog catalogue create creates add adds edit edits update updates change changes delete
     deletes remove removes hide hides price prices detail details list read reads public follows
     sign signs log logs login logged
+    entries entry listing listings record records catalogue catalog
   actors: [admin, owner, staff, manager]
   tests:
     - "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"

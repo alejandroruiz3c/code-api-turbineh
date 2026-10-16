@@ -787,3 +787,36 @@ describe("canonical criteria: actors only through declared aliases (FA01 r4, ADR
     ).toEqual([]);
   });
 });
+
+// Staging functional bench r5 (FA02, FA03 at planning): generic UI verbs ("selects") no longer let the public booking
+// absorb the confirmation email or the staff calendar; "product entries" are products.
+describe("canonical criteria: staging bench r5 (ADR-0063)", () => {
+  const prompt =
+    "Appointment booking for a two-chair barber shop in Lisbon: customers pick a haircut (30 min) or haircut and beard (45 min), a barber or any barber, and a free time; no sign-up. Confirmation email with a link to cancel up to 6 hours before. Barbers see a day and week calendar and can take time off. Never double book a barber.";
+  const plan = () => canonicalForPlan({ recipesDir, recipe: "bookings", entities: ["Barber"] });
+  it.each([
+    [
+      "Given a customer provides an email and selects a time, the system sends a confirmation email containing a unique cancellation link.",
+      "bookings.confirmation-email",
+    ],
+    [
+      "Given a barber views the calendar, the system displays all scheduled appointments for the selected day and week.",
+      "bookings.staff-calendar",
+    ],
+    [
+      "Given a customer selects a specific barber, the system only shows time slots where that specific barber is free.",
+      "bookings.public-booking",
+    ],
+  ])("FA02 maps %j", (asked, id) => {
+    expect(mapToCanonical(asked, plan(), [], requestWords(prompt)).map((c) => c.id)).toEqual([id]);
+  });
+  it("FA03: an admin's product entries are the admin panel", () => {
+    expect(
+      mapToCanonical(
+        "Given an admin user logs into the admin panel, they can create, update, or delete product entries.",
+        canonicalForPlan({ recipesDir, recipe: "storefront" }),
+        [{ term: "owner", means: ["administrator", "admin", "staff"] }],
+      ).map((c) => c.id),
+    ).toEqual(["storefront.admin-panel"]);
+  });
+});
