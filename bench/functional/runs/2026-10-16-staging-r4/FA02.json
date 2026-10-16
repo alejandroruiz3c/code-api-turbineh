@@ -1,0 +1,156 @@
+{
+  "startedAt": "2026-10-16T19:28:41.890Z",
+  "id": "FA02",
+  "band": "A",
+  "flowId": "0bee82b2-7748-42fd-9501-ad4520c9094e",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a customer selects a 'haircut', when they pick a time slot, the system reserves exactly 30 minutes of the barber's availability.",
+        "Given a customer selects a 'haircut and beard', when they pick a time slot, the system reserves exactly 45 minutes of the barber's availability.",
+        "Given a customer selects 'any barber', when they book a slot, the system assigns the appointment to the first available barber.",
+        "Given a customer selects a specific barber, when they book a slot, the system assigns the appointment only to that barber."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.public-booking"],
+      "criterion": "A customer books a free time on the public page without an account and the booking is created"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a customer completes a booking, when the process finishes, the system sends a confirmation email containing a unique cancellation link."
+    },
+    {
+      "asked": [
+        "Given a customer clicks the cancellation link, when the current time is more than 6 hours before the appointment, the system successfully cancels the booking.",
+        "Given a customer clicks the cancellation link, when the current time is less than 6 hours before the appointment, the system prevents the cancellation."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.cancel-notice"],
+      "criterion": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a barber views their calendar, when they access the dashboard, they see their specific daily and weekly schedule."
+    },
+    {
+      "asked": [
+        "Given a barber marks a time period as 'time off', when a customer attempts to book during that period, the system shows the slot as unavailable."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.time-off"],
+      "criterion": "A staff member blocks time off and those time slots are no longer offered for booking"
+    },
+    {
+      "asked": [
+        "Given an appointment is being booked, when a slot is already occupied by another booking for a specific barber, the system prevents the double booking."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
+        "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.no-double-booking"],
+      "criterion": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 6/6",
+  "functional": {
+    "met": 6,
+    "total": 6,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 6,
+    "total": 6,
+    "ratio": 1,
+    "label": "Verified · functional 6/6"
+  },
+  "criteria": [
+    {
+      "text": "A customer books a free time on the public page without an account and the booking is created",
+      "status": "met",
+      "canonical": ["bookings.public-booking"],
+      "asked": [
+        "Given a customer selects a 'haircut', when they pick a time slot, the system reserves exactly 30 minutes of the barber's availability.",
+        "Given a customer selects a 'haircut and beard', when they pick a time slot, the system reserves exactly 45 minutes of the barber's availability.",
+        "Given a customer selects 'any barber', when they book a slot, the system assigns the appointment to the first available barber.",
+        "Given a customer selects a specific barber, when they book a slot, the system assigns the appointment only to that barber."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+      }
+    },
+    {
+      "text": "Given a customer completes a booking, when the process finishes, the system sends a confirmation email containing a unique cancellation link.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+      }
+    },
+    {
+      "text": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused",
+      "status": "met",
+      "canonical": ["bookings.cancel-notice"],
+      "asked": [
+        "Given a customer clicks the cancellation link, when the current time is more than 6 hours before the appointment, the system successfully cancels the booking.",
+        "Given a customer clicks the cancellation link, when the current time is less than 6 hours before the appointment, the system prevents the cancellation."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      }
+    },
+    {
+      "text": "Given a barber views their calendar, when they access the dashboard, they see their specific daily and weekly schedule.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+      }
+    },
+    {
+      "text": "A staff member blocks time off and those time slots are no longer offered for booking",
+      "status": "met",
+      "canonical": ["bookings.time-off"],
+      "asked": [
+        "Given a barber marks a time period as 'time off', when a customer attempts to book during that period, the system shows the slot as unavailable."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+      }
+    },
+    {
+      "text": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
+      "status": "met",
+      "canonical": ["bookings.no-double-booking"],
+      "asked": [
+        "Given an appointment is being booked, when a slot is already occupied by another booking for a specific barber, the system prevents the double booking."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+      }
+    }
+  ],
+  "minutes": 15.79,
+  "finishedAt": "2026-10-16T19:44:29.094Z"
+}

@@ -1,0 +1,229 @@
+{
+  "startedAt": "2026-10-16T19:28:41.890Z",
+  "id": "FA03",
+  "band": "A",
+  "flowId": "9a8fee2d-4235-47a8-bb55-4c82810dbbf8",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a user views the product catalogue, they can see photos of the ceramic products."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the admin creates a product with an image",
+        "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.images"],
+      "criterion": "The admin creates a product with an image"
+    },
+    {
+      "asked": [
+        "Given a user views a mug, they can see three distinct colour options, each with a unique SKU, price, and stock level."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the admin adds options with their own SKU, price and stock"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.variants"],
+      "criterion": "The admin adds options with their own SKU, price and stock"
+    },
+    {
+      "asked": ["Given a user selects items, they can add them to a shopping cart."],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.cart"],
+      "criterion": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+    },
+    {
+      "asked": [
+        "Given a user enters a valid discount code before the expiry date, the total price is reduced."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › uses a discount code: applied on the server, counted once on payment, then used up",
+        "tests/e2e/shop.spec.ts › the admin creates a one-use discount code",
+        "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.discount-codes"],
+      "criterion": "Uses a discount code: applied on the server, counted once on payment, then used up"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user enters an expired discount code, the total price remains unchanged."
+    },
+    {
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, the payment is processed successfully."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.checkout"],
+      "criterion": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
+    },
+    {
+      "asked": [
+        "Given a successful payment, the user receives an order confirmation email.",
+        "Given a successful sale, the stock level for the purchased SKU is automatically reduced by the quantity sold."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › an out-of-stock product cannot be added to the cart"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.orders-stock"],
+      "criterion": "The signed webhook marks the order paid and decrements each product's stock"
+    },
+    {
+      "asked": [
+        "Given an admin user logs into the admin panel, they can create, update, or delete products."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.admin-panel"],
+      "criterion": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it"
+    },
+    {
+      "asked": [
+        "Given an admin user logs into the admin panel, they can view a list of all completed orders."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.admin-orders"],
+      "criterion": "The owner accesses the admin area and sees the list of all orders with their payment status"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 9/9",
+  "functional": {
+    "met": 9,
+    "total": 9,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 9,
+    "total": 9,
+    "ratio": 1,
+    "label": "Verified · functional 9/9"
+  },
+  "criteria": [
+    {
+      "text": "The admin creates a product with an image",
+      "status": "met",
+      "canonical": ["storefront.images"],
+      "asked": [
+        "Given a user views the product catalogue, they can see photos of the ceramic products."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the admin creates a product with an image"
+      }
+    },
+    {
+      "text": "The admin adds options with their own SKU, price and stock",
+      "status": "met",
+      "canonical": ["storefront.variants"],
+      "asked": [
+        "Given a user views a mug, they can see three distinct colour options, each with a unique SKU, price, and stock level."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the admin adds options with their own SKU, price and stock"
+      }
+    },
+    {
+      "text": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
+      "status": "met",
+      "canonical": ["storefront.cart"],
+      "asked": ["Given a user selects items, they can add them to a shopping cart."],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      }
+    },
+    {
+      "text": "Uses a discount code: applied on the server, counted once on payment, then used up",
+      "status": "met",
+      "canonical": ["storefront.discount-codes"],
+      "asked": [
+        "Given a user enters a valid discount code before the expiry date, the total price is reduced."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "uses a discount code: applied on the server, counted once on payment, then used up"
+      }
+    },
+    {
+      "text": "Given a user enters an expired discount code, the total price remains unchanged.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/shop.test.ts",
+        "title": "refuses inactive, expired, used-up and below-minimum codes"
+      }
+    },
+    {
+      "text": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
+      "status": "met",
+      "canonical": ["storefront.checkout"],
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, the payment is processed successfully."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "The signed webhook marks the order paid and decrements each product's stock",
+      "status": "met",
+      "canonical": ["storefront.orders-stock"],
+      "asked": [
+        "Given a successful payment, the user receives an order confirmation email.",
+        "Given a successful sale, the stock level for the purchased SKU is automatically reduced by the quantity sold."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it",
+      "status": "met",
+      "canonical": ["storefront.admin-panel"],
+      "asked": [
+        "Given an admin user logs into the admin panel, they can create, update, or delete products."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+      }
+    },
+    {
+      "text": "The owner accesses the admin area and sees the list of all orders with their payment status",
+      "status": "met",
+      "canonical": ["storefront.admin-orders"],
+      "asked": [
+        "Given an admin user logs into the admin panel, they can view a list of all completed orders."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the owner accesses the admin area and sees the list of all orders with their payment status"
+      }
+    }
+  ],
+  "minutes": 20.2,
+  "finishedAt": "2026-10-16T19:48:54.055Z"
+}

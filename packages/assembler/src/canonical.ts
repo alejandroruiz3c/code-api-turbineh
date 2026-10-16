@@ -249,11 +249,29 @@ function absorbed(c: ResolvedCanonical, aliases: readonly string[]): Set<string>
   );
 }
 
-function servesActors(derived: string, c: ResolvedCanonical, aliases: readonly string[]): boolean {
+/**
+ * Every role the request criterion names is one the canonical criterion serves (its wording, `actors`, its tests), or
+ * this app's word for such a role through a declared alias ("client" → customer, "manager" → owner). App words that are
+ * not declared aliases never grant a role.
+ */
+function servesActors(
+  derived: string,
+  c: ResolvedCanonical,
+  pairs: readonly CanonicalAlias[],
+): boolean {
   const serves = rolesIn(
-    [c.criterion, ...c.actors, ...aliases, ...c.tests.map((t) => splitTestRef(t).title)].join(" "),
+    [c.criterion, ...c.actors, ...c.tests.map((t) => splitTestRef(t).title)].join(" "),
   );
-  return [...rolesIn(derived)].every((r) => serves.has(r));
+  const viaAlias = (r: string) =>
+    pairs.some((p) => {
+      const termRoles = [...rolesIn(p.term)];
+      return (
+        termRoles.length > 0 &&
+        termRoles.every((t) => serves.has(t)) &&
+        p.means.some((m) => rolesIn(m).has(r))
+      );
+    });
+  return [...rolesIn(derived)].every((r) => serves.has(r) || viaAlias(r));
 }
 
 /**
@@ -269,7 +287,7 @@ const scopeOnly = (text: string): string =>
 function candidate(
   derived: string,
   c: ResolvedCanonical,
-  aliases: readonly string[],
+  pairs: readonly CanonicalAlias[],
   saysText: string = derived,
 ): boolean {
   if (c.says.length === 0) return false;
@@ -292,7 +310,7 @@ function candidate(
     ),
   );
   if ([...salientStems(derived)].filter((w) => own.has(w)).length < 2) return false;
-  return servesActors(derived, c, aliases);
+  return servesActors(derived, c, pairs);
 }
 
 /** Narrative words of Given/When/Then requirements that carry nothing to check (residual check only). */
@@ -344,7 +362,8 @@ export function mapToCanonical(
   const aliases = aliasWords(input);
   const absorbedAlso = [...aliases, ...context];
   const saysText = withTerms(derived, input);
-  const cands = canon.filter((c) => candidate(derived, c, aliases, saysText));
+  const pairs = input.filter((a): a is CanonicalAlias => typeof a !== "string");
+  const cands = canon.filter((c) => candidate(derived, c, pairs, saysText));
   if (cands.length === 0) return [];
   const alone = cands.filter((c) => leftover(derived, [c], absorbedAlso).length === 0);
   if (alone.length > 0) {
@@ -561,10 +580,17 @@ export function canonicalForPlan(input: {
       ...(input.components ?? []),
     ]),
   ];
+  // Entities the recipe already implements (Booking in a bookings app) get no generated CRUD screens.
+  const provided = new Set(
+    recipeChain(input.recipesDir, input.recipe).flatMap((m) =>
+      (m.providedEntities ?? []).map((e) => e.toLowerCase()),
+    ),
+  );
+  const nameOf = (e: CanonicalEntity) => (typeof e === "string" ? e : e.name);
   return resolveCanonical(
     canonicalCriteria({ recipesDir: input.recipesDir, recipe: input.recipe, components }),
     catalogSource(input.recipesDir, input.recipe, components),
-    input.entities ?? [],
+    (input.entities ?? []).filter((e) => !provided.has(nameOf(e).toLowerCase())),
   );
 }
 
@@ -680,7 +706,12 @@ export function explainCanonical(
   return canon.map((c) => ({
     id: c.id,
     says: c.says.every((p) => safeRegExp(p)?.test(saysText) ?? false),
-    candidate: candidate(derived, c, aliases, saysText),
+    candidate: candidate(
+      derived,
+      c,
+      input.filter((a): a is CanonicalAlias => typeof a !== "string"),
+      saysText,
+    ),
     leftover: leftover(derived, [c], aliases),
   }));
 }

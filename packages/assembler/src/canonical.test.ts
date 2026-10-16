@@ -8,6 +8,7 @@ import {
   advertisedFunctions,
   auditRecipe,
   canonicalCriteria,
+  canonicalForPlan,
   canonicalize,
   mapToCanonical,
   requestWords,
@@ -759,5 +760,30 @@ describe("canonical criteria: planning-time precision (FA02 r2, ADR-0063)", () =
       "Customers book, cancel with the link, get emails and staff see the calendar and block time off",
     ])
       expect(mapToCanonical(asked, bookings(), [], about).length).toBeLessThanOrEqual(2);
+  });
+});
+
+// Staging functional bench r4 (FA01): "a client completes a booking without an account" was mapped to the owner's
+// generated CRUD of the recipe-provided Booking entity, because an app word ("client") was taken as any role.
+describe("canonical criteria: actors only through declared aliases (FA01 r4, ADR-0063)", () => {
+  it("a customer's booking is the public booking, never the owner's generated CRUD", () => {
+    const plan = canonicalForPlan({
+      recipesDir,
+      recipe: "bookings",
+      entities: ["Booking", "Artist"],
+    });
+    expect(plan.map((c) => c.id)).not.toContain("saas-crud.crud-create:Booking");
+    expect(plan.map((c) => c.id)).toContain("saas-crud.crud-create:Artist");
+    const asked = "A client can complete a booking without creating an account.";
+    expect(mapToCanonical(asked, plan, ["client", "artist"]).map((c) => c.id)).toEqual([
+      "bookings.public-booking",
+    ]);
+    expect(
+      mapToCanonical(asked, plan, [{ term: "customer", means: ["client"] }]).map((c) => c.id),
+    ).toEqual(["bookings.public-booking"]);
+    // A plain app word never makes the owner's CRUD serve a client.
+    expect(
+      mapToCanonical("A client creates an artist and sees it in the list", plan, ["client"]),
+    ).toEqual([]);
   });
 });
