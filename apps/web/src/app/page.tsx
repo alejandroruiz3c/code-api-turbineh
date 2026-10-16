@@ -129,7 +129,10 @@ export default async function Home() {
               <Stat value={`${s.verified}/${s.flows}`} label="Flows verified" accent />
               <Stat value={secs(s.avgSeconds)} label="Average time to a verified package" />
               <Stat value={pct(s.avgReusedShare)} label="Code reused from verified components" />
-              <Stat value={String(s.securityFixed)} label="Security issues fixed before delivery" />
+              <Stat
+                value={String(s.securityFixed)}
+                label="Security issues fixed before delivery (confirmed by a new scan)"
+              />
             </div>
             <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
               {items.map((i) => (

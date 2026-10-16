@@ -40,7 +40,8 @@ tradeoffs:
 config:
   - name: install
     description: "Copied by the assembler from files/ when selected: src/lib/jobs.ts, src/db/component-jobs.ts,
-      src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts (exact version, added by TurbineH)"
+      src/app/api/jobs/run/route.ts, tests/unit/jobs.test.ts, tests/unit/jobs-concurrency.test.ts (exact
+      version, added by TurbineH)"
   - name: JOBS_RUNNER_SECRET
     description: Environment variable read by the component's code.
   - name: CRON_SECRET
@@ -61,10 +62,15 @@ interfaces:
   - name: runDueJobs
     signature: async function runDueJobs( limit
     where: "@/lib/jobs"
+  - name: jobContext
+    signature: "function jobContext( store: JobStore, job: Pick<ClaimedJob, \"id\" | \"organizationId\">, signal: AbortSignal, ): JobContext"
+    where: "@/lib/jobs"
 extension_points:
   - what: Job Handlers
     where: defineJob
-    how: Provide a run function that accepts a validated payload and context.
+    how: "Provide a run function that accepts a validated payload and context; wrap every external effect (email,
+      payment, post) in ctx.once(key, fn) and pass ctx.idempotencyKey(key) to providers that accept an
+      Idempotency-Key, so overlapping cron calls and retries never repeat it."
 compatibility:
   package: turbineh/jobs.queue.turbineh@0.1.0
   runtime: node@>=20
@@ -85,16 +91,26 @@ guarantees:
     test: files/tests/unit/jobs.test.ts › renews the lease with a heartbeat while the handler runs
   - claim: A runner whose lease was taken over never writes its result (fencing token)
     test: "files/tests/unit/jobs.test.ts › fences a runner whose lease was taken over: its result is not written and the handler is aborted"
+  - claim: Two runners at the same time (overlapping cron calls) never run the same job twice
+    test: files/tests/unit/jobs-concurrency.test.ts › two runners at the same time never run the same job twice
+  - claim: Enqueues with the same idempotency key in a workspace are one job
+    test: files/tests/unit/jobs-concurrency.test.ts › overlapping enqueues with the same idempotency key are one job
+  - claim: A side effect wrapped in ctx.once runs at most once per job, across retries and runners
+    test: "files/tests/unit/jobs.test.ts › runs a side effect at most once per job across retries (ctx.once), with a stable idempotency key"
 limits:
   - Max attempts per job is capped at 20
   - Backoff delay is capped at 1 hour
   - Lease 60 s, heartbeat every 20 s; stale jobs without attempts left end as failed (LeaseExpired)
+  - "ctx.once is at most once: an effect interrupted by a crash is not retried (it stays recorded in job_effects)"
 example: |-
+  import { z } from 'zod';
   import { defineJob, enqueue } from '@/lib/jobs';
 
-  defineJob('email', { schema: {}, run: async (p, ctx) => {} }, async (p, ctx) => {});
+  defineJob('email.reminder', z.object({ to: z.email() }), async (p, ctx) => {
+    await ctx.once('send', () => sendReminder(p.to, { idempotencyKey: ctx.idempotencyKey('send') }));
+  });
 
-  enqueue('email', {}, { organizationId: '123' });
+  await enqueue('email.reminder', { to: 'ana@example.com' }, { organizationId, idempotencyKey: `reminder:${bookingId}` });
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13

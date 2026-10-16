@@ -20,10 +20,22 @@ type Row = {
   lastError: string | null;
 };
 
-function memoryStore(rows: Row[], clock: { now: number }): JobStore {
+function memoryStore(
+  rows: Row[],
+  clock: { now: number },
+  effects: Set<string> = new Set(),
+): JobStore {
   const held = (id: string, token: number) =>
     rows.find((r) => r.id === id && r.token === token && r.status === "running");
   return {
+    async claimEffect(id, key) {
+      if (effects.has(`${id}|${key}`)) return false;
+      effects.add(`${id}|${key}`);
+      return true;
+    },
+    async releaseEffect(id, key) {
+      effects.delete(`${id}|${key}`);
+    },
     async claim(limit, leaseMs) {
       for (const r of rows) {
         const s = staleAction(
@@ -185,5 +197,60 @@ describe("jobs.queue.turbineh", () => {
     clock.now = rows[0]!.runAt;
     expect(await runDueJobs(10, { store })).toMatchObject({ failed: 1 });
     expect(rows[0]?.status).toBe("failed");
+  });
+
+  it("runs a side effect at most once per job across retries (ctx.once), with a stable idempotency key", async () => {
+    const clock = { now: 1_000_000 };
+    const rows = [row({ type: "test.effect", maxAttempts: 3 })];
+    const store = memoryStore(rows, clock);
+    const sent: string[] = [];
+    let attempt = 0;
+    defineJob("test.effect", z.object({}), async (_p, ctx) => {
+      attempt++;
+      await ctx.once("send-email", async () => {
+        sent.push(ctx.idempotencyKey("send-email"));
+      });
+      // The email went out, then the job fails: the retry must not send it again.
+      if (attempt === 1) throw new Error("after the effect");
+    });
+    expect(await runDueJobs(10, { store })).toMatchObject({ retried: 1 });
+    clock.now = rows[0]!.runAt;
+    expect(await runDueJobs(10, { store })).toMatchObject({ done: 1 });
+    expect(attempt).toBe(2);
+    expect(sent).toEqual(["job-1:send-email"]);
+  });
+
+  it("lets a retry run an effect whose function threw (the record is removed)", async () => {
+    const clock = { now: 1_000_000 };
+    const rows = [row({ type: "test.effect-fails", maxAttempts: 3 })];
+    const store = memoryStore(rows, clock);
+    let calls = 0;
+    defineJob("test.effect-fails", z.object({}), async (_p, ctx) => {
+      await ctx.once("charge", async () => {
+        calls++;
+        if (calls === 1) throw new Error("provider down");
+      });
+    });
+    expect(await runDueJobs(10, { store })).toMatchObject({ retried: 1 });
+    clock.now = rows[0]!.runAt;
+    expect(await runDueJobs(10, { store })).toMatchObject({ done: 1 });
+    expect(calls).toBe(2);
+  });
+
+  it("never starts an effect after the lease was lost", async () => {
+    const clock = { now: 1_000_000 };
+    const rows = [row({ type: "test.lost-effect" })];
+    const store = memoryStore(rows, clock);
+    let ran = false;
+    defineJob("test.lost-effect", z.object({}), async (_p, ctx) => {
+      rows[0]!.token += 1; // another runner took the job over
+      await new Promise((r) => setTimeout(r, 30));
+      const r = await ctx.once("post", async () => {
+        ran = true;
+      });
+      expect(r.ran).toBe(false);
+    });
+    await runDueJobs(10, { store, leaseMs: 60_000, heartbeatMs: 5 });
+    expect(ran).toBe(false);
   });
 });

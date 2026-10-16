@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AiSafetyError,
   allowedTools,
@@ -48,5 +48,29 @@ describe("AI Safety Pack", () => {
     const tools = allowedTools(registry, ["email_me", "delete_everything"]);
     expect(tools.map((t) => t.name)).toEqual(["email_me"]);
     expect(tools.every(needsConfirmation)).toBe(true);
+  });
+
+  describe("personal data is redacted by default (AI_REDACT_PII, ADR-0065)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it("redacts emails and phone numbers when AI_REDACT_PII is not set", async () => {
+      vi.stubEnv("AI_REDACT_PII", "");
+      vi.resetModules();
+      const guard = await import("@/lib/ai/guard");
+      const g = guard.guardInput("Email ana@example.com about the order");
+      expect(g.text).toBe("Email [email] about the order");
+      expect(g.flags).toContain("pii-redacted");
+      expect(guard.scanOutput("Call +34 600 123 456").text).toBe("Call [phone]");
+    });
+
+    it("keeps personal data only with an explicit AI_REDACT_PII=false", async () => {
+      vi.stubEnv("AI_REDACT_PII", "false");
+      vi.resetModules();
+      const guard = await import("@/lib/ai/guard");
+      expect(guard.guardInput("Email ana@example.com").text).toBe("Email ana@example.com");
+    });
   });
 });

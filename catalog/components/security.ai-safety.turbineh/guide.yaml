@@ -48,7 +48,8 @@ config:
   - name: AI_MAX_INPUT_CHARS
     description: Environment variable read by the component's code.
   - name: AI_REDACT_PII
-    description: Environment variable read by the component's code.
+    description: "Redacts emails, phone numbers, IBANs and card numbers before they reach a model and in its answers.
+      Default true (privacy by default); opt out explicitly with AI_REDACT_PII=false."
   - name: AI_REQUESTS_PER_MINUTE_PER_USER
     description: Environment variable read by the component's code.
   - name: AI_DAILY_TOKENS_PER_USER

@@ -918,6 +918,9 @@ test("forced failure for the not-verified delivery test", () => {
     timings: { ...timings, total: Math.round(performance.now() - t0) },
     alerts: fin.alerts,
     remediation: fin.remediation,
+    // ADR-0065: first pass, corrections with diffs, refused changes and the findings a re-scan confirmed fixed.
+    audit: fin.audit,
+    exceptions: fin.exceptions,
     report: fin.report,
     handover: fin.handover,
     improvement: fin.improvement,
@@ -964,7 +967,7 @@ test("forced failure for the not-verified delivery test", () => {
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
     repoDir,
     alerts: fin.alerts.length,
-    remediated: fin.remediation.length,
+    remediated: fin.audit.fixed.length,
     delivery: fin.delivery.kind,
   });
   return {
@@ -1036,6 +1039,9 @@ export async function improveBuild(
     timings: { verify: fin.verifyMs, total: Math.round(performance.now() - t0) },
     alerts: fin.alerts,
     remediation: fin.remediation,
+    // ADR-0065: first pass, corrections with diffs, refused changes and the findings a re-scan confirmed fixed.
+    audit: fin.audit,
+    exceptions: fin.exceptions,
     report: fin.report,
     handover: fin.handover,
     improvement: fin.improvement,
@@ -1045,7 +1051,7 @@ export async function improveBuild(
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
     repoDir,
     alerts: fin.alerts.length,
-    remediated: fin.remediation.length,
+    remediated: fin.audit.fixed.length,
     delivery: fin.delivery.kind,
   });
   return {

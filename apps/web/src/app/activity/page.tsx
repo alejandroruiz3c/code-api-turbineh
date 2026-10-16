@@ -36,7 +36,10 @@ export default async function ActivityPage() {
         <Stat value={pct(s.avgReusedShare)} label="Code reused from verified components" />
         <Stat value={s.reusedLines.toLocaleString("en")} label="Lines you did not have to write" />
         <Stat value={newLines.toLocaleString("en")} label="New lines to maintain (glue)" />
-        <Stat value={String(s.securityFixed)} label="Security issues fixed before delivery" />
+        <Stat
+          value={String(s.securityFixed)}
+          label="Security issues fixed before delivery (confirmed by a new scan)"
+        />
       </section>
 
       <section aria-label="Flows" className="mt-10">

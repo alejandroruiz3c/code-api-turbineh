@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BackupCoder } from "@turbineh/backup-coder";
-import { leakingFiles, revertWeakenedTests, type VerifyResult } from "@turbineh/verifier";
+import { leakingFiles, revertForbiddenChanges, type VerifyResult } from "@turbineh/verifier";
 import {
   askFile,
   CODE_RULES,
@@ -75,7 +75,9 @@ export function correctableFiles(dir: string, log: string): string[] {
 const PATCH_SYSTEM = `You fix ONE file of a TypeScript/Next.js app so that the failing quality gate passes.
 Change only what the error log reports for this file, with the smallest edit. Keep exports, behaviour, validation,
 authorization checks and the "use server"/"use client" directive (first statement). Never add secrets. In a test file
-never delete, skip or loosen a test or an assertion: fix the code under test instead (weakened tests are reverted).`;
+never delete, skip or loosen a test or an assertion: fix the code under test instead (weakened tests are reverted).
+Never silence a check: no nosemgrep, eslint-disable, @ts-ignore or @ts-expect-error comments and no edits to lint,
+TypeScript or test-runner configuration (such changes are reverted).`;
 
 export interface CorrectionStep {
   attempt: number;
@@ -85,12 +87,16 @@ export interface CorrectionStep {
   usage: Usage;
 }
 
+/** Called for each change a correction proposed that was refused (weakened test, suppression, check config). */
+export type OnRefused = (r: { file: string; reason: string }) => void;
+
 /** One directed patch round with the compiler model, all affected files in parallel. Returns null if nothing to do. */
 export async function patchOnce(
   dir: string,
   v: VerifyResult,
   cfg: ModelCfg,
   attempt: number,
+  onRefused?: OnRefused,
 ): Promise<CorrectionStep | null> {
   const log = failureLog(v);
   const files = correctableFiles(dir, log);
@@ -115,7 +121,7 @@ export async function patchOnce(
       changed.push(f);
     }),
   );
-  const kept = dropLeaks(dir, keepAssertions(dir, changed));
+  const kept = dropLeaks(dir, keepAssertions(dir, changed, onRefused));
   if (kept.length === 0) return null;
   changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: directed correction ${attempt} (${changed.length} file(s))`);
@@ -129,6 +135,7 @@ export async function backupPatch(
   coder: BackupCoder,
   buildId: string,
   attempt: number,
+  onRefused?: OnRefused,
 ): Promise<CorrectionStep | null> {
   const log = failureLog(v);
   const files = correctableFiles(dir, log);
@@ -157,7 +164,7 @@ export async function backupPatch(
       changed.push(f);
     }),
   );
-  const kept = dropLeaks(dir, keepAssertions(dir, changed));
+  const kept = dropLeaks(dir, keepAssertions(dir, changed, onRefused));
   if (kept.length === 0) return null;
   changed.splice(0, changed.length, ...kept);
   commit(dir, `fix: backup coder correction (T4, ${changed.length} file(s))`);
@@ -165,12 +172,16 @@ export async function backupPatch(
 }
 
 /**
- * A repair never weakens a test (ADR-0054): changed test files that lose a test or an assertion, skip one, or edit an
- * assertion of a fixed oracle are restored from HEAD (deterministic, `revertWeakenedTests`) and dropped from the step.
+ * A repair never weakens a test (ADR-0054) nor silences a check (ADR-0065): changed test files that lose a test or an
+ * assertion, skip one, or edit an assertion of a fixed oracle, files that gain a suppression (`nosemgrep`,
+ * `eslint-disable`, `@ts-ignore`…) and edited check configuration are restored from HEAD (deterministic,
+ * `revertForbiddenChanges`), reported to `onRefused` and dropped from the step.
  */
-export function keepAssertions(dir: string, files: string[]): string[] {
+export function keepAssertions(dir: string, files: string[], onRefused?: OnRefused): string[] {
   if (!existsSync(join(dir, ".git"))) return files;
-  const weakened = new Set(revertWeakenedTests(dir, files).map((w) => w.file));
+  const refused = revertForbiddenChanges(dir, files);
+  for (const r of refused) onRefused?.(r);
+  const weakened = new Set(refused.map((w) => w.file));
   return files.filter((f) => !weakened.has(f));
 }
 

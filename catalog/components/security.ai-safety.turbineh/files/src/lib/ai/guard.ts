@@ -13,7 +13,8 @@ const Env = z.object({
     empty,
     z.coerce.number().int().min(1000).max(200_000).default(20_000),
   ),
-  AI_REDACT_PII: z.preprocess(empty, z.enum(["true", "false"]).default("false")),
+  // Privacy by default (GDPR art. 25, ADR-0065): personal data is redacted unless AI_REDACT_PII=false says otherwise.
+  AI_REDACT_PII: z.preprocess(empty, z.enum(["true", "false"]).default("true")),
 });
 let cached: z.infer<typeof Env> | undefined;
 export const guardConfig = () => (cached ??= Env.parse(process.env));
@@ -96,7 +97,7 @@ const SECRETS: RegExp[] = [
   /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
 ];
 
-/** Checks a model's answer before it is shown or stored: secrets always, personal data when configured. */
+/** Checks a model's answer before it is shown or stored: secrets always, personal data unless AI_REDACT_PII=false. */
 export function scanOutput(raw: string): Guarded {
   const flags: string[] = [];
   let text = raw;

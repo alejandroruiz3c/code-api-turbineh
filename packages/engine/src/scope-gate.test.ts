@@ -327,3 +327,27 @@ describe("F20 · quickstart from the real package", () => {
     ).toContain("pnpm db:seed");
   });
 });
+
+describe("pass with warnings in the badge (ADR-0065)", () => {
+  it("never shows a plain pass when a passed check has non-blocking findings left", () => {
+    const r = {
+      id: "b3",
+      status: "done",
+      options: {},
+      metrics: {
+        verify: [
+          { name: "static", ok: true },
+          { name: "dependencies", ok: true, warnings: 1 },
+        ],
+        handover: { checksPassed: 11, checksTotal: 11, checksWithWarnings: 1 },
+        acceptance: { met: 2, covered: 0, open: ["a", "b", "c"] },
+      },
+      artifact: { zipKey: "k" },
+      error: null,
+    };
+    expect(checksAndRequirements(r).badge).toBe(
+      "Checks 11/11 (1 with warnings) · Requirements 2/5 met",
+    );
+    expect(checksAndRequirements(r).checks).toEqual({ passed: 11, total: 11, warnings: 1 });
+  });
+});
