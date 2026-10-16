@@ -48,6 +48,7 @@ export function AgentFields({
             {TOOL_LABELS[t.name] ?? t.name}
           </label>
         ))}
+        {/* turbineh:module knowledge-base */}
         <label className="mt-2 flex items-center gap-2">
           <input
             type="checkbox"
@@ -56,6 +57,7 @@ export function AgentFields({
           />
           Answer from the knowledge base
         </label>
+        {/* turbineh:end-module knowledge-base */}
       </fieldset>
     </>
   );

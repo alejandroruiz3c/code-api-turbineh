@@ -6,12 +6,6 @@ import { TURBINEH_LOGO_SVG } from "./brand.js";
  * verified facts — no model text, no external resources.
  */
 
-interface EnvVar {
-  key: string;
-  note: string;
-}
-
-const REQUIRED = new Set(["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "ADMIN_EMAILS"]);
 /** AI connection settings: documented in their own section, as two equal choices (F-09), not in the tables. */
 const AI_CONNECTION = new Set([
   "TURBINEH_AI_URL",
@@ -20,6 +14,7 @@ const AI_CONNECTION = new Set([
   "AI_API_KEY",
   "AI_MODEL",
 ]);
+/** Plain-language notes for well-known settings (shown instead of the .env.example comment). */
 const EXPLAIN: Record<string, string> = {
   DATABASE_URL: "Connection string of your production PostgreSQL database.",
   BETTER_AUTH_SECRET:
@@ -45,12 +40,21 @@ const EXPLAIN: Record<string, string> = {
   AI_MODEL: "Model served by `AI_BASE_URL`.",
 };
 
+/** A setting of the app's env schema (src/env.ts + declared component settings, ADR-0064). */
+export interface EnvSetting {
+  name: string;
+  about: string;
+}
+
+/** The note DEPLOY.md shows for a setting. */
+export const settingNote = (e: EnvSetting) => EXPLAIN[e.name] ?? e.about;
+
 /**
  * How the app reaches a model (component ai.orchestrator.turbineh, `src/lib/ai/models.ts`): the TurbineH gateway or the
  * client's own OpenAI-compatible provider, presented as equal choices. Only what the shipped code does is described.
  */
-function aiSection(vars: EnvVar[], n: number): string {
-  const has = (k: string) => vars.some((v) => v.key === k);
+function aiSection(vars: EnvSetting[], n: number): string {
+  const has = (k: string) => vars.some((v) => v.name === k);
   if (!has("TURBINEH_AI_TOKEN") && !has("AI_BASE_URL")) return "";
   const own = has("AI_BASE_URL");
   return `
@@ -83,31 +87,22 @@ it. With option 2, your own provider's terms apply.
 `;
 }
 
-/** Keys and comments from the app's own .env.example. */
-export function envVarsOf(envExample: string): EnvVar[] {
-  const out: EnvVar[] = [];
-  let comment = "";
-  for (const raw of envExample.split("\n")) {
-    const line = raw.trim();
-    if (line.startsWith("#")) {
-      comment = line.replace(/^#\s*/, "");
-      continue;
-    }
-    const m = /^([A-Z][A-Z0-9_]*)=/.exec(line);
-    if (m?.[1]) out.push({ key: m[1], note: EXPLAIN[m[1]] ?? comment });
-    comment = "";
-  }
-  return out;
-}
-
-export function deployGuide(appName: string, envExample: string): string {
-  const vars = envVarsOf(envExample);
-  const required = vars.filter((v) => REQUIRED.has(v.key));
-  const optional = vars.filter((v) => !REQUIRED.has(v.key) && !AI_CONNECTION.has(v.key));
-  const ai = aiSection(vars, 3);
+/**
+ * DEPLOY.md from the app's single env schema (ADR-0064): the same Required / Optional split as the plan, the result,
+ * AGENTS.md and turbineh.json. The AI connection settings are presented in their own section as two equal options
+ * (F-09) instead of the tables.
+ */
+export function deployGuide(
+  appName: string,
+  env: { required: EnvSetting[]; optional: EnvSetting[] },
+): string {
+  const all = [...env.required, ...env.optional];
+  const required = env.required.filter((v) => !AI_CONNECTION.has(v.name));
+  const optional = env.optional.filter((v) => !AI_CONNECTION.has(v.name));
+  const ai = aiSection(all, 3);
   const step = (n: number) => (ai ? n + 1 : n);
-  const jobs = vars.some((v) => v.key === "JOBS_RUNNER_SECRET");
-  const row = (v: EnvVar) => `| \`${v.key}\` | ${v.note} |`;
+  const jobs = all.some((v) => v.name === "JOBS_RUNNER_SECRET");
+  const row = (v: EnvSetting) => `| \`${v.name}\` | ${settingNote(v).replace(/\|/g, "\\|")} |`;
   return `# Deploy ${appName}
 
 From this package to a live app your customers can use.
@@ -125,9 +120,7 @@ From this package to a live app your customers can use.
 
 Set these in your host's dashboard. Never commit them to the repository.
 
-| Required | What it is |
-|---|---|
-${required.map(row).join("\n")}
+${required.length ? `| Required | What it is |\n|---|---|\n${required.map(row).join("\n")}\n` : "No setting is required.\n"}
 ${optional.length ? `\n| Optional | What it is |\n|---|---|\n${optional.map(row).join("\n")}\n` : ""}${ai}
 ## ${step(3)} · Go live — option A: Vercel + Neon (simplest)
 

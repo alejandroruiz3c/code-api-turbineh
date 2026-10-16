@@ -67,6 +67,20 @@ integration:
       AI_PUBLIC_TURNS_PER_CONVERSATION,
     ]
   migrations: true
+# Tree-shaking (ADR-0064): the public assistant ships only when an installed domain toolkit is meant for the public.
+modules:
+  - id: public-assistant
+    about: "Public assistant: the /assistant page, POST /api/assistant and its widget for anonymous visitors"
+    capability: ai.public-assistant
+    when: public-toolkit
+    files:
+      [
+        src/app/assistant/,
+        src/app/api/assistant/,
+        src/components/assistant-widget.tsx,
+        src/lib/ai/assistant.ts,
+      ]
+    env: [AI_PUBLIC_MAX_INPUT_CHARS, AI_PUBLIC_REQUESTS_PER_MINUTE, AI_PUBLIC_TURNS_PER_CONVERSATION]
 quality:
   tests:
     {

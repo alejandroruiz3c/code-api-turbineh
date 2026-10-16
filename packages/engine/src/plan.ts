@@ -1,11 +1,13 @@
-import type {
-  CapabilitySummary,
-  Decision,
-  DetectedStack,
-  FileChange,
-  Plan,
-  ProjectPreferences,
-  Requirement,
+import {
+  envRequirements,
+  type CapabilitySummary,
+  type Decision,
+  type DeliveryManifest,
+  type DetectedStack,
+  type FileChange,
+  type Plan,
+  type ProjectPreferences,
+  type Requirement,
 } from "@turbineh/shared";
 import { componentSummary, requirementsFor, summarizeUseCase } from "./search.js";
 import { repositoryFit, type RepoAnalysis } from "./repo-analysis.js";
@@ -61,7 +63,17 @@ export interface PlanInput {
   preferences?: ProjectPreferences;
   /** Analysis of the connected repository (PLAN §16 P5): conventions, conflicts and adaptation decisions. */
   analysis?: RepoAnalysis;
+  /**
+   * The delivery manifest (ADR-0064) this plan is rendered from: settings come from its env schema (required and
+   * optional, every one of them) and what it does not include is stated and needs the person's approval.
+   */
+  delivery?: DeliveryManifest;
 }
+
+const NOT_INCLUDED_NOTICE = "Not included in this build: ";
+/** A capability the build will not include (ADR-0064): the person approves going ahead without it. */
+export const notIncludedNotice = (label: string, reason: string) =>
+  `${NOT_INCLUDED_NOTICE}${label} — ${reason}`;
 
 const native = (purl: string) => purl.startsWith("pkg:generic/turbineh");
 
@@ -167,11 +179,16 @@ export function buildPlan(input: PlanInput): Plan {
         name: input.slug,
         components: components.size,
       };
+  const delivery = input.delivery;
+  const excluded = (delivery?.entries ?? []).filter((e) => e.way === "not_included");
   const config: Requirement[] = [
     ...(input.useCase
       ? requirementsFor([...input.useCase.capabilities, ...caps])
-      : requirementsFor(caps)),
-    ...(input.envKeys ?? [])
+      : requirementsFor(caps)
+    ).filter((r) => !delivery || r.kind !== "env"),
+    // ADR-0064: every setting of the app's env schema, required ones first (BETTER_AUTH_* included).
+    ...(delivery ? envRequirements(delivery.env) : []),
+    ...(delivery ? [] : (input.envKeys ?? []))
       .filter((k) => !["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL"].includes(k))
       .map((k) => ({
         kind: "env" as const,
@@ -187,6 +204,9 @@ export function buildPlan(input: PlanInput): Plan {
   const needsApproval = [
     ...compat.incompatibilities.map((i) => `Before you continue: ${i}`),
     ...input.gaps.map(gapNotice),
+    ...excluded.map((e) =>
+      notIncludedNotice(e.label, e.reason ?? "no verified component can be used"),
+    ),
     ...(policy && !policy.allowDependencyChanges && deps.added.length > 0
       ? [
           `Adds ${deps.added.length} dependencies, but this project's policy does not allow new dependencies.`,
@@ -238,6 +258,9 @@ export function buildPlan(input: PlanInput): Plan {
           `${input.labels?.(g) ?? g}: no verified component yet — the Backup Coder may write it during generation (not catalogue-verified; checked only by this build's gate)`,
       ),
       ...(input.notCovered ?? []),
+      ...excluded.map(
+        (e) => `${e.label}: not included — ${e.reason ?? "no verified component can be used"}`,
+      ),
     ],
     decisions: input.decisions,
     files:
@@ -259,9 +282,10 @@ export function buildPlan(input: PlanInput): Plan {
     outcome: planOutcome(input.stack, kind),
     left: leftItems({
       gaps: input.gaps,
-      notCovered: input.notCovered ?? [],
+      notCovered: [...(input.notCovered ?? []), ...excluded.map((e) => e.label)],
       ...(input.labels ? { label: input.labels } : {}),
     }),
+    ...(delivery ? { delivery } : {}),
   };
 }
 

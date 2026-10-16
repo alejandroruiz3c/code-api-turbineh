@@ -44,6 +44,34 @@ providedCapabilities: [jobs.queue, data.csv-import, data.csv-export]
 requiredComponents:
   ai.orchestrator: ai.orchestrator.turbineh
   security.ai-safety: security.ai-safety.turbineh
+# Tree-shaking (ADR-0064): optional modules ship only when a requirement of the request asks for them. Without
+# batch-processes the template has no job runner and no CSV import/export of process items: those provided capabilities
+# belong to the module (`provides`) and are claimed only when it ships.
+modules:
+  - id: knowledge-base
+    about: "a knowledge base of uploaded documents used as answer sources"
+    capability: ai.knowledge-base
+    files:
+      [
+        src/server/knowledge.ts,
+        src/server/chunking.ts,
+        src/app/dashboard/knowledge/,
+        src/components/knowledge-form.tsx,
+      ]
+    nav: [/dashboard/knowledge]
+  - id: batch-processes
+    about: "batch AI processing of records (classify, extract, summarise) with a background job runner"
+    capability: ai.batch-processing
+    files:
+      [
+        src/server/processes.ts,
+        src/server/process-schema.ts,
+        src/app/dashboard/processes/,
+        src/app/api/jobs/run/route.ts,
+      ]
+    env: [JOBS_RUNNER_SECRET]
+    nav: [/dashboard/processes]
+    provides: [jobs.queue, data.csv-import, data.csv-export]
 nav:
   - { label: Assistants, href: /dashboard/agents }
   - { label: Knowledge, href: /dashboard/knowledge }

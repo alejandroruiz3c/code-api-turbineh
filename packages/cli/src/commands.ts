@@ -377,8 +377,25 @@ export function planLines(p: Plan): string[] {
             .join(", ")}${p.dependencies.length > 12 ? ` (+${p.dependencies.length - 12})` : ""}`,
         ]
       : []),
-    ...(p.config.length
-      ? [`  Settings you provide: ${p.config.map((q) => q.name).join(", ")}`]
+    // ADR-0064 (F-11): required and optional settings apart, from the app's single env schema.
+    ...(p.config.some((q) => q.kind !== "env" || q.required === true)
+      ? [
+          `  Settings you provide (required): ${p.config
+            .filter((q) => q.kind !== "env" || q.required === true)
+            .map((q) => q.name)
+            .join(", ")}`,
+        ]
+      : []),
+    ...(p.config.some((q) => q.kind === "env" && q.required !== true)
+      ? [
+          `  Optional settings: ${p.config
+            .filter((q) => q.kind === "env" && q.required !== true)
+            .map((q) => q.name)
+            .join(", ")}`,
+        ]
+      : []),
+    ...(p.delivery?.notSelected.length
+      ? [`  Left out (not asked for): ${p.delivery.notSelected.map((n) => n.label).join(", ")}`]
       : []),
     "",
     ...estimateLines(p.estimate),
@@ -884,8 +901,21 @@ export async function status(c: Ctx): Promise<CommandResult> {
         ...(r.result.works.length
           ? ["Works:", ...r.result.works.map((w) => `  ${green("✔")} ${w}`)]
           : []),
-        ...(r.result.needs.length
-          ? ["Needs:", ...r.result.needs.map((n) => `  ${yellow("!")} ${n.name} — ${n.why}`)]
+        ...(r.result.needs.some((n) => n.required !== false)
+          ? [
+              "Needs (required):",
+              ...r.result.needs
+                .filter((n) => n.required !== false)
+                .map((n) => `  ${yellow("!")} ${n.name} — ${n.why}`),
+            ]
+          : []),
+        ...(r.result.needs.some((n) => n.required === false)
+          ? [
+              `Optional settings: ${r.result.needs
+                .filter((n) => n.required === false)
+                .map((n) => n.name)
+                .join(", ")}`,
+            ]
           : []),
       ],
       ...(r.result.errors[0] ? { error: r.result.errors[0] } : {}),

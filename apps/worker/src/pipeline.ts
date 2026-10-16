@@ -64,10 +64,18 @@ import {
   type ScopeVerdict,
 } from "@turbineh/engine";
 import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
-import type { Plan } from "@turbineh/shared";
+import type { DeliveryManifest, Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
 import { requireRequirements } from "./required-components.js";
+import {
+  fromApproved,
+  justifyCapabilities,
+  patternEvidence,
+  useCaseCapabilities,
+  type RelevanceResult,
+} from "./relevance.js";
+import { buildManifest, plannedEnv, removedModules } from "./manifest.js";
 
 export type Phase =
   | "compiling"
@@ -201,6 +209,11 @@ export async function runBuild(
      * Plans ask for that choice through `needsApproval` instead.
      */
     componentsOnly?: boolean;
+    /**
+     * Generation from an approved plan (ADR-0064): the plan's delivery manifest. Its justifications are reused and
+     * its promises bind the generation — one not kept is a broken promise and the package is never "verified".
+     */
+    approved?: DeliveryManifest;
   } = {},
 ): Promise<BuildOutcome> {
   // The test-only marker never reaches a model (it is honoured only through options.forceFailure).
@@ -415,6 +428,9 @@ export async function runBuild(
   // Families without their own recipe yet fall back to the multi-tenant CRUD base (recorded in metrics).
   const recipeId = hasRecipe(recipesDir, spec.recipe) ? spec.recipe : "saas-crud";
   const recipe = mergedRecipe(recipeChain(recipesDir, recipeId));
+  // Plain-language names: capabilities, and the template modules a request may ask for (ADR-0064).
+  const label = (cap: string) =>
+    CAPABILITY_LABELS[cap] ?? recipe.modules?.find((m) => m.capability === cap)?.about ?? cap;
   // Recipe defaults are added by code, never left to the model.
   spec.capabilities = [
     ...new Set([...spec.capabilities, ...recipe.defaultCapabilities]),
@@ -466,6 +482,11 @@ export async function runBuild(
   // 2 · select (one batched decider request for the whole build)
   t = performance.now();
   const catalog = loadCatalog(join(deps.repoRoot, "catalog/components"));
+  // ADR-0055 (audit F09): a capability an approved component provides is never written by the Backup Coder, even
+  // when the resolver could not use that component in this build — it is reported as not covered instead.
+  const catalogued = new Set(
+    catalog.filter((c) => c.status === "approved").flatMap((c) => c.provides),
+  );
   // Components a required component needs (e.g. ui.kanban → domain.workflow, ADR-0048) are required too: with the
   // request's params when the fidelity output has them, otherwise with their defaults, listed under "What is left".
   const requirements = requireRequirements({
@@ -478,6 +499,64 @@ export async function runBuild(
   });
   domains.push(...requirements.domains);
   if (fidelity) fidelity.assembly.patterns.push(...requirements.defaults);
+
+  // Relevance (ADR-0064): only capabilities a requirement of the request (or a transversal requirement) justifies
+  // reach selection; recipe modules ship only when their capability is justified (tree-shaking).
+  const chainMeta = recipeChain(recipesDir, recipeId);
+  const moduleCaps = [...new Set((recipe.modules ?? []).map((m) => m.capability))];
+  const relevanceInput = {
+    summary: spec.summary,
+    prompt,
+    criteria: spec.acceptance_criteria,
+    recipe: {
+      id: recipeId,
+      useCase: useCaseCapabilities(chainMeta),
+      transversal: recipe.transversal ?? {},
+    },
+    required: recipe.requiredComponents ?? {},
+    evidence: patternEvidence(fidelity),
+    nonFunctional: nonFunctional.map((r) => ({ source: r.source, capabilities: r.capabilities })),
+    label,
+  };
+  let relevance: RelevanceResult;
+  if (options.approved) {
+    const reused = fromApproved(options.approved, [...spec.capabilities, ...moduleCaps]);
+    relevance = reused.result;
+    if (reused.unknown.length > 0) {
+      const extra = await justifyCapabilities(
+        { ...relevanceInput, capabilities: reused.unknown, required: {} },
+        deps.decider,
+      );
+      Object.assign(relevance.justified, extra.justified);
+      relevance.notSelected.push(...extra.notSelected);
+    }
+  } else {
+    relevance = await justifyCapabilities(
+      { ...relevanceInput, capabilities: [...spec.capabilities, ...moduleCaps] },
+      deps.decider,
+    );
+  }
+  spec.capabilities = spec.capabilities.filter(
+    (c) => (relevance.justified[c]?.length ?? 0) > 0,
+  ) as typeof spec.capabilities;
+  const keptModules = moduleCaps.filter((c) => (relevance.justified[c]?.length ?? 0) > 0);
+  // What the template implements once tree-shaken: a removed module's capabilities are not provided (ADR-0064).
+  const provided = (recipe.providedCapabilities ?? []).filter(
+    (c) =>
+      !(recipe.modules ?? []).some(
+        (m) => !keptModules.includes(m.capability) && m.provides?.includes(c),
+      ),
+  );
+  await deps.emit(buildId, "selecting", "relevance", {
+    via: relevance.via,
+    justified: Object.fromEntries(
+      Object.entries(relevance.justified).map(([c, js]) => [
+        c,
+        js.map((j) => `${j.kind}: ${j.ref}`),
+      ]),
+    ),
+    notSelected: relevance.notSelected,
+  });
   const selectionInput = {
     app: {
       recipe: spec.recipe,
@@ -486,8 +565,7 @@ export async function runBuild(
     },
     candidates: candidatesFor(
       spec.capabilities.filter(
-        (c) =>
-          !recipe.providedCapabilities?.includes(c) && !(c in (recipe.requiredComponents ?? {})),
+        (c) => !provided.includes(c) && !(c in (recipe.requiredComponents ?? {})),
       ),
       catalog,
     ),
@@ -558,11 +636,52 @@ export async function runBuild(
     rejected: resolution.rejected,
     gaps,
   });
+  // The delivery manifest (ADR-0064): the single source of truth of this build — every surface is rendered from it.
+  const nativeIds = Object.values(resolution.selected)
+    .filter((c) => c.pkg.name.startsWith("turbineh/"))
+    .map((c) => c.id);
+  const droppedModules = removedModules({
+    recipe,
+    keptCapabilities: new Set(keptModules),
+    componentsDir: join(deps.repoRoot, "catalog/components"),
+    components: nativeIds,
+  });
+  const manifest = buildManifest({
+    recipe: recipeId,
+    criteria: spec.acceptance_criteria,
+    capabilities: [...spec.capabilities, ...keptModules],
+    justified: relevance.justified,
+    notSelected: relevance.notSelected,
+    // A provided capability of a removed module is not in the app (ADR-0064).
+    provided: [
+      ...provided.filter((c) => !droppedModules.some((m) => m.provides?.includes(c))),
+      ...keptModules,
+    ],
+    selected: resolution.selected,
+    gaps,
+    catalogued,
+    env: plannedEnv({
+      recipesDir,
+      componentsDir: join(deps.repoRoot, "catalog/components"),
+      chain: chainMeta.map((m) => m.id),
+      components: nativeIds,
+      dropped: droppedModules.flatMap((m) => m.env ?? []),
+    }),
+    label,
+    approved: Boolean(options.plan || options.approved),
+  });
+  await deps.emit(buildId, "selecting", "manifest", {
+    entries: manifest.entries.map((e) => ({
+      capability: e.capability,
+      label: e.label,
+      way: e.way,
+      component: e.component,
+      justifiedBy: e.justifiedBy,
+      ...(e.reason ? { reason: e.reason } : {}),
+    })),
+    notSelected: manifest.notSelected,
+  });
   if (options.plan) {
-    const envTemplate = recipeChain(recipesDir, recipeId)
-      .map((m) => join(recipesDir, m.id, "template", ".env.example"))
-      .reverse()
-      .find((f) => existsSync(f));
     const plan = flowPlan({
       buildId,
       request: options.plan,
@@ -570,12 +689,10 @@ export async function runBuild(
       recipeId,
       selected: resolution.selected,
       decisions: selection.decisions,
-      gaps: gaps.map((g) => g.capability),
       templateDeps: pkg.dependencies,
-      templateEnv: envTemplate ? readFileSync(envTemplate, "utf8") : "",
-      componentsDir: join(deps.repoRoot, "catalog/components"),
       entities: spec.entities.map((e) => e.name),
-      labels: (cap) => CAPABILITY_LABELS[cap] ?? cap,
+      labels: label,
+      delivery: manifest,
       ...(scope ? { scope } : {}),
     });
     plan.criteria = planCriteria(spec.acceptance_criteria, recipesDir, recipeId, [
@@ -637,6 +754,7 @@ export async function runBuild(
     brand,
     domains,
     ...(fidelity ? { fidelity: fidelity.assembly } : {}),
+    modules: { justified: new Set(keptModules) },
     gaps: [
       ...gaps,
       ...external.map((e) => ({
@@ -686,12 +804,6 @@ test("forced failure for the not-verified delivery test", () => {
     written: [] as WrittenRules[],
   }));
   const componentsDir = join(deps.repoRoot, "catalog/components");
-  const label = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;
-  // ADR-0055 (audit F09): a capability an approved component provides is never written by the Backup Coder, even
-  // when the resolver could not use that component in this build — it is reported as not covered instead.
-  const catalogued = new Set(
-    catalog.filter((c) => c.status === "approved").flatMap((c) => c.provides),
-  );
   const toFill = gaps
     .filter(
       (g) => backupMayFill(g.capability, catalogued) && (g.trigger === "T1" || g.trigger === "T2"),
@@ -939,6 +1051,15 @@ test("forced failure for the not-verified delivery test", () => {
           rules.flatMap((r) => r.rules),
         ),
       },
+      // ADR-0064: the approved plan's manifest binds the generation; a direct build reconciles its own.
+      manifest: options.approved ?? manifest,
+      removed: Object.fromEntries(
+        pendingIntegration.map((p) => [
+          p.capability,
+          `The verified component ${p.component} could not be installed in this app`,
+        ]),
+      ),
+      removedModules: assembled.removedModules,
       metrics: { ...metrics, timings },
       swap: {
         toCommit: assembledCommit,
@@ -1000,6 +1121,8 @@ test("forced failure for the not-verified delivery test", () => {
     // Failure → owner → implicated parts, per swap round (ADR-0037 §D2).
     attribution: fin.attribution,
     acceptance: fin.acceptance,
+    // ADR-0064: the reconciled delivery manifest every surface is rendered from (with the footprint).
+    ...(fin.manifest ? { manifest: fin.manifest } : {}),
     // What is in the delivered repository after corrections and swaps.
     components: usedComponents
       .filter((u) => !fin.swappedOut.includes(u.capability))
@@ -1083,18 +1206,39 @@ export async function improveBuild(
   buildId: string,
 ): Promise<BuildOutcome> {
   const t0 = performance.now();
+  // ADR-0064: the parent's manifest is reconciled again with the improved package (same components, same promises).
+  const parentManifest = parent.metrics.manifest as DeliveryManifest | undefined;
   const fin = await finalize(
     {
       buildId,
       repoDir,
       scope: "improve",
+      ...(parentManifest
+        ? {
+            manifest: {
+              ...parentManifest,
+              entries: parentManifest.entries.map((e) => ({ ...e, status: "planned" as const })),
+              brokenPromises: [],
+            },
+            removed: Object.fromEntries(
+              parentManifest.entries
+                .filter((e) => e.status === "not_delivered" && e.way !== "not_included")
+                .map((e) => [e.capability, e.reason ?? "Not in the delivered package"]),
+            ),
+            written: parentManifest.entries
+              .filter((e) => e.way === "written" && e.status === "delivered")
+              .map((e) => e.capability),
+          }
+        : {}),
       facts: {
         appName: parent.spec.app_name,
         summary: parent.spec.summary,
         recipe: String((parent.metrics.recipe as { built?: string } | undefined)?.built ?? ""),
         entities: parent.spec.entities.map((e) => e.name),
         acceptanceCriteria: parent.spec.acceptance_criteria,
-        components: [],
+        components: (parentManifest?.entries ?? [])
+          .filter((e) => e.way === "component" && e.component && e.status === "delivered")
+          .map((e) => ({ capability: e.capability, id: e.component as string })),
         gaps: ((parent.metrics.gaps as { capability: string }[] | undefined) ?? []).map(
           (g) => g.capability,
         ),
@@ -1117,6 +1261,7 @@ export async function improveBuild(
     improvement: fin.improvement,
     improved: true,
     improvedFrom: parent.metrics.buildId ?? null,
+    ...(fin.manifest ? { manifest: fin.manifest } : {}),
   };
   await deps.emit(buildId, fin.ok ? "done" : "failed", "done", {
     repoDir,

@@ -3,8 +3,18 @@ description: Multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens
 extends: null
 providedEntities: []
 defaultCapabilities: [auth.session, authz.organizations, authz.roles, data.orm, data.validation, data.pagination, ui.table, ui.form, ui.layout, security.headers, ops.rate-limit]
-# Implemented by the template itself: better-auth hashes passwords (scrypt) before storing them.
-providedCapabilities: [security.password-hash]
+# Implemented by the template itself: better-auth hashes passwords (scrypt) before storing them; the generated screens
+# render their own tables and forms (server components and server actions, no table or form library); the Security
+# Pack's limiter (src/security/rate-limit.ts, shared PostgreSQL store) is the app's rate limiting (ADR-0064: a library
+# chosen for these would be a decision the app never uses).
+providedCapabilities: [security.password-hash, ui.table, ui.form, ops.rate-limit]
+# Transversal requirements (ADR-0064): what every app needs whatever the request says. They justify these capabilities
+# in the delivery manifest; anything else must be justified by a requirement of the request.
+transversal:
+  auth: [auth.session, authz.organizations, authz.roles, security.password-hash]
+  security: [security.headers, data.validation, ops.rate-limit]
+  persistence: [data.orm]
+  interface: [ui.layout, ui.table, ui.form, data.pagination]
 nav: []
 
 # Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.

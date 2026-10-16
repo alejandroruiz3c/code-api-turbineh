@@ -5,7 +5,6 @@ import {
   buildPlan,
   catalogToPlanned,
   PLATFORM_SERVICES,
-  decisionFromSelection,
   componentsForNeed,
   USE_CASES,
   writeComponentPackage,
@@ -16,7 +15,16 @@ import {
   type PlannedComponent,
   type RepoAnalysis,
 } from "@turbineh/engine";
-import type { CheckResult, DetectedStack, Plan, ProjectPreferences } from "@turbineh/shared";
+import {
+  promiseOf,
+  whyOf,
+  type CheckResult,
+  type Decision,
+  type DeliveryManifest,
+  type DetectedStack,
+  type Plan,
+  type ProjectPreferences,
+} from "@turbineh/shared";
 import type { ArtifactStorage } from "@turbineh/storage";
 import { parse } from "yaml";
 
@@ -82,7 +90,12 @@ const envKeysOf = (text: string) =>
     .map((l) => /^([A-Z][A-Z0-9_]*)=/.exec(l.trim())?.[1])
     .filter((k): k is string => Boolean(k));
 
-/** Plan of a complete flow, from the real selection and resolution of the pipeline. */
+/**
+ * Plan of a complete flow, rendered from the delivery manifest (ADR-0064) of the pipeline's real selection and
+ * resolution: one decision per component the package will contain (including the ones the use case's code needs) and
+ * per capability TurbineH writes or does not include, each with what in the request justifies it; the settings of
+ * the app's env schema; nothing decided that the package will not use.
+ */
 export function flowPlan(input: {
   buildId: string;
   request: PlanRequest;
@@ -92,37 +105,62 @@ export function flowPlan(input: {
     string,
     { id: string; pkg: { name: string; version: string }; license: { declared: string } }
   >;
+  /** The selection's ranking per capability (alternatives and confidence of the components it chose). */
   decisions: {
     capability: string;
     best: { id: string; p: number } | null;
     ranked: { id: string }[];
   }[];
-  gaps: string[];
   templateDeps: Record<string, string>;
-  templateEnv: string;
-  componentsDir: string;
   entities: string[];
   labels: (cap: string) => string;
+  delivery: DeliveryManifest;
   /** No template matched the need exactly: it is built on the closest one (ADR-0050). */
   scope?: { builtOn: string; reason: string };
 }): Plan {
   const useCase = USE_CASES.find((u) => u.id === input.recipeId) ?? null;
-  const components: PlannedComponent[] = Object.entries(input.selected).map(([capability, c]) => ({
-    id: c.id,
-    version: c.pkg.version,
-    license: c.license.declared,
-    purl: purlOf(c.pkg),
-    capability,
-    why:
-      input.decisions.find((d) => d.capability === capability)?.best?.id === c.id
-        ? `Best verified fit for ${input.labels(capability)}`
-        : `Required by the ${useCase?.name ?? input.recipeId} flow for ${input.labels(capability)}`,
-  }));
-  let env = input.templateEnv;
-  for (const c of components) {
-    const append = join(input.componentsDir, c.id, "files", ".env.example.append");
-    if (existsSync(append)) env += `\n${readFileSync(append, "utf8")}`;
-  }
+  const entries = input.delivery.entries;
+  const components: PlannedComponent[] = entries.flatMap((e) => {
+    const c = e.way === "component" ? input.selected[e.capability] : undefined;
+    if (!c) return [];
+    return [
+      {
+        id: c.id,
+        version: c.pkg.version,
+        license: c.license.declared,
+        purl: purlOf(c.pkg),
+        capability: e.capability,
+        why: whyOf(e),
+      },
+    ];
+  });
+  const decisions: Decision[] = entries
+    .filter((e) => e.way !== "recipe")
+    .map((e) => {
+      const ranked = input.decisions.find((d) => d.capability === e.capability);
+      const chosen = ranked?.best && ranked.best.id === e.component ? ranked.best.p : null;
+      return {
+        topic: e.capability,
+        choice:
+          e.way === "component"
+            ? (e.component ?? e.capability)
+            : e.way === "written"
+              ? "written by TurbineH"
+              : "not included",
+        why:
+          e.way === "not_included"
+            ? `Not included: ${e.reason ?? "no verified component can be used"}. ${whyOf(e)}`
+            : `${promiseOf(e).replace(/^./, (c) => c.toUpperCase())}. ${whyOf(e)}`,
+        alternatives: (ranked?.ranked ?? [])
+          .map((r) => r.id)
+          .filter((id) => id !== e.component)
+          .slice(0, 3),
+        // Components chosen by code (required by the use case or by another component) are certain.
+        confidence: chosen !== null ? Math.round(chosen * 100) / 100 : 1,
+        way: e.way,
+        justifiedBy: e.justifiedBy,
+      };
+    });
   const deps = Object.entries(input.templateDeps).map(([name, version]) => ({ name, version }));
   for (const c of components) {
     const npm = /^pkg:npm\/(.+)@([^@]+)$/.exec(c.purl);
@@ -136,10 +174,8 @@ export function flowPlan(input: {
     stack: input.request.stack,
     useCase,
     components,
-    gaps: input.gaps,
-    decisions: input.decisions
-      .map((d) => decisionFromSelection({ ...d, label: input.labels(d.capability) }))
-      .filter((d): d is NonNullable<typeof d> => d !== null),
+    gaps: entries.filter((e) => e.way === "written").map((e) => e.capability),
+    decisions,
     dependencies: deps,
     ...(input.request.projectDependencies
       ? { projectDependencies: input.request.projectDependencies }
@@ -148,8 +184,8 @@ export function flowPlan(input: {
     // removes it from scope with the person's explicit choice (`Plan.scope`).
     notCovered: [],
     labels: input.labels,
-    envKeys: envKeysOf(env),
     entities: input.entities,
+    delivery: input.delivery,
     ...(input.request.preferences ? { preferences: input.request.preferences } : {}),
     ...(input.request.analysis ? { analysis: input.request.analysis } : {}),
   });

@@ -1,15 +1,25 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  envOf,
   finalizeAcceptance,
+  footprintOf,
   readAcceptanceJson,
   recordOwners,
   verifiedGuide,
+  writeDeployGuide,
   writeReports,
   writeStartHere,
   type HandoverFacts,
+  type TreeShakeResult,
 } from "@turbineh/assembler";
+import {
+  DELIVERY_FILE,
+  notIncluded,
+  reconcileManifest,
+  type DeliveryManifest,
+} from "@turbineh/shared";
 import type { BackupCoder } from "@turbineh/backup-coder";
 import type { Decider } from "@turbineh/decider";
 import {
@@ -64,7 +74,12 @@ import {
   verify,
   type VerifyResult,
 } from "@turbineh/verifier";
-import { deliveryOf, notVerifiedMarkdown, type Delivery } from "./not-verified.js";
+import {
+  deliveryOf,
+  notVerifiedMarkdown,
+  withBrokenPromises,
+  type Delivery,
+} from "./not-verified.js";
 
 export interface FinalizeDeps {
   decider: Decider;
@@ -89,6 +104,17 @@ export interface FinalizeInput {
     "evidence" | "checks" | "alerts" | "remediation" | "improvement" | "finalVersion" | "audit"
   >;
   metrics: Record<string, unknown>;
+  /**
+   * The delivery manifest (ADR-0064): the approved plan's, or the build's own. Reconciled here with what the package
+   * really contains; every document is written from the reconciled manifest.
+   */
+  manifest?: DeliveryManifest;
+  /** Capabilities not delivered before finalize (e.g. an integration that failed), with the reason. */
+  removed?: Record<string, string>;
+  /** Capabilities TurbineH wrote that are in the package (default: the Backup Coder fills of this build). */
+  written?: string[];
+  /** Template modules removed by tree-shaking (for the footprint). */
+  removedModules?: TreeShakeResult["removed"];
   /**
    * Swap target: the commit before external integrations and Backup Coder fills. If directed corrections cannot make
    * the build green, only the parts the failure is attributed to (ADR-0037 §D2) are removed (their capabilities are
@@ -134,6 +160,8 @@ export interface FinalizeResult {
   delivery: Delivery;
   /** Failure → owner → implicated parts, for every swap decision (ADR-0037 §D2). */
   attribution: { round: number; failures: FailureAttribution[]; removed: string[] }[];
+  /** The reconciled delivery manifest (ADR-0064), with the footprint; null when the build had none. */
+  manifest: DeliveryManifest | null;
 }
 
 /** A file as it was at `commit` when it existed there (e.g. the business-rules stub), otherwise removed. */
@@ -581,12 +609,39 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
       !swappedOut.includes(p.capability) &&
       !(p.kind === "glue" && glueRemoved.includes(p.capability)),
   );
-  const delivery = deliveryOf(
+  const gateDelivery = deliveryOf(
     result,
     result.ok
       ? []
       : attributeFailures(input.repoDir, gateFailures(result), keptParts, failureLog(result)),
   );
+  // ADR-0064: the manifest reconciled with what the package really contains. A promise of the approved plan that the
+  // package does not keep is a broken promise: the package is delivered, never "verified".
+  const swappedSet = new Set(swappedOut);
+  const manifest = input.manifest
+    ? reconcileManifest(input.manifest, {
+        components: input.facts.components
+          .filter((c) => !swappedSet.has(c.capability))
+          .map((c) => c.id),
+        written: (
+          input.written ?? (input.facts.backupGenerated ?? []).map((b) => b.capability)
+        ).filter((c) => !swappedSet.has(c)),
+        removed: {
+          ...(input.removed ?? {}),
+          ...Object.fromEntries(
+            swappedOut.map((c) => [
+              c,
+              "Removed before delivery: a failing check was attributed to it and it could not be made to pass",
+            ]),
+          ),
+        },
+        env: envOf(input.repoDir),
+        label: (c) => input.facts.gapLabels?.[c] ?? c,
+        capabilityOf: (id) => input.facts.components.find((c) => c.id === id)?.capability ?? id,
+      })
+    : null;
+  if (manifest) manifest.footprint = footprintOf(input.repoDir, manifest, input.removedModules);
+  const delivery = withBrokenPromises(gateDelivery, manifest?.brokenPromises ?? []);
   const alerts = alertsOf(result);
   const exceptions = await advisoryExceptions(result, fixedVersion);
   // "Improve & redeliver" is offered once: never on an improvement build, never when nothing can be fixed.
@@ -603,7 +658,24 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   const facts: ReportFacts = {
     ...input.facts,
     components: input.facts.components.filter((c) => !swapped.has(c.capability)),
-    gaps: [...new Set([...input.facts.gaps, ...swappedOut.filter((c) => !c.startsWith("rules."))])],
+    gaps: manifest
+      ? notIncluded(manifest).map((e) => e.capability)
+      : [...new Set([...input.facts.gaps, ...swappedOut.filter((c) => !c.startsWith("rules."))])],
+    ...(manifest
+      ? {
+          gapLabels: {
+            ...(input.facts.gapLabels ?? {}),
+            ...Object.fromEntries(manifest.entries.map((e) => [e.capability, e.label])),
+          },
+          delivery: {
+            notIncluded: notIncluded(manifest)
+              .filter((e) => !manifest.brokenPromises.some((b) => b.capability === e.capability))
+              .map((e) => ({ capability: e.capability, label: e.label })),
+            brokenPromises: manifest.brokenPromises,
+            requiredEnv: manifest.env.required.map((e) => e.name),
+          },
+        }
+      : {}),
     backupGenerated: (input.facts.backupGenerated ?? []).filter((b) => !swapped.has(b.capability)),
     businessRules: (input.facts.businessRules ?? []).map((r) => ({
       ...r,
@@ -628,7 +700,7 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
   const handover = {
     appName: input.facts.appName,
     summary: input.facts.summary,
-    verified: result.ok,
+    verified: delivery.verified,
     checksPassed: result.steps.filter((s) => s.ok).length,
     checksTotal: result.steps.length,
     checksWithWarnings: result.steps.filter((s) => checkStatus(s) === "warn").length,
@@ -661,13 +733,16 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     gaps: facts.gaps,
     failures: delivery.failures,
     backup: (facts.backupGenerated ?? []).map((b) => ({ capability: b.capability, file: b.file })),
+    ...(manifest ? { delivery: manifest } : {}),
   });
   const acceptance = guide
     ? guide.criteria.map((c) => ({
         criterion: c.text,
         status: c.status === "unverified" ? ("covered" as const) : c.status,
       }))
-    : finalizeAcceptance(input.repoDir, result.ok);
+    : finalizeAcceptance(input.repoDir, delivery.verified);
+  if (manifest)
+    manifest.criteriaOpen = acceptance.filter((a) => a.status === "open").map((a) => a.criterion);
   const metrics = {
     ...input.metrics,
     acceptance: {
@@ -701,6 +776,12 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     );
   }
   writeStartHere(input.repoDir, handover);
+  if (manifest) {
+    // DEPLOY.md and .turbineh/delivery.json from the same reconciled manifest as AGENTS.md and turbineh.json.
+    writeDeployGuide(input.repoDir, input.facts.appName, manifest.env);
+    mkdirSync(join(input.repoDir, ".turbineh"), { recursive: true });
+    writeFileSync(join(input.repoDir, DELIVERY_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
+  }
   writeReports(
     input.repoDir,
     securityMarkdown(result, alerts, audit, exceptions),
@@ -723,7 +804,8 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     { cwd: input.repoDir },
   );
   return {
-    ok: result.ok,
+    ok: result.ok && delivery.verified,
+    manifest,
     handover,
     verify: result,
     alerts,

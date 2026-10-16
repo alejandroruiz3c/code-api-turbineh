@@ -7,6 +7,8 @@ import type {
   Hedged,
   IntentInput,
   IntentVerdict,
+  RelevanceAnswer,
+  RelevanceInput,
   SelectionCandidate,
   SelectionInput,
   SelectionResult,
@@ -20,6 +22,8 @@ import type {
  * - Selection: approved components that declare the capability, in catalogue order.
  * - Intent: the product family whose public description shares the most words with the request; no optional
  *   capability is inferred (recipes bring their defaults); a short list of obviously abusive requests is refused.
+ * - Relevance: a capability is justified by the criterion (else the requirement) that shares a meaningful word stem
+ *   with its plain-language name; nothing shared = not justified.
  * - Every other decision has no answer here, so the callers' deterministic code decides.
  * - The gateway never hedges.
  */
@@ -97,6 +101,58 @@ export function openSelection<C extends SelectionCandidate>(
   };
 }
 
+/** Words too generic to justify a capability on their own ("data", "user", "show"…). */
+const GENERIC = new Set(
+  (
+    "about after again also an and any are as at be been before being between both but by can could data each " +
+    "every few for from have how into its just like make many more most must need new not now of off on once " +
+    "only or other our out over own same see should show some such than that the their them then there these " +
+    "they this those through time to too under until up use used user using very view when where which while " +
+    "who will with within without would your app apps page pages screen screens system platform record records " +
+    "item items list lists value values text information info thing things work works way ways read reading " +
+    "write writing writes written create creating change changing manage managing provide providing support " +
+    "supporting allow allowing able one two three first last next limit limits limiting panel panels long very shown display displayed"
+  ).split(" "),
+);
+
+/** Word stems of a text (plain suffix stripping; enough to match "retry" with "retrying", "fail" with "failure"). */
+export const stems = (text: string): Set<string> =>
+  new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 2 && !GENERIC.has(w))
+      .map((w) =>
+        w
+          .replace(/(ations?|ings?|ures?|ments?|ness|ies|ied|ed|es|s|ly|er|ers|e)$/, "")
+          .replace(/(.)\1$/, "$1"),
+      )
+      .filter((w) => w.length > 2),
+  );
+
+/** Open relevance (ADR-0064): the criterion (else requirement) sharing the most word stems with the capability. */
+export function openRelevance(input: RelevanceInput): RelevanceAnswer {
+  const crit = input.criteria.map(stems);
+  const reqs = input.requirements.map(stems);
+  const justified: RelevanceAnswer["justified"] = {};
+  for (const c of input.capabilities) {
+    const want = stems(`${c.label} ${c.id.split(".").slice(1).join(" ")}`);
+    const best = (sets: Set<string>[]) =>
+      sets
+        .map((s, index) => ({ index, n: [...want].filter((w) => s.has(w)).length }))
+        .filter((x) => x.n > 0)
+        .sort((a, b) => b.n - a.n || a.index - b.index)[0] ?? null;
+    const fromCriteria = best(crit);
+    const fromRequirements = fromCriteria ? null : best(reqs);
+    justified[c.id] = fromCriteria
+      ? { by: { kind: "criterion", index: fromCriteria.index }, confidence: 1 }
+      : fromRequirements
+        ? { by: { kind: "requirement", index: fromRequirements.index }, confidence: 1 }
+        : { by: null, confidence: 1 };
+  }
+  return { justified, meta: { model: OPEN_MODEL, latencyMs: 0 } };
+}
+
 export const openDecider: Decider = {
   id: "heuristic",
   selectionVersion: "open-1",
@@ -110,6 +166,7 @@ export const openDecider: Decider = {
   fixableFindings: async () => null,
   matchCriteria: async () => null,
   businessRules: async () => [],
+  capabilityRelevance: async (input) => openRelevance(input),
 };
 
 export const openEngine: DecisionEngine = {

@@ -380,6 +380,58 @@
           "description": "Entity names the component implements: the CRUD generator never duplicates them."
         }
       }
+    },
+    "modules": {
+      "description": "Optional modules (ADR-0064, tree-shaking): parts of files/ that ship only when the request justifies their capability (or a deterministic condition holds). Shared files mark the module's lines between `turbineh:module <id>` and `turbineh:end-module <id>`.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "about", "capability", "files"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "about": {
+            "type": "string",
+            "minLength": 10
+          },
+          "capability": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9.-]*$"
+          },
+          "when": {
+            "enum": ["public-toolkit"]
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]*$"
+            }
+          },
+          "nav": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   }
 }

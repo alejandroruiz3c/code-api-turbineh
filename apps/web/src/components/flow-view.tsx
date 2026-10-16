@@ -1,5 +1,6 @@
 "use client";
 import type {
+  DeliveryManifest,
   EstimateVsActual,
   FlowOutcome,
   FlowState,
@@ -128,6 +129,8 @@ export interface BuildResult {
     audit?: CorrectionAudit;
     deployment?: { url?: string } | null;
     timings?: Record<string, number>;
+    /** ADR-0064: the reconciled delivery manifest every surface is rendered from. */
+    manifest?: DeliveryManifest;
   };
   artifact: {
     slug?: string;
@@ -240,6 +243,20 @@ export function FlowView({
         decider?: { questions?: number; latencyMs?: number };
       }
     | undefined;
+  // ADR-0064: what each part of the build is for (relevance), instead of the selection's fit alone.
+  const decided = by("selecting", "manifest") as
+    | {
+        entries?: {
+          capability: string;
+          label: string;
+          way: string;
+          component: string | null;
+          justifiedBy: { kind: string; ref: string }[];
+          reason?: string;
+        }[];
+        notSelected?: { capability: string; label: string }[];
+      }
+    | undefined;
   const verifying = run.filter((e) => e.phase === "verifying" && e.type === "done").at(-1)?.data as
     { steps?: { name: string; ok: boolean; ms: number }[]; package?: string } | undefined;
   const compiling = by("compiling") as
@@ -338,7 +355,51 @@ export function FlowView({
               ) : null}
             </Panel>
           ) : null}
-          {selecting?.decisions ? (
+          {decided?.entries ? (
+            <Panel
+              title={`Decisions · ${decided.entries.length} capabilities, each justified by your request`}
+            >
+              <ul className="grid gap-2 sm:grid-cols-2" data-testid="live-decisions">
+                {decided.entries.map((d) => (
+                  <li
+                    key={d.capability}
+                    className="rounded-lg border border-line px-3 py-2 text-xs"
+                  >
+                    <p className="font-mono text-muted">{d.capability}</p>
+                    <p className={`mt-1 ${d.way === "not_included" ? "text-amber" : "text-ice-2"}`}>
+                      {d.way === "component"
+                        ? d.component
+                        : d.way === "recipe"
+                          ? "implemented by the use case's template"
+                          : d.way === "written"
+                            ? "no verified component — TurbineH writes it (not catalogue-verified)"
+                            : `not included — ${d.reason ?? ""}`}
+                    </p>
+                    <p className="mt-1 text-muted">
+                      {d.justifiedBy.length
+                        ? `For: ${d.justifiedBy
+                            .map((j) =>
+                              j.kind === "criterion" || j.kind === "requirement"
+                                ? `“${j.ref}”`
+                                : j.kind === "transversal"
+                                  ? `every app (${j.ref})`
+                                  : j.kind === "use_case"
+                                    ? `the ${j.ref} use case`
+                                    : `needed by ${j.ref}`,
+                            )
+                            .join("; ")}`
+                        : "Nothing in the request justifies it"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              {decided.notSelected?.length ? (
+                <p className="mt-3 text-xs text-muted">
+                  Left out, not asked for: {decided.notSelected.map((n) => n.label).join(", ")}.
+                </p>
+              ) : null}
+            </Panel>
+          ) : selecting?.decisions ? (
             <Panel
               title={`Decisions · ${selecting.decisions.length} capabilities${selecting.decider?.questions ? ` · ${selecting.decider.questions} questions decided in one pass` : ""}`}
             >
@@ -547,13 +608,29 @@ function ResultScreen({
   const [copied, setCopied] = useState(false);
   const report = result.metrics.report;
   const docs = useMemo(() => result.artifact?.docs ?? {}, [result.artifact]);
-  const needs = useMemo(() => {
+  // ADR-0064 (F-11): the app's settings from its single env schema, required and optional apart. Flows delivered
+  // before the manifest fall back to the names DEPLOY.md lists.
+  const manifest = result.metrics.manifest;
+  const settings = useMemo(() => {
+    if (manifest)
+      return {
+        required: manifest.env.required.map((e) => e.name),
+        optional: manifest.env.optional.map((e) => e.name),
+      };
     const names = new Set<string>();
     for (const m of (docs["DEPLOY.md"] ?? "").matchAll(ENV_NAME)) {
       if (m[1] && !SECRETLESS_DEFAULTS.has(m[1])) names.add(m[1]);
     }
-    return [...names].slice(0, 12);
-  }, [docs]);
+    return { required: [...names], optional: [] as string[] };
+  }, [docs, manifest]);
+  const broken = manifest?.brokenPromises ?? [];
+  const excluded = manifest
+    ? manifest.entries.filter(
+        (e) =>
+          (e.way === "not_included" || e.status === "not_delivered") &&
+          !broken.some((b) => b.capability === e.capability),
+      )
+    : [];
   const works = (report?.criteria ?? []).filter((c) => c.verified);
   const pending = (report?.criteria ?? []).filter((c) => !c.verified);
   // One state model (F18): the same count as the badge, the API and the CLI.
@@ -603,30 +680,75 @@ function ResultScreen({
         <div className="flex flex-col gap-6">
           {/* F18: settings and unmet requirements are different things; neither is "configuration" for the other. */}
           <Panel title="Settings">
-            {needs.length === 0 ? (
+            {settings.required.length + settings.optional.length === 0 ? (
               <p className="text-sm text-teal">Nothing to set.</p>
             ) : (
-              <ul className="flex flex-col gap-2 text-sm">
-                {needs.map((n) => (
-                  <li key={n} className="flex gap-2">
-                    <span className="text-amber" aria-hidden="true">
-                      ○
+              (
+                [
+                  ["Required", settings.required, "The app needs these to do what you asked."],
+                  ["Optional", settings.optional, "Defaults work; set them to change behaviour."],
+                ] as const
+              ).map(([title, names, hint]) =>
+                names.length > 0 ? (
+                  <div
+                    key={title}
+                    className="mb-3"
+                    data-testid={`result-settings-${title.toLowerCase()}`}
+                  >
+                    <p className="text-sm font-semibold text-cream">
+                      {title} · {names.length}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {hint} Set them in .env.local (documented in{" "}
+                      {result.artifact?.files.includes(".env.example")
+                        ? ".env.example"
+                        : "config/.env.example"}
+                      ) and in your host; DEPLOY.md explains each one.
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-2 text-xs">
+                      {names.map((n) => (
+                        <li key={n} className="font-mono text-ice-2">
+                          {n}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null,
+              )
+            )}
+          </Panel>
+          {broken.length > 0 ? (
+            <Panel title="Approved in the plan, not delivered">
+              <ul className="flex flex-col gap-2 text-sm" data-testid="broken-promises">
+                {broken.map((b) => (
+                  <li key={b.capability} className="flex gap-2">
+                    <span className="text-bad" aria-hidden="true">
+                      ✗
                     </span>
                     <span>
-                      <span className="font-mono text-ice-2">{n}</span>
+                      {b.label}
                       <span className="block text-xs text-muted">
-                        Set it in .env.local (documented in{" "}
-                        {result.artifact?.files.includes(".env.example")
-                          ? ".env.example"
-                          : "config/.env.example"}
-                        )
+                        The plan promised {b.promised}. {b.reason}. The package is not verified
+                        until it is implemented and proven by a test.
                       </span>
                     </span>
                   </li>
                 ))}
               </ul>
-            )}
-          </Panel>
+            </Panel>
+          ) : null}
+          {excluded.length > 0 ? (
+            <Panel title="Not included in this build">
+              <ul className="flex flex-col gap-2 text-sm">
+                {excluded.map((e) => (
+                  <li key={e.capability}>
+                    {e.label}
+                    <span className="block text-xs text-muted">{e.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
           {pending.length > 0 ? (
             <Panel title="Requirements not met yet">
               <ul className="flex flex-col gap-2 text-sm">

@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Fixed
+
+- One source of truth for what a flow decides and delivers (ADR-0064, audit v2 F-03/F-11/F-05/Annex A): a delivery
+  manifest (`turbineh.delivery/v1`) built from the real selection renders the plan, the result, "Next steps",
+  DEPLOY.md, AGENTS.md, turbineh.json (`delivery`, `brokenPromises`), `.turbineh/delivery.json`, the web and the CLI.
+  Every decision says what in the request justifies it; the components the code always chose (AI orchestrator, AI
+  Safety Pack, domain components) now have a decision, and nothing is decided that the package does not use
+  (`ui.table`, `ui.form`, `ops.rate-limit` are the template's own). An approved promise the package does not keep
+  is a broken promise — delivered, never "verified" — and plans no longer promise "TurbineH writes it" for what it does
+  not write (`ops.idempotency` is "not included", with why, and needs approval). The result's "what is left" and
+  settings come from the delivered package (acceptance result and manifest), never from the plan's prediction.
+  Every flow records `metrics.consistency`; CI checks 0 contradictions for every recipe.
+- Settings: one env schema (`src/env.ts` + declared component settings) gives the same Required / Optional split in
+  the plan (with `BETTER_AUTH_*`), the result, DEPLOY.md, AGENTS.md, turbineh.json and the CLI.
+- Relevance: only capabilities a requirement of the request (or a transversal requirement: auth, security,
+  persistence, interface) justifies are selected — decided by the private engine's `capabilityRelevance`
+  (resource-decider 1.2.0), else open rules; the rest is shown as "left out, not asked for". Recipe tree-shaking:
+  optional template and component modules ship only when asked for (the public `/assistant` route only with a public
+  toolkit); a bookings app no longer gets the public-pages CMS route; the footprint of code linked to no criterion is
+  recorded per flow. Private resource decider pinned to v1.2.0 (`capabilityRelevance`).
+
 ### Security
 
 - Honest security gate for generated apps (ADR-0065, audit v2 N-02, F-07, F-08, F-10, F-12):

@@ -42,6 +42,7 @@ import { createLogger, loadLocalEnv, mailerFromEnv, readEnv } from "@turbineh/sh
 import { storageFromEnv, type ArtifactStorage } from "@turbineh/storage";
 import { buildCost } from "./cost.js";
 import { processDeployment } from "./deploy-job.js";
+import { deliveryConsistency } from "./consistency.js";
 import { processDelivery } from "./delivery.js";
 import { adaptationCoderFromEnv, modelSlotsFromEnv } from "./models.js";
 import { processRepoIntegration } from "./repo-integration.js";
@@ -59,7 +60,7 @@ import { generateComponentPackage } from "./component-package.js";
 import { runContracts } from "@turbineh/curation";
 import type { BuildSpec } from "@turbineh/compiler";
 import { runSample, trackedTokens, type RunSample } from "@turbineh/engine";
-import type { Plan } from "@turbineh/shared";
+import type { DeliveryManifest, Plan } from "@turbineh/shared";
 
 loadLocalEnv();
 const env = readEnv();
@@ -194,6 +195,8 @@ async function handle(build: BuildRow): Promise<void> {
             ...(forcedFailureRequested(build.prompt, process.env) ? { forceFailure: true } : {}),
             ...(build.options.covered_only === true ? { coveredOnly: true } : {}),
             ...(build.options.components_only === true ? { componentsOnly: true } : {}),
+            // ADR-0064: the approved plan's manifest binds the generation.
+            ...(mode === "generate" && plan?.delivery ? { approved: plan.delivery } : {}),
           });
   if (mode === "generate" && plan) outcome.metrics = { ...outcome.metrics, plan };
   // ADR-0062: a direct build that accepted the components-only offer (`components_only: true`) is packaged at once,
@@ -213,6 +216,26 @@ async function handle(build: BuildRow): Promise<void> {
       runContracts,
     });
     outcome = { ...pkg, metrics: { ...outcome.metrics, ...pkg.metrics, plan: offered } };
+  }
+  // ADR-0064: every surface of the delivered flow is compared with its delivery manifest; contradictions are recorded.
+  const delivered = outcome.metrics.manifest as DeliveryManifest | undefined;
+  if (delivered) {
+    try {
+      const consistency = deliveryConsistency({
+        manifest: delivered,
+        ...(outcome.repoDir ? { repoDir: outcome.repoDir } : {}),
+        ...(plan ? { plan } : {}),
+        metrics: outcome.metrics,
+      });
+      outcome.metrics.consistency = consistency;
+      if (!consistency.ok)
+        log.error("delivery surfaces disagree", {
+          buildId: build.id,
+          contradictions: consistency.contradictions.slice(0, 20),
+        });
+    } catch (err) {
+      log.error("consistency check failed", { buildId: build.id, error: String(err) });
+    }
   }
   let artifact: Record<string, unknown> | undefined;
   if (componentOnly || offerAccepted) {
