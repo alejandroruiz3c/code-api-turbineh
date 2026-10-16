@@ -969,3 +969,32 @@ export function estimateLines(e: Plan["estimate"]): string[] {
       : "  (benchmark average, not calibrated on finished runs)",
   ];
 }
+
+/**
+ * `turbineh ai-token <build-id>` (audit I-12): issues the app's AI gateway token (TURBINEH_AI_TOKEN) for a delivered
+ * build whose app uses AI through the orchestrator. Shown once; issuing again replaces the previous token.
+ */
+export async function aiToken(c: Ctx): Promise<CommandResult> {
+  const id = c.args[0];
+  if (!id)
+    fail(
+      "usage",
+      "No build id given.",
+      "Run `turbineh ai-token <build-id>` (the id from `turbineh status`).",
+    );
+  const project = readProject(c.cwd);
+  const r = await api<{ token?: string } & Record<string, unknown>>(
+    `/v1/builds/${encodeURIComponent(id as string)}/ai-token`,
+    { method: "POST", body: {}, workspace: project?.workspace },
+  );
+  return {
+    ok: true,
+    command: "ai-token",
+    data: r,
+    lines: [
+      `${green("✔")} AI token issued (shown once). Set it as TURBINEH_AI_TOKEN in the app's environment:`,
+      `  TURBINEH_AI_TOKEN=${r.token ?? ""}`,
+    ],
+    next: "Store it as a secret in the app's environment (never commit it).",
+  };
+}

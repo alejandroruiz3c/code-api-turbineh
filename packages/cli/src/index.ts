@@ -16,6 +16,7 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
                                     --approve builds only those components); --components builds exactly these
   turbineh resume [id]              keep waiting for a build that timed out or was interrupted, then write it
   turbineh status [id]              flows, states, pending build and integrations
+  turbineh ai-token <build-id>      issue the app's AI token (TURBINEH_AI_TOKEN), shown once
   turbineh left                     in a delivered package: what is left (open criteria with where, gate, settings)
   turbineh verify [integration]     fast checks with file:line and the fix
   turbineh verify --full [--offline] [--skip-scripts]

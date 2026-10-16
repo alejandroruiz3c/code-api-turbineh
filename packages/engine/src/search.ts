@@ -91,7 +91,7 @@ export function requirementsFor(capabilities: string[]): Requirement[] {
     req.push({
       kind: "env",
       name: "TURBINEH_AI_TOKEN",
-      why: "AI calls: a TurbineH gateway token (issued per app), or your own OpenAI-compatible provider instead (AI_BASE_URL, AI_API_KEY, AI_MODEL)",
+      why: "AI calls: a TurbineH gateway token issued per app (POST /v1/builds/{id}/ai-token, `turbineh ai-token <build-id>` or the MCP `ai_token` tool), or your own OpenAI-compatible provider instead (AI_BASE_URL, AI_API_KEY, AI_MODEL)",
       satisfied: false,
     });
   return req;

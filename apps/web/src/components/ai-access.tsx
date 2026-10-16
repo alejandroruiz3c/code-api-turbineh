@@ -39,7 +39,7 @@ export function AiAccess({ id }: { id: string }) {
 
   async function create() {
     setError(null);
-    const res = await fetch(`/v1/builds/${id}/ai-token`, { method: "POST" });
+    const res = await fetch(`/v1/builds/${id}/ai-token`, { method: "POST", headers: { "Content-Type": "application/json" } });
     const body = (await res.json().catch(() => ({}))) as {
       token?: string;
       url?: string;

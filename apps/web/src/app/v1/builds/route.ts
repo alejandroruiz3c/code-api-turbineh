@@ -5,7 +5,7 @@ import { requestChannel } from "@/server/channel";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
-import { problem } from "@/server/problem";
+import { NOT_JSON, problem, readJson } from "@/server/problem";
 
 const Body = z.object({
   prompt: z.string().trim().min(20, "Describe the app in at least 20 characters").max(20_000),
@@ -56,8 +56,10 @@ const Body = z.object({
 /** POST /v1/builds — queue a build. Header `Idempotency-Key` makes retries safe. */
 export async function POST(req: Request): Promise<Response> {
   const caller = await getCaller();
-  if (!caller) return problem(401, "Unauthorized", "Sign in with GitHub or send `Authorization: Bearer <api_key>`.");
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  if (!caller) return problem(401, "Unauthorized", "No valid access token.");
+  const json = await readJson(req);
+  if (json === NOT_JSON) return problem(400, "Invalid JSON", "The request body is not valid JSON.");
+  const parsed = Body.safeParse(json);
   if (!parsed.success) return problem(422, "Invalid request", parsed.error.issues[0]?.message);
   const quota = caller.kind === "api-key" ? caller.dailyQuota : env.USER_DAILY_BUILDS;
   if ((await buildsLastDay(db, caller.ownerId)) >= quota) {

@@ -6,6 +6,7 @@ import {
   getBuild,
 } from "@turbineh/db";
 import { requestChannel } from "@/server/channel";
+import { NOT_JSON, readJson } from "@/server/problem";
 import type { Plan } from "@turbineh/shared";
 import {
   analyseGitHubRepo,
@@ -88,7 +89,10 @@ const Body = z.object({
 export async function POST(req: Request): Promise<Response> {
   const caller = await requireCaller();
   if (caller instanceof Response) return caller;
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  const json = await readJson(req);
+  if (json === NOT_JSON)
+    return productProblem(400, ERRORS.invalidRequest("The request body is not valid JSON."));
+  const parsed = Body.safeParse(json);
   if (!parsed.success)
     return productProblem(
       422,

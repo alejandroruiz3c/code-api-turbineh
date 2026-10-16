@@ -102,7 +102,7 @@ describe("turbineh mcp", () => {
   it("lists the agent tools with input schemas", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["apply", "build", "left", "plan", "resume", "search", "status", "verify"].sort(),
+      ["ai_token", "apply", "build", "left", "plan", "resume", "search", "status", "verify"].sort(),
     );
     expect(tools.find((t) => t.name === "build")?.inputSchema.properties).toHaveProperty("spec");
     expect(tools.find((t) => t.name === "verify")?.inputSchema.properties).toHaveProperty("full");
@@ -124,5 +124,14 @@ describe("turbineh mcp", () => {
     const r = await client.callTool({ name: "status", arguments: { id: "nope" } });
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toMatchObject({ ok: false, error: { code: "not_found" } });
+  });
+});
+
+describe("mcpAction (audit I-17)", () => {
+  it("points tool errors at tools, not CLI commands", async () => {
+    const { mcpAction } = await import("./mcp.js");
+    expect(mcpAction('Run `turbineh build "x"` or `turbineh login`.')).toBe(
+      "Run the `build` tool or `turbineh login`.",
+    );
   });
 });

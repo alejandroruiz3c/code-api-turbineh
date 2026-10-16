@@ -11,7 +11,8 @@ export const DEFAULT_URL = "https://software.turbineh.com";
 export class CliError extends Error {
   constructor(
     readonly error: ProductError,
-    readonly exitCode = 1,
+    // Usage errors exit 2, as the documented exit-code table says (audit I-15).
+    readonly exitCode = error.code === "usage" ? 2 : 1,
   ) {
     super(error.message);
   }

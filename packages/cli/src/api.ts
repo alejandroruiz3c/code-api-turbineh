@@ -6,13 +6,15 @@ export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown; workspace?: string | undefined; raw?: boolean } = {},
 ): Promise<T> {
+  // Outside the try: a missing token is `unauthorized` with its own action, not a network error (audit I-15).
+  const bearer = token();
   let res: Response;
   try {
     res = await fetch(`${baseUrl()}${path}`, {
       method: init.method ?? "GET",
       redirect: "follow",
       headers: {
-        Authorization: `Bearer ${token()}`,
+        Authorization: `Bearer ${bearer}`,
         // ADR-0061: the API records the channel (cli, or mcp when `turbineh mcp` makes the call).
         "User-Agent": `turbineh-cli/${VERSION}${process.env.TURBINEH_CLI_SURFACE === "mcp" ? " mcp" : ""}`,
         ...(init.workspace ? { "x-turbineh-workspace": init.workspace } : {}),
@@ -24,7 +26,7 @@ export async function api<T>(
   } catch (err) {
     throw new CliError({
       code: "network",
-      message: `Could not reach ${baseUrl()}: ${err instanceof Error ? err.message : String(err)}.`,
+      message: `Could not reach ${baseUrl()}: ${(err instanceof Error ? err.message : String(err)).replace(/\.+$/, "")}.`,
       action: "Check your connection (or TURBINEH_URL) and run the same command again.",
     });
   }
