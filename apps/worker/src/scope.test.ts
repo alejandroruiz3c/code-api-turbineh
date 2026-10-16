@@ -231,10 +231,10 @@ describe("uncovered use case → components-only offer (ADR-0062), against the r
     }),
   };
 
-  it("owner's example: only the AI drafting, proved by a verified test; the core is said not to be included", async () => {
+  it("owner's example: AI drafting and publishing with a person in the loop (ADR-0067), each proved by a test; the autonomous core is said not to be included", async () => {
     const verdict = await gate();
     expect(verdict.status).toBe("uncovered");
-    // The open engine has no judgement and the core (publishing to social networks) is blocked: no offer.
+    // The open engine has no judgement and the core (an autonomous publisher) is blocked: no offer.
     const open = await explainUncovered({
       prompt: need,
       verdict,
@@ -254,18 +254,35 @@ describe("uncovered use case → components-only offer (ADR-0062), against the r
     });
     expect(result?.decidedBy).toBe("decider");
     const offer = explanation.offer;
-    // Never the scheduler (it cannot publish anywhere) nor sign-in (not asked for by the person).
-    expect(offer?.components.map((c) => c.id)).toEqual([
+    // Never a generic scheduler (social publishing schedules its own posts) nor sign-in (not asked for by the person);
+    // connecting the accounts comes with publishing as its declared dependency.
+    const ids = offer?.components.map((c) => c.id) ?? [];
+    expect(ids).toEqual([
       "ai.orchestrator.turbineh",
+      "social.publish.turbineh",
       "security.ai-safety.turbineh",
+      "social.connections.turbineh",
     ]);
+    expect(ids).not.toContain("jobs.scheduled.turbineh");
+    expect(ids).not.toContain("auth.session.better-auth");
     expect(offer?.components[0]?.serves).toEqual(["AI drafts a post from a topic"]);
     expect(offer?.components[0]?.proof[0]?.test).toMatch(/ai-agent\.test\.ts/);
+    const publish = offer?.components[1];
+    expect(publish?.serves).toEqual([
+      "Scheduled posts are published automatically to the connected social accounts",
+    ]);
+    expect(publish?.proof[0]?.test).toMatch(
+      /social-publish\.spec\.ts › human approval before publishing/,
+    );
+    expect(publish?.gives).toMatch(/approved by a person — never autonomously$/);
+    expect(offer?.components[3]?.requiredBy).toBe("social.publish.turbineh");
     expect(offer?.coreNotIncluded).toBe(true);
     expect(offer?.notIncluded).toMatch(
       /^Not included — the core of your request: “autonomous social media publisher”/,
     );
-    expect(offer?.youGet).toMatch(/^You get AI generation through the TurbineH orchestrator/);
+    expect(offer?.youGet).toMatch(
+      /^You get AI generation through the TurbineH orchestrator.*; publishing posts to LinkedIn/,
+    );
 
     // The plan: exactly those components, the explicit choice first, never the use case.
     const plan = offerPlan(
@@ -276,10 +293,7 @@ describe("uncovered use case → components-only offer (ADR-0062), against the r
     );
     expect(plan.capability.kind).toBe("component");
     expect(plan.capability.name).toBe(offer?.name);
-    expect(plan.components.map((c) => c.id).sort()).toEqual([
-      "ai.orchestrator.turbineh",
-      "security.ai-safety.turbineh",
-    ]);
+    expect(plan.components.map((c) => c.id).sort()).toEqual([...ids].sort());
     expect(plan.scope?.status).toBe("components_only");
     expect(plan.scope?.removed).toEqual(offer?.outOfScope);
     expect(plan.needsApproval[0]).toMatch(/^Build verified components only, /);

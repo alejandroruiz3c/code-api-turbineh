@@ -101,6 +101,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Components-only offer with the social components (ADR-0062 §7, ADR-0067): publishing with a person in the loop is
+  offered for social-publisher requests (never a generic scheduler next to it; a hint may supersede generic
+  capabilities), and the labelled set gains two social requests. Main CI was red after #124: the precision test and the
+  owner's-case expectation are updated with evidence (engine precision 1.000 on 20 requests).
 - Scope gate: the private engine's question saw only the first 60 catalogue components, so requirements served by
   later ones (payments, PDF, QR…) were judged outside the library; the worker now sends the whole catalogue with
   capabilities and keywords and the engine (resource-decider 1.1.1) picks the relevant components per requirement.

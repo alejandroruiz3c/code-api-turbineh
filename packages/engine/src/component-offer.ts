@@ -52,6 +52,11 @@ export interface OfferHint {
   proof: RegExp;
   /** The functional result the person gets, in plain words. */
   gives: string;
+  /**
+   * Capabilities this one already includes: when it is a candidate for a requirement, a generic provider of those is
+   * not offered for the same requirement (e.g. social publishing schedules its own posts — no separate scheduler).
+   */
+  supersedes?: readonly string[];
 }
 
 /**
@@ -163,6 +168,28 @@ export const OFFER_HINTS: readonly OfferHint[] = [
     gives: "RSS and Atom feeds",
   },
   {
+    // ADR-0067: publishing to LinkedIn, Facebook Pages, Instagram and X, with a person in the loop.
+    ask: /\b(publish\w*|post(s|ed|ing)?|cross-?post\w*)\b[^.]{0,60}\b(social|linkedin|facebook|instagram|twitter)\b|\b(social (media|network)s?|linkedin|facebook|instagram|twitter)\b[^.]{0,40}\b(publish\w*|post(s|ed|ing)?)\b/i,
+    provides: "social.publish",
+    proof: /\bpublish/i,
+    gives:
+      "publishing posts to LinkedIn, Facebook Pages, Instagram and X at a scheduled time, each post created and (when required) approved by a person — never autonomously",
+    supersedes: ["jobs.scheduled", "jobs.queue"],
+  },
+  {
+    ask: /\b(connect\w*|link\w*|sign in with|log in with)\b[^.]{0,60}\b(social (media )?(accounts?|networks?|profiles?)|linkedin|facebook|instagram|twitter)\b/i,
+    provides: "social.oauth",
+    proof: /\b(connect|oauth|consent)/i,
+    gives:
+      "connecting LinkedIn, Facebook Page + Instagram and X accounts (OAuth, tokens encrypted at rest)",
+  },
+  {
+    ask: /\b(engagement|likes|impressions|(post|social( media)?) (metrics|analytics|performance|stats|statistics))\b/i,
+    provides: "social.metrics",
+    proof: /\b(metric|likes|engagement)/i,
+    gives: "engagement metrics (likes, comments, shares, impressions) of the posts it published",
+  },
+  {
     ask: /\bkanban\b/i,
     provides: "ui.kanban",
     proof: /\b(kanban|column|board|card)/i,
@@ -250,7 +277,9 @@ export function candidatesFor(
     const evidence = evidenceFor(text, entry, hint);
     if (evidence) out.push({ entry, hint, evidence });
   }
-  return out;
+  // A specific component that already includes a generic capability wins over its generic provider.
+  const superseded = new Set(out.flatMap((c) => c.hint.supersedes ?? []));
+  return out.filter((c) => !superseded.has(c.hint.provides));
 }
 
 export interface OfferResult {
