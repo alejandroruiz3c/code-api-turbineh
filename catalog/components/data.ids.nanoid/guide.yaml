@@ -60,8 +60,19 @@ limits:
   - Does not guarantee ordering by creation time
 example: |-
   import { nanoid, customAlphabet } from "nanoid";
-  const id = nanoid();
-  const customId = customAlphabet("0123456789", 6)();
+
+  const ids = new Set(Array.from({ length: 1000 }, () => nanoid()));
+  console.log(ids.size); // → 1000
+  for (const id of ids) console.log(id); // → matches /^[A-Za-z0-9_-]{21}$/
+  console.log(customAlphabet("0123456789", 6)()); // → matches /^\d{6}$/
+example_check:
+  kind: typescript
+  from: contract.test.ts › generates url-safe unique ids
+  compiled:
+    against:
+      - nanoid@6.0.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -78,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

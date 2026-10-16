@@ -75,12 +75,20 @@ limits:
   - "One scope kind per app; a member can belong to several scopes of that kind"
   - "Invitation links are for one workspace and one email address"
   - "In staff-only sign-up apps the invited email must be allowlisted (ADMIN_EMAILS)"
-example: |
+example: |-
+  // A server action in the app: role check plus the per-record scopes this member may see.
   import { can, requireMember } from "@/server/authz";
   import { visibleScopes } from "@/server/record-access";
-  const ctx = await requireMember();
-  if (!can(ctx.role, "update")) throw new UserFacingError("Viewers cannot edit notes.");
-  const scopes = await visibleScopes(ctx); // "all" or the ids of the member's companies
+  import { UserFacingError } from "@/security/errors";
+
+  export async function editableScopes(): Promise<string[] | "all"> {
+    const ctx = await requireMember();
+    if (!can(ctx.role, "update")) throw new UserFacingError("Viewers cannot edit notes.");
+    return visibleScopes(ctx); // "all" or the ids of the member's companies
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/membership/params.json
   schema: params.schema.json

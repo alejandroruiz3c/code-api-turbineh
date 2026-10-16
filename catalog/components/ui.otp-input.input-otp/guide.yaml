@@ -68,24 +68,28 @@ guarantees:
 limits:
   - Does not send codes.
 example: |-
-  import { OTPInput, REGEXP_ONLY_DIGITS } from 'input-otp';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { OTPInput, REGEXP_ONLY_DIGITS } from "input-otp";
 
-  export function VerificationCode() {
-    return (
-      <OTPInput
-        maxLength={6}
-        pattern={REGEXP_ONLY_DIGITS}
-        render={({ slots }) => (
-          <div className="flex gap-2">
-            {slots.map((slot, idx) => (
-              <div key={idx} className="border p-2">{slot}
-              </div>
-            ))}
-          </div>
-        )}
-      />
-    );
-  }
+  const html = renderToString(
+    h(OTPInput, {
+      maxLength: 6,
+      pattern: REGEXP_ONLY_DIGITS,
+      render: () => h("span", null, "slots"),
+    }),
+  );
+  console.log(html); // → contains 'maxLength="6"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders a one-time code input limited to digits
+  compiled:
+    against:
+      - input-otp@1.5.0
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -102,10 +106,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

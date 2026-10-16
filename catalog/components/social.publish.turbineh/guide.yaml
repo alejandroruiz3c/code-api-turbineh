@@ -92,11 +92,27 @@ limits:
   - "Text, and one image by public https URL (JPEG for Instagram); no video, carousel, story, reel, poll, thread, link preview control or first comment"
   - "LinkedIn's 3,000-character commentary limit comes from LinkedIn Help (the API only reports FIELD_LENGTH_TOO_LONG); Facebook's 63,206 is the long-standing UI limit"
   - "Needs a scheduler calling the runner; posting precision is the scheduler's interval. Instagram containers are polled up to ~30 s per attempt"
-example: |
-  // Scheduler (every minute): curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/social/publish/run
-  // From code: a draft a person will review and submit
-  await composePosts(ctx, { connectionIds: [id], text, versions: { x: shortText }, imageUrl: null,
-    scheduledLocal: "2026-10-20T09:00", timeZone: "Europe/Madrid", idempotencyKey: key, intent: "draft" });
+example: |-
+  // Server code in the app (e.g. a server action): a draft a person will review and submit; the job at
+  // /api/social/publish/run publishes scheduled posts.
+  import type { Ctx } from "@/social/connections";
+  import { composePosts } from "@/social/posts";
+
+  export async function draftLaunchPost(ctx: Ctx, connectionId: string, formKey: string) {
+    return composePosts(ctx, {
+      connectionIds: [connectionId],
+      text: "We are live: book your first session online.",
+      versions: { x: "We are live — book online." },
+      imageUrl: null,
+      scheduledLocal: "2026-10-20T09:00",
+      timeZone: "Europe/Madrid",
+      idempotencyKey: formKey,
+      intent: "draft",
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/social/params/publish.json
   schema: params.schema.json

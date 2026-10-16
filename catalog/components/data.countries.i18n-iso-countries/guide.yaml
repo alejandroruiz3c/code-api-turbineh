@@ -65,15 +65,20 @@ guarantees:
 limits:
   - Does not validate postal addresses
 example: |-
-  import { isCountryCode, countryName, countryOptions, CountryLang } from '@/integrations/data-countries';
+  import countries from "i18n-iso-countries";
+  import en from "i18n-iso-countries/langs/en.json";
 
-  const code: string = 'ES';
-  const lang: CountryLang = 'en';
-
-  if (isCountryCode(code)) {
-    console.log(countryName(code, lang));
-    console.log(countryOptions(lang));
-  }
+  countries.registerLocale(en);
+  console.log(countries.getName("ES", "en")); // → "Spain"
+  console.log(countries.isValid("XX")); // → false
+example_check:
+  kind: typescript
+  from: contract.test.ts › returns localised country names from ISO codes
+  compiled:
+    against:
+      - i18n-iso-countries@7.14.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -90,10 +95,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

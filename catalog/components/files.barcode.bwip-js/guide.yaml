@@ -37,8 +37,8 @@ config:
     description: pnpm add bwip-js@4.11.4 (exact version, added by TurbineH)
 interfaces:
   - name: bwipjs
-    signature: import { bwipjs } from "bwip-js"
-    where: bwip-js
+    signature: import bwipjs from "bwip-js/node"
+    where: bwip-js/node
 extension_points:
   - what: custom drawing interface
     where: text() method
@@ -56,10 +56,18 @@ guarantees:
 limits:
   - Does not scan barcodes
 example: |-
-  import { bwipjs } from "bwip-js";
-  // Note: bwipjs is the import name from the specifier
-  // The code uses bwipjs.toSVG
+  import bwipjs from "bwip-js/node";
+
   const svg = bwipjs.toSVG({ bcid: "ean13", text: "5901234123457" });
+  console.log(svg); // → contains "<svg"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders an EAN-13 barcode as SVG
+  compiled:
+    against:
+      - bwip-js@4.11.4
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -76,10 +84,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

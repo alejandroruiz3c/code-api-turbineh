@@ -92,11 +92,21 @@ limits:
   - "No payments, reminders or external calendar sync"
   - "Time off is checked when times are offered and booked; a booking racing a time-off change in the same instant is not locked out"
   - "Local times inside a DST gap are never offered; ambiguous fall-back times use the first occurrence"
-example: |
+example: |-
+  // Server code in the app (e.g. a staff action in src/app/dashboard/appointments/actions.ts).
   import { availability, createAppointment } from "@/bookings/service";
-  const day = await availability({ day: "2026-11-02" });            // real free times
-  const first = day.slots[0];
-  if (first) await createAppointment({ day: "2026-11-02", time: first.time, name: "Ana García", email: "ana@example.com", via: "staff" });
+
+  export async function bookFirstFreeSlot(day: string, name: string, email: string) {
+    const free = await availability({ day }); // real free times: hours, duration, time zone, existing bookings
+    const first = free.slots[0];
+    if (!first) return null;
+    return createAppointment({ day, time: first.time, name, email, via: "staff" });
+  }
+
+  export const example = () => bookFirstFreeSlot("2026-11-02", "Ana García", "ana@example.com");
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/bookings/params.json
   schema: params.schema.json

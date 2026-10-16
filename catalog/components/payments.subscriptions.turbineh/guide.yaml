@@ -97,12 +97,20 @@ limits:
   - Supports only one Pro plan tier out of the box
   - Does not handle usage-based billing or taxes
 example: |-
-  import { billingEnv, stripePost } from "@/lib/billing";
+  // Server code in the app (e.g. src/app/dashboard/reports/page.tsx): a paid-only feature.
+  import { billingConfigured, requirePlan, workspacePlan } from "@/lib/billing";
   import { hasPaidAccess } from "@/lib/billing-rules";
 
-  const config = billingEnv;
-  const isPro = hasPaidAccess('pro', 'active');
-  const response = await stripePost('/v1/customers/sub_123', new URLSearchParams({}));
+  export async function proReport() {
+    const ctx = await requirePlan("pro"); // members without an active Pro plan go to /dashboard/billing
+    const plan = await workspacePlan(ctx.organizationId);
+    return { organizationId: ctx.organizationId, plan: plan.plan, stripeReady: billingConfigured() };
+  }
+
+  export const isPro = hasPaidAccess("pro", "active"); // → true
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -119,10 +127,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -37,9 +37,10 @@ export function ProductNav() {
           await fetch("/api/access", { method: "DELETE" });
           router.push("/access");
         }}
+        title="Removes your invitation access from this browser; you can enter it again at any time."
         className="text-xs text-muted underline-offset-4 hover:text-ice-2 hover:underline"
       >
-        Leave
+        Sign out
       </button>
     </nav>
   );

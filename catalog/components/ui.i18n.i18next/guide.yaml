@@ -37,7 +37,7 @@ config:
     description: pnpm add i18next@26.4.2 (exact version, added by TurbineH)
 interfaces:
   - name: i18next
-    signature: import { i18next } from "i18next"
+    signature: import i18next from "i18next"
     where: i18next
 extension_points:
   - what: Backends
@@ -61,7 +61,8 @@ guarantees:
 limits:
   - Does not translate content automatically
 example: |-
-  import { i18next } from "i18next";
+  import i18next from "i18next";
+
   const i = i18next.createInstance();
   await i.init({
     lng: "es",
@@ -75,8 +76,16 @@ example: |-
       },
     },
   });
-  i.t("hi", { name: "Ana" });
-  i.t("item", { count: 3 });
+  console.log(i.t("hi", { name: "Ana" })); // → "Hola Ana"
+  console.log(i.t("item", { count: 3 })); // → "3 elementos"
+example_check:
+  kind: typescript
+  from: contract.test.ts › translates with interpolation and plurals
+  compiled:
+    against:
+      - i18next@26.4.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -93,10 +102,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

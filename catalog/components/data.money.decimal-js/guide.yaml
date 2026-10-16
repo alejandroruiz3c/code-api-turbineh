@@ -36,7 +36,7 @@ config:
     description: pnpm add decimal.js@10.6.0 (exact version, added by TurbineH)
 interfaces:
   - name: Decimal
-    signature: import { Decimal } from "decimal.js"
+    signature: import Decimal from "decimal.js"
     where: decimal.js
 extension_points:
   - what: Decimal constructor
@@ -56,11 +56,18 @@ limits:
   - Precision loss occurs when using numeric literals with more than 15 significant digits or outside the
     range of Number values.
 example: |-
-  import { Decimal } from 'decimal.js';
-  const x = new Decimal('0.1');
-  const y = new Decimal('0.2');
-  const result = x.plus(y);
-  console.log(result.toString()); // '0.3'
+  import Decimal from "decimal.js";
+
+  console.log(new Decimal("0.1").plus("0.2").toString()); // → "0.3"
+  console.log(new Decimal("19.99").times(3).toFixed(2)); // → "59.97"
+example_check:
+  kind: typescript
+  from: contract.test.ts › avoids binary floating point errors
+  compiled:
+    against:
+      - decimal.js@10.6.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -77,10 +84,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

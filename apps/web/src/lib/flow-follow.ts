@@ -43,6 +43,11 @@ export interface FollowDeps<R extends { status: string }> {
   silenceMs?: number;
   pollMs?: number;
   refollowMs?: number;
+  /**
+   * Persisted state rendered by the server (N-03, ADR-0066): the row and its trace so far. The follower starts from it
+   * — a finished flow is final at once — and still loads the row and follows the stream for anything newer.
+   */
+  initial?: { result?: R | null; events?: FollowEvent[] };
 }
 
 const CLOSED = 2;
@@ -56,8 +61,8 @@ export function followFlow<R extends { status: string }>(
   const pollMs = deps.pollMs ?? 10_000;
   const refollowMs = deps.refollowMs ?? 2_000;
   const state: FollowSnapshot<R> = {
-    events: [],
-    result: null,
+    events: [...(deps.initial?.events ?? [])],
+    result: deps.initial?.result ?? null,
     connection: "connecting",
     lastEventAt: now(),
   };

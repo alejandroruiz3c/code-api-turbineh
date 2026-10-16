@@ -60,11 +60,24 @@ guarantees:
 limits:
   - Does not manage availability or bookings
 example: |-
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
   import { DayPicker } from "react-day-picker";
 
-  function MyDatePicker() {
-    return <DayPicker mode="single" defaultMonth={new Date(2026, 9, 1)} />;
-  }
+  const html = renderToString(
+    h(DayPicker, { mode: "single", defaultMonth: new Date(2026, 9, 1) }),
+  );
+  console.log(html); // → contains 'role="grid"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › server-renders an accessible month grid
+  compiled:
+    against:
+      - react@19.3.0
+      - react-day-picker@10.0.1
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

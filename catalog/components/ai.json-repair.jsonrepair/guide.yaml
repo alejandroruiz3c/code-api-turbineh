@@ -65,9 +65,18 @@ guarantees:
 limits:
   - Does not validate the shape of the resulting object
 example: |-
-  import { parseModelJson } from '@/integrations/ai-json-repair';
+  import { jsonrepair } from "jsonrepair";
 
-  const repaired = parseModelJson("```json\n{name: 'Ana', tags: ['vip',], active: True}\n```");
+  const raw = "```json\n{name: 'Ana', tags: ['vip',], active: True}\n```";
+  console.log(JSON.parse(jsonrepair(raw))); // → { name: "Ana", tags: ["vip"], active: true }
+example_check:
+  kind: typescript
+  from: contract.test.ts › repairs typical model JSON mistakes
+  compiled:
+    against:
+      - jsonrepair@3.15.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -84,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -7,6 +7,7 @@ import { checkComponents, checkRecipes } from "./agent-ready.js";
 import { buildIndex, INDEX_DIR } from "./catalog-index.js";
 import { docsIssues } from "./docs.js";
 import { paramsErrors } from "./params.js";
+import { exampleErrors } from "./snippets.js";
 import { validateManifestFile } from "./validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -30,6 +31,8 @@ for (const dir of dirs) {
     res.errors.push(...guideErrors(join(root, dir.name), id));
     // Parameterised components (ADR-0041): schema compiles and the shipped default satisfies it.
     res.errors.push(...paramsErrors(join(root, dir.name)));
+    // Public usage snippet (ADR-0066): derived from the component's own usage; compiled by pnpm catalog:snippets.
+    res.errors.push(...exampleErrors(join(root, dir.name), join(root, "../..")));
     res.ok = res.errors.length === 0;
   }
   if (!res.ok) failed++;

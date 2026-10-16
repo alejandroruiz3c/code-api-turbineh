@@ -27,6 +27,34 @@ All notable changes to this project are documented here. Format: [Keep a Changel
     that every recipe uses the PostgreSQL-backed rate limiter.
   - `AI_REDACT_PII` defaults to `true` in generated AI apps; `AI_REDACT_PII=false` is the explicit, documented opt-out.
 
+### Fixed
+
+- Public usage snippets compile (ADR-0066, audit F-04): every component's example is generated from its own contract
+  test (or a `snippet.ts`) and compiled with `tsc --noEmit` against the pinned versions — 137 TypeScript snippets, 19
+  TurbineH module snippets compiled inside the assembled apps, 5 parameter examples validated against their schema, 2
+  CLI/API examples checked against real commands and routes. Wrong imports fixed (exceljs and i18next default exports,
+  gray-matter, better-auth client subpaths, MCP SDK subpaths, dinero.js currencies, react-colorful…); `import`
+  interface signatures taken from the real imports. `pnpm catalog:snippets [--check]`, CI job "Snippets compile",
+  `verify:recipe --snippets`; Discover shows "Snippet compiled against <pkg>@<v> on <date>". `files.upload.busboy`
+  now declares `@types/busboy@1.5.4`.
+- Discover relevance (ADR-0066, audit §5.3): idf-weighted similarity with a minimum (0.25), a cut relative to the
+  best result, rerank by capability description; the Discover fallback uses the same ranking. precision@5 on the 20
+  reference queries 0.69 → 0.89; 0.90 on 12 held-out queries; enforced in CI (≥ 0.8).
+- "Finished in" is `finished_at − started_at` (persisted), the flow page renders the persisted state on the server
+  (no "Generating · 0 s" for finished flows), and the home / activity average uses the same formula (ADR-0066, N-03).
+- Plan estimates are calibrated per recipe from finished runs: p50–p90 intervals with their basis, benchmark averages
+  labelled as such below 5 runs, and estimated vs real in the result (ADR-0066, F-06). Median error on staging
+  history: time 16.4 %, lines 21.7 %, tokens 36.9 %.
+
+### Changed
+
+- Generated DEPLOY.md: TurbineH gateway and your own OpenAI-compatible provider as two equal options, what happens
+  when the AI endpoint is unavailable, and a DPA/SLA contact section (ADR-0066, F-09).
+- Product site: no "In seconds" or unmeasured durations; "Free and open" explained (Apache-2.0 library, invitation
+  beta, AI gateway or own provider); supported stack declared on the home page and in the stack selector; "STEP 02 ·
+  THE MOAT" removed; "Leave" → "Sign out"; verified pull request into an existing repository on the home page
+  (ADR-0066, L-01…L-06).
+
 ### Added
 
 - Uncovered use cases explained and, only when real, a components-only offer (ADR-0062): every surface shows what the

@@ -12,7 +12,7 @@ const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "YES IF for Builders · TurbineH",
   description:
-    "Secured software flows. In seconds. Free and open. Verified capabilities, ready to integrate — as a downloadable package or directly in your project.",
+    "Secured software flows: verified capabilities for TypeScript, Next.js, PostgreSQL and Drizzle, ready to integrate — as a downloadable package or as a verified pull request into your repository. Open-source library (Apache-2.0).",
   robots: { index: false, follow: false },
 };
 
@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </header>
         <div id="main">{children}</div>
         <footer className="mx-auto mt-24 flex max-w-6xl flex-wrap justify-between gap-2 border-t border-line px-6 py-8 text-xs text-muted">
-          <p>TurbineH · Secured software flows. In seconds. Free and open.</p>
+          <p>TurbineH · Secured software flows · open-source library (Apache-2.0)</p>
           <p>Invitation beta · European sovereign AI lab · open-weights models</p>
         </footer>
       </body>

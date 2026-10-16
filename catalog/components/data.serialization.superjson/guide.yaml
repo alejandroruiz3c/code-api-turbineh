@@ -38,7 +38,7 @@ config:
     description: pnpm add superjson@2.2.6 (exact version, added by TurbineH)
 interfaces:
   - name: superjson
-    signature: import { superjson } from "superjson"
+    signature: import superjson from "superjson"
     where: superjson
 extension_points:
   - what: Next.js SWC plugin
@@ -57,11 +57,20 @@ guarantees:
 limits:
   - Does not validate data
 example: |-
-  import superjson from 'superjson';
+  import superjson from "superjson";
 
   const v = { at: new Date("2026-10-13T00:00:00Z"), m: new Map([["a", 1]]) };
-  const jsonString = superjson.stringify(v);
-  const back = superjson.parse(jsonString);
+  const back = superjson.parse<typeof v>(superjson.stringify(v));
+  console.log(back.at instanceof Date); // → true
+  console.log(back.m.get("a")); // → 1
+example_check:
+  kind: typescript
+  from: contract.test.ts › round-trips dates and maps
+  compiled:
+    against:
+      - superjson@2.2.6
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -78,10 +87,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

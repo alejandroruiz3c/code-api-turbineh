@@ -39,7 +39,7 @@ config:
     description: pnpm add bcryptjs@3.0.3 (exact version, added by TurbineH)
 interfaces:
   - name: bcrypt
-    signature: import { bcrypt } from "bcryptjs"
+    signature: import bcrypt from "bcryptjs"
     where: bcryptjs
 extension_points:
   - what: iteration count
@@ -64,7 +64,16 @@ example: |-
   import bcrypt from "bcryptjs";
 
   const hash = await bcrypt.hash("correct horse", 10);
-  const isValid = await bcrypt.compare("correct horse", hash);
+  console.log(await bcrypt.compare("correct horse", hash)); // → true
+  console.log(await bcrypt.compare("wrong", hash)); // → false
+example_check:
+  kind: typescript
+  from: contract.test.ts › hashes and verifies
+  compiled:
+    against:
+      - bcryptjs@3.0.3
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +90,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

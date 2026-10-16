@@ -62,7 +62,18 @@ guarantees:
     test: contract.test.ts › exposes put, list and delete
 limits:
   - Server uploads are limited to 4.5 MB on Vercel-hosted websites.
-example: import { put, del, list } from "@vercel/blob";
+example: |-
+  import { put, del, list } from "@vercel/blob";
+
+  console.log([put, del, list].every((f) => typeof f === "function")); // → true
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes put, list and delete
+  compiled:
+    against:
+      - "@vercel/blob@2.8.0"
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +90,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

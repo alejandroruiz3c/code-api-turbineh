@@ -47,8 +47,8 @@ interfaces:
     signature: import { toSnapshot } from "dinero.js"
     where: dinero.js
   - name: EUR
-    signature: import { EUR } from "dinero.js"
-    where: dinero.js
+    signature: import { EUR } from "dinero.js/currencies"
+    where: dinero.js/currencies
 extension_points:
   - what: custom calculator
     where: dinero.js functions
@@ -66,12 +66,23 @@ guarantees:
 limits:
   - Does not fetch exchange rates
 example: |-
-  import { dinero, add, allocate, toSnapshot, EUR } from 'dinero.js';
-  const d1 = dinero({ amount: 1000, currency: EUR });
-  const d2 = dinero({ amount: 99, currency: EUR });
-  const total = add(d1, d2);
-  const distributed = allocate(d1, [1, 2]);
-  const snapshot = toSnapshot(total);
+  import { dinero, add, allocate, toSnapshot } from "dinero.js";
+  import { EUR } from "dinero.js/currencies";
+
+  const total = add(
+    dinero({ amount: 1000, currency: EUR }),
+    dinero({ amount: 99, currency: EUR }),
+  );
+  console.log(toSnapshot(total).amount); // → 1099
+  console.log(allocate(dinero({ amount: 100, currency: EUR }), [1, 2]).map((d) => toSnapshot(d).amount)); // → [33, 67]
+example_check:
+  kind: typescript
+  from: contract.test.ts › adds and allocates money in minor units
+  compiled:
+    against:
+      - dinero.js@2.0.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +99,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

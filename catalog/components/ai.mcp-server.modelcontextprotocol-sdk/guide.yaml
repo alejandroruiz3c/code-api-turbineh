@@ -41,14 +41,14 @@ config:
     description: pnpm add @modelcontextprotocol/sdk@1.31.0 (exact version, added by TurbineH)
 interfaces:
   - name: Client
-    signature: import { Client } from "@modelcontextprotocol/sdk"
-    where: "@modelcontextprotocol/sdk"
+    signature: import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+    where: "@modelcontextprotocol/sdk/client/index.js"
   - name: InMemoryTransport
-    signature: import { InMemoryTransport } from "@modelcontextprotocol/sdk"
-    where: "@modelcontextprotocol/sdk"
+    signature: import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js"
+    where: "@modelcontextprotocol/sdk/inMemory.js"
   - name: McpServer
-    signature: import { McpServer } from "@modelcontextprotocol/sdk"
-    where: "@modelcontextprotocol/sdk"
+    signature: import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+    where: "@modelcontextprotocol/sdk/server/mcp.js"
   - name: createAppToolServer
     signature: "function createAppToolServer(name: string, version"
     where: "@/integrations/ai-mcp-server"
@@ -75,14 +75,40 @@ limits:
   - Does not call models directly
   - v1.x does not support the 2026-07-28 specification
 example: |-
-  import { Client, InMemoryTransport, McpServer } from "@modelcontextprotocol/sdk";
-  import { createAppToolServer } from "@/integrations/ai-mcp-server";
+  import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+  import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+  import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+  import { z } from "zod";
 
-  const server = createAppToolServer("app-tools");
+  const server = new McpServer({ name: "app-tools", version: "1.0.0" });
+  server.registerTool(
+    "order_status",
+    {
+      description: "Status of an order by id",
+      inputSchema: { orderId: z.string().regex(/^o-[0-9]+$/) },
+    },
+    async ({ orderId }) => ({ content: [{ type: "text", text: `${orderId}: shipped` }] }),
+  );
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   await server.connect(serverSide);
   const client = new Client({ name: "test", version: "1.0.0" });
   await client.connect(clientSide);
+  const tools = await client.listTools();
+  console.log(tools.tools.map((t) => t.name)); // → ["order_status"]
+  const res = await client.callTool({ name: "order_status", arguments: { orderId: "o-42" } });
+  console.log(res.content); // → [{ type: "text", text: "o-42: shipped" }]
+  const bad = await client.callTool({ name: "order_status", arguments: { orderId: "../etc" } });
+  console.log(bad.isError); // → true
+  await client.close();
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes an app tool to an agent through MCP (no model involved)
+  compiled:
+    against:
+      - "@modelcontextprotocol/sdk@1.31.0"
+      - zod@4.6.5
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -99,10 +125,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -63,9 +63,20 @@ limits:
   - "Facebook: impressions are not fetched (post_impressions is deprecated in the Graph API); needs pages_read_engagement. Instagram insights need instagram_manage_insights (without it likes and comments are still fetched)"
   - "X: each read is billed per request (pay-per-use); metrics are fetched one post per request"
   - "Needs a scheduler; 50 posts per call"
-example: |
-  // Scheduler (hourly): curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/social/metrics/run
-  const m = await fetchMetrics("x", token, post.externalId); // { likes: 15, comments: 2, shares: 4, impressions: 512 }
+example: |-
+  // Server-only code in the app: engagement of one published post (the hourly job at /api/social/metrics/run does this
+  // for every recent post).
+  import { accessTokenFor, type Ctx } from "@/social/connections";
+  import { fetchMetrics } from "@/social/metrics-api";
+
+  export async function postMetrics(ctx: Ctx, connectionId: string, externalId: string) {
+    const { token, network } = await accessTokenFor(ctx.organizationId, connectionId);
+    const m = await fetchMetrics(network, token, externalId);
+    return { likes: m.likes, comments: m.comments, shares: m.shares, impressions: m.impressions };
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/social/params/metrics.json
   schema: params.schema.json

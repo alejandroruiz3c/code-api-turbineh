@@ -43,7 +43,7 @@ config:
     description: pnpm add he@1.2.0 (exact version, added by TurbineH)
 interfaces:
   - name: he
-    signature: import { he } from "he"
+    signature: import he from "he"
     where: he
 extension_points:
   - what: options object
@@ -63,10 +63,18 @@ guarantees:
 limits:
   - Does not sanitize full HTML documents.
 example: |-
-  import * as he from 'he';
+  import he from "he";
 
-  he.escape("<a href='x'>&</a>");
-  he.decode("&eacute;&amp;");
+  console.log(he.escape("<a href='x'>&</a>")); // → "&lt;a href=&#x27;x&#x27;&gt;&amp;&lt;/a&gt;"
+  console.log(he.decode("&eacute;&amp;")); // → "é&"
+example_check:
+  kind: typescript
+  from: contract.test.ts › escapes and decodes entities
+  compiled:
+    against:
+      - he@1.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +91,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -58,18 +58,25 @@ guarantees:
 limits:
   - Does not provide input components or styling
 example: |-
-  import { useForm } from 'react-hook-form';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { useForm } from "react-hook-form";
 
-  function App() {
-    const { register, handleSubmit } = useForm();
-    const onSubmit = data => console.log(data);
-    return (
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <input {...register('email')} />
-        <input type='submit' />
-      </form>
-    );
+  function F() {
+    const { register } = useForm({ defaultValues: { email: "a@b.co" } });
+    return h("input", register("email"));
   }
+  console.log(renderToString(h(F))); // → contains 'name="email"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › registers fields during server render
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - react-hook-form@7.89.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

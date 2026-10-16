@@ -69,13 +69,29 @@ limits:
   - "Records only changes that go through audit() (generated entities and TurbineH domain components do)"
   - "No retention job: entries are kept until a deliberate migration removes them"
   - "Values longer than 300 characters are shortened in the log"
-example: |
+example: |-
+  // A server action in the app (e.g. src/app/dashboard/notes/actions.ts): the change and its audit entry together.
   import { audit } from "@/lib/audit";
-  await audit({
-    organizationId: ctx.organizationId, actorId: ctx.userId, actorEmail: ctx.email,
-    action: "note.updated", subjectType: "Note", subjectId: note.id,
-    before: previous, after: { ...previous, title: "New title" },
-  });
+
+  export async function recordTitleChange(
+    ctx: { organizationId: string; userId: string; email: string },
+    note: { id: string; title: string },
+    title: string,
+  ): Promise<void> {
+    await audit({
+      organizationId: ctx.organizationId,
+      actorId: ctx.userId,
+      actorEmail: ctx.email,
+      action: "note.updated",
+      subjectType: "Note",
+      subjectId: note.id,
+      before: { title: note.title },
+      after: { title },
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/audit/params.json
   schema: params.schema.json

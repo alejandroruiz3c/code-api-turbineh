@@ -1,4 +1,5 @@
 import type { Plan, PlanAction } from "@turbineh/shared";
+import { estimateView } from "@/lib/estimate-format";
 import { COMPONENTS_ONLY_APPROVAL, NotCovered } from "./not-covered";
 import { Panel } from "./ui";
 
@@ -23,6 +24,8 @@ export function PlanReview({
   blockGenerate?: boolean;
 }) {
   const standalone = plan.stack.source === "declared";
+  // F-06 (ADR-0066): an interval from finished runs of this recipe, or the benchmark average said in words.
+  const estimate = estimateView(plan.estimate);
   // ADR-0062: the components-only choice is the offer's own button ("Build the verified components"), not a checkbox.
   const approvals =
     plan.scope?.status === "components_only"
@@ -126,17 +129,12 @@ export function PlanReview({
           </section>
         ) : null}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Estimate value={`~${plan.estimate.seconds} s`} label="Time to a verified package" />
-          <Estimate
-            value={plan.estimate.tokens.toLocaleString("en")}
-            label="Tokens, only on new glue"
-          />
-          <Estimate
-            value={String(plan.estimate.newLinesToMaintain)}
-            label="New lines to maintain"
-          />
+          <Estimate value={estimate.seconds} label="Time to the package" />
+          <Estimate value={estimate.tokens} label="Model tokens (intent, glue, fixes)" />
+          <Estimate value={estimate.lines} label="New lines to maintain" />
           <Estimate value="Included" label="Cost during the invitation beta" />
         </div>
+        <p className="mt-2 text-[11px] text-muted">Estimate: {estimate.basis}</p>
         {plan.incompatibilities.length > 0 ? (
           <div className="mt-4 rounded-lg border border-amber/50 p-3">
             <p className="text-sm font-semibold text-amber">Before you continue</p>

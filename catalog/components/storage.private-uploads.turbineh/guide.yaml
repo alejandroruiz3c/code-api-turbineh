@@ -87,11 +87,25 @@ limits:
   - "One request per file (no multipart upload); size bounded by the server-action body limit and the host"
   - "No image processing or virus scanning"
   - "Local-disk storage is for one server; serverless hosts need the S3 driver"
-example: |
+example: |-
+  // A record page in the app (e.g. src/app/dashboard/workflow/request/[id]/page.tsx), written without JSX here.
+  import { createElement as h } from "react";
   import { Attachments } from "@/components/uploads/attachments";
-  const ctx = await requireMember();
-  // On a record page (the record's scope is read on the server by src/uploads/subjects.ts):
-  <Attachments ctx={ctx} subjectType="workflow:request" subjectId={item.id} back={`/dashboard/workflow/request/${item.id}`} />
+  import { requireMember } from "@/server/authz";
+
+  export async function RequestFiles({ id }: { id: string }) {
+    const ctx = await requireMember();
+    // The record's scope is checked on the server (src/uploads/subjects.ts); downloads go through an authorised route.
+    return h(Attachments, {
+      ctx,
+      subjectType: "workflow:request",
+      subjectId: id,
+      back: `/dashboard/workflow/request/${id}`,
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/uploads/params.json
   schema: params.schema.json

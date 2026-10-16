@@ -61,16 +61,29 @@ guarantees:
 limits:
   - Does not provide search indexing.
 example: |-
-  import { Command } from 'cmdk';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { Command } from "cmdk";
 
-  const Example = () => (
-    <Command>
-      <Command.Input />
-      <Command.List>
-        <Command.Item>Apple</Command.Item>
-      </Command.List>
-    </Command>
+  const html = renderToString(
+    h(
+      Command,
+      { label: "Menu" },
+      h(Command.Input),
+      h(Command.List, null, h(Command.Item, null, "Open")),
+    ),
   );
+  console.log(html); // → contains "cmdk-input"
+example_check:
+  kind: typescript
+  from: contract.test.ts › server-renders a command list
+  compiled:
+    against:
+      - cmdk@1.1.1
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -87,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

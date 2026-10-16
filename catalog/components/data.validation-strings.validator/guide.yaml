@@ -38,7 +38,7 @@ config:
     description: pnpm add validator@13.15.35 (exact version, added by TurbineH)
 interfaces:
   - name: validator
-    signature: import { validator } from "validator"
+    signature: import validator from "validator"
     where: validator
 extension_points:
   - what: Validation and sanitization methods
@@ -59,12 +59,20 @@ limits:
   - Only accepts strings; passing other types results in an error.
   - Does not validate structured objects.
 example: |-
-  import validator from 'validator';
+  import validator from "validator";
 
-  validator.isEmail('a@b.co');
-  validator.isURL('https://example.com');
-  validator.isIBAN('ES9121000418450200051332');
-  validator.escape('<b>');
+  console.log(validator.isEmail("a@b.co")); // → true
+  console.log(validator.isURL("https://example.com")); // → true
+  console.log(validator.isIBAN("ES9121000418450200051332")); // → true
+  console.log(validator.escape("<b>")); // → "&lt;b&gt;"
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates common string formats
+  compiled:
+    against:
+      - validator@13.15.35
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

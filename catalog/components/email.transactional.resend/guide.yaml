@@ -56,13 +56,20 @@ limits:
 example: |-
   import { Resend } from "resend";
 
-  const resend = new Resend("re_test_key");
-  await resend.emails.send({
-    from: "a@example.com",
-    to: "b@example.com",
-    subject: "s",
-    text: "t"
-  });
+  const r = new Resend("re_test_key");
+  console.log(typeof r.emails.send); // → "function"
+  const res = await r.emails
+    .send({ from: "a@example.com", to: "b@example.com", subject: "s", text: "t" })
+    .catch((e: unknown) => ({ data: null, error: e }));
+  console.log(res.data); // → null
+example_check:
+  kind: typescript
+  from: contract.test.ts › builds a client and fails cleanly without network
+  compiled:
+    against:
+      - resend@6.30.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +86,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

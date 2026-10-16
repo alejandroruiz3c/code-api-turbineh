@@ -62,10 +62,18 @@ guarantees:
 limits:
   - Does not block third-party scripts automatically without configuration
 example: |-
-  import { run, acceptedCategory } from 'vanilla-cookieconsent';
+  import * as CookieConsent from "vanilla-cookieconsent";
 
-  run();
-  const isAccepted = acceptedCategory('analytics');
+  console.log(typeof CookieConsent.run); // → "function"
+  console.log(typeof CookieConsent.acceptedCategory); // → "function"
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes the consent API
+  compiled:
+    against:
+      - vanilla-cookieconsent@3.1.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -82,10 +90,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

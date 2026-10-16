@@ -37,7 +37,7 @@ config:
     description: pnpm add p-queue@9.3.3 (exact version, added by TurbineH)
 interfaces:
   - name: PQueue
-    signature: import { PQueue } from "p-queue"
+    signature: import PQueue from "p-queue"
     where: p-queue
   - name: createBatchQueue
     signature: "function createBatchQueue(opts:"
@@ -61,12 +61,29 @@ guarantees:
 limits:
   - Tasks are not durable across process restarts
 example: |-
-  import { createBatchQueue } from '@/integrations/ops-queue-throttle';
+  import PQueue from "p-queue";
 
-  const queue = createBatchQueue({ concurrency: 2, perMinute: 10 });
-  await queue.add(async () => {
-    // task logic
-  });
+  const queue = new PQueue({ concurrency: 2 });
+  let running = 0;
+  let max = 0;
+  const job = async (n: number) => {
+    running++;
+    max = Math.max(max, running);
+    await new Promise((r) => setTimeout(r, 10));
+    running--;
+    return n * 2;
+  };
+  const results = await Promise.all([1, 2, 3, 4, 5].map((n) => queue.add(() => job(n))));
+  console.log(results); // → [2, 4, 6, 8, 10]
+  console.log(max); // → 2
+example_check:
+  kind: typescript
+  from: contract.test.ts › limits concurrency for batch work
+  compiled:
+    against:
+      - p-queue@9.3.3
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -36,7 +36,7 @@ config:
     description: pnpm add react-hot-toast@2.6.1 (exact version, added by TurbineH)
 interfaces:
   - name: toast
-    signature: import { toast } from "react-hot-toast"
+    signature: import toast from "react-hot-toast"
     where: react-hot-toast
   - name: Toaster
     signature: import { Toaster } from "react-hot-toast"
@@ -63,16 +63,22 @@ guarantees:
 limits:
   - Not for persistent alerts
 example: |-
-  import { toast, Toaster } from 'react-hot-toast';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import toast, { Toaster } from "react-hot-toast";
 
-  const App = () => (
-    <>
-      <Toaster />
-      <button onClick={() => toast('Here is your toast.')}>
-        Make me a toast
-      </button>
-    </>
-  );
+  console.log(typeof toast.success); // → "function"
+  console.log(renderToString(h(Toaster))); // → contains "div"
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes the toaster and toast API
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - react-hot-toast@2.6.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -89,10 +95,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

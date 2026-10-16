@@ -64,11 +64,19 @@ guarantees:
 limits:
   - Does not shorten ids for URLs
 example: |-
-  import { v4, v7, validate, version } from 'uuid';
+  import { v4, v7, validate, version } from "uuid";
 
-  const id = v4();
-  const is_valid = validate(id);
-  const ver = version(v7());
+  console.log(validate(v4())); // → true
+  console.log(version(v7())); // → 7
+  console.log(validate("not-a-uuid")); // → false
+example_check:
+  kind: typescript
+  from: contract.test.ts › generates and validates v4 and v7
+  compiled:
+    against:
+      - uuid@14.0.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -1,0 +1,77 @@
+{
+  "schema": "turbineh.validation-discover/v1",
+  "about": "Held-out Discover queries (ADR-0066): written from the catalogue on 2026-10-16 before the ranking was measured on them, never used to tune weights or thresholds. Same scoring as bench/validation/discover-queries.json.",
+  "queries": [
+    {
+      "q": "translate the app into spanish",
+      "relevant": [
+        "ui.i18n.i18next",
+        "data.countries.i18n-iso-countries",
+        "ai.language-detection.franc-min"
+      ]
+    },
+    {
+      "q": "hash passwords",
+      "relevant": [
+        "security.password-hash.bcryptjs",
+        "auth.session.better-auth",
+        "security.pack.turbineh"
+      ]
+    },
+    {
+      "q": "drag and drop list reordering",
+      "relevant": ["ui.drag-drop.dnd-kit-sortable", "ui.drag-drop.dnd-kit", "ui.kanban.turbineh"]
+    },
+    { "q": "map with markers", "relevant": ["ui.map.maplibre"] },
+    {
+      "q": "markdown rendering",
+      "relevant": [
+        "content.markdown.react-markdown",
+        "ui.markdown.markdown-it",
+        "ui.markdown.marked",
+        "content.markdown-to-text.remove-markdown",
+        "content.html-to-markdown.node-html-markdown"
+      ]
+    },
+    {
+      "q": "qr code for tickets",
+      "relevant": ["files.qr.qrcode", "files.qr.qrcode-react", "files.barcode.bwip-js"]
+    },
+    {
+      "q": "toast notifications",
+      "relevant": ["ui.notifications.sonner", "ui.notifications.react-hot-toast"]
+    },
+    {
+      "q": "verify stripe webhook signatures",
+      "relevant": [
+        "security.webhook-signature.standardwebhooks",
+        "payments.checkout.stripe",
+        "payments.subscriptions.turbineh",
+        "security.jwt.jose"
+      ]
+    },
+    {
+      "q": "fuzzy search over products",
+      "relevant": ["data.fuzzy-search.fuse", "data.search-index.minisearch", "storefront"]
+    },
+    {
+      "q": "audit trail of changes",
+      "relevant": ["domain.audit-log.turbineh", "data.diff.diff", "observability.logging.pino"]
+    },
+    {
+      "q": "client portal with document uploads",
+      "relevant": [
+        "client-portal",
+        "storage.private-uploads.turbineh",
+        "files.dropzone.react-dropzone",
+        "files.upload.busboy",
+        "storage.objects.aws-s3",
+        "storage.objects.s3-presigner"
+      ]
+    },
+    {
+      "q": "retry failed http requests",
+      "relevant": ["ops.retry.p-retry", "ops.http-client.ky", "jobs.queue.turbineh"]
+    }
+  ]
+}

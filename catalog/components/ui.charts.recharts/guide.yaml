@@ -65,13 +65,28 @@ limits:
   - Does not provide dashboards
   - Does not provide data fetching
 example: |-
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
   import { Bar, BarChart } from "recharts";
 
-  const MyChart = () => (
-    <BarChart width={300} height={200} data={[{ v: 1 }, { v: 2 }]}>
-      <Bar dataKey="v" />
-    </BarChart>
+  const html = renderToString(
+    h(
+      BarChart,
+      { width: 300, height: 200, data: [{ v: 1 }, { v: 2 }] },
+      h(Bar, { dataKey: "v" }),
+    ),
   );
+  console.log(html); // → contains "recharts"
+example_check:
+  kind: typescript
+  from: contract.test.ts › server-renders a chart without throwing
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - recharts@3.10.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +103,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

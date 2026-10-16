@@ -37,7 +37,7 @@ config:
     description: pnpm add gray-matter@4.0.3 (exact version, added by TurbineH)
 interfaces:
   - name: matter
-    signature: import { matter } from "gray-matter"
+    signature: import matter from "gray-matter"
     where: gray-matter
 extension_points:
   - what: Custom engines
@@ -56,8 +56,19 @@ guarantees:
 limits:
   - Does not render Markdown to HTML
 example: |-
-  import { matter } from 'gray-matter';
-  const f = matter('---\ntitle: Hello\ntags: [a, b]\n---\n# Body');
+  import matter from "gray-matter";
+
+  const f = matter("---\ntitle: Hello\ntags: [a, b]\n---\n# Body");
+  console.log(f.data); // → { title: "Hello", tags: ["a", "b"] }
+  console.log(f.content.trim()); // → "# Body"
+example_check:
+  kind: typescript
+  from: contract.test.ts › splits front matter from the Markdown body
+  compiled:
+    against:
+      - gray-matter@4.0.3
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -74,10 +85,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

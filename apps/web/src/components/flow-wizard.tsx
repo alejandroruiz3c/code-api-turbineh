@@ -2,7 +2,7 @@
 import type { EnvironmentInput, NotCoveredExplanation, Plan, PlanAction } from "@turbineh/shared";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { environmentFor, stackNote, type EnvMode } from "@/lib/flow-environment";
+import { environmentFor, stackNote, SUPPORTED_STACK, type EnvMode } from "@/lib/flow-environment";
 import { productApi } from "@/lib/product-api";
 import { matchUseCases, USE_CASES, type UseCase } from "@/lib/use-cases";
 import { GithubConnect, RepoAnalysisView, RepoPicker, useGithub } from "./github-connect";
@@ -342,6 +342,11 @@ export function FlowWizard({
 
             {mode === "app" ? (
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <p data-testid="supported-stack" className="text-xs text-ice-2 sm:col-span-3">
+                  Supported stack for new apps:{" "}
+                  <span className="text-cream">{SUPPORTED_STACK}</span>. Other choices are marked
+                  &ldquo;not supported&rdquo;: you get the same Next.js app, as described below.
+                </p>
                 <label className="text-xs text-muted">
                   Language
                   <select
@@ -353,7 +358,13 @@ export function FlowWizard({
                     className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm text-ice-2"
                   >
                     {Object.keys(FRAMEWORKS).map((l) => (
-                      <option key={l}>{l}</option>
+                      <option key={l} value={l}>
+                        {l === "TypeScript"
+                          ? l
+                          : l === "JavaScript"
+                            ? `${l} (app written in TypeScript)`
+                            : `${l} (not supported for new apps)`}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -365,7 +376,9 @@ export function FlowWizard({
                     className="mt-1 w-full rounded-md border border-line bg-navy-900 px-3 py-2 text-sm text-ice-2"
                   >
                     {(FRAMEWORKS[language] ?? []).map((f) => (
-                      <option key={f}>{f}</option>
+                      <option key={f} value={f}>
+                        {f === "Next.js" ? f : `${f} (not supported for new apps)`}
+                      </option>
                     ))}
                   </select>
                 </label>

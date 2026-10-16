@@ -62,17 +62,28 @@ guarantees:
 limits:
   - Does not provide default styles
 example: |-
-  import { Root, Trigger, Value } from "@radix-ui/react-select";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import * as Select from "@radix-ui/react-select";
 
-  function SelectExample() {
-    return (
-      <Root defaultValue="eu">
-        <Trigger aria-label="Region">
-          <Value placeholder="Pick" />
-        </Trigger>
-      </Root>
-    );
-  }
+  const html = renderToString(
+    h(
+      Select.Root,
+      { defaultValue: "eu" },
+      h(Select.Trigger, { "aria-label": "Region" }, h(Select.Value, { placeholder: "Pick" })),
+    ),
+  );
+  console.log(html); // → contains 'role="combobox"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders a combobox trigger with its value
+  compiled:
+    against:
+      - "@radix-ui/react-select@2.3.7"
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -89,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

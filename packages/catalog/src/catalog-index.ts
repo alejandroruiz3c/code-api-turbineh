@@ -55,6 +55,7 @@ export function buildIndex(componentsDir: string): { json: string; llms: string 
               guarantees: d.guarantees,
               limits: d.limits,
               example: d.example,
+              ...(d.example_check ? { exampleCheck: d.example_check } : {}),
               keywords: d.keywords,
               ...(d.synonyms ? { synonyms: d.synonyms } : {}),
               ...(d.generated ? { generated: { by: d.generated.by, at: d.generated.at } } : {}),

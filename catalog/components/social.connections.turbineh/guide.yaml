@@ -84,10 +84,22 @@ limits:
   - "LinkedIn: no refresh tokens unless LinkedIn enables programmatic refresh for the app (members reconnect every 60 days) and no revocation API (tokens are deleted here; members remove the app in their LinkedIn settings)"
   - "Instagram: only professional (business or creator) accounts linked to a Facebook Page; Instagram Login (graph.instagram.com) is not used"
   - "Rate limits are the platforms' (e.g. X users/me 75 per 15 min); this component adds none of its own"
-example: |
-  // A server-only provider call with a connected account:
-  const { token, accountId } = await accessTokenFor(ctx.organizationId, connectionId);
-  const res = await fetch(`https://api.x.com/2/users/${accountId}`, { headers: { authorization: `Bearer ${token}` } });
+example: |-
+  // Server-only code in the app (e.g. src/social/profile.ts): a provider call with a connected account's token.
+  import { accessTokenFor, type Ctx } from "@/social/connections";
+
+  export async function connectedProfile(ctx: Ctx, connectionId: string): Promise<unknown> {
+    // Decrypted on the server for this call only; refreshed when it is about to expire.
+    const { token, accountId, network } = await accessTokenFor(ctx.organizationId, connectionId);
+    if (network !== "x") return null;
+    const res = await fetch(`https://api.x.com/2/users/${accountId}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    return res.ok ? res.json() : null;
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 params:
   file: src/social/params/connections.json
   schema: params.schema.json

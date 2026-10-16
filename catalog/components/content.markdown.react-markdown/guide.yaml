@@ -37,7 +37,7 @@ config:
     description: pnpm add react-markdown@10.1.0 (exact version, added by TurbineH)
 interfaces:
   - name: Markdown
-    signature: import { Markdown } from "react-markdown"
+    signature: import Markdown from "react-markdown"
     where: react-markdown
 extension_points:
   - what: Plugins
@@ -63,9 +63,23 @@ guarantees:
 limits:
   - Does not edit Markdown content
 example: |-
-  import { Markdown } from 'react-markdown';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import Markdown from "react-markdown";
 
-  const MyComponent = () => <Markdown># Title</Markdown>;
+  const html = renderToString(h(Markdown, null, "# Title\n\n<script>alert(1)</script>"));
+  console.log(html); // → contains "<h1>Title</h1>"
+  console.log(html); // → does not contain "<script>"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders Markdown and does not execute raw HTML
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - react-markdown@10.1.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -82,10 +96,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

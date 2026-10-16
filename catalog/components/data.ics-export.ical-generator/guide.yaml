@@ -33,7 +33,7 @@ config:
     description: pnpm add ical-generator@11.1.1 (exact version, added by TurbineH)
 interfaces:
   - name: ical
-    signature: import { ical } from "ical-generator"
+    signature: import ical from "ical-generator"
     where: ical-generator
 extension_points:
   - what: createEvent
@@ -61,7 +61,8 @@ guarantees:
 limits:
   - Does not sync with external calendars
 example: |-
-  import { ical } from "ical-generator";
+  import ical from "ical-generator";
+
   const cal = ical({ name: "Bookings" });
   cal.createEvent({
     start: new Date(Date.UTC(2026, 9, 13, 9)),
@@ -69,6 +70,16 @@ example: |-
     summary: "Physio session",
   });
   const out = cal.toString();
+  console.log(out); // → contains "BEGIN:VCALENDAR"
+  console.log(out); // → contains "SUMMARY:Physio session"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders a VEVENT
+  compiled:
+    against:
+      - ical-generator@11.1.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +96,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

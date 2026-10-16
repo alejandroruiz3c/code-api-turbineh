@@ -39,7 +39,7 @@ interfaces:
     signature: "function withRetry<T>( operation: (attempt: number)"
     where: "@/integrations/ops-retry"
   - name: pRetry
-    signature: import { pRetry } from "p-retry"
+    signature: import pRetry from "p-retry"
     where: p-retry
   - name: AbortError
     signature: import { AbortError } from "p-retry"
@@ -61,17 +61,27 @@ guarantees:
 limits:
   - Maximum of 10 retries allowed via withRetry
 example: |-
-  import { withRetry } from '@/integrations/ops-retry';
+  import pRetry from "p-retry";
 
-  async function task() {
-    return await withRetry(
-      async (attempt) => {
-        if (attempt < 2) throw new Error('fail');
-        return 'success';
-      },
-      { retries: 5 }
-    );
-  }
+  let n = 0;
+  const r = await pRetry(
+    async () => {
+      n++;
+      if (n < 3) throw new Error("x");
+      return "ok";
+    },
+    { retries: 3, minTimeout: 1, factor: 1 },
+  );
+  console.log(r); // → "ok"
+  console.log(n); // → 3
+example_check:
+  kind: typescript
+  from: contract.test.ts › retries until success
+  compiled:
+    against:
+      - p-retry@8.0.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +98,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

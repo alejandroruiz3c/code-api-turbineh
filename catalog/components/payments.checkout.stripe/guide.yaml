@@ -33,7 +33,7 @@ config:
     description: pnpm add stripe@22.6.2 (exact version, added by TurbineH)
 interfaces:
   - name: Stripe
-    signature: import { Stripe } from "stripe"
+    signature: import Stripe from "stripe"
     where: stripe
 extension_points:
   - what: webhook signature verification
@@ -55,8 +55,30 @@ guarantees:
 limits:
   - Does not hold card data
 example: |-
-  import { Stripe } from "stripe";
+  import Stripe from "stripe";
+
   const stripe = new Stripe("sk_test_dummy");
+  const secret = "whsec_test";
+  const payload = JSON.stringify({
+    id: "evt_1",
+    object: "event",
+    type: "checkout.session.completed",
+  });
+  const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
+  console.log(stripe.webhooks.constructEvent(payload, header, secret).type); // → "checkout.session.completed"
+  try {
+    stripe.webhooks.constructEvent(payload, header, "whsec_other");
+  } catch (err) {
+    console.log(err); // → throws
+  }
+example_check:
+  kind: typescript
+  from: contract.test.ts › verifies webhook signatures and rejects forged ones
+  compiled:
+    against:
+      - stripe@22.6.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -73,10 +95,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

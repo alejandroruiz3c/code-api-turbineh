@@ -70,8 +70,22 @@ guarantees:
 limits:
   - Counts are only estimates for non-BPE model families
 example: |-
-  import { decode, encode, isWithinTokenLimit } from 'gpt-tokenizer';
-  import { countTokens, truncateToTokens } from '@/integrations/ai-token-count';
+  import { decode, encode, isWithinTokenLimit } from "gpt-tokenizer";
+
+  const text = "Summarise the attached contract in three bullet points.";
+  const tokens = encode(text);
+  console.log(tokens.length); // → > 5
+  console.log(decode(tokens)); // → text
+  console.log(isWithinTokenLimit(text, 1000)); // → tokens.length
+  console.log(isWithinTokenLimit(text, 2)); // → false
+example_check:
+  kind: typescript
+  from: contract.test.ts › encodes, decodes and checks a token budget
+  compiled:
+    against:
+      - gpt-tokenizer@4.0.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -88,10 +102,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

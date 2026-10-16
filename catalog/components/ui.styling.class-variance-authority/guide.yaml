@@ -56,11 +56,19 @@ example: |-
   import { cva } from "class-variance-authority";
 
   const button = cva("btn", {
-    variants: {
-      size: { sm: "text-sm", lg: "text-lg" }
-    },
-    defaultVariants: { size: "sm" }
+    variants: { size: { sm: "text-sm", lg: "text-lg" } },
+    defaultVariants: { size: "sm" },
   });
+  console.log(button()); // → "btn text-sm"
+  console.log(button({ size: "lg" })); // → "btn text-lg"
+example_check:
+  kind: typescript
+  from: contract.test.ts › composes variant classes
+  compiled:
+    against:
+      - class-variance-authority@0.7.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -77,10 +85,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

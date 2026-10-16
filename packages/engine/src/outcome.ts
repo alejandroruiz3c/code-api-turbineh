@@ -23,7 +23,7 @@ const ACTIONS = {
     id: "build_nextjs_app",
     label: "Build a complete Next.js app instead",
     detail:
-      "Switches the plan to Next.js, our main path: one complete app — screens, server code, database and sign-in — ready to run.",
+      "Switches the plan to Next.js, the supported stack (TypeScript + Next.js + PostgreSQL + Drizzle): one complete app — screens, server code, database and sign-in — ready to run.",
   },
   connectRepo: {
     id: "connect_repo",

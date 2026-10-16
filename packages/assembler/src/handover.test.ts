@@ -43,14 +43,26 @@ describe("client handover", () => {
     expect(html).not.toMatch(/(src|href)="https?:/);
   });
 
-  it("AI apps: the TurbineH AI token is required and no provider or decider key is asked for", () => {
+  it("AI apps: TurbineH gateway and own provider are two equal options, with outage behaviour and DPA/SLA contact", () => {
     const guide = deployGuide(
       "Support AI",
-      "DATABASE_URL=\nTURBINEH_AI_URL=https://software.turbineh.com/v1/ai\n# token\nTURBINEH_AI_TOKEN=\n",
+      "DATABASE_URL=\nTURBINEH_AI_URL=https://software.turbineh.com/v1/ai\n# token\nTURBINEH_AI_TOKEN=\nAI_BASE_URL=\nAI_API_KEY=\nAI_MODEL=\n",
     );
-    const required = guide.slice(guide.indexOf("| Required |"), guide.indexOf("| Optional |"));
-    expect(required).toContain("`TURBINEH_AI_TOKEN`");
-    expect(required).toContain("Get AI access token");
-    expect(guide).not.toMatch(/TYPESAFE_API_KEY|AI_API_KEY/);
+    const required = guide.slice(guide.indexOf("| Required |"), guide.indexOf("AI: choose"));
+    expect(required).not.toContain("TURBINEH_AI_TOKEN");
+    expect(required).not.toContain("AI_BASE_URL");
+    expect(guide).toContain("| | Option 1 · TurbineH gateway | Option 2 · your own provider |");
+    expect(guide).toContain(
+      "`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, with `TURBINEH_AI_TOKEN` left empty",
+    );
+    expect(guide).toContain("There is **no automatic switch**");
+    expect(guide).toContain("Data processing (DPA) and service levels (SLA)");
+    expect(guide).not.toMatch(/override|TYPESAFE_API_KEY/i);
+    expect(guide).toContain("## 4 · Go live — option A");
+  });
+
+  it("apps without AI get no AI section", () => {
+    expect(deployGuide("App", env)).not.toContain("AI: choose");
+    expect(deployGuide("App", env)).toContain("## 3 · Go live — option A");
   });
 });

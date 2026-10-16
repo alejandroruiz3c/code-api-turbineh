@@ -44,6 +44,7 @@ pnpm dev            # api + worker + web en local
 pnpm test
 pnpm lint && pnpm typecheck
 pnpm catalog:validate
+pnpm catalog:snippets [--check]   # ejemplos públicos desde el contract test / snippet.ts, compilados con tsc contra las versiones fijadas (ADR-0066)
 pnpm smoke:decider        # JEV + open decider (requiere .env.local y services/open-decider)
 pnpm smoke:compiler       # 5 prompts → BuildSpec
 pnpm smoke:backup-coder   # primario + secundario responden

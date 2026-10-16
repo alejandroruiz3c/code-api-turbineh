@@ -56,6 +56,10 @@ describe("/flows/new · stack only → complete app", () => {
       },
     });
     expect(stackNote("TypeScript", "Next.js")).toMatch(/complete Next.js project/);
+    expect(stackNote("TypeScript", "Next.js")).toContain(
+      "Supported stack: TypeScript + Next.js + PostgreSQL + Drizzle",
+    );
+    expect(stackNote("TypeScript", "Next.js")).not.toMatch(/main path/);
   });
 
   it("the owner's path: a compatible plan whose first action generates the complete app", () => {
@@ -84,6 +88,8 @@ describe("/flows/new · stack only → complete app", () => {
     expect(text).toMatch(/server code under src\/ .* import into Express/);
     expect(text).not.toMatch(JARGON);
     expect(stackNote("TypeScript", "Express")).toMatch(/not converted to Express/);
+    expect(stackNote("TypeScript", "Express")).toMatch(/^Express is not supported for new apps/);
+    expect(stackNote("Python", "FastAPI")).toMatch(/^Python is not supported for new apps/);
   });
 
   it("Python: a separate service, never a dead end", () => {

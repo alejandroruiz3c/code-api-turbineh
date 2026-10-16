@@ -32,7 +32,7 @@ config:
     description: pnpm add fuse.js@7.5.0 (exact version, added by TurbineH)
 interfaces:
   - name: Fuse
-    signature: import { Fuse } from "fuse.js"
+    signature: import Fuse from "fuse.js"
     where: fuse.js
 extension_points:
   - what: search
@@ -51,9 +51,18 @@ guarantees:
 limits:
   - Not suitable for large datasets
 example: |-
-  import { Fuse } from "fuse.js";
+  import Fuse from "fuse.js";
+
   const fuse = new Fuse([{ name: "Physiotherapy" }, { name: "Dentistry" }], { keys: ["name"] });
-  const results = fuse.search("physio");
+  console.log(fuse.search("physio")[0]?.item.name); // → "Physiotherapy"
+example_check:
+  kind: typescript
+  from: contract.test.ts › finds approximate matches
+  compiled:
+    against:
+      - fuse.js@7.5.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -70,10 +79,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

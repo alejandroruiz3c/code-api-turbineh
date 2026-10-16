@@ -63,10 +63,21 @@ limits:
   - Does not run scripts or lay out pages
   - parseHtmlDocument throws if HTML length exceeds 2,000,000 characters
 example: |-
-  import { parseHtmlDocument } from '@/integrations/content-html-dom';
+  import { parseHTML } from "linkedom";
 
-  const doc = parseHtmlDocument('<ul><li class="item">A</li></ul>');
-  const text = doc.querySelector('.item')?.textContent;
+  const { document } = parseHTML(
+    '<ul><li class="item">A</li><li class="item">B</li></ul><script>alert(1)</script>',
+  );
+  console.log([...document.querySelectorAll(".item")].map((n) => n.textContent)); // → ["A", "B"]
+  console.log(document.querySelector("script")?.textContent); // → "alert(1)"
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses HTML into a queryable DOM on the server
+  compiled:
+    against:
+      - linkedom@0.18.13
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

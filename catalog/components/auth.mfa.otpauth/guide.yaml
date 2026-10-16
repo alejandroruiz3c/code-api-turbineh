@@ -63,10 +63,20 @@ limits:
   - Does not render QR codes
 example: |-
   import { TOTP, Secret } from "otpauth";
-  const secret = new Secret({ size: 20 });
-  const totp = new TOTP({ secret, digits: 6, period: 30 });
+
+  const totp = new TOTP({ secret: new Secret({ size: 20 }), digits: 6, period: 30 });
   const token = totp.generate();
-  const isValid = totp.validate({ token, window: 1 });
+  console.log(token); // → matches /^\d{6}$/
+  console.log(totp.validate({ token, window: 1 })); // → 0
+  console.log(totp.toString()); // → contains "otpauth://totp/"
+example_check:
+  kind: typescript
+  from: contract.test.ts › generates and validates a TOTP code
+  compiled:
+    against:
+      - otpauth@9.5.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

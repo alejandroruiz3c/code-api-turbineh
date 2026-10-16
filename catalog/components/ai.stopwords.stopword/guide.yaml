@@ -65,11 +65,17 @@ limits:
   - No stemming or lemmatisation
 example: |-
   import { eng, removeStopwords, spa } from "stopword";
-  import { keywords } from "@/integrations/ai-stopwords";
 
-  const words = ["the", "invoice", "is", "late"];
-  const filtered = removeStopwords(words, eng);
-  const tags = keywords("The invoice is late");
+  console.log(removeStopwords("the invoice for the customer is late".split(" "), eng)); // → [ "invoice", "customer", "late", ]
+  console.log(removeStopwords("la factura del cliente llega tarde".split(" "), spa)); // → [ "factura", "cliente", "llega", "tarde", ]
+example_check:
+  kind: typescript
+  from: contract.test.ts › removes stopwords in several languages
+  compiled:
+    against:
+      - stopword@3.1.5
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

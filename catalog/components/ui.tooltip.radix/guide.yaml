@@ -61,15 +61,24 @@ guarantees:
 limits:
   - Does not provide default styles
 example: |-
-  import { Provider, Root, Trigger } from "@radix-ui/react-tooltip";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import * as Tooltip from "@radix-ui/react-tooltip";
 
-  const TooltipExample = () => (
-    <Provider>
-      <Root>
-        <Trigger>Help</Trigger>
-      </Root>
-    </Provider>
+  const html = renderToString(
+    h(Tooltip.Provider, null, h(Tooltip.Root, null, h(Tooltip.Trigger, null, "Help"))),
   );
+  console.log(html); // → contains "Help"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders the trigger inside a provider
+  compiled:
+    against:
+      - "@radix-ui/react-tooltip@1.2.16"
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +95,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

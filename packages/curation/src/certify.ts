@@ -16,7 +16,7 @@ export interface CertifyResult {
  * Test harness versions (ADR-0002), aligned with the recipe templates. React is only used by UI component contracts
  * (server rendering); TypeScript and type packages type-check every contract like a generated app does.
  */
-const HARNESS = {
+export const HARNESS = {
   vitest: "5.0.2",
   vite: "8.3.1",
   react: "19.3.0",
@@ -30,7 +30,7 @@ const HARNESS = {
 };
 
 /** Same strictness as the generated apps (recipe tsconfig), so a contract that passes here type-checks there. */
-const TSCONFIG = {
+export const TSCONFIG = {
   compilerOptions: {
     target: "ES2022",
     module: "ESNext",
