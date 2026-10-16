@@ -42,7 +42,10 @@ export function ApiKeys() {
   }
 
   async function revoke(id: string) {
-    await fetch(`/v1/keys/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+    await fetch(`/v1/keys/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
     await load();
   }
 

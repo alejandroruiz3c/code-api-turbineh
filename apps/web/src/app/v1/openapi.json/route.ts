@@ -141,7 +141,9 @@ const spec = {
           { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],
         responses: {
-          "200": { description: "{ token, ... } — set it as TURBINEH_AI_TOKEN in the app's environment" },
+          "200": {
+            description: "{ token, ... } — set it as TURBINEH_AI_TOKEN in the app's environment",
+          },
           "404": { description: "Build not found or its app does not use AI" },
         },
       },

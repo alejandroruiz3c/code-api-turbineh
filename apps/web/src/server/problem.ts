@@ -1,7 +1,10 @@
 /** Stable error codes by status, so every /v1 problem carries code/message/action like the product API (audit I-14). */
 const CODES: Record<number, [code: string, action: string]> = {
   400: ["bad_request", "Fix the request and send it again."],
-  401: ["unauthorized", "Send Authorization: Bearer <your invitation token or API key> (TURBINEH_TOKEN), or sign in."],
+  401: [
+    "unauthorized",
+    "Send Authorization: Bearer <your invitation token or API key> (TURBINEH_TOKEN), or sign in.",
+  ],
   403: ["forbidden", "Use an account or workspace that owns this resource."],
   404: ["not_found", "Check the id (list yours with GET /v1/activity)."],
   409: ["conflict", "Wait until the resource is in the right state and try again."],
@@ -30,7 +33,10 @@ export function problem(
       action,
       ...extra,
     },
-    { status, headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" } },
+    {
+      status,
+      headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" },
+    },
   );
 }
 

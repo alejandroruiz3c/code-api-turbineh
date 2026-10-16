@@ -102,16 +102,40 @@ describe("v1Guard (audit I-6, I-7)", () => {
       expect(r.status, ws).toBe(400);
       expect((await r.json()).code).toBe("invalid_workspace");
     }
-    expect(passes(await proxy(api("/v1/activity", "GET", { "x-turbineh-workspace": crypto.randomUUID() })))).toBe(true);
+    expect(
+      passes(
+        await proxy(api("/v1/activity", "GET", { "x-turbineh-workspace": crypto.randomUUID() })),
+      ),
+    ).toBe(true);
   });
 
   it("requires application/json on cookie-authenticated writes (CSRF)", async () => {
     const r = await proxy(api("/v1/plans", "POST", { "content-type": "text/plain" }));
     expect(r.status).toBe(415);
     expect((await proxy(api("/v1/builds/x/ai-token", "POST"))).status).toBe(415);
-    expect(passes(await proxy(api("/v1/plans", "POST", { "content-type": "application/json; charset=utf-8" })))).toBe(true);
-    expect(passes(await proxy(api("/v1/plans", "POST", { authorization: "Bearer t", "content-type": "text/plain" })))).toBe(true);
+    expect(
+      passes(
+        await proxy(
+          api("/v1/plans", "POST", { "content-type": "application/json; charset=utf-8" }),
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      passes(
+        await proxy(
+          api("/v1/plans", "POST", { authorization: "Bearer t", "content-type": "text/plain" }),
+        ),
+      ),
+    ).toBe(true);
     expect(passes(await proxy(api("/v1/plans", "GET")))).toBe(true);
-    expect(passes(await proxy(api("/v1/ops/owner-report/send", "POST", { "content-type": "application/x-www-form-urlencoded" })))).toBe(true);
+    expect(
+      passes(
+        await proxy(
+          api("/v1/ops/owner-report/send", "POST", {
+            "content-type": "application/x-www-form-urlencoded",
+          }),
+        ),
+      ),
+    ).toBe(true);
   });
 });

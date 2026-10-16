@@ -47,7 +47,10 @@ const unauthorized = () =>
 const apiProblem = (status: number, code: string, message: string, action: string) =>
   NextResponse.json(
     { type: "about:blank", title: message, status, code, message, action },
-    { status, headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" } },
+    {
+      status,
+      headers: { "Content-Type": "application/problem+json", "Cache-Control": "no-store" },
+    },
   );
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -64,7 +67,9 @@ const FORM_POSTS: ReadonlySet<string> = new Set(["/v1/ops/owner-report/send"]);
  *    application/json` — a cross-site form or `text/plain` fetch cannot set it without a CORS preflight, which is
  *    refused. 415 otherwise. Session cookies are also SameSite=Lax.
  */
-export function v1Guard(req: Pick<NextRequest, "method" | "headers"> & { nextUrl: { pathname: string } }) {
+export function v1Guard(
+  req: Pick<NextRequest, "method" | "headers"> & { nextUrl: { pathname: string } },
+) {
   const ws = req.headers.get(WORKSPACE_HEADER);
   if (ws !== null && !WORKSPACE_RE.test(ws.trim().toLowerCase()))
     return apiProblem(
