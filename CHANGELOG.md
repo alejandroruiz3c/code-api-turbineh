@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Go-validation benchmark (`bench/validation/`, audit report v2 section 9): 30 new labelled statements (band A in a
+  covered use case, B a use case plus 1–2 new capabilities, C an uncovered core) with the reviewer's canonical
+  requirements and the gaps to warn about, 20 Discover reference queries, a resumable runner over the public API
+  (`--env staging|production`, ≤ 3 flows in parallel; plan → approve when asked → generate → collect plan, result,
+  `/v1/builds`, manifest.json and turbineh.json) and a scorer that writes `RESULTS.md` with the section 9.2 metrics
+  and thresholds (functional coverage, gap-detection recall, false "verified", contradictions between surfaces,
+  snippets, precision@5, estimate error, footprint, time p50/p95, cost) plus a review sheet for human confirmation.
+  The section 11.3 comparison with Claude Code is prepared, not run (`compare-claude-code.md`).
 - Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,
   outcomes, checks, requirements, capabilities/components, time to verified, downloads, pull requests, deploys,
   uncovered requests, AI use of generated apps) and Intelligence Orchestration (requests, tokens, p50/p95, cost,

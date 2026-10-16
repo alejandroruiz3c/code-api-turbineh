@@ -1,0 +1,238 @@
+{
+  "schema": "turbineh.validation-discover/v1",
+  "about": "Section 9.2 Discover precision@5: 20 reference queries with the use cases (recipe ids) and verified components a senior developer would accept as relevant. Written from the catalogue on 2026-10-16 before measuring; precision@5 = relevant results among the first k returned / k, k = min(5, returned); a query with relevant items and no results scores 0.",
+  "queries": [
+    {
+      "q": "support agent",
+      "relevant": [
+        "ai-agents",
+        "ai.orchestrator.turbineh",
+        "ai.mcp-server.modelcontextprotocol-sdk",
+        "security.ai-safety.turbineh",
+        "email.parsing.mailparser",
+        "files.pdf-text.unpdf",
+        "ai.vector-store.pgvector",
+        "ai.text-chunking.sentence-splitter",
+        "ai.prompt-templates.mustache"
+      ]
+    },
+    {
+      "q": "online shop with card payments",
+      "relevant": [
+        "storefront",
+        "payments.checkout.stripe",
+        "commerce.cart.zustand",
+        "payments.subscriptions.turbineh",
+        "data.money.dinero",
+        "data.money.currency-js",
+        "data.money.decimal-js",
+        "security.webhook-signature.standardwebhooks"
+      ]
+    },
+    {
+      "q": "appointment booking",
+      "relevant": [
+        "bookings",
+        "domain.bookings.turbineh",
+        "ui.calendar.react-day-picker",
+        "data.ics-export.ical-generator",
+        "data.recurrence.rrule",
+        "data.timezones.date-fns-tz",
+        "email.transactional.turbineh",
+        "email.transactional.resend"
+      ]
+    },
+    {
+      "q": "export table to excel",
+      "relevant": [
+        "data.xlsx-export.exceljs",
+        "data.csv-export.csv-stringify",
+        "data.csv-export.turbineh",
+        "internal-tool",
+        "ui.table.tanstack-table"
+      ]
+    },
+    {
+      "q": "import csv file",
+      "relevant": [
+        "data.csv-import.papaparse",
+        "data.csv-import.turbineh",
+        "data.analytics-import.turbineh",
+        "internal-tool",
+        "analytics-dashboard",
+        "files.upload.busboy",
+        "files.dropzone.react-dropzone"
+      ]
+    },
+    {
+      "q": "send transactional email",
+      "relevant": [
+        "email.transactional.resend",
+        "email.transactional.turbineh",
+        "email.smtp.nodemailer",
+        "email.plain-text.html-to-text",
+        "jobs.queue.turbineh"
+      ]
+    },
+    {
+      "q": "sign in with teams and roles",
+      "relevant": [
+        "auth.session.better-auth",
+        "authz.organizations.better-auth",
+        "authz.roles.turbineh",
+        "saas-crud",
+        "auth.mfa.otpauth",
+        "domain.membership-access.turbineh"
+      ]
+    },
+    {
+      "q": "two-factor authentication",
+      "relevant": [
+        "auth.mfa.otpauth",
+        "ui.otp-input.input-otp",
+        "auth.session.better-auth",
+        "files.qr.qrcode",
+        "files.qr.qrcode-react",
+        "security.jwt.jose"
+      ]
+    },
+    {
+      "q": "upload files to s3",
+      "relevant": [
+        "storage.objects.aws-s3",
+        "storage.objects.s3-presigner",
+        "storage.private-uploads.turbineh",
+        "storage.objects.vercel-blob",
+        "files.upload.busboy",
+        "files.dropzone.react-dropzone",
+        "files.mime.mime",
+        "files.type-detection.file-type",
+        "client-portal"
+      ]
+    },
+    {
+      "q": "generate pdf invoice",
+      "relevant": [
+        "files.pdf.pdf-lib",
+        "files.pdf.react-pdf",
+        "data.money.dinero",
+        "data.money.currency-js",
+        "data.money.decimal-js",
+        "files.qr.qrcode",
+        "files.barcode.bwip-js"
+      ]
+    },
+    {
+      "q": "kanban board",
+      "relevant": [
+        "projects",
+        "ui.kanban.turbineh",
+        "ui.drag-drop.dnd-kit",
+        "ui.drag-drop.dnd-kit-sortable",
+        "domain.workflow.turbineh"
+      ]
+    },
+    {
+      "q": "dashboard with kpi charts",
+      "relevant": [
+        "analytics-dashboard",
+        "ui.charts.recharts",
+        "data.analytics-import.turbineh",
+        "ui.table.tanstack-table"
+      ]
+    },
+    {
+      "q": "rate limit an api",
+      "relevant": [
+        "ops.rate-limit.rate-limiter-flexible",
+        "ops.queue-throttle.p-queue",
+        "ops.concurrency.p-limit",
+        "security.pack.turbineh",
+        "ops.retry.p-retry"
+      ]
+    },
+    {
+      "q": "scheduled background jobs",
+      "relevant": [
+        "jobs.scheduled.turbineh",
+        "jobs.queue.turbineh",
+        "jobs.scheduler.cron-parser",
+        "jobs.scheduler.croner",
+        "ops.retry.p-retry",
+        "ops.queue-throttle.p-queue"
+      ]
+    },
+    {
+      "q": "waitlist landing page",
+      "relevant": [
+        "landing-waitlist",
+        "growth.waitlist.turbineh",
+        "site.public-pages.turbineh",
+        "email.transactional.turbineh",
+        "email.transactional.resend",
+        "ui.cookie-consent.vanilla-cookieconsent"
+      ]
+    },
+    {
+      "q": "blog with rss feed",
+      "relevant": [
+        "corporate-site",
+        "content.rss.feed",
+        "content.markdown.react-markdown",
+        "ui.markdown.markdown-it",
+        "ui.markdown.marked",
+        "content.frontmatter.gray-matter",
+        "content.reading-time.reading-time",
+        "seo.sitemap.sitemap",
+        "seo.structured-data.schema-dts",
+        "site.public-pages.turbineh",
+        "data.slug.slugify"
+      ]
+    },
+    {
+      "q": "subscription billing",
+      "relevant": [
+        "payments.subscriptions.turbineh",
+        "payments.checkout.stripe",
+        "saas-crud",
+        "security.webhook-signature.standardwebhooks",
+        "data.money.dinero",
+        "data.money.currency-js",
+        "data.money.decimal-js"
+      ]
+    },
+    {
+      "q": "habit tracker with streaks",
+      "relevant": [
+        "tracker",
+        "data.dates.date-fns",
+        "data.dates.dayjs",
+        "ui.charts.recharts",
+        "data.timezones.date-fns-tz"
+      ]
+    },
+    {
+      "q": "validate phone numbers",
+      "relevant": [
+        "data.phone.libphonenumber-js",
+        "data.validation-strings.validator",
+        "data.validation.zod",
+        "data.validation.valibot",
+        "data.validation.yup",
+        "ui.form.react-hook-form",
+        "ui.form.hookform-resolvers",
+        "data.countries.i18n-iso-countries"
+      ]
+    },
+    {
+      "q": "sanitize user html",
+      "relevant": [
+        "security.sanitize-html.sanitize-html",
+        "security.html-escape.he",
+        "security.pack.turbineh",
+        "content.html-to-markdown.node-html-markdown",
+        "email.plain-text.html-to-text"
+      ]
+    }
+  ]
+}
