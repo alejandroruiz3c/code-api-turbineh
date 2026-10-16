@@ -124,6 +124,17 @@ export function withScope(plan: Plan, verdict: ScopeVerdict, appName: string): P
  * rules (acceptance.yaml) and the tested guarantees (guide.yaml) that prove what each one does.
  */
 export function offerCatalog(componentsDir: string): OfferEntry[] {
+  const cached = offerCatalogs.get(componentsDir);
+  if (cached) return cached;
+  const entries = readOfferCatalog(componentsDir);
+  offerCatalogs.set(componentsDir, entries);
+  return entries;
+}
+
+/** Read once per process: the catalogue in a deployed worker changes only with a deploy. */
+const offerCatalogs = new Map<string, OfferEntry[]>();
+
+function readOfferCatalog(componentsDir: string): OfferEntry[] {
   const yaml = (file: string): unknown => {
     try {
       return existsSync(file) ? parse(readFileSync(file, "utf8")) : null;

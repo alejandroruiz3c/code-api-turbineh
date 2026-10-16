@@ -16,7 +16,8 @@ const judge = (yes: boolean): Decider => ({
   }),
 });
 
-describe("offer precision on the labelled set (ADR-0062)", () => {
+// The whole set runs the gate and the offer against the real catalogue: slower than a unit test on CI runners.
+describe("offer precision on the labelled set (ADR-0062)", { timeout: 60_000 }, () => {
   it("has at least 15 mixed requests: some with a real function to offer, some with nothing", () => {
     const set = labelledSet();
     expect(set.length).toBeGreaterThanOrEqual(15);
