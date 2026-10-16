@@ -1,0 +1,168 @@
+{
+  "id": "FA01",
+  "band": "A",
+  "flowId": "e5c9a9f2-a389-4bbb-9958-1c1817ba49c3",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A client can select a 30-minute consultation, 60-minute small piece, or 180-minute large piece session."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A client can choose a specific artist or select the 'any artist' option."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A client can complete a booking without creating an account."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A client receives a confirmation email containing a unique cancellation link upon successful booking."
+    },
+    {
+      "asked": [
+        "A client can successfully cancel a booking via the email link if the cancellation occurs more than 48 hours before the session.",
+        "A client is prevented from cancelling a booking via the email link if the cancellation occurs less than 48 hours before the session."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.cancel-notice"],
+      "criterion": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "An artist can view their personal schedule in both daily and weekly calendar formats."
+    },
+    {
+      "asked": ["An artist can mark specific days as 'off' to block them from the booking system."],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+      ],
+      "status": "covered",
+      "canonical": ["bookings.time-off"],
+      "criterion": "A staff member blocks time off and those time slots are no longer offered for booking"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "An artist can move an existing session to a different time slot."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "An artist can cancel an existing session."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A client receives an automated email notification whenever an artist moves or cancels their session."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The system prevents the scheduling of two sessions for the same artist at the same time."
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 6/11",
+  "functional": {
+    "met": 6,
+    "total": 11,
+    "ratio": 0.545,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 6,
+    "total": 11,
+    "ratio": 0.545,
+    "label": "Technically verified · functional 6/11"
+  },
+  "criteria": [
+    {
+      "text": "A client can select a 30-minute consultation, 60-minute small piece, or 180-minute large piece session.",
+      "status": "open"
+    },
+    {
+      "text": "A client can choose a specific artist or select the 'any artist' option.",
+      "status": "open"
+    },
+    {
+      "text": "A client can complete a booking without creating an account.",
+      "status": "open"
+    },
+    {
+      "text": "A client receives a confirmation email containing a unique cancellation link upon successful booking.",
+      "status": "open"
+    },
+    {
+      "text": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused",
+      "status": "met",
+      "canonical": ["bookings.cancel-notice"],
+      "asked": [
+        "A client can successfully cancel a booking via the email link if the cancellation occurs more than 48 hours before the session.",
+        "A client is prevented from cancelling a booking via the email link if the cancellation occurs less than 48 hours before the session."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      }
+    },
+    {
+      "text": "An artist can view their personal schedule in both daily and weekly calendar formats.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+      }
+    },
+    {
+      "text": "A staff member blocks time off and those time slots are no longer offered for booking",
+      "status": "met",
+      "canonical": ["bookings.time-off"],
+      "asked": ["An artist can mark specific days as 'off' to block them from the booking system."],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+      }
+    },
+    {
+      "text": "An artist can move an existing session to a different time slot.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+      }
+    },
+    {
+      "text": "An artist can cancel an existing session.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+      }
+    },
+    {
+      "text": "A client receives an automated email notification whenever an artist moves or cancels their session.",
+      "status": "open"
+    },
+    {
+      "text": "The system prevents the scheduling of two sessions for the same artist at the same time.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+      }
+    }
+  ],
+  "minutes": 3.59
+}

@@ -10,6 +10,7 @@ import {
   canonicalCriteria,
   canonicalize,
   mapToCanonical,
+  requestWords,
   resolveCanonical,
 } from "./canonical.js";
 
@@ -541,5 +542,186 @@ describe("domain components' canonical criteria prove their own wording (ADR-006
       expect(proven, c.id).toBe(true);
       expect(mapToCanonical(c.criterion, resolved).map((m) => m.id)).toContain(c.id);
     }
+  });
+});
+
+// Staging functional bench 2026-10-16 (bench/functional FA01): criteria left open before the alias-aware `says`,
+// the bookings vocabulary and the narrative words; this app's aliases as .turbineh/aliases.json declares them.
+describe("canonical criteria: staging functional bench FA01 (ADR-0063)", () => {
+  const aliases = [
+    { term: "customer", means: ["client"] },
+    { term: "customers", means: ["clients"] },
+    { term: "staff member", means: ["artist"] },
+    { term: "staff members", means: ["artists"] },
+    { term: "service", means: ["Consultation", "Small piece", "Large piece"] },
+  ];
+  it.each([
+    [
+      "A client can select a 30-minute consultation, 60-minute small piece, or 180-minute large piece session.",
+      "bookings.public-booking",
+    ],
+    [
+      "A client can choose a specific artist or select the 'any artist' option.",
+      "bookings.public-booking",
+    ],
+    ["A client can complete a booking without creating an account.", "bookings.public-booking"],
+    [
+      "A client receives a confirmation email containing a unique cancellation link upon successful booking.",
+      "bookings.confirmation-email",
+    ],
+    [
+      "An artist can view their personal schedule in both daily and weekly calendar formats.",
+      "bookings.staff-calendar",
+    ],
+    [
+      "An artist can move an existing session to a different time slot.",
+      "bookings.staff-move-cancel",
+    ],
+    ["An artist can cancel an existing session.", "bookings.staff-move-cancel"],
+    [
+      "A client receives an automated email notification whenever an artist moves or cancels their session.",
+      "bookings.staff-move-cancel",
+    ],
+    [
+      "The system prevents the scheduling of two sessions for the same artist at the same time.",
+      "bookings.no-double-booking",
+    ],
+  ])("maps %j", (asked, id) => {
+    expect(mapToCanonical(asked, bookings(), aliases).map((c) => c.id)).toEqual([id]);
+  });
+  it("still keeps an SMS reminder out", () => {
+    expect(
+      mapToCanonical(
+        "A client receives an SMS reminder 2 hours before the session",
+        bookings(),
+        aliases,
+      ),
+    ).toEqual([]);
+  });
+});
+
+// Staging functional bench 2026-10-16 (FA02 barber shop, FA03 ceramics shop, FA04 design agency projects): request
+// criteria as the compiler wrote them, with each app's declared aliases.
+describe("canonical criteria: staging functional bench FA02–FA04 (ADR-0063)", () => {
+  const barber = [
+    { term: "staff member", means: ["barber"] },
+    { term: "staff members", means: ["barbers"] },
+    { term: "service", means: ["Haircut", "Haircut and beard"] },
+  ];
+  it.each([
+    [
+      "Given a customer selects a 'haircut', the system reserves a 30-minute block in the calendar.",
+      "bookings.public-booking",
+    ],
+    [
+      "Given a customer selects 'any barber', the system assigns the appointment to the first available barber.",
+      "bookings.public-booking",
+    ],
+    [
+      "Given a customer completes a booking, the system sends a confirmation email containing a unique cancellation link.",
+      "bookings.confirmation-email",
+    ],
+    [
+      "Given a barber marks a time slot as 'time off', that slot becomes unavailable for customer bookings.",
+      "bookings.time-off",
+    ],
+    [
+      "Given two customers attempt to book the same barber at the same time, the system prevents the second booking to ensure no double booking occurs.",
+      "bookings.no-double-booking",
+    ],
+  ])("FA02 maps %j", (asked, id) => {
+    expect(id).toMatch(/^bookings\./);
+    expect(mapToCanonical(asked, bookings(), barber).map((c) => c.id)).toEqual([id]);
+  });
+
+  const shop = [{ term: "owner", means: ["administrator", "admin", "staff"] }];
+  it.each([
+    [
+      "Given a user views the product catalogue, they can see high-quality photos of each ceramic item.",
+      "storefront.images",
+    ],
+    [
+      "Given a user views a mug, they can select from three distinct colours, each displaying its specific price and stock availability.",
+      "storefront.variants",
+    ],
+    [
+      "Given a user selects a specific colour of a mug, the system adds the correct unique SKU to the cart.",
+      "storefront.variants",
+    ],
+    [
+      "Given a user adds items to the cart, the cart correctly calculates the subtotal of all selected products.",
+      "storefront.cart",
+    ],
+    [
+      "Given a user enters a valid discount code before the expiry date, the total price is reduced by the specified amount.",
+      "storefront.discount-codes",
+    ],
+    [
+      "Given a user enters an expired discount code, the system rejects the code and applies no discount.",
+      "storefront.discount-refused",
+    ],
+    [
+      "Given a successful sale, the stock level for the specific SKU purchased is automatically decremented in the database.",
+      "storefront.orders-stock",
+    ],
+    [
+      "Given an admin user logs into the admin panel, they can create, update, or delete products.",
+      "storefront.admin-panel",
+    ],
+    [
+      "Given an admin user accesses the admin panel, they can view a list of all historical orders.",
+      "storefront.admin-orders",
+    ],
+  ])("FA03 maps %j", (asked, id) => {
+    // The request's subject words, from its app name and summary (requestWords).
+    const about = requestWords(
+      "Clayhouse Ceramics",
+      "An online shop for a small ceramics workshop selling handmade mugs.",
+    );
+    expect(mapToCanonical(asked, installed("storefront"), shop, about).map((c) => c.id)).toContain(
+      id,
+    );
+  });
+
+  it.each([
+    [
+      "Given a task exists, a user can assign a specific team member to it.",
+      "projects.tasks-assignees",
+    ],
+    [
+      "Given a project exists, a user can view a Kanban board with 'To Do', 'In Progress', and 'Done' columns.",
+      "projects.kanban",
+    ],
+    [
+      "Given a user is logged in, the user can view a filtered list containing only tasks assigned to them.",
+      "projects.my-tasks",
+    ],
+    [
+      "Given a project exists, a user can create a task within that project.",
+      "projects.tasks-assignees",
+    ],
+  ])("FA04 maps %j", (asked, id) => {
+    expect(mapToCanonical(asked, installed("projects")).map((c) => c.id)).toContain(id);
+  });
+
+  it("FA02: a chosen barber's free slots are the public booking's or the real-free-times function", () => {
+    const ids = mapToCanonical(
+      "Given a customer selects a specific barber, the system only shows that barber's available time slots.",
+      bookings(),
+      barber,
+    ).map((c) => c.id);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids)
+      expect(["bookings.public-booking", "bookings.opening-hours"]).toContain(id);
+  });
+
+  it("a shop criterion naming a function the shop does not have stays out", () => {
+    expect(
+      mapToCanonical(
+        "Given a user buys a gift card, it can be redeemed in store",
+        installed("storefront"),
+        shop,
+      ),
+    ).toEqual([]);
   });
 });

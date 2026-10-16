@@ -16,7 +16,7 @@
 - id: projects.tasks-assignees
   criterion: "The owner creates a project and a task assigned to them"
   advertises: "assignees"
-  says: ["assign|owner of|responsible", "task|project|card|issue"]
+  says: ["assign|owner of|responsible|creat|add|new", "task|project|card|issue"]
   terms: >-
     assign assigns assigned assignee assignees responsible team member members teammate project projects task
     tasks card cards issue issues create creates created add adds new
@@ -67,6 +67,7 @@
   terms: >-
     my personal own their tasks task list lists assigned assignee across projects project view page see shows
     order ordered due date priority
+    sign signs log logs logged filter filtered filters only
   actors: [owner, member, admin]
   tests:
     - "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"

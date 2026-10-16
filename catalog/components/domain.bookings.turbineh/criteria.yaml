@@ -3,10 +3,17 @@
 # nothing of it is left over once the wording, the tests' titles, `terms`, `actors` and this app's aliases are
 # absorbed) is replaced by the canonical wording in the plan, and is met exactly when the linked tests are in the
 # package and the gate passed. `advertises`: the words of the catalogue text this criterion proves.
+# The booking domain's nouns (what the functions act on), absorbed by every criterion below.
+- vocabulary: >-
+    booking bookings appointment appointments reservation reservations session sessions visit visits class classes
+    lesson lessons slot slots time times date dates day days hour hours minute minutes service services treatment
+    treatments customer customers client clients patient patients team member members staff resource resources
+    calendar schedule existing system app website page online
+
 - id: bookings.public-booking
   criterion: "A customer books a free time on the public page without an account and the booking is created"
   advertises: "public booking page"
-  says: ["\\bbook|appointment|reserv|slot|schedul", "public|online|page|site|without (an )?account|pick|choose|select|free|availab|slot|time|service"]
+  says: ["\\bbook|appointment|reserv|slot|schedul|session|choos|select|pick", "public|online|page|site|without|account|sign|pick|choose|select|free|availab|slot|time|service|any"]
   terms: >-
     slot slots session sessions visit visits minute minutes duration hour hours select selects pick picks choose
     chooses service services treatment team member members staff any available availability online website form
@@ -80,6 +87,7 @@
     slot slots offered offer no longer available customers booking bookings appointment appointments period
     day days hours mark marks
     calendar schedule scheduled date dates mark marks specific
+    unavailable
   actors: [staff, admin, owner, employee, manager, customer]
   tests:
     - "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
@@ -105,6 +113,7 @@
     opening open hours working business closed closing day days weekday weekdays outside time times slot slots
     offered offer only real free available availability reject rejected refused minute minutes duration
     grid start starts end ends local zone
+    select selects selected chosen specific show shows shown display that their
   actors: [customer, client, patient, visitor, guest]
   tests:
     - "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"

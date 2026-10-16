@@ -361,6 +361,7 @@ export function assemble(input: AssembleInput): AssembleResult {
     components: [...selectedIds],
     entities: spec.entities,
     roles: [...spec.roles, matrix?.roles.owner?.label ?? "", matrix?.roles.admin?.label ?? ""],
+    about: [spec.app_name, spec.summary],
   });
   writeAcceptance(
     outDir,

@@ -9,6 +9,7 @@ import {
   canonicalize,
   coverageRules,
   mapToCanonical,
+  requestWords,
   roleWords,
   type CanonicalEntity,
   entitiesToGenerate,
@@ -183,6 +184,7 @@ export function planCriteria(
     entities?: readonly CanonicalEntity[];
     roles?: readonly string[];
     asked?: Record<string, string[]>;
+    about?: readonly string[];
   } = {},
 ): NonNullable<Plan["criteria"]> {
   const rules = coverageRules({
@@ -200,7 +202,12 @@ export function planCriteria(
   });
   const aliases = roleWords(canonical.roles);
   return acceptanceStatus(criteria, rules, false).map((c) => {
-    const mapped = mapToCanonical(c.criterion, canon, aliases);
+    const mapped = mapToCanonical(
+      c.criterion,
+      canon,
+      aliases,
+      requestWords(...(canonical.about ?? [])),
+    );
     const asked = canonical.asked?.[c.criterion];
     const extra = {
       ...(mapped.length ? { canonical: mapped.map((m) => m.id) } : {}),
@@ -241,6 +248,7 @@ export function canonicalizeSpec(spec: BuildSpec, recipesDir: string): number {
     canon,
     roleWords(spec.roles),
     spec.criteria_asked ?? {},
+    requestWords(spec.app_name, spec.summary),
   );
   spec.acceptance_criteria = c.criteria;
   if (Object.keys(c.asked).length > 0) spec.criteria_asked = c.asked;
@@ -387,7 +395,11 @@ export async function runBuild(
                     join(deps.repoRoot, "catalog/recipes"),
                     spec.recipe,
                     [],
-                    { entities: spec.entities, roles: spec.roles },
+                    {
+                      entities: spec.entities,
+                      roles: spec.roles,
+                      about: [spec.app_name, spec.summary],
+                    },
                   )
                     .filter((c) => c.status === "covered")
                     .map((c) => c.criterion),
@@ -767,7 +779,12 @@ export async function runBuild(
       recipesDir,
       recipeId,
       [...Object.values(resolution.selected).map((c) => c.id)],
-      { entities: spec.entities, roles: spec.roles, asked: spec.criteria_asked ?? {} },
+      {
+        entities: spec.entities,
+        roles: spec.roles,
+        asked: spec.criteria_asked ?? {},
+        about: [spec.app_name, spec.summary],
+      },
     );
     plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];
     plan.estimate = calibrateEstimate(

@@ -33,6 +33,11 @@ export interface CanonicalCriterion {
   terms: string[];
   /** Roles this function serves besides those its wording names (absorbed by the actor check). */
   actors: string[];
+  /**
+   * The domain's nouns, shared by every canonical criterion of the same file (`- vocabulary: …` entry): what the
+   * function acts on (session, appointment, client…), never what it does.
+   */
+  vocabulary: string[];
   /** "file › title" of the tests that prove it (all must be in the package). */
   tests: string[];
   /**
@@ -82,6 +87,9 @@ export function readCanonical(file: string, from: string): CanonicalCriterion[] 
   if (!existsSync(file)) return [];
   const raw = parse(readFileSync(file, "utf8")) as unknown;
   if (!Array.isArray(raw)) return [];
+  const vocabulary = (raw as { vocabulary?: unknown }[]).flatMap((r) =>
+    r && typeof r === "object" && "vocabulary" in r ? strings(r.vocabulary) : [],
+  );
   return (raw as RawCanonical[])
     .filter(
       (r) =>
@@ -95,6 +103,7 @@ export function readCanonical(file: string, from: string): CanonicalCriterion[] 
       says: strings(r.says),
       terms: strings(r.terms),
       actors: strings(r.actors),
+      vocabulary,
       tests: Array.isArray(r.tests) ? r.tests.map(String) : [],
       ...(typeof r.generated === "string" ? { generated: r.generated } : {}),
       ...(typeof r.when === "string" ? { when: r.when } : {}),
@@ -195,8 +204,29 @@ const safeRegExp = (re: string): RegExp | null => {
   }
 };
 
+/** A declared alias of this app (ADR-0047/0049): the word a test uses and this app's words for it. */
+export interface CanonicalAlias {
+  term: string;
+  means: string[];
+}
+/** App words: plain words (role names) or declared aliases. */
+export type AliasInput = string | CanonicalAlias;
+const aliasWords = (aliases: readonly AliasInput[]): string[] =>
+  aliases.flatMap((a) => (typeof a === "string" ? [a] : a.means));
+const escapeWord = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** The request criterion with each declared alias's generic term next to this app's word ("artist staff member"). */
+const withTerms = (derived: string, aliases: readonly AliasInput[]): string =>
+  aliases.reduce<string>((text, a) => {
+    if (typeof a === "string") return text;
+    const hit = a.means.some(
+      (m) => m.trim() && new RegExp(`\\b${escapeWord(m.trim())}s?\\b`, "i").test(derived),
+    );
+    return hit ? `${text} ${a.term}` : text;
+  }, derived);
+
 /** Words a canonical criterion absorbs: its wording, its tests' titles, its terms and actors, and app aliases. */
 function absorbed(c: ResolvedCanonical, aliases: readonly string[]): Set<string> {
+  // The domain's nouns are absorbed too.
   const titles = c.tests.map((t) => splitTestRef(t).title);
   const entityWords = c.entity
     ? [
@@ -212,6 +242,7 @@ function absorbed(c: ResolvedCanonical, aliases: readonly string[]): Set<string>
       ...titles,
       ...c.terms,
       ...c.actors,
+      ...(c.vocabulary ?? []),
       ...entityWords,
       ...aliases,
     ].join("\n"),
@@ -225,9 +256,25 @@ function servesActors(derived: string, c: ResolvedCanonical, aliases: readonly s
   return [...rolesIn(derived)].every((r) => serves.has(r));
 }
 
-function candidate(derived: string, c: ResolvedCanonical, aliases: readonly string[]): boolean {
+/**
+ * "Only" restricts who may act ("only staff see bookings": a refusal of everyone else) or what is shown ("a list of only
+ * the tasks assigned to them": no refusal). The second kind is not a refusal for the mapping.
+ */
+const scopeOnly = (text: string): string =>
+  text.replace(
+    /\bonly\b(?!\s+(?:the\s+|an?\s+)?(?:[a-z-]+\s+)?(?:owners?|admins?|administrators?|staff|managers?|members?|editors?|viewers?|users?|people|employees?|customers?|clients?|signed|logged|authenticated|authori[sz]ed)\b)/gi,
+    "",
+  );
+
+function candidate(
+  derived: string,
+  c: ResolvedCanonical,
+  aliases: readonly string[],
+  saysText: string = derived,
+): boolean {
   if (c.says.length === 0) return false;
-  if (!c.says.every((p) => safeRegExp(p)?.test(derived) ?? false)) return false;
+  // `says` reads the criterion with each declared alias's term ("an artist" also says "staff member").
+  if (!c.says.every((p) => safeRegExp(p)?.test(saysText) ?? false)) return false;
   if (c.entity) {
     const n = entityNames(c.entity);
     const named = new RegExp(
@@ -236,14 +283,18 @@ function candidate(derived: string, c: ResolvedCanonical, aliases: readonly stri
     );
     if (!named.test(derived)) return false;
   }
-  if (statesRefusal(derived) && !statesRefusal(c.criterion)) return false;
+  if (statesRefusal(scopeOnly(derived)) && !statesRefusal(c.criterion)) return false;
   return servesActors(derived, c, aliases);
 }
 
 /** Narrative words of Given/When/Then requirements that carry nothing to check (residual check only). */
 const NARRATIVE = salientStems(
   "try tries tried trying another other second first both someone anyone everyone able allowed allows let lets " +
-    "ensure ensures make makes sure should must want wants need needs needed way ways",
+    "ensure ensures make makes sure should must want wants need needs needed way ways unique specific both " +
+    "whenever upon existing option options format formats either successful successfully properly correctly " +
+    "valid particular desired respective respectively relevant own only become becomes occur occurs high quality " +
+    "distinct within historical automatically automatic correct one two three four five several various multiple " +
+    "given exists exist specified certain additional",
 );
 
 const leftover = (
@@ -254,6 +305,10 @@ const leftover = (
   const have = new Set(cs.flatMap((c) => [...absorbed(c, aliases)]));
   return [...salientStems(derived)].filter((s) => !have.has(s) && !NARRATIVE.has(s));
 };
+
+/** Phrasings that read like another function's words: "reserves a 30-minute block" is a slot, not a time-off block. */
+const normalize = (text: string): string =>
+  text.replace(/\b(\d+[- ]?(?:min|mins|minutes?|hours?|h))\s+(?:time\s+)?block\b/gi, "$1 slot");
 
 /** How much of a canonical criterion's own wording the request criterion expresses (0–1). */
 const closeness = (derived: string, c: ResolvedCanonical): number => {
@@ -268,21 +323,27 @@ const closeness = (derived: string, c: ResolvedCanonical): number => {
  * two functions needs both), else none.
  */
 export function mapToCanonical(
-  derived: string,
+  asked: string,
   canon: readonly ResolvedCanonical[],
-  aliases: readonly string[] = [],
+  input: readonly AliasInput[] = [],
+  /** The request's own subject words (requestWords): absorbed, never actors, never functions. */
+  context: readonly string[] = [],
 ): ResolvedCanonical[] {
-  const exact = canon.find((c) => c.criterion.toLowerCase() === derived.trim().toLowerCase());
+  const exact = canon.find((c) => c.criterion.toLowerCase() === asked.trim().toLowerCase());
   if (exact) return [exact];
-  const cands = canon.filter((c) => candidate(derived, c, aliases));
+  const derived = normalize(asked);
+  const aliases = aliasWords(input);
+  const absorbedAlso = [...aliases, ...context];
+  const saysText = withTerms(derived, input);
+  const cands = canon.filter((c) => candidate(derived, c, aliases, saysText));
   if (cands.length === 0) return [];
-  const alone = cands.filter((c) => leftover(derived, [c], aliases).length === 0);
+  const alone = cands.filter((c) => leftover(derived, [c], absorbedAlso).length === 0);
   if (alone.length > 0) {
     // Several functions each describe it: the one(s) whose own wording it expresses most.
     const best = Math.max(...alone.map((c) => closeness(derived, c)));
     return alone.filter((c) => closeness(derived, c) === best);
   }
-  return leftover(derived, cands, aliases).length === 0 ? cands : [];
+  return leftover(derived, cands, absorbedAlso).length === 0 ? cands : [];
 }
 
 export interface CanonicalizedCriteria {
@@ -301,8 +362,9 @@ export interface CanonicalizedCriteria {
 export function canonicalize(
   criteria: readonly string[],
   canon: readonly ResolvedCanonical[],
-  aliases: readonly string[] = [],
+  aliases: readonly AliasInput[] = [],
   previous: Record<string, string[]> = {},
+  context: readonly string[] = [],
 ): CanonicalizedCriteria {
   const out: string[] = [];
   const asked: Record<string, string[]> = {};
@@ -311,7 +373,7 @@ export function canonicalize(
     if (!out.includes(text)) out.push(text);
   };
   for (const c of criteria) {
-    const mapped = mapToCanonical(c, canon, aliases);
+    const mapped = mapToCanonical(c, canon, aliases, context);
     if (mapped.length === 0) {
       push(c);
       continue;
@@ -486,17 +548,43 @@ export function canonicalForPlan(input: {
   );
 }
 
+/** Words that name a capability or an external platform: a request word like these is never absorbed as context. */
+const FEATURE_WORD =
+  /^(sync|publish|post|integrat|import|export|notif|remind|sms|text|whatsapp|telegram|slack|discord|instagram|facebook|linkedin|twitter|tiktok|youtube|google|outlook|calendar|hubspot|salesforce|shopify|quickbooks|xero|mailchimp|zendesk|stripe|paypal|pay|charge|subscri|invoice|ai|chat|bot|assistant|email|mail|report|analytic|api|webhook|map|gps|video|stream|voice|call|phone|sign|login|password|translat|recommend|review|rating|loyalty|gift|refund|deliver|track|auction|bid)/i;
+
+/**
+ * The request's subject words (its app name and summary: "ceramics", "mug", "studio"), absorbed by the residual check
+ * so a criterion about "a mug" can map to the shop's variants. Words that name a capability or a platform are left out.
+ */
+export const requestWords = (...texts: readonly (string | undefined)[]): string[] => [
+  ...new Set(
+    texts
+      .join(" ")
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && !FEATURE_WORD.test(w)),
+  ),
+];
+
 /** Words of the request's own roles ("front_desk" → "front", "desk"), absorbed as actors of the app. */
 export const roleWords = (roles: readonly string[] = []): string[] =>
   roles.flatMap((r) => r.split(/[_\s-]+/)).filter((w) => w.length > 2);
 
-/** The app words of every declared alias in the package (.turbineh/aliases.json): "patient", "physiotherapist"… */
-export function packageAliasWords(outDir: string): string[] {
+/** Every declared alias in the package (.turbineh/aliases.json): "customer" → "patient", "staff member" → "artist"… */
+export function packageAliases(outDir: string): CanonicalAlias[] {
   const p = join(outDir, ".turbineh/aliases.json");
   if (!existsSync(p)) return [];
   try {
-    const list = JSON.parse(readFileSync(p, "utf8")) as { aliases?: { means?: string[] }[] }[];
-    return [...new Set(list.flatMap((r) => (r.aliases ?? []).flatMap((a) => a.means ?? [])))];
+    const list = JSON.parse(readFileSync(p, "utf8")) as {
+      aliases?: { term?: string; means?: string[] }[];
+    }[];
+    return list.flatMap((r) =>
+      (r.aliases ?? []).flatMap((a) =>
+        typeof a.term === "string" && Array.isArray(a.means) && a.means.length
+          ? [{ term: a.term, means: a.means.map(String) }]
+          : [],
+      ),
+    );
   } catch {
     return [];
   }
@@ -531,6 +619,8 @@ export function linkCriteria(
     components: readonly string[];
     entities: readonly CanonicalEntity[];
     roles?: readonly string[];
+    /** The request's app name and summary (requestWords). */
+    about?: readonly string[];
   },
 ): Map<string, CriterionLink> {
   const source = (file: string) =>
@@ -546,10 +636,10 @@ export function linkCriteria(
     },
     packageConditions(outDir),
   );
-  const aliases = [...packageAliasWords(outDir), ...roleWords(input.roles)];
+  const aliases: AliasInput[] = [...packageAliases(outDir), ...roleWords(input.roles)];
   const links = new Map<string, CriterionLink>();
   for (const c of criteria) {
-    const mapped = mapToCanonical(c, canon, aliases);
+    const mapped = mapToCanonical(c, canon, aliases, requestWords(...(input.about ?? [])));
     if (mapped.length === 0) continue;
     links.set(c, {
       canonical: mapped.map((m) => m.id),
@@ -557,4 +647,20 @@ export function linkCriteria(
     });
   }
   return links;
+}
+
+/** Why a request criterion maps or not to each canonical criterion (diagnostics for catalogue authors and CI). */
+export function explainCanonical(
+  derived: string,
+  canon: readonly ResolvedCanonical[],
+  input: readonly AliasInput[] = [],
+): { id: string; says: boolean; candidate: boolean; leftover: string[] }[] {
+  const aliases = aliasWords(input);
+  const saysText = withTerms(derived, input);
+  return canon.map((c) => ({
+    id: c.id,
+    says: c.says.every((p) => safeRegExp(p)?.test(saysText) ?? false),
+    candidate: candidate(derived, c, aliases, saysText),
+    leftover: leftover(derived, [c], aliases),
+  }));
 }

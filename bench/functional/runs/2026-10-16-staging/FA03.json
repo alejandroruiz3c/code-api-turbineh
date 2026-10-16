@@ -1,0 +1,133 @@
+{
+  "id": "FA03",
+  "band": "A",
+  "flowId": "ac45d75a-e6b8-4875-b479-f940286fe688",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views the product catalogue, they can see high-quality photos of each ceramic item."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views a mug, they can select from three distinct colours, each displaying its specific price and stock availability."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user selects a specific colour of a mug, the system adds the correct unique SKU to the cart."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user adds items to the cart, the cart correctly calculates the subtotal of all selected products."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user enters a valid discount code before the expiry date, the total price is reduced by the specified amount."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user enters an expired discount code, the system rejects the code and applies no discount."
+    },
+    {
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, the payment is processed successfully."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.checkout"],
+      "criterion": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a successful sale, the stock level for the specific SKU purchased is automatically decremented in the database."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given an admin user logs into the admin panel, they can create, update, or delete products."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given an admin user accesses the admin panel, they can view a list of all historical orders."
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"Clay & Kiln (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given a successful payment, the system sends an order confirmation email to the user's provided address."
+  ],
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 1/10",
+  "functional": {
+    "met": 1,
+    "total": 10,
+    "ratio": 0.1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 1,
+    "total": 10,
+    "ratio": 0.1,
+    "label": "Technically verified · functional 1/10"
+  },
+  "criteria": [
+    {
+      "text": "Given a user views the product catalogue, they can see high-quality photos of each ceramic item.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user views a mug, they can select from three distinct colours, each displaying its specific price and stock availability.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user selects a specific colour of a mug, the system adds the correct unique SKU to the cart.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user adds items to the cart, the cart correctly calculates the subtotal of all selected products.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user enters a valid discount code before the expiry date, the total price is reduced by the specified amount.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user enters an expired discount code, the system rejects the code and applies no discount.",
+      "status": "open"
+    },
+    {
+      "text": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
+      "status": "met",
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, the payment is processed successfully."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given a successful sale, the stock level for the specific SKU purchased is automatically decremented in the database.",
+      "status": "open"
+    },
+    {
+      "text": "Given an admin user logs into the admin panel, they can create, update, or delete products.",
+      "status": "open"
+    },
+    {
+      "text": "Given an admin user accesses the admin panel, they can view a list of all historical orders.",
+      "status": "open"
+    }
+  ],
+  "minutes": 7.15
+}
