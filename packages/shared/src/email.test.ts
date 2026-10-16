@@ -40,6 +40,26 @@ describe("resendMailer", () => {
     });
   });
 
+  it("sends attachments base64-encoded (ADR-0061)", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ id: "em_2" }));
+    const mailer = resendMailer({ apiKey: "re_test_key", fetch: fetchMock as typeof fetch });
+    await mailer.send({
+      to: "owner@example.com",
+      subject: "s",
+      html: "h",
+      text: "t",
+      attachments: [{ filename: "people.csv", content: "email,name\r\nañ@x.test,Ñ\r\n" }],
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as {
+      attachments: { filename: string; content: string }[];
+    };
+    expect(body.attachments[0]?.filename).toBe("people.csv");
+    expect(Buffer.from(body.attachments[0]?.content ?? "", "base64").toString("utf8")).toBe(
+      "email,name\r\nañ@x.test,Ñ\r\n",
+    );
+  });
+
   it("returns failures instead of throwing (HTTP error and network error)", async () => {
     const http = resendMailer({
       apiKey: "k",

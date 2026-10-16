@@ -1,6 +1,7 @@
 import { buildsLastDay, buildsLastDayFromIp, costToday, enqueueBuild } from "@turbineh/db";
 import { z } from "zod";
 import { getCaller } from "@/server/caller";
+import { requestChannel } from "@/server/channel";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
@@ -32,7 +33,7 @@ const Body = z.object({
     .transform((o) =>
       Object.fromEntries(
         Object.entries(o).filter(
-          ([k]) => !["mode", "parent", "brand", "covered_only", "contact_email"].includes(k),
+          ([k]) => !["mode", "parent", "brand", "covered_only", "contact_email", "channel"].includes(k),
         ),
       ),
     )
@@ -68,6 +69,8 @@ export async function POST(req: Request): Promise<Response> {
       ...(parsed.data.brand ? { brand: parsed.data.brand } : {}),
       ...(parsed.data.covered_only ? { covered_only: true } : {}),
       ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
+      // ADR-0061: web, CLI, MCP or API, for the owner report.
+      channel: requestChannel(req.headers),
     },
   });
   return Response.json(

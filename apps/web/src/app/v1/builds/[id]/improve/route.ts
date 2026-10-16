@@ -1,4 +1,5 @@
 import { buildsLastDay, costToday, enqueueBuild, findImprovement, getBuild } from "@turbineh/db";
+import { requestChannel } from "@/server/channel";
 import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
@@ -43,7 +44,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     ownerId: caller.ownerId,
     ...(caller.kind === "api-key" ? { apiKeyId: caller.apiKeyId } : {}),
     idempotencyKey,
-    options: { mode: "improve", parent: id },
+    options: { mode: "improve", parent: id, channel: requestChannel(req.headers) },
   });
   return Response.json(
     { build_id: buildId, created, parent: id, status_url: `/v1/builds/${buildId}`, events_url: `/v1/builds/${buildId}/events` },

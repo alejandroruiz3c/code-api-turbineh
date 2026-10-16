@@ -1,7 +1,6 @@
 import { listOrchestrationTrials } from "@turbineh/db";
-import { getCaller } from "@/server/caller";
 import { db } from "@/server/db";
-import { isOps } from "@/server/ops";
+import { getStaff } from "@/server/staff";
 import { problem } from "@/server/problem";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ export const dynamic = "force-dynamic";
  * company, use case, signups, spend and the active token prefix. TurbineH staff only; 404 for everyone else.
  */
 export async function GET(req: Request): Promise<Response> {
-  if (!isOps(await getCaller())) return problem(404, "Not found");
+  if (!(await getStaff())) return problem(404, "Not found");
   const limit = Number(new URL(req.url).searchParams.get("limit") ?? 100);
   const rows = await listOrchestrationTrials(db, Number.isFinite(limit) ? limit : 100);
   return Response.json({ trials: rows }, { headers: { "Cache-Control": "no-store" } });

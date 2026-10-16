@@ -24,6 +24,13 @@ const schema = z.object({
   VERCEL_INTEGRATION_CLIENT_SECRET: z.string().optional(),
   /** Landing server secret for POST /v1/ai/trial-signups (ADR-0059). Optional: without it the endpoint is 404. */
   ORCHESTRATION_SIGNUP_SECRET: z.string().optional(),
+  /** Vercel Cron's bearer secret for /v1/cron/* (ADR-0061). Optional: without it the cron routes are 404. */
+  CRON_SECRET: z.string().optional(),
+  /** Recipient of the owner usage report (ADR-0061); ORCHESTRATION_REPORT_EMAIL is accepted as an alias. */
+  OWNER_REPORT_EMAIL: z.string().optional(),
+  ORCHESTRATION_REPORT_EMAIL: z.string().optional(),
+  /** "1" lets the weekly cron email from a non-production host (staging defaults to a dry run). */
+  OWNER_REPORT_CRON_SEND: z.string().optional(),
 });
 
 type Env = z.infer<typeof schema>;

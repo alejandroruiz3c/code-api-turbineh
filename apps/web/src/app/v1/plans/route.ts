@@ -5,6 +5,7 @@ import {
   enqueueBuild,
   getBuild,
 } from "@turbineh/db";
+import { requestChannel } from "@/server/channel";
 import type { Plan } from "@turbineh/shared";
 import {
   analyseGitHubRepo,
@@ -204,6 +205,8 @@ export async function POST(req: Request): Promise<Response> {
       ...(parsed.data.generate ? { autoGenerate: true } : {}),
       // ADR-0052: an uncovered request is recorded as demand; signed-in people get the priority notice by email.
       ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
+      // ADR-0061: web, CLI, MCP or API, for the owner report.
+      channel: requestChannel(req.headers),
     },
   });
   const links = { status_url: `/v1/plans/${id}`, events_url: `/v1/plans/${id}/events` };

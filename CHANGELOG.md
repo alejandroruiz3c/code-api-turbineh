@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,
+  outcomes, checks, requirements, capabilities/components, time to verified, downloads, pull requests, deploys,
+  uncovered requests, AI use of generated apps) and Intelligence Orchestration (requests, tokens, p50/p95, cost,
+  frontier reference, savings, trial, surfaces), a combined per-person view, totals and week-over-week. Staff page
+  `/ops/report` (sortable, CSV, "email me now"; `/ops/users`, `/ops/orchestration`), `GET /v1/ops/owner-report`,
+  `POST /v1/ops/owner-report/send`, `pnpm --filter @turbineh/db owner-report` / `orchestration-report`, and a weekly
+  email every Monday 08:00 Europe/Madrid (Vercel Cron → `GET /v1/cron/owner-report` with `CRON_SECRET`, once per ISO
+  week; staging runs dry). Flows now record their channel (`options.channel`) and package downloads are counted
+  (migration 0016). Staff sign-in with GitHub at `/ops/sign-in`; platform emails support attachments.
 - Measurable orchestration (ADR-0060): every orchestrated chat, `/orchestrate`, `/agent`, direct chat answer and MCP
   `orchestrate`/`chat` result reports this request's `latency_ms`, tokens, `cost_usd` (as charged to the trial), the
   same tokens at a frontier model's list price (`frontier_reference_cost_usd`) and `savings_usd`/`savings_pct`
@@ -14,6 +23,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   `GET /v1/ai/v1/usage` and the MCP tool `usage_report` (migration 0015 `ai_request_metrics`).
 - The gateway forwards the OpenAI-compatible `reasoning_effort` and reports `finish_reason` to the engine; an engine
   `NO_ANSWER` is answered 502 `no_answer`; JSON mode on the orchestrated chat is validated structured output.
+
+### Fixed
+
+- Staff pages and `/v1/ops/*` recognise a staff GitHub sign-in in a browser that also has the invitation cookie
+  (before, `/ops` was a 404 for staff in the browser).
 
 ### Changed
 

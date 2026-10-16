@@ -114,6 +114,10 @@ async function env(): Promise<void> {
     // Intelligence Orchestration trials (ADR-0059): the landing server's secret for POST /v1/ai/trial-signups.
     // Staging may use its own (STG_ORCHESTRATION_SIGNUP_SECRET). Without it the endpoint answers 404.
     ...sharedOptional("ORCHESTRATION_SIGNUP_SECRET"),
+    // Owner usage report (ADR-0061): Vercel Cron's bearer secret for /v1/cron/owner-report (same value on both
+    // projects unless STG_CRON_SECRET is set) and the report's recipient. Staging's cron runs dry (no email).
+    ...sharedOptional("CRON_SECRET"),
+    ...sharedOptional("OWNER_REPORT_EMAIL"),
   };
   const body = Object.entries(vars).map(([key, value]) => ({
     key,
