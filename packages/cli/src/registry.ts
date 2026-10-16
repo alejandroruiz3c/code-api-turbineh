@@ -1,5 +1,6 @@
 import { build, resume } from "./build.js";
 import {
+  aiToken,
   apply,
   init,
   inspect,
@@ -31,6 +32,7 @@ export const COMMANDS: Record<string, (c: Ctx) => Promise<CommandResult>> = {
   left,
   connect,
   disconnect,
+  "ai-token": aiToken,
 };
 
 /** Runs one command; failures become the same result object (and exit code) the CLI prints with --json. */

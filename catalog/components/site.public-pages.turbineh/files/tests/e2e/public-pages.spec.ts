@@ -14,6 +14,9 @@ const filter = page0.filters
   .map((f) => f.trim().toLowerCase())
   .find((f) => /^[a-z][a-z0-9]*( [a-z0-9]+)?$/.test(f));
 const filterLabel = filter ? filter.charAt(0).toUpperCase() + filter.slice(1) : null;
+// The field is located by its id (the key config.ts derives), not its label: a filter named like a form field
+// ("title", "summary", "order", "text"…) would make the label ambiguous.
+const filterKey = filter ? filter.replace(/ /g, "_") : null;
 const stamp = Date.now();
 const A = { title: `Bridge ${stamp}`, value: "Bridges" };
 const B = { title: `Tower ${stamp}`, value: "Towers" };
@@ -24,7 +27,7 @@ async function addEntry(page: Page, title: string, value: string | null, publish
   await page.goto(`/dashboard/site-pages/${key}`);
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("Summary").fill(`${title} summary`);
-  if (filterLabel && value) await page.getByLabel(filterLabel, { exact: true }).fill(value);
+  if (filterKey && value) await page.locator(`#se-${filterKey}`).fill(value);
   if (published) await page.getByLabel("Published").check();
   await page.getByRole("button", { name: /^Add / }).click();
   await expect(page.getByTestId("site-entry-row").filter({ hasText: title })).toContainText(
@@ -45,8 +48,9 @@ test.describe.serial("public pages", () => {
     await visitor.goto(page0.path);
     await expect(visitor.getByTestId("entry").filter({ hasText: A.title })).toBeVisible();
     await expect(visitor.getByTestId("entry").filter({ hasText: B.title })).toBeVisible();
-    if (filterLabel) {
-      await visitor.getByLabel(filterLabel, { exact: true }).selectOption(A.value);
+    if (filterKey) {
+      await expect(visitor.locator(`label[for="f-${filterKey}"]`)).toHaveText(filterLabel!);
+      await visitor.locator(`#f-${filterKey}`).selectOption(A.value);
       await visitor.getByRole("button", { name: "Filter" }).click();
       await expect(visitor.getByTestId("entry").filter({ hasText: A.title })).toBeVisible();
       await expect(visitor.getByTestId("entry").filter({ hasText: B.title })).toHaveCount(0);

@@ -20,7 +20,7 @@ export const NOT_COVERED_TITLE = "The library doesn't cover this use case yet";
 export const NOT_COVERED_WHY = "We'll notify you with priority as soon as it does.";
 export const NOT_COVERED_MESSAGE = `${NOT_COVERED_TITLE}. ${NOT_COVERED_WHY}`;
 export const NOT_COVERED_ACTION =
-  "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).";
+  "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalog), or choose verified components explicitly (`components` in the API, `--components` in the CLI).";
 /** Raw reason stored on the build row (`builds.error`); `explainFailure` maps it back. */
 export const NOT_COVERED_REASON = "Use case not covered by the library";
 

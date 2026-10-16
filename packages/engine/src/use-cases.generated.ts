@@ -5,7 +5,7 @@ export const USE_CASES: UseCase[] = [
   {
     "id": "ai-agents",
     "name": "AI Agents",
-    "description": "AI assistants with instructions and allowed tools, chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), usage and audit — every AI call through the TurbineH orchestrator with its AI Safety Pack",
+    "description": "AI assistants with instructions and allowed tools (escalate to a human by email), chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), usage and audit — every AI call through the TurbineH orchestrator with its AI Safety Pack",
     "extends": "saas-crud",
     "capabilities": [
       "data.pagination",

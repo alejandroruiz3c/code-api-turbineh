@@ -41,6 +41,23 @@ const obj = (properties: Record<string, Schema>, required: string[] = []): Schem
   ...(required.length ? { required } : {}),
 });
 
+/** Object schema where at least one of `oneOf` must be given (audit I-17: `build` needs spec or specFile). */
+const requireOneOf = (keys: string[], properties: Record<string, Schema>): Schema => ({
+  ...obj(properties),
+  anyOf: keys.map((k) => ({ required: [k] })),
+});
+
+/**
+ * Tool errors name tools, not shell commands (audit I-17): "`turbineh build …`" → "the `build` tool" when that tool
+ * exists; other commands (login, init) stay as they are, they are for the user's terminal.
+ */
+export function mcpAction(action: string): string {
+  const names = new Set(TOOLS.map((t) => t.name));
+  return action.replace(/`turbineh ([a-z-]+)[^`]*`/g, (whole, name: string) =>
+    names.has(name) ? `the \`${name}\` tool` : whole,
+  );
+}
+
 /** ADR-0052: verified components chosen explicitly (ids from `search`), built exactly as they were verified. */
 const COMPONENTS_ARG: Schema = {
   type: "array",
@@ -57,8 +74,8 @@ export const TOOLS: Tool[] = [
   {
     name: "build",
     description:
-      "Spec → verified code committed in the project folder: plans, generates, verifies (lint, types, unit, build, E2E, security), writes and commits. Empty folder → complete app; existing project → the capability in its own folder. Result: criteria met/open with where, left[], settings, gate, next. Takes 2–4 min; on timeout (exitCode 4) call resume.",
-    inputSchema: obj({
+      "Spec → verified code committed in the project folder: plans, generates, verifies (lint, types, unit, build, E2E, security), writes and commits. Empty folder → complete app; existing project → the capability in its own folder. Result: criteria met/open with where, left[], settings, gate, next. Takes several minutes; on timeout (exitCode 4) call resume.",
+    inputSchema: requireOneOf(["spec", "specFile"], {
       spec: { type: "string", description: "What to build: the full specification text." },
       specFile: {
         type: "string",
@@ -137,6 +154,13 @@ export const TOOLS: Tool[] = [
     description: "A flow's state (by id) or the project's recent flows and integrations.",
     inputSchema: obj({ id: { type: "string" } }),
     map: (a) => ({ cmd: "status", args: str(a.id) ? [str(a.id) as string] : [], flags: {} }),
+  },
+  {
+    name: "ai_token",
+    description:
+      "Issue the AI gateway token (TURBINEH_AI_TOKEN) for a delivered build whose app uses AI through TurbineH. Shown once; issuing again replaces it. Store it as a secret, never in the repo.",
+    inputSchema: obj({ id: { type: "string", description: "The build (flow) id." } }, ["id"]),
+    map: (a) => ({ cmd: "ai-token", args: str(a.id) ? [str(a.id) as string] : [], flags: {} }),
   },
   {
     name: "left",
@@ -243,7 +267,9 @@ export function serve(
             : {}),
         };
         const { result } = await runCommand(cmd, ctx);
-        const doc = jsonOf(result);
+        const doc = jsonOf(result) as Record<string, unknown> & { error?: { action?: unknown } };
+        if (doc.error && typeof doc.error.action === "string")
+          doc.error = { ...doc.error, action: mcpAction(doc.error.action) };
         reply(m.id, {
           content: [{ type: "text", text: JSON.stringify(doc) }],
           structuredContent: JSON.parse(JSON.stringify(doc)) as Record<string, unknown>,

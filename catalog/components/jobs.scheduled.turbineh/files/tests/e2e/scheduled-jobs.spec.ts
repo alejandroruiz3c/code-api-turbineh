@@ -36,26 +36,30 @@ test.describe.serial("scheduled jobs", () => {
   test("a due job runs once per scheduled time: calling again sends nothing (idempotent)", async ({
     request,
   }) => {
-    const job = params.jobs.at(-1)!.id;
-    const call = async () => {
-      const res = await request.post(`/api/cron/run?job=${job}`, {
-        headers: { "x-cron-secret": secret },
-      });
-      expect(res.status()).toBe(200);
-      return (await res.json()) as Report;
-    };
-    const first = await call();
-    expect(first.failed).toEqual([]);
-    const at = first.ran[0]?.scheduledFor ?? first.skipped[0]?.scheduledFor;
-    expect(at).toBeTruthy();
+    // Which job is due depends on the clock and the request's schedules (a monthly job may have no occurrence within
+    // the runner's look-back): ask for all jobs and follow one that has a scheduled time. When none has, the run must
+    // report every job "not due" and stay that way.
+    const res = await request.post("/api/cron/run", { headers: { "x-cron-secret": secret } });
+    expect(res.status()).toBe(200);
+    const all = (await res.json()) as Report;
+    expect(all.failed).toEqual([]);
+    const due = [...all.ran, ...all.skipped].find((r) => r.scheduledFor);
+    if (!due) {
+      expect(all.skipped.map((s) => s.reason)).toEqual(params.jobs.map(() => "not due"));
+      return;
+    }
+    const job = due.job;
+    const at = due.scheduledFor;
     // Vercel Cron's header works too, and the same occurrence is never run twice.
     const second = (await (
       await request.get(`/api/cron/run?job=${job}`, {
         headers: { authorization: `Bearer ${secret}` },
       })
     ).json()) as Report;
-    expect(second.ran).toEqual([]);
-    expect(second.skipped).toEqual([{ job, scheduledFor: at, reason: "already ran" }]);
+    // A frequent schedule may reach its next occurrence between the calls: that one is a new run; this one never reruns.
+    expect(second.ran.filter((r) => r.scheduledFor === at)).toEqual([]);
+    if (!second.ran.length)
+      expect(second.skipped).toEqual([{ job, scheduledFor: at, reason: "already ran" }]);
     const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
     const rows = await client.query(

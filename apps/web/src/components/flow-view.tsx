@@ -1158,7 +1158,10 @@ function ImproveCallout({
           disabled={state === "working"}
           onClick={async () => {
             setState("working");
-            const res = await fetch(`/v1/builds/${id}/improve`, { method: "POST" });
+            const res = await fetch(`/v1/builds/${id}/improve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
             const body = (await res.json().catch(() => ({}))) as { build_id?: string };
             if (body.build_id) return router.push(`/flows/${body.build_id}`);
             setState("error");
