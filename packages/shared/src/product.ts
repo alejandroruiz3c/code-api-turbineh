@@ -401,7 +401,7 @@ export interface FlowOutcome {
   left: string[]; // what is left to do, in order
   /**
    * F18 (ADR-0052): build checks and the request's requirements, kept apart. `badge` is the one line every client
-   * shows ("Checks 11/11 · Requirements 6/8 met"); "verified" alone is never shown while requirements are open.
+   * shows (ADR-0063 verdict: "Technically verified · checks 11/11 · functional 6/8"); "verified" alone only at ≥ 80 %.
    */
   /** `warnings`: passed checks with non-blocking findings left (ADR-0065). */
   checks?: { passed: number; total: number; warnings?: number };
