@@ -51,8 +51,15 @@ Each recipe, and each domain component a recipe relies on, ships `criteria.yaml`
   "asked as". A request criterion maps only when every `says` pattern matches, every role it names is served, a refusal
   it states is a refusal the canonical criterion states, and **nothing of it is left over** once the canonical wording,
   its tests' titles, `terms`, `actors` and the app's declared aliases (ADR-0047/0049: params, role names) are absorbed.
-  A leftover word ("…and pays a deposit", "…WhatsApp reminder") keeps the criterion out. Ties go to the canonical
-  criterion whose own wording the request expresses most; a criterion that states two functions maps to both.
+  A leftover word ("…and pays a deposit", "…WhatsApp reminder") keeps the criterion out. Also absorbed: the file's
+  `vocabulary` (the domain's nouns: session, appointment, client…), Given/When/Then filler words, and the request's
+  subject words (`spec.request_words`, from the prompt, app name, summary and entity names, with capability and
+  platform words such as sync, publish, remind, SMS, WhatsApp, Slack left out). `says` reads the criterion with each
+  declared alias's generic term ("an artist" also says "staff member"). Precision guards: at least two of the request
+  criterion's words must be the canonical criterion's own (wording, tests' titles, `terms`) — never only nouns or
+  context; a refusal is a refusal ("only" that scopes a list is not); ties go to the canonical criterion whose wording
+  the request expresses most; a criterion that states two functions maps to the fewest canonical criteria (at most two)
+  that absorb it together. `explainCanonical` prints why a criterion maps or not (catalogue authoring, CI).
 - At assembly `linkCriteria` links criteria (canonical or not) to canonical criteria present in the package, with the
   package's aliases; `.turbineh/acceptance.json`, ACCEPTANCE.md and turbineh.json carry `canonical` and `asked`. A
   linked criterion is met exactly when its linked tests are in the package and the gate passed. The rest keep the
@@ -73,6 +80,14 @@ Each recipe, and each domain component a recipe relies on, ships `criteria.yaml`
 - Exposed as `outcome.functional {met,total,ratio,threshold}` and `outcome.badge` (API, CLI `--json`, MCP, web) and
   `functional_coverage {met,total,ratio,label}` in turbineh.json (its `status` stays the technical gate, documented).
 - Home and Activity: "Flows verified" → "Checks passed (flows)" and "Requirements met (aggregate)".
+
+### 3b · Components-only offers use the same links
+
+For an uncovered request (ADR-0062), the worker links each requirement to the canonical criteria of catalogue
+components (`declaredOffers`; social publishing, connections and metrics declare theirs) and passes them to
+`offerComponents` as candidates with their proving test. The offer's own checks still apply (asked for in the request,
+nothing blocked, the decision engine may only narrow), so a function a component's suite proves — scheduled
+publication, retries with backoff — is offered with its proof instead of being listed as not included.
 
 ### 4 · Functional floor in the scope gate (N-05)
 
