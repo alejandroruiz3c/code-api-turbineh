@@ -90,6 +90,20 @@ if (process.env.S3_BASE_URL?.startsWith("http://127.0.0.1")) {
   process.env.S3_ACCESS_KEY_ID ||= secret("e2e");
   process.env.S3_SECRET_ACCESS_KEY ||= secret();
 }
+// Social networks (social.*.turbineh): the LinkedIn, Meta Graph and X mocks serve both the consent pages and the
+// APIs; the app gets throwaway app credentials and a throwaway token-encryption key (the mocks read the same ones).
+const socialMocks: [api: string, auth: string, id: string, secretName: string][] = [
+  ["LINKEDIN_API_BASE", "LINKEDIN_AUTH_BASE_URL", "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+  ["META_GRAPH_API_BASE", "META_AUTH_BASE_URL", "META_APP_ID", "META_APP_SECRET"],
+  ["X_API_BASE", "X_AUTH_BASE_URL", "X_CLIENT_ID", "X_CLIENT_SECRET"],
+];
+for (const [api, auth, id, secretName] of socialMocks) {
+  if (!process.env[api]?.startsWith("http://127.0.0.1")) continue;
+  process.env[auth] = process.env[api];
+  process.env[id] = `e2e-${id.toLowerCase().replace(/_/g, "-")}`;
+  process.env[secretName] = secret();
+  process.env.SOCIAL_TOKEN_KEY ||= randomBytes(32).toString("base64");
+}
 // Scheduled jobs (jobs.scheduled.turbineh): the cron route's shared secret, generated per run.
 process.env.CRON_SECRET ||= secret();
 // Recipe-specific test settings (tests/e2e/test-env.ts), e.g. a second shop currency.

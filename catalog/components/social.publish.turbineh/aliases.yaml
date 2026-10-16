@@ -1,0 +1,9 @@
+# Criteria aliases (ADR-0047): the words this component's tests use, and which of its params hold this app's word for
+# each. "network" in the test titles means the networks this app publishes to (src/social/params/publish.json).
+file: src/social/params/publish.json
+tests:
+  - tests/e2e/social-publish.spec.ts
+  - tests/unit/social-publish.test.ts
+aliases:
+  - term: network
+    from: "networks[]"

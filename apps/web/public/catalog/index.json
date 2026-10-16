@@ -12599,6 +12599,638 @@
       "details": "https://software.turbineh.com/v1/capabilities/site.public-pages.turbineh"
     },
     {
+      "id": "social.connections.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "social",
+      "package": "pkg:generic/turbineh/social.connections.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "social.oauth"
+      ],
+      "does": "Connects a workspace's social media accounts with OAuth 2.0: LinkedIn members (Sign In with LinkedIn + Share on LinkedIn, w_member_social), Facebook Pages and their Instagram professional accounts (Facebook Login for Business, Page tokens), and X (Twitter) accounts (Authorization Code with PKCE, refresh tokens). Single-use state bound to the person and workspace, tokens encrypted at rest with AES-256-GCM (key from SOCIAL_TOKEN_KEY, bound to their row), refreshed before use when the provider allows it, revoked at the provider on disconnect (X, Meta), never shown, exported or logged.",
+      "doesNot": "Does not post anything by itself (social.publish.turbineh), connect LinkedIn organization pages (Community Management API approval, w_organization_social), TikTok, YouTube, Pinterest, Threads, Bluesky or Mastodon, or obtain the platforms' app review for you",
+      "title": "Social accounts connected with OAuth 2.0 (LinkedIn, Facebook Pages + Instagram, X) and tokens encrypted at rest",
+      "summary": "Lets the people who manage a workspace connect its social media accounts with each provider's official OAuth 2.0 flow: a LinkedIn member (Sign In with LinkedIn + Share on LinkedIn), the Facebook Pages a person manages and the Instagram professional accounts linked to them (Facebook Login for Business, Page tokens), and X accounts (Authorization Code with PKCE). The state sent to the provider is single use and bound to the person, the workspace and the provider. Tokens are encrypted with AES-256-GCM under SOCIAL_TOKEN_KEY, bound to their own row, refreshed before use when the provider gives a refresh token, revoked at the provider on disconnect where it offers a way (X, Meta), and never appear in a screen, an export or a log. It is the base of social.publish.turbineh and social.metrics.turbineh, and ships the offline mocks of the three providers they all test against.",
+      "useCases": [
+        "A small business connects its LinkedIn profile, its Facebook Page with the linked Instagram account and its X account to publish from the app",
+        "An agency workspace connects several Facebook Pages a manager administers in one consent"
+      ],
+      "useWhen": [
+        "The request connects, links or authorises LinkedIn, Facebook, Instagram or X (Twitter) accounts to post or read engagement",
+        "Third-party social tokens must be stored safely (encrypted, write-only, revocable)"
+      ],
+      "avoidWhen": [
+        "Social sign-in for the app's own users (auth.oauth / better-auth social providers)",
+        "LinkedIn company pages (needs the Community Management API and w_organization_social, not covered), TikTok, YouTube, Pinterest, Threads, Bluesky, Mastodon",
+        "Share buttons or links to profiles (plain web content, no component needed)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Tokens sealed with AES-256-GCM bound to the row (AAD)",
+          "gain": "A database dump or a copied value is useless without the key and outside its row",
+          "cost": "Losing SOCIAL_TOKEN_KEY means every account must be connected again"
+        },
+        {
+          "choice": "One Meta grant per Facebook user",
+          "gain": "One consent connects every Page and its Instagram account",
+          "cost": "Disconnecting one of them revokes the grant, so all of that person's Pages are disconnected"
+        },
+        {
+          "choice": "Official flows only (no scraping, no password storage)",
+          "gain": "Works within each platform's terms; tokens can be revoked by the account owner",
+          "cost": "Each platform's app review is needed before real customers can connect"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/social/params/connections.json",
+          "default": "{ providers: [linkedin, meta, x] }",
+          "description": "Providers this app connects (from the request)"
+        },
+        {
+          "name": "SOCIAL_TOKEN_KEY",
+          "description": "32 random bytes, base64 (openssl rand -base64 32). Without it connecting is refused. SOCIAL_TOKEN_KEY_PREVIOUS decrypts during a rotation"
+        },
+        {
+          "name": "LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET",
+          "description": "LinkedIn developer app with the products Sign In with LinkedIn using OpenID Connect and Share on LinkedIn"
+        },
+        {
+          "name": "META_APP_ID / META_APP_SECRET (+ META_LOGIN_CONFIG_ID)",
+          "description": "Meta app (Business type) with Facebook Login for Business; the configuration id replaces the scope list when set"
+        },
+        {
+          "name": "X_CLIENT_ID / X_CLIENT_SECRET",
+          "description": "X developer app with OAuth 2.0 enabled as a confidential client (Web App)"
+        },
+        {
+          "name": "Redirect URIs",
+          "description": "<APP_URL>/api/social/oauth/linkedin/callback, …/meta/callback, …/x/callback registered with each provider"
+        },
+        {
+          "name": "LINKEDIN_VERSION / META_GRAPH_VERSION",
+          "default": "202609 / v26.0",
+          "description": "Pinned API versions; LinkedIn versions are supported about a year"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Connect",
+          "signature": "GET /api/social/oauth/<linkedin|meta|x>/start → provider consent page; GET …/callback → stores the accounts",
+          "where": "src/app/api/social/oauth/[provider]/"
+        },
+        {
+          "name": "listConnections",
+          "signature": "listConnections(organizationId) → ConnectionView[] (no token fields)",
+          "where": "src/social/connections.ts"
+        },
+        {
+          "name": "accessTokenFor",
+          "signature": "accessTokenFor(organizationId, connectionId, now?) → { token, accountId, network } — refreshes when needed, marks expired otherwise",
+          "where": "src/social/connections.ts"
+        },
+        {
+          "name": "disconnect",
+          "signature": "disconnect(ctx, connectionId) → { revoked: 'revoked' | 'local', note }",
+          "where": "src/social/connections.ts"
+        },
+        {
+          "name": "OAuth",
+          "signature": "authorizeUrl, exchangeCode, refreshTokens, accountsFor, revokeGrant (pure, per provider)",
+          "where": "src/social/oauth.ts"
+        },
+        {
+          "name": "Crypto",
+          "signature": "encryptToken(plain, binding, key?) / decryptToken(sealed, binding, keys?)",
+          "where": "src/social/crypto.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Use a connected account from new code (e.g. read comments)",
+          "where": "src/social/connections.ts",
+          "how": "Call accessTokenFor(organizationId, connectionId) right before the provider call and never store or return the token; on a ProviderError with unauthorized, the connection is marked expired."
+        },
+        {
+          "what": "Request more permissions (e.g. LinkedIn organization posting)",
+          "where": "src/social/networks.ts (SCOPES)",
+          "how": "Add the scope, get it approved by the platform for your app, then connect the accounts again; add a contract test against the mock first."
+        },
+        {
+          "what": "Rotate the encryption key",
+          "where": "SOCIAL_TOKEN_KEY, SOCIAL_TOKEN_KEY_PREVIOUS",
+          "how": "Move the current key to SOCIAL_TOKEN_KEY_PREVIOUS, set a new SOCIAL_TOKEN_KEY, ask owners to reconnect each account (new tokens are sealed with the new key), then remove the previous key."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 route handlers and server actions, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "saas-crud",
+          "ai-agents"
+        ],
+        "requires": [],
+        "works_with": [
+          "social.publish.turbineh",
+          "social.metrics.turbineh",
+          "domain.audit-log.turbineh"
+        ],
+        "notes": "Connecting and disconnecting need can(role, \"configure\") (owners and admins in the base policy)."
+      },
+      "security": [
+        "Tokens are AES-256-GCM ciphertext bound to workspace, network, account and kind (AAD); the key comes only from the environment",
+        "Queries for screens select explicit columns without tokens; provider error messages are redacted before they are stored or shown",
+        "OAuth state: random, single use, 10 minutes, bound to the person, the workspace and the provider; PKCE S256 for X",
+        "Every Graph API call carries appsecret_proof; API calls never follow redirects"
+      ],
+      "guarantees": [
+        {
+          "claim": "Tokens are encrypted with AES-256-GCM and bound to their row",
+          "test": "tests/unit/social-connections.test.ts › social tokens are stored encrypted with AES-256-GCM: the ciphertext never contains the token and decrypts only with the key and its own row"
+        },
+        {
+          "claim": "X uses PKCE; LinkedIn and Meta the documented code flow and scopes",
+          "test": "tests/unit/social-connections.test.ts › X uses Authorization Code with PKCE (S256); LinkedIn and Meta use the authorization code flow with the documented scopes"
+        },
+        {
+          "claim": "LinkedIn flow matches LinkedIn's documented endpoints",
+          "test": "tests/unit/social-oauth-contract.test.ts › LinkedIn: authorization code → access token (60 days) → the member from /v2/userinfo; refresh refused without programmatic refresh; no revocation API"
+        },
+        {
+          "claim": "Meta flow gives Page tokens and Instagram accounts; revocation removes the grant",
+          "test": "tests/unit/social-oauth-contract.test.ts › Meta: code → short-lived → long-lived user token → each Page (Page token) and its Instagram account; revoking removes the grant"
+        },
+        {
+          "claim": "X flow: PKCE, Basic client auth, rotating refresh tokens, revocation",
+          "test": "tests/unit/social-oauth-contract.test.ts › X: PKCE code exchange with HTTP Basic client auth, refresh tokens rotate, revoke invalidates the tokens"
+        },
+        {
+          "claim": "Owners connect the three providers through their consent pages",
+          "test": "tests/e2e/social-connections.spec.ts › a workspace owner connects LinkedIn, Facebook Pages with their Instagram account, and X through each provider's OAuth consent page"
+        },
+        {
+          "claim": "Tokens are encrypted in the database and never on a page",
+          "test": "tests/e2e/social-connections.spec.ts › access tokens are stored encrypted (AES-256-GCM) and never appear on a page"
+        },
+        {
+          "claim": "Forged or reused state is refused",
+          "test": "tests/e2e/social-connections.spec.ts › the OAuth callback refuses a state it did not issue to this person (single use)"
+        },
+        {
+          "claim": "Disconnect revokes at the provider and deletes the tokens",
+          "test": "tests/e2e/social-connections.spec.ts › disconnecting an account revokes its tokens at the provider and deletes them here"
+        }
+      ],
+      "limits": [
+        "Proven against local mocks recorded from each provider's documentation (2026-10), not against the live platforms: no live sandbox run was possible without real app credentials, and LinkedIn and X offer no public sandbox",
+        "Platform approval: Meta App Review (advanced access to pages_manage_posts, pages_read_engagement, instagram_content_publish, instagram_manage_insights, business_management) and Business Verification before non-developer accounts can connect; LinkedIn self-serve products (Sign In with LinkedIn, Share on LinkedIn) for members, Community Management API approval for company pages (not covered); X API access is paid per request (pay-per-use credits)",
+        "LinkedIn: no refresh tokens unless LinkedIn enables programmatic refresh for the app (members reconnect every 60 days) and no revocation API (tokens are deleted here; members remove the app in their LinkedIn settings)",
+        "Instagram: only professional (business or creator) accounts linked to a Facebook Page; Instagram Login (graph.instagram.com) is not used",
+        "Rate limits are the platforms' (e.g. X users/me 75 per 15 min); this component adds none of its own"
+      ],
+      "example": "// A server-only provider call with a connected account:\nconst { token, accountId } = await accessTokenFor(ctx.organizationId, connectionId);\nconst res = await fetch(`https://api.x.com/2/users/${accountId}`, { headers: { authorization: `Bearer ${token}` } });\n",
+      "keywords": [
+        "social media",
+        "social accounts",
+        "connect linkedin",
+        "connect facebook",
+        "connect instagram",
+        "connect x",
+        "twitter",
+        "oauth",
+        "oauth2",
+        "pkce",
+        "facebook login for business",
+        "instagram business",
+        "linkedin share",
+        "token encryption",
+        "revoke access"
+      ],
+      "synonyms": {
+        "social account": [
+          "social profile",
+          "connected account",
+          "social channel",
+          "social network account"
+        ],
+        "X": [
+          "Twitter",
+          "tweet"
+        ],
+        "Facebook Page": [
+          "Facebook business page",
+          "Meta page"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/social.connections.turbineh"
+    },
+    {
+      "id": "social.metrics.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "social",
+      "package": "pkg:generic/turbineh/social.metrics.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "social.metrics"
+      ],
+      "does": "Fetches basic engagement metrics of published social media posts on a schedule: LinkedIn reactions and comments (socialMetadata), Facebook Page post reactions, comments and shares, Instagram likes, comments, shares and views (media fields + insights), X (Twitter) likes, replies, reposts + quotes and impressions (public_metrics). Snapshots per fetch, null (never 0) for what a network does not report, a protected runner route and a metrics page with totals per network.",
+      "doesNot": "Does not fetch follower growth, audience demographics, link clicks, LinkedIn share/impression counts (restricted analytics APIs), Facebook impressions (deprecated Graph metric) or metrics of posts not published by the app",
+      "title": "Engagement metrics of published social posts (likes, comments, shares, impressions) fetched on a schedule",
+      "summary": "For every post published by social.publish.turbineh in the last windowDays, a protected runner route (called by any scheduler with CRON_SECRET) fetches the engagement each network's official read API gives and stores a snapshot: LinkedIn reactions and comments (socialMetadata), Facebook Page post reactions, comments and shares, Instagram likes, comments, shares and views (media fields + insights), X likes, replies, reposts + quotes and impressions (public_metrics). A metric a network does not report for that post — or that needs a permission the app lacks — stays empty, never 0. Posts are fetched again only when their latest snapshot is older than refreshHours. A metrics page shows the latest numbers per post and totals per network.",
+      "useCases": [
+        "A dashboard with the likes, comments and shares of every post the business published",
+        "Comparing which network engages more: totals of likes and comments per network over the last 30 days"
+      ],
+      "useWhen": [
+        "The request shows basic engagement metrics of published posts (likes, comments, shares, impressions)"
+      ],
+      "avoidWhen": [
+        "Follower growth, audience demographics, link clicks or competitor analytics (not covered)",
+        "Metrics of posts not published through the app"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Snapshots per fetch",
+          "gain": "Numbers can be compared over time; nothing is overwritten",
+          "cost": "One row per post per refresh (bounded by windowDays and refreshHours)"
+        },
+        {
+          "choice": "null instead of 0 for unreported metrics",
+          "gain": "No invented numbers",
+          "cost": "Totals per network sum what is known only"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/social/params/metrics.json",
+          "default": "refreshHours 6, windowDays 30",
+          "description": "How often and for how long published posts are followed"
+        },
+        {
+          "name": "CRON_SECRET",
+          "description": "Same secret as the publishing runner"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Runner route",
+          "signature": "GET|POST /api/social/metrics/run — x-cron-secret or Bearer CRON_SECRET → { fetched, failed, skipped }",
+          "where": "src/app/api/social/metrics/run/route.ts"
+        },
+        {
+          "name": "fetchMetrics",
+          "signature": "fetchMetrics(network, token, externalId, deps?) → { likes, comments, shares, impressions } (null = not reported)",
+          "where": "src/social/metrics-api.ts"
+        },
+        {
+          "name": "runMetrics",
+          "signature": "runMetrics({ now?, limit?, deps?, config? }) → MetricsReport",
+          "where": "src/social/metrics.ts"
+        },
+        {
+          "name": "latestMetrics",
+          "signature": "latestMetrics(organizationId, since) → posts with their latest snapshot",
+          "where": "src/social/metrics.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a metric a network reports (e.g. Instagram saves)",
+          "where": "src/social/metrics-api.ts, src/db/component-social-metrics.ts",
+          "how": "Add the column (nullable), request the field from the documented endpoint, extend the mock and the contract test."
+        },
+        {
+          "what": "Call the runner on a schedule",
+          "where": "CRON_SECRET, your scheduler",
+          "how": "Vercel Cron: { \"path\": \"/api/social/metrics/run\", \"schedule\": \"0 * * * *\" } with CRON_SECRET set."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 route handlers, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "saas-crud",
+          "ai-agents"
+        ],
+        "requires": [
+          "social.publish.turbineh"
+        ],
+        "works_with": [
+          "social.connections.turbineh",
+          "ui.charts.recharts"
+        ],
+        "notes": "Reads posts and tokens through the publish and connections components."
+      },
+      "security": [
+        "The runner requires CRON_SECRET (≥32 characters), compared in constant time",
+        "Reads are scoped to the workspace; tokens only from accessTokenFor; numbers validated before storage"
+      ],
+      "guarantees": [
+        {
+          "claim": "Metrics per network where the API gives them, null otherwise",
+          "test": "tests/unit/social-metrics-contract.test.ts › fetches likes, comments, shares and impressions per published post where each network's API gives them (null otherwise)"
+        },
+        {
+          "claim": "Documented read endpoints and fields",
+          "test": "tests/unit/social-metrics-contract.test.ts › uses each network's documented read endpoint and fields"
+        },
+        {
+          "claim": "Fetched on a schedule and shown per post; fresh ones not refetched",
+          "test": "tests/e2e/social-metrics.spec.ts › a dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule, not fetched again while fresh"
+        },
+        {
+          "claim": "Unreported metrics stay empty",
+          "test": "tests/e2e/social-metrics.spec.ts › a metric a network does not report stays empty instead of 0 (LinkedIn impressions)"
+        },
+        {
+          "claim": "Runner route protected",
+          "test": "tests/e2e/social-metrics.spec.ts › the metrics route refuses calls without the secret"
+        }
+      ],
+      "limits": [
+        "Proven against local mocks recorded from each provider's documentation (2026-10), not against the live platforms",
+        "LinkedIn reads through the socialMetadata API need r_member_social_feed / r_organization_social_feed, which LinkedIn grants only to approved apps; shares and impressions of member posts need the restricted memberCreatorPostAnalytics API (not fetched)",
+        "Facebook: impressions are not fetched (post_impressions is deprecated in the Graph API); needs pages_read_engagement. Instagram insights need instagram_manage_insights (without it likes and comments are still fetched)",
+        "X: each read is billed per request (pay-per-use); metrics are fetched one post per request",
+        "Needs a scheduler; 50 posts per call"
+      ],
+      "example": "// Scheduler (hourly): curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/social/metrics/run\nconst m = await fetchMetrics(\"x\", token, post.externalId); // { likes: 15, comments: 2, shares: 4, impressions: 512 }\n",
+      "keywords": [
+        "social media metrics",
+        "engagement",
+        "likes",
+        "comments",
+        "shares",
+        "impressions",
+        "views",
+        "post analytics",
+        "linkedin metrics",
+        "facebook insights",
+        "instagram insights",
+        "x public metrics",
+        "dashboard"
+      ],
+      "synonyms": {
+        "engagement": [
+          "interactions",
+          "reactions",
+          "performance"
+        ],
+        "impressions": [
+          "views",
+          "reach"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/social.metrics.turbineh"
+    },
+    {
+      "id": "social.publish.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "social",
+      "package": "pkg:generic/turbineh/social.publish.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "social.publish"
+      ],
+      "does": "Publishes social media posts to connected accounts with each network's current official API: LinkedIn Posts API (/rest/posts with Linkedin-Version, images through the Images API), Facebook Page posts (/{page-id}/feed, /photos), Instagram (/media container + /media_publish) and X (Twitter) posts (POST /2/tweets, images through /2/media/upload). Per-network format and length rules enforced before saving (X weighted 280, LinkedIn 3,000, Instagram 2,200 with an image, 30 hashtags, 20 mentions), optional approval by people who may approve, scheduling in the author's time zone, a unique idempotency key per post, publication by a protected runner route with claims and leases (never twice), retries with exponential backoff honouring Retry-After, an append-only publication log, a month calendar and post list.",
+      "doesNot": "Does not write the posts (AI drafts need the AI orchestrator or the ai-agents recipe), publish videos, carousels, stories, reels, polls or threads, post to LinkedIn organization pages, TikTok or other networks, or publish without a person creating (and, when required, approving) each post",
+      "title": "Social publishing to LinkedIn, Facebook Pages, Instagram and X with approval, scheduling, retries and a publication log",
+      "summary": "People compose a post once for one or more connected accounts (social.connections.turbineh), with an optional version per network; each network's rules are checked live and again on the server — X's weighted 280 characters (links 23, emoji and CJK 2), LinkedIn's 3,000, Instagram's 2,200 with a required image, 30 hashtags and 20 mentions — and nothing is cut silently. When the app requires it, a post waits for someone who may approve; then it is scheduled at the time typed in the author's time zone. A runner route, called by any scheduler with CRON_SECRET, publishes due posts with each network's current official API (LinkedIn Posts API with Linkedin-Version and the Images API; Graph API /feed, /photos and the Instagram container flow; X API v2 /2/tweets and /2/media/upload). Every post has a unique idempotency key and is claimed with a lease, so it is never published twice; 429/5xx/lost requests are retried with exponential backoff and jitter (honouring Retry-After); an interrupted attempt becomes \"outcome unknown\" for a person to check instead of being re-sent. Every step goes to an append-only publication log, shown per post next to a month calendar.",
+      "useCases": [
+        "A small business schedules posts to LinkedIn, its Facebook Page, Instagram and X, approved by the owner first",
+        "A marketing team keeps a content calendar with the status of each post and a log of every publication"
+      ],
+      "useWhen": [
+        "The request publishes or schedules posts on LinkedIn, Facebook, Instagram or X (Twitter)",
+        "Posts must respect each network's length and format, be approved by a person, retried on failure and logged"
+      ],
+      "avoidWhen": [
+        "Autonomous publishing without a person creating each post (not covered: an AI agent drafting and posting by itself)",
+        "Videos, reels, stories, carousels, polls or threads; LinkedIn company pages; TikTok, YouTube, Pinterest, Threads",
+        "Writing the posts with AI (needs the AI orchestrator / ai-agents recipe; this component publishes what people approve)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Retries spread across runner calls (next attempt stored on the post)",
+          "gain": "Serverless-friendly, survives crashes, p-retry's backoff policy without sleeping in a request",
+          "cost": "Retry timing is bounded by how often the scheduler calls the route"
+        },
+        {
+          "choice": "Interrupted attempts are marked unknown, not retried",
+          "gain": "Never posts twice when a network accepted a post but the answer was lost",
+          "cost": "A person checks the network and presses Retry or Cancel"
+        },
+        {
+          "choice": "No silent truncation",
+          "gain": "What is published is exactly what a person approved",
+          "cost": "Long texts need a shorter version per network"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/social/params/publish.json",
+          "default": "all four networks, requireApproval true, maxAttempts 5",
+          "description": "Networks, human approval before publishing, attempts per post (from the request)"
+        },
+        {
+          "name": "CRON_SECRET",
+          "description": "Shared secret of /api/social/publish/run (≥32 chars); without it the route answers 503"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Runner route",
+          "signature": "GET|POST /api/social/publish/run — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { published, retrying, failed, unknown }",
+          "where": "src/app/api/social/publish/run/route.ts"
+        },
+        {
+          "name": "runDuePosts",
+          "signature": "runDuePosts({ now?, limit?, deps? }) → RunReport — claims due posts, publishes, records the outcome",
+          "where": "src/social/posts.ts"
+        },
+        {
+          "name": "Post service",
+          "signature": "composePosts, submitPost, approvePost, rejectPost, cancelPost, retryPost, listPosts, getPost",
+          "where": "src/social/posts.ts"
+        },
+        {
+          "name": "publishTo",
+          "signature": "publishTo({ network, token, accountId, text, imageUrl }, deps?) → { externalId, externalUrl }",
+          "where": "src/social/publishers.ts"
+        },
+        {
+          "name": "Rules",
+          "signature": "RULES, weightedLength(text), checkPost(network, post), compositionProblems(input, networks)",
+          "where": "src/social/limits.ts"
+        },
+        {
+          "name": "Backoff",
+          "signature": "backoffMs(attempt, { retryAfterMs?, random? }), afterFailure({ attempt, maxAttempts, retryable, retryAfterMs? })",
+          "where": "src/social/retry.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Create posts from code (e.g. an AI draft step)",
+          "where": "src/social/posts.ts",
+          "how": "Call composePosts(ctx, { …, intent: \"draft\" }) so a person reviews and submits it; never call publishTo directly from a request handler."
+        },
+        {
+          "what": "Change who approves",
+          "where": "src/server/role-policy.ts (approve), src/social/params/publish.json",
+          "how": "approvePost checks can(role, \"approve\"); set requireApproval to false only when the request says posts go out without review."
+        },
+        {
+          "what": "Call the runner on a schedule in production",
+          "where": "CRON_SECRET, your scheduler",
+          "how": "Vercel Cron: { \"crons\": [{ \"path\": \"/api/social/publish/run\", \"schedule\": \"* * * * *\" }] } with CRON_SECRET set; elsewhere call it with the x-cron-secret header every minute or few minutes."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 route handlers and server actions, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "saas-crud",
+          "ai-agents"
+        ],
+        "requires": [
+          "social.connections.turbineh"
+        ],
+        "works_with": [
+          "social.metrics.turbineh",
+          "domain.audit-log.turbineh",
+          "jobs.scheduled.turbineh"
+        ],
+        "notes": "Shares CRON_SECRET with jobs.scheduled.turbineh when both are present."
+      },
+      "security": [
+        "The runner requires CRON_SECRET (≥32 characters) in a header, compared in constant time; disabled without it",
+        "Every post action re-checks the workspace and the role in the service (create, approve, update)",
+        "Images that the app must upload (LinkedIn, X) are downloaded only from public https addresses, checked at DNS resolution, ≤ 5 MB, image types only",
+        "Tokens are taken from accessTokenFor for one call; provider errors are redacted before they are logged"
+      ],
+      "guarantees": [
+        {
+          "claim": "Each network's length limit is enforced (X weighted)",
+          "test": "tests/unit/social-publish.test.ts › each network's length limit is enforced: X counts 280 weighted characters (links 23, emoji and CJK 2), LinkedIn 3,000, Instagram 2,200"
+        },
+        {
+          "claim": "Instagram needs an image; hashtag and mention limits",
+          "test": "tests/unit/social-publish.test.ts › Instagram needs an image, at most 30 hashtags and 20 mentions; images must be public https URLs"
+        },
+        {
+          "claim": "Per-network versions are checked, nothing is cut",
+          "test": "tests/unit/social-publish.test.ts › a post adapted per network: the network's own version is checked instead of the common text, nothing is cut silently"
+        },
+        {
+          "claim": "LinkedIn little text format",
+          "test": "tests/unit/social-publish.test.ts › LinkedIn commentary uses the little text format: reserved characters escaped, hashtags as hashtag templates"
+        },
+        {
+          "claim": "Exponential backoff with jitter and Retry-After",
+          "test": "tests/unit/social-publish.test.ts › failed publications are retried with exponential backoff and jitter, honouring the provider's Retry-After, up to the attempt limit"
+        },
+        {
+          "claim": "Image downloads only from public https hosts",
+          "test": "tests/unit/social-publish.test.ts › images for LinkedIn and X are downloaded only from public https addresses (no private, loopback or link-local hosts)"
+        },
+        {
+          "claim": "LinkedIn Posts API request shape",
+          "test": "tests/unit/social-publish-contract.test.ts › LinkedIn: POST /rest/posts with Linkedin-Version and Rest.li 2.0 headers, author urn:li:person, little-text commentary; the post URN comes from x-restli-id"
+        },
+        {
+          "claim": "LinkedIn images through the Images API",
+          "test": "tests/unit/social-publish-contract.test.ts › LinkedIn with an image: Images API initializeUpload, PUT of the bytes, then the post with content.media.id"
+        },
+        {
+          "claim": "Facebook Page feed and photo posts",
+          "test": "tests/unit/social-publish-contract.test.ts › Facebook Page: POST /{page-id}/feed with message and the Page token (appsecret_proof) → page_post id; with an image POST /{page-id}/photos"
+        },
+        {
+          "claim": "Instagram container flow",
+          "test": "tests/unit/social-publish-contract.test.ts › Instagram: container POST /{ig-user-id}/media (image_url, caption), status FINISHED, then POST /media_publish (creation_id)"
+        },
+        {
+          "claim": "X posts and media upload",
+          "test": "tests/unit/social-publish-contract.test.ts › X: POST /2/tweets {text} with the user token → 201 data.id; with an image, POST /2/media/upload (multipart, tweet_image) then media.media_ids"
+        },
+        {
+          "claim": "Approval, scheduled publication once, and the log",
+          "test": "tests/e2e/social-publish.spec.ts › human approval before publishing: the owner approves each post before it is published; approved posts are published automatically at the scheduled time by the runner, once, and every step is logged"
+        },
+        {
+          "claim": "Retry with backoff after a failure, each attempt logged",
+          "test": "tests/e2e/social-publish.spec.ts › a failed publication is retried with backoff and then published; each attempt is in the publication log"
+        },
+        {
+          "claim": "An access token about to expire is refreshed before publishing (rotated refresh token stored encrypted)",
+          "test": "tests/e2e/social-publish.spec.ts › an X access token about to expire is refreshed before publishing (the rotated refresh token is stored encrypted)"
+        },
+        {
+          "claim": "Unique idempotency key and append-only log in the database",
+          "test": "tests/e2e/social-publish.spec.ts › each post has a unique idempotency key and the publication log is append-only in the database"
+        },
+        {
+          "claim": "Content calendar",
+          "test": "tests/e2e/social-publish.spec.ts › a content calendar shows the scheduled and published posts on their day with their network and status"
+        },
+        {
+          "claim": "Runner route protected",
+          "test": "tests/e2e/social-publish.spec.ts › the runner route refuses calls without the secret"
+        }
+      ],
+      "limits": [
+        "Proven against local mocks recorded from each provider's documentation (2026-10), not against the live platforms (no real app credentials; LinkedIn and X have no public sandbox)",
+        "Platform approval before real customers: Meta App Review for pages_manage_posts and instagram_content_publish (+ Business Verification); LinkedIn Share on LinkedIn (self-serve) posts as the member only; X API is paid per request (posting about $0.015 per post, more with a URL, per X's pricing page in 2026-10)",
+        "Rate limits are the networks': X 100 posts per 15 minutes per user; Instagram 100 API-published posts per rolling 24 h per account; LinkedIn 150 member requests per day — hitting them is retried with backoff, not avoided",
+        "Text, and one image by public https URL (JPEG for Instagram); no video, carousel, story, reel, poll, thread, link preview control or first comment",
+        "LinkedIn's 3,000-character commentary limit comes from LinkedIn Help (the API only reports FIELD_LENGTH_TOO_LONG); Facebook's 63,206 is the long-standing UI limit",
+        "Needs a scheduler calling the runner; posting precision is the scheduler's interval. Instagram containers are polled up to ~30 s per attempt"
+      ],
+      "example": "// Scheduler (every minute): curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/social/publish/run\n// From code: a draft a person will review and submit\nawait composePosts(ctx, { connectionIds: [id], text, versions: { x: shortText }, imageUrl: null,\n  scheduledLocal: \"2026-10-20T09:00\", timeZone: \"Europe/Madrid\", idempotencyKey: key, intent: \"draft\" });\n",
+      "keywords": [
+        "social media publishing",
+        "post scheduler",
+        "schedule posts",
+        "publish to linkedin",
+        "publish to facebook",
+        "publish to instagram",
+        "tweet",
+        "post to x",
+        "content calendar",
+        "approval workflow",
+        "retries",
+        "backoff",
+        "publication log",
+        "idempotency",
+        "character limit",
+        "hashtags"
+      ],
+      "synonyms": {
+        "post": [
+          "publication",
+          "update",
+          "tweet",
+          "social post"
+        ],
+        "schedule": [
+          "plan",
+          "queue",
+          "publish later",
+          "content calendar"
+        ],
+        "approval": [
+          "human review",
+          "sign-off",
+          "validation before publishing"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/social.publish.turbineh"
+    },
+    {
       "id": "storage.objects.aws-s3",
       "version": "0.1.0",
       "status": "approved",

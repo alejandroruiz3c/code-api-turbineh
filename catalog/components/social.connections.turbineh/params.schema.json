@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "social.connections.turbineh params (src/social/params/connections.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["providers"],
+  "properties": {
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "enum": ["linkedin", "meta", "x"] },
+      "description": "OAuth providers the app connects: linkedin (a member's profile), meta (Facebook Pages and the Instagram professional accounts linked to them), x."
+    }
+  }
+}

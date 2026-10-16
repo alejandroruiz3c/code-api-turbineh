@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "social.metrics.turbineh params (src/social/params/metrics.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["refreshHours", "windowDays"],
+  "properties": {
+    "refreshHours": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 168,
+      "description": "A published post's metrics are fetched again when the latest snapshot is older than this."
+    },
+    "windowDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "description": "Posts published within this many days are followed (older ones keep their last snapshot)."
+    }
+  }
+}

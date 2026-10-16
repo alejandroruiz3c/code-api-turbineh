@@ -1,0 +1,8 @@
+# Criteria aliases (ADR-0047): "account" in the test titles means an account of the providers this app connects
+# (src/social/params/connections.json).
+file: src/social/params/connections.json
+tests:
+  - tests/e2e/social-connections.spec.ts
+aliases:
+  - term: provider
+    from: "providers[]"
