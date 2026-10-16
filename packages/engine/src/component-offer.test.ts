@@ -527,6 +527,106 @@ describe("social components (ADR-0067) in the offer", () => {
     expect(c[0]?.hint.gives).toMatch(/never autonomously$/);
   });
 
+  // Production 2026-10-16: the same request, two compiler wordings; JEV (jev-1.13.0) answered `serves: []` for both.
+  const PROD_NEED =
+    "Build an autonomous social media publisher that drafts posts with AI and publishes them to Instagram on a schedule";
+  const F =
+    "No requirement of this request maps to a function the library verified (0 % functional coverage)";
+  const prodVerdict = (publish: string) => {
+    const requirements: ScopeRequirement[] = [
+      {
+        requirement: "Given a drafted post, the user can manually edit the text before scheduling.",
+        covered: false,
+        why: F,
+      },
+      {
+        requirement:
+          "Given a scheduled time is set, the system queues the post for that specific timestamp.",
+        covered: false,
+        why: F,
+      },
+      { requirement: publish, covered: false, why: F },
+      {
+        requirement: "Build an autonomous social media publisher (the use case itself)",
+        covered: false,
+        why: "Autonomous actions without a person's confirmation: not part of any verified use case",
+      },
+    ];
+    return { requirements, notCovered: requirements };
+  };
+  const emptyJudge: Pick<Decider, "componentsServe"> = {
+    componentsServe: async (input) => ({
+      serves: Object.fromEntries(input.requirements.map((r) => [r.index, []])),
+      meta: { model: "fake", latencyMs: 1 },
+    }),
+  };
+  const canonical = {
+    id: "social.publish.turbineh",
+    test: "tests/e2e/social-publish.spec.ts › human approval",
+    gives: "x",
+  };
+
+  it.each([
+    "Given a scheduled time is reached, the system automatically publishes the post to the connected Instagram account.",
+    "Given a scheduled time is reached, the system authenticates with Instagram and publishes the post.",
+  ])("an empty engine answer keeps a candidate anchored twice by code: %s", async (publish) => {
+    const r = await offerComponents(
+      {
+        need: PROD_NEED,
+        verdict: prodVerdict(publish),
+        catalog: social,
+        declared: { 2: [canonical] },
+      },
+      emptyJudge,
+    );
+    expect(r?.components.filter((c) => !c.requiredBy).map((c) => c.id)).toEqual([
+      "social.publish.turbineh",
+    ]);
+    expect(r?.components.find((c) => c.id === "social.publish.turbineh")?.serves).toEqual([
+      publish,
+    ]);
+    expect(r?.decidedBy).toBe("decider");
+  });
+
+  it("negative: without the canonical anchor an empty engine answer still offers nothing", async () => {
+    const publish =
+      "Given a scheduled time is reached, the system automatically publishes the post.";
+    expect(
+      await offerComponents(
+        { need: PROD_NEED, verdict: prodVerdict(publish), catalog: social },
+        emptyJudge,
+      ),
+    ).toBeNull();
+    // Blocked requirements are never anchored, even with a canonical link.
+    const blocked = prodVerdict(publish);
+    blocked.requirements[2] = {
+      requirement: publish,
+      covered: false,
+      why: "Integration with Instagram: …",
+    };
+    expect(
+      await offerComponents(
+        { need: PROD_NEED, verdict: blocked, catalog: social, declared: { 2: [canonical] } },
+        emptyJudge,
+      ),
+    ).toBeNull();
+  });
+
+  it("a scheduler is offered only when scheduling is the requirement's own action", () => {
+    const need = "drafts posts and publishes them on a schedule";
+    expect(
+      candidatesFor(req("The user can edit the text before scheduling"), need, social),
+    ).toEqual([]);
+    expect(
+      candidatesFor(req("Given a scheduled time is set, the system queues the post"), need, social),
+    ).toEqual([]);
+    expect(
+      candidatesFor(req("The system schedules the post for the chosen time"), need, social).map(
+        (x) => x.entry.id,
+      ),
+    ).toEqual(["jobs.scheduled.turbineh"]);
+  });
+
   it("negative: no social component for a request that never asks to publish", () => {
     expect(
       candidatesFor(

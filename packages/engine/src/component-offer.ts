@@ -57,7 +57,21 @@ export interface OfferHint {
    * not offered for the same requirement (e.g. social publishing schedules its own posts — no separate scheduler).
    */
   supersedes?: readonly string[];
+  /**
+   * The function must be the requirement's own action: a precondition ("Given a scheduled time is set, …") or a
+   * subordinate clause ("edit the text before scheduling") naming it does not ask for it.
+   */
+  actionOnly?: boolean;
 }
+
+/** The requirement without its precondition ("Given …,") and its subordinate clauses ("before scheduling"). */
+export const actionOf = (text: string): string =>
+  text
+    .replace(/^\s*given\b[^,]*,\s*/i, "")
+    .replace(
+      /\b(before|after|until|prior to|without|once|when|while)\s+(\w+\s+){0,3}?\w*schedul\w*/gi,
+      "",
+    );
 
 /**
  * Functional capabilities a person can ask for explicitly, each with what proves it. Deliberately narrow: plumbing a
@@ -110,6 +124,7 @@ export const OFFER_HINTS: readonly OfferHint[] = [
   {
     ask: /\b(schedul\w*|every (day|week|month|morning|evening|night|hour)|daily|weekly|monthly|nightly|cron)\b/i,
     provides: "jobs.scheduled",
+    actionOnly: true,
     proof: /\b(schedul|cron|every (morning|day)|runs once)/i,
     gives: "jobs that run on a schedule (cron), once per scheduled time",
   },
@@ -269,7 +284,7 @@ export function candidatesFor(
   if (!r.covered && BLOCKED.test(r.why)) return [];
   const out: Candidate[] = [];
   for (const hint of OFFER_HINTS) {
-    if (!hint.ask.test(text) || !hint.ask.test(need)) continue;
+    if (!hint.ask.test(hint.actionOnly ? actionOf(text) : text) || !hint.ask.test(need)) continue;
     // A requirement left out only for lack of AI can be served by the orchestrator, and by nothing else.
     if (!r.covered && NEEDS_AI.test(r.why) !== (hint.provides === "ai.orchestrator")) continue;
     const entry = providerOf(hint.provides, entries);
@@ -336,7 +351,19 @@ export async function offerComponents(
       const declared = declaredFor(r, index).filter(
         (d) => !fromHints.some((c) => c.entry.id === d.entry.id),
       );
-      return { index, r, text: plain(r.requirement), candidates: [...fromHints, ...declared] };
+      // Anchored by code twice: a hint with a verified test AND the component's own canonical criterion (ADR-0063).
+      const anchored = new Set(
+        fromHints
+          .filter((c) => declaredFor(r, index).some((d) => d.entry.id === c.entry.id))
+          .map((c) => c.entry.id),
+      );
+      return {
+        index,
+        r,
+        text: plain(r.requirement),
+        candidates: [...fromHints, ...declared],
+        anchored,
+      };
     })
     .filter((x) => x.candidates.length > 0);
   if (items.length === 0) return null;
@@ -373,7 +400,14 @@ export async function offerComponents(
     const judged = answer?.serves[x.index];
     // The engine can only narrow the code's candidates, never add to them.
     const kept =
-      judged === undefined ? x.candidates : x.candidates.filter((c) => judged.includes(c.entry.id));
+      judged === undefined
+        ? x.candidates
+        : judged.length === 0
+          ? // The engine's judgement depends on how the compiler worded the requirement (it flips between runs for the
+            // same function): an empty answer does not drop a candidate code anchored twice (hint evidence + canonical
+            // criterion). Blocked requirements and the use case itself never get here (no candidates).
+            x.candidates.filter((c) => x.anchored.has(c.entry.id))
+          : x.candidates.filter((c) => judged.includes(c.entry.id));
     const requirement = x.r.requirement;
     for (const c of kept) {
       const existing = offered.get(c.entry.id);
