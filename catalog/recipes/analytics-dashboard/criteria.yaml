@@ -1,0 +1,74 @@
+# Canonical acceptance criteria (ADR-0063) of the analytics-dashboard use case: one per function its catalogue text
+# advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: analytics-dashboard.csv-import
+  criterion: "The owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+  advertises: "import data from CSV"
+  says: ["csv|spreadsheet|import|upload|file"]
+  terms: >-
+    csv file files spreadsheet spreadsheets import imports imported upload uploads uploaded data dataset
+    datasets rows row values value invalid valid validated validation rejected reject skipped errors error
+    dashboard kpi kpis chart charts exact totals total columns date category
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+
+- id: analytics-dashboard.manual-entry
+  criterion: "The owner enters a value by hand and the KPIs count it in its period"
+  advertises: "enter it"
+  says: ["enter|manual|by hand|add|record|log|input|type", "value|data|entr|record|metric|number|point|figure|amount"]
+  terms: >-
+    enter enters entered manual manually hand add adds added record records log logs input inputs type types
+    value values data entry entries metric metrics number numbers point points figure figures amount amounts
+    date category form stored listed kpi kpis count counts total totals period dataset
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the owner enters a value by hand and the KPIs compare the period with the previous period of the same length"
+
+- id: analytics-dashboard.period-comparison
+  criterion: "The KPIs compare the period with the previous period of the same length"
+  advertises: "KPIs with period comparison"
+  says: ["kpi|metric|indicator|total|average|key figure", "compar|previous|prior|last (period|month|week)|change|vs|versus|growth|trend|period"]
+  terms: >-
+    kpi kpis metric metrics indicator indicators key figures figure total totals average averages entries
+    compare compares comparison previous prior period periods last month week year change changes percentage
+    percent growth trend versus vs same length dashboard show shows owner
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the owner enters a value by hand and the KPIs compare the period with the previous period of the same length"
+    - "tests/unit/analytics.test.ts › computes the previous period of the same length"
+
+- id: analytics-dashboard.charts
+  criterion: "The owner imports a CSV and the dashboard shows exact KPIs and charts"
+  advertises: "time series"
+  says: ["chart|graph|time series|timeline|trend|breakdown|visuali|plot|line|bar"]
+  terms: >-
+    chart charts graph graphs time series timeline trend trends breakdown breakdowns category categories
+    visualise visualize visualisation visualization plot plots line bar daily day days over dashboard show
+    shows display displays kpi kpis exact data owner
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+    - "tests/unit/analytics.test.ts › fills missing days with zero"
+
+- id: analytics-dashboard.breakdown
+  criterion: "The dashboard shows exact KPIs and charts"
+  advertises: "breakdown charts"
+  says: ["breakdown|by category|per category|segment|split|group"]
+  terms: >-
+    breakdown breakdowns category categories segment segments split group groups grouped per by chart charts
+    bar other small dashboard show shows exact kpi kpis
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+    - "tests/unit/analytics.test.ts › groups small categories as Other"
+
+- id: analytics-dashboard.filter-export
+  criterion: "The dashboard filters by category and exports the filtered data as a CSV file"
+  advertises: "filters and export"
+  says: ["filter|export|download|csv|date range|period|category"]
+  terms: >-
+    filter filters filtered filtering export exports exported download downloads csv file data date range
+    period from to category categories segment dashboard kpi kpis only matching selected
+  actors: [owner, admin, manager, member, analyst]
+  tests:
+    - "tests/e2e/analytics.spec.ts › the dashboard filters by category and exports the filtered data as a CSV file"

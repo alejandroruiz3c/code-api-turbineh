@@ -1,0 +1,290 @@
+{
+  "schema": "turbineh.functional-statements/v1",
+  "about": "Functional coverage benchmark (ADR-0063, audit v2 N-01/F-01/F-14). Band A: a request the catalogue covers (one recipe, only functions it advertises). Band B: a covered recipe plus 1-2 capabilities the library does not have (the scope gate removes them; the covered part is built after approval). `expect` lists the canonical criteria a reviewer expects the request to map to (labelled before any run); `removed` the parts band B must drop. Written for this benchmark only (2026-10-16); not used in any test.",
+  "statements": [
+    {
+      "id": "FA01",
+      "band": "A",
+      "recipe": "bookings",
+      "prompt": "Online booking for Hilo Tattoo studio in Seville with three artists. Clients choose a session (consultation 30 min, small piece 60 min, large piece 180 min), an artist or any artist, and a free time without an account. They get a confirmation email with a cancel link; cancelling is allowed up to 48 hours before. Artists see their calendar by day and week, block days off, and can move or cancel sessions; the client is emailed each time. No two sessions for the same artist at the same time.",
+      "expect": [
+        "bookings.public-booking",
+        "bookings.confirmation-email",
+        "bookings.cancel-notice",
+        "bookings.staff-calendar",
+        "bookings.time-off",
+        "bookings.staff-move-cancel",
+        "bookings.no-double-booking"
+      ]
+    },
+    {
+      "id": "FA02",
+      "band": "A",
+      "recipe": "bookings",
+      "prompt": "Appointment booking for a two-chair barber shop in Lisbon: customers pick a haircut (30 min) or haircut and beard (45 min), a barber or any barber, and a free time; no sign-up. Confirmation email with a link to cancel up to 6 hours before. Barbers see a day and week calendar and can take time off. Never double book a barber.",
+      "expect": [
+        "bookings.public-booking",
+        "bookings.confirmation-email",
+        "bookings.cancel-notice",
+        "bookings.staff-calendar",
+        "bookings.time-off",
+        "bookings.no-double-booking"
+      ]
+    },
+    {
+      "id": "FA03",
+      "band": "A",
+      "recipe": "storefront",
+      "prompt": "An online shop for a small ceramics workshop: product catalogue with photos, mugs in three colours each with its own SKU, price and stock, a cart, discount codes with an expiry date, card payments with Stripe Checkout, order confirmation emails, stock reduced on each sale, and an admin panel to manage products and see orders.",
+      "expect": [
+        "storefront.catalog",
+        "storefront.images",
+        "storefront.variants",
+        "storefront.cart",
+        "storefront.discount-codes",
+        "storefront.checkout",
+        "storefront.orders-stock",
+        "storefront.admin-panel",
+        "storefront.admin-orders"
+      ]
+    },
+    {
+      "id": "FA04",
+      "band": "A",
+      "recipe": "projects",
+      "prompt": "Task management for a 6-person design agency: projects with tasks, each task has an assignee, a priority and a due date; a kanban board per project (to do, in progress, done); comments on tasks; overdue tasks are flagged; everyone has a 'my tasks' list.",
+      "expect": [
+        "projects.kanban",
+        "projects.tasks-assignees",
+        "projects.priorities",
+        "projects.due-dates",
+        "projects.comments",
+        "projects.my-tasks"
+      ]
+    },
+    {
+      "id": "FA05",
+      "band": "A",
+      "recipe": "tracker",
+      "prompt": "A personal water and sleep tracker: set a daily goal per tracker, log amounts quickly from the dashboard, see the current streak of days meeting the goal, a 30-day history and the weekly total.",
+      "expect": [
+        "tracker.goals",
+        "tracker.quick-logging",
+        "tracker.streaks",
+        "tracker.history",
+        "tracker.weekly-totals"
+      ]
+    },
+    {
+      "id": "FA06",
+      "band": "A",
+      "recipe": "landing-waitlist",
+      "prompt": "A landing page for 'Quill', an upcoming note-taking app: hero, benefits, how it works and FAQ, a waitlist form with name and email, a confirmation email to people who join, and an admin page listing the signups.",
+      "expect": [
+        "landing-waitlist.landing-page",
+        "landing-waitlist.join",
+        "landing-waitlist.confirmation-email",
+        "landing-waitlist.admin-signups"
+      ]
+    },
+    {
+      "id": "FA07",
+      "band": "A",
+      "recipe": "corporate-site",
+      "prompt": "Website for an architecture firm: home, services, about us, a blog with RSS, a contact form, and an admin panel where staff edit the site texts, publish posts and read contact messages.",
+      "expect": [
+        "corporate-site.browse-pages",
+        "corporate-site.services",
+        "corporate-site.about",
+        "corporate-site.blog",
+        "corporate-site.contact-form",
+        "corporate-site.edit-content",
+        "corporate-site.messages"
+      ]
+    },
+    {
+      "id": "FA08",
+      "band": "A",
+      "recipe": "client-portal",
+      "prompt": "A client portal for an accounting firm: clients submit requests (tax return, invoice question) with PDF uploads and follow the status of each request; staff review the requests and update their status.",
+      "expect": [
+        "client-portal.submit-request",
+        "client-portal.file-uploads",
+        "client-portal.follow-status",
+        "client-portal.staff-review"
+      ]
+    },
+    {
+      "id": "FA09",
+      "band": "A",
+      "recipe": "analytics-dashboard",
+      "prompt": "A sales dashboard for a team: import monthly sales from a CSV file or enter them by hand, KPIs compared with the previous period, a time series chart and a breakdown by region, filters and CSV export of the filtered data.",
+      "expect": [
+        "analytics-dashboard.csv-import",
+        "analytics-dashboard.manual-entry",
+        "analytics-dashboard.period-comparison",
+        "analytics-dashboard.charts",
+        "analytics-dashboard.breakdown",
+        "analytics-dashboard.filter-export"
+      ]
+    },
+    {
+      "id": "FA10",
+      "band": "A",
+      "recipe": "saas-crud",
+      "prompt": "A small CRM SaaS: teams sign up and get their own workspace, invite nothing for now; they manage contacts (name, email, company) — create, list, edit and delete them, search contacts by name and export them to CSV. Members cannot export.",
+      "expect": [
+        "saas-crud.workspace-sign-up",
+        "saas-crud.crud-create",
+        "saas-crud.crud-list",
+        "saas-crud.crud-edit",
+        "saas-crud.crud-delete",
+        "saas-crud.search",
+        "saas-crud.csv-export",
+        "saas-crud.roles"
+      ]
+    },
+    {
+      "id": "FB01",
+      "band": "B",
+      "recipe": "bookings",
+      "prompt": "Booking site for a yoga studio: students book 60-minute classes with a teacher of their choice in a free slot, get a confirmation email with a cancel link (cancel up to 12 hours before), teachers see their week calendar and block holidays. Also: an SMS reminder 2 hours before each class.",
+      "expect": [
+        "bookings.public-booking",
+        "bookings.confirmation-email",
+        "bookings.cancel-notice",
+        "bookings.staff-calendar",
+        "bookings.time-off"
+      ],
+      "removed": ["SMS reminder"]
+    },
+    {
+      "id": "FB02",
+      "band": "B",
+      "recipe": "bookings",
+      "prompt": "Online appointments for a physiotherapy clinic: patients book 45-minute sessions with a physiotherapist or any, no account, confirmation email with cancellation link, no double bookings, staff day and week calendar. Plus: sync every appointment to the physiotherapist's Google Calendar.",
+      "expect": [
+        "bookings.public-booking",
+        "bookings.confirmation-email",
+        "bookings.no-double-booking",
+        "bookings.staff-calendar"
+      ],
+      "removed": ["Google Calendar"]
+    },
+    {
+      "id": "FB03",
+      "band": "B",
+      "recipe": "storefront",
+      "prompt": "An online store for a coffee roaster: catalogue with photos, bags in 250 g and 1 kg variants with their own price and stock, cart, Stripe Checkout, order emails, stock decremented on payment, admin panel. Also sync orders to QuickBooks.",
+      "expect": [
+        "storefront.catalog",
+        "storefront.variants",
+        "storefront.cart",
+        "storefront.checkout",
+        "storefront.orders-stock",
+        "storefront.admin-panel"
+      ],
+      "removed": ["QuickBooks"]
+    },
+    {
+      "id": "FB04",
+      "band": "B",
+      "recipe": "storefront",
+      "prompt": "A shop selling printed posters: product catalogue with images, cart, discount codes, payments with Stripe Checkout, shipping rates by country, order confirmation email. Plus: publish every new product automatically to our Instagram account.",
+      "expect": [
+        "storefront.catalog",
+        "storefront.images",
+        "storefront.cart",
+        "storefront.discount-codes",
+        "storefront.checkout",
+        "storefront.shipping"
+      ],
+      "removed": ["Instagram"]
+    },
+    {
+      "id": "FB05",
+      "band": "B",
+      "recipe": "projects",
+      "prompt": "Project management for a software team: projects, tasks with assignee, priority and due date, kanban board, comments, my tasks list. In addition, post a message to our Slack channel whenever a task is moved to done.",
+      "expect": [
+        "projects.kanban",
+        "projects.tasks-assignees",
+        "projects.priorities",
+        "projects.due-dates",
+        "projects.comments",
+        "projects.my-tasks"
+      ],
+      "removed": ["Slack"]
+    },
+    {
+      "id": "FB06",
+      "band": "B",
+      "recipe": "tracker",
+      "prompt": "A habit tracker: daily goals, quick check-ins, streaks, a 30-day history and weekly totals. Also read my steps automatically from my Apple Watch.",
+      "expect": [
+        "tracker.goals",
+        "tracker.quick-logging",
+        "tracker.streaks",
+        "tracker.history",
+        "tracker.weekly-totals"
+      ],
+      "removed": ["Apple Watch"]
+    },
+    {
+      "id": "FB07",
+      "band": "B",
+      "recipe": "landing-waitlist",
+      "prompt": "A pre-launch landing page for a meal-kit startup with a waitlist form (name and email), a confirmation email and an admin list of signups. Also add every signup to our Mailchimp audience.",
+      "expect": [
+        "landing-waitlist.landing-page",
+        "landing-waitlist.join",
+        "landing-waitlist.confirmation-email",
+        "landing-waitlist.admin-signups"
+      ],
+      "removed": ["Mailchimp"]
+    },
+    {
+      "id": "FB08",
+      "band": "B",
+      "recipe": "client-portal",
+      "prompt": "A portal for a law firm's clients: they submit document requests with file uploads and follow their status; lawyers review and update the status. Also notify the client on WhatsApp when the status changes.",
+      "expect": [
+        "client-portal.submit-request",
+        "client-portal.file-uploads",
+        "client-portal.follow-status",
+        "client-portal.staff-review"
+      ],
+      "removed": ["WhatsApp"]
+    },
+    {
+      "id": "FB09",
+      "band": "B",
+      "recipe": "corporate-site",
+      "prompt": "Website for a dental clinic: home, services, about, blog with RSS, contact form, admin panel to edit content and read messages. Plus a live chat widget connected to our Zendesk account.",
+      "expect": [
+        "corporate-site.browse-pages",
+        "corporate-site.services",
+        "corporate-site.about",
+        "corporate-site.blog",
+        "corporate-site.contact-form",
+        "corporate-site.edit-content",
+        "corporate-site.messages"
+      ],
+      "removed": ["Zendesk"]
+    },
+    {
+      "id": "FB10",
+      "band": "B",
+      "recipe": "analytics-dashboard",
+      "prompt": "A marketing KPI dashboard: import campaign results from CSV, KPIs with the previous period, time series and breakdown charts, filters and CSV export. Also pull the numbers every night directly from our HubSpot account.",
+      "expect": [
+        "analytics-dashboard.csv-import",
+        "analytics-dashboard.period-comparison",
+        "analytics-dashboard.charts",
+        "analytics-dashboard.breakdown",
+        "analytics-dashboard.filter-export"
+      ],
+      "removed": ["HubSpot"]
+    }
+  ]
+}

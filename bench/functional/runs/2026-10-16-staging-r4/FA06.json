@@ -1,0 +1,118 @@
+{
+  "startedAt": "2026-10-16T19:44:29.095Z",
+  "id": "FA06",
+  "band": "A",
+  "flowId": "82baadda-74fe-48f9-b787-e56e09ecf47b",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The hero section displays the 'Quill' branding and a value proposition."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The benefits section outlines the key features of the app."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The 'how it works' section provides a step-by-step guide to using the app."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The FAQ section contains a list of frequently asked questions and answers."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The waitlist form accepts a user's name and email address."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The waitlist form prevents submission if the email format is invalid."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A confirmation email is sent to the user's email address upon successful waitlist signup."
+    },
+    {
+      "tests": [
+        "tests/e2e/waitlist.spec.ts › the owner (admin) sees the list of waitlist signups in the dashboard"
+      ],
+      "status": "covered",
+      "criterion": "The admin page displays a list of all users who have signed up for the waitlist."
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 5/8",
+  "functional": {
+    "met": 5,
+    "total": 8,
+    "ratio": 0.625,
+    "threshold": 0.8
+  },
+  "guideFunctional": null,
+  "criteria": [
+    {
+      "text": "The hero section displays the 'Quill' branding and a value proposition.",
+      "status": "open"
+    },
+    {
+      "text": "The benefits section outlines the key features of the app.",
+      "status": "open"
+    },
+    {
+      "text": "The 'how it works' section provides a step-by-step guide to using the app.",
+      "status": "open"
+    },
+    {
+      "text": "The FAQ section contains a list of frequently asked questions and answers.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "shows benefits, how it works and an FAQ"
+      }
+    },
+    {
+      "text": "The waitlist form accepts a user's name and email address.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "a visitor on the landing page submits their name and email and joins the waitlist"
+      }
+    },
+    {
+      "text": "The waitlist form prevents submission if the email format is invalid.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/authz.test.ts",
+        "title": "refuses invalid input before the handler runs"
+      }
+    },
+    {
+      "text": "A confirmation email is sent to the user's email address upon successful waitlist signup.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/waitlist-mechanics.spec.ts",
+        "title": "a visitor submits a valid email in the landing page hero; it is stored and triggers a double opt-in confirmation email; once confirmed they see their position and referral link"
+      }
+    },
+    {
+      "text": "The admin page displays a list of all users who have signed up for the waitlist.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "the owner (admin) sees the list of waitlist signups in the dashboard"
+      }
+    }
+  ],
+  "minutes": 15.53,
+  "finishedAt": "2026-10-16T20:00:00.766Z"
+}

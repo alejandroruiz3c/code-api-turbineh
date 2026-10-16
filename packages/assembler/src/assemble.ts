@@ -34,6 +34,7 @@ import { deployGuide, startHereHtml, type HandoverFacts } from "./handover.js";
 import { materializeRecipe, mergedRecipe, recipeChain } from "./recipes.js";
 import {
   acceptanceStatus,
+  withCanonicalLinks,
   attachProofs,
   readCoverage,
   sourceIn,
@@ -51,6 +52,7 @@ import {
 import { generateByKind, type KindPlan } from "./kinds.js";
 import { pascal } from "./naming.js";
 import { envOf, initialGuide, writeAgentGuide } from "./agent-guide.js";
+import { linkCriteria } from "./canonical.js";
 import { ownersOf, recordOwners } from "./ownership.js";
 import {
   componentModules,
@@ -285,9 +287,9 @@ export function assemble(input: AssembleInput): AssembleResult {
   const kinds: KindPlan | null = fid ? planByKind(input, entities, features) : null;
   const entityFiles = kinds
     ? []
-    : entities.map((e) => ({
+    : entities.map((e, i) => ({
         name: e.name,
-        files: generateEntity(e, features, entities),
+        files: generateEntity(e, features, entities, { isolation: i === 0 }),
       }));
   for (const e of entityFiles) for (const f of e.files) owners[f.path] = `entity:${e.name}`;
   if (kinds) Object.assign(owners, kinds.owners);
@@ -351,21 +353,34 @@ export function assemble(input: AssembleInput): AssembleResult {
     ...(actors.aliases.length ? [actors] : []),
   ]);
   // Criterion → test: only tests shipped in this package, each checked against its title and assertions (ADR-0043, ADR-0044).
+  // Canonical criteria (ADR-0063) first: a criterion linked to the recipe's or a component's canonical criteria is
+  // proven by their declared tests; the rest by the rules above (proof by title), then the report's decider.
+  const links = linkCriteria(outDir, spec.acceptance_criteria, {
+    recipesDir: input.recipesDir,
+    recipe: input.recipe,
+    components: [...selectedIds],
+    entities: spec.entities,
+    roles: [...spec.roles, matrix?.roles.owner?.label ?? "", matrix?.roles.admin?.label ?? ""],
+  });
   writeAcceptance(
     outDir,
-    acceptanceStatus(
-      spec.acceptance_criteria,
-      withAliases(
-        [
-          ...coverageRules(input, outDir),
-          ...entityCoverage(
-            outDir,
-            entities.map((e) => e.name),
-          ),
-          ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
-        ],
-        [actors],
+    withCanonicalLinks(
+      acceptanceStatus(
+        spec.acceptance_criteria,
+        withAliases(
+          [
+            ...coverageRules(input, outDir),
+            ...entityCoverage(
+              outDir,
+              entities.map((e) => e.name),
+            ),
+            ...(fidelityOut ? fidelityCoverage(outDir, fidelityOut.unit) : []),
+          ],
+          [actors],
+        ),
       ),
+      links,
+      spec.criteria_asked ?? {},
     ),
   );
   if (fid && matrix && kinds) writeFidelityReport(outDir, fid, matrix, kinds);

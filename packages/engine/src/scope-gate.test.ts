@@ -83,6 +83,50 @@ describe("scope gate (ADR-0052)", () => {
     expect(v.requirements[0]?.why).toMatch(/test shipped/);
   });
 
+  it("N-05 (ADR-0063): a detailed request where no requirement maps to a verified function is refused", async () => {
+    // The decider would place every requirement "inside the use case": the functional floor still refuses it.
+    const v = await scopeGate(
+      {
+        need: "AutoPublish Social: a SaaS where brands schedule content and see engagement analytics per post",
+        requirements: [
+          "Brands schedule content for each campaign with per-network limits",
+          "Engagement analytics per post are shown after publication",
+          "Drafts are approved by a brand manager before they go live",
+        ],
+        useCase: {
+          id: "saas-crud",
+          description: "Multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens",
+        },
+        catalog: CATALOG,
+        provenByTests: new Set(),
+        aiIncluded: false,
+      },
+      fakeDecider(() => false),
+    );
+    expect(v.status).toBe("uncovered");
+    expect(v.via).toBe("none");
+    expect(v.notCovered).toHaveLength(3);
+    expect(v.notCovered[0]?.why).toMatch(/0 % functional coverage/);
+  });
+
+  it("N-05: one requirement on a verified function is enough to pass the floor", async () => {
+    const v = await scopeGate(
+      {
+        need: "Bookings for a physiotherapy clinic",
+        requirements: [
+          "Clients book an available 45-minute slot",
+          "Staff see the week in a calendar",
+        ],
+        useCase: BOOKINGS,
+        catalog: CATALOG,
+        provenByTests: new Set(["Clients book an available 45-minute slot"]),
+        aiIncluded: false,
+      },
+      fakeDecider(() => false),
+    );
+    expect(v.status).toBe("covered");
+  });
+
   it("components chosen explicitly are covered as they were verified, without asking the decider", async () => {
     const decider = fakeDecider(() => true);
     const v = await scopeGate(
@@ -291,15 +335,31 @@ describe("F18 · checks and requirements apart", () => {
     error: null,
   });
 
-  it('"Checks 11/11 · Requirements 6/8 met", never "verified" alone while requirements are open', () => {
+  it('ADR-0063: "Technically verified · checks 11/11 · functional 6/8" below 80 %, never "verified" alone', () => {
     const r = row({ met: 6, covered: 0, open: ["a", "b"] });
-    expect(checksAndRequirements(r).badge).toBe("Checks 11/11 · Requirements 6/8 met");
+    expect(checksAndRequirements(r).badge).toBe(
+      "Technically verified · checks 11/11 · functional 6/8",
+    );
     const o = flowOutcome(r);
-    expect(o.badge).toBe("Checks 11/11 · Requirements 6/8 met");
-    expect(o.title).not.toMatch(/verified/i);
-    expect(o.title).toMatch(/2 requirement\(s\) not met yet/);
-    expect(flowOutcome(row({ met: 8, covered: 0, open: [] })).title).toBe(
-      "App verified in the TurbineH sandbox",
+    expect(o.badge).toBe("Technically verified · checks 11/11 · functional 6/8");
+    expect(o.functional).toEqual({ met: 6, total: 8, ratio: 0.75, threshold: 0.8 });
+    expect(o.title).toMatch(/^Technically verified · functional 6\/8/);
+    expect(o.title).toMatch(/2 not met yet/);
+  });
+
+  it('ADR-0063: at or above 80 % the verdict is "Verified", still with its functional coverage', () => {
+    const most = flowOutcome(row({ met: 8, covered: 0, open: ["a", "b"] }));
+    expect(most.badge).toBe("Verified · checks 11/11 · functional 8/10");
+    const all = flowOutcome(row({ met: 8, covered: 0, open: [] }));
+    expect(all.badge).toBe("Verified · checks 11/11 · functional 8/8");
+    expect(all.title).toMatch(
+      /^Verified · functional 8\/8 — .*every one of the 8 requirement\(s\)/,
+    );
+  });
+
+  it("ADR-0063: 0 % never reads verified; a failed gate reads not verified", () => {
+    expect(flowOutcome(row({ met: 0, covered: 0, open: ["a", "b", "c"] })).badge).toBe(
+      "Technically verified · checks 11/11 · functional 0/3",
     );
   });
 });
@@ -345,8 +405,9 @@ describe("pass with warnings in the badge (ADR-0065)", () => {
       artifact: { zipKey: "k" },
       error: null,
     };
+    // ADR-0063 verdict line, with the warnings kept visible.
     expect(checksAndRequirements(r).badge).toBe(
-      "Checks 11/11 (1 with warnings) · Requirements 2/5 met",
+      "Technically verified · checks 11/11 (1 with warnings) · functional 2/5",
     );
     expect(checksAndRequirements(r).checks).toEqual({ passed: 11, total: 11, warnings: 1 });
   });

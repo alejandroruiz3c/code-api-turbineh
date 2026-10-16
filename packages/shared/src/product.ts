@@ -326,6 +326,10 @@ export interface PlanCriterion {
   criterion: string;
   status: "covered" | "open";
   tests: string[];
+  /** Canonical criteria of the use case this criterion is (ADR-0063): proven by their linked tests. */
+  canonical?: string[];
+  /** The request's own wording, when the plan uses the canonical one (ADR-0063). */
+  asked?: string[];
 }
 
 export interface CheckResult {
@@ -402,6 +406,11 @@ export interface FlowOutcome {
   /** `warnings`: passed checks with non-blocking findings left (ADR-0065). */
   checks?: { passed: number; total: number; warnings?: number };
   requirements?: { met: number; total: number };
+  /**
+   * Functional coverage (ADR-0063, audit v2 F-01): requirements a passing test proves / requirements derived from the
+   * request, with the same weight as the checks. "Verified" without a qualifier only at `ratio >= threshold`.
+   */
+  functional?: { met: number; total: number; ratio: number; threshold: number };
   badge?: string;
 }
 

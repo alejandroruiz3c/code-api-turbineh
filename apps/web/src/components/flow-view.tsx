@@ -7,6 +7,7 @@ import type {
   NotCoveredExplanation,
   Plan,
 } from "@turbineh/shared";
+import { functionalRatio } from "@turbineh/shared/status-texts";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { currentRun, isWorking } from "@/lib/flow-events";
@@ -662,7 +663,7 @@ function ResultScreen({
               <span className={req.met < req.total ? "text-amber" : "text-teal"} aria-hidden="true">
                 {req.met < req.total ? "○" : "✓"}
               </span>
-              {`Requirements met: ${req.met}/${req.total}${req.met < req.total ? " — the open ones are listed under “Requirements not met yet”" : ""}`}
+              {`Functional coverage: ${req.met}/${req.total} requirements proven by a passing test (${Math.round(functionalRatio(req.met, req.total) * 100)}%)${req.met < req.total ? " — the open ones are listed under “Requirements not met yet”" : ""}`}
             </li>
             {works.slice(0, 6).map((c) => (
               <li key={c.criterion} className="flex gap-2">

@@ -89,6 +89,10 @@ test.describe.serial("online booking (public page, cancel link, staff calendar)"
     await bookFirst(page, openDay(3, 0), email);
     const booked = page.getByTestId("booked");
     await expect(booked).toContainText("Booked!");
+    await expect(
+      booked,
+      "booked with any team member: the booking names the free team member it was assigned to",
+    ).toContainText(/ with \S.* on /);
     reference = /Reference (\w+)/.exec((await booked.textContent()) ?? "")?.[1] ?? "";
     expect(reference).toMatch(/^\w{8}$/);
     const mail = await mailTo(page, email, new RegExp(`${reference} is confirmed`));

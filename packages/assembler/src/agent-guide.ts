@@ -1,6 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { appSettings, notIncluded, proofVerdict, type DeliveryManifest } from "@turbineh/shared";
+import {
+  appSettings,
+  functionalRatio,
+  notIncluded,
+  proofVerdict,
+  verdictLabel,
+  type DeliveryManifest,
+} from "@turbineh/shared";
 import { aliasesFor } from "./aliases.js";
 import { splitTestRef, testBlocks, writeAcceptance, type CriterionStatus } from "./acceptance.js";
 
@@ -28,6 +35,21 @@ export interface GuideCriterion {
   where?: string[];
   /** For open criteria: the spec file where its E2E test belongs. */
   testFile?: string;
+  /** Canonical criteria of the recipe or a component this criterion is linked to (ADR-0063). */
+  canonical?: string[];
+  /** The request's own wording, when the plan replaced it with the canonical one (ADR-0063). */
+  asked?: string[];
+}
+
+/**
+ * Functional coverage (ADR-0063): criteria a passing test proves / criteria derived from the request. Library
+ * contract tests never count. `label` is the one line every surface shows (FUNCTIONAL_THRESHOLD in @turbineh/shared).
+ */
+export interface GuideFunctionalCoverage {
+  met: number;
+  total: number;
+  ratio: number;
+  label: string;
 }
 export interface GuideGateFinding {
   category: "security" | "policy" | "quality";
@@ -70,6 +92,11 @@ export interface PackageGuide {
   verified?: boolean;
   /** Checks passed / total of the gate ("10/11"), once verified. */
   checks?: string;
+  /**
+   * `status` is the technical gate; this is what the request asked for (ADR-0063): never read "verified" as "does
+   * what was asked" without it.
+   */
+  functional_coverage?: GuideFunctionalCoverage;
   /** Exact failures of a delivered, not verified package, each with the suggested fix. */
   failures?: GuideFailure[];
   /** What a coding agent still has to do. Empty = nothing: the package meets the spec and passed the gate. */
@@ -699,11 +726,23 @@ export function verifiedGuide(
       : null;
   };
   const deterministic = readAcceptanceJson(outDir);
+  // Canonical links (ADR-0063): every linked test must still be in the package (a correction may not delete one).
+  const linked = (refs: readonly string[]) => {
+    const found = refs.map((ref) => {
+      const { file, title } = splitTestRef(ref);
+      return blocksOf(file).some((b) => b.title === title) ? { file, title } : null;
+    });
+    return found.length > 0 && found.every((t) => t !== null) ? found[0] : null;
+  };
   const criteria: GuideCriterion[] = input.criteria.map((c) => {
-    const ruled = deterministic
-      .find((d) => d.criterion === c.criterion)
-      ?.tests.map((ref) => proves(c.criterion, ref))
-      .find((t) => t !== null);
+    const det = deterministic.find((d) => d.criterion === c.criterion);
+    const extra = {
+      ...(det?.canonical?.length ? { canonical: det.canonical } : {}),
+      ...(det?.asked?.length ? { asked: det.asked } : {}),
+    };
+    const ruled = det?.canonical?.length
+      ? linked(det.tests)
+      : det?.tests.map((ref) => proves(c.criterion, ref)).find((t) => t !== null);
     const title = c.evidence.replace(/^(End-to-end|Unit) test:\s*/, "");
     const file = fileOf(title);
     const test = ruled ?? (c.verified && file ? { file, title } : null);
@@ -712,6 +751,7 @@ export function verifiedGuide(
         text: c.criterion,
         status: input.gate.ok ? ("met" as const) : ("unverified" as const),
         test,
+        ...extra,
       };
     }
     return {
@@ -719,17 +759,28 @@ export function verifiedGuide(
       status: "open" as const,
       where: whereFor(c.criterion, files),
       testFile: testFileFor(c.criterion, tests),
+      ...extra,
     };
   });
   // ACCEPTANCE.md and .turbineh/acceptance.json say exactly what AGENTS.md says.
   writeAcceptance(
     outDir,
-    criteria.map((c): CriterionStatus => ({
-      criterion: c.text,
-      status: c.status === "met" ? "met" : c.status === "open" ? "open" : "covered",
-      tests: c.test ? [`${c.test.file} › ${c.test.title}`] : [],
-    })),
+    criteria.map((c): CriterionStatus => {
+      const det = deterministic.find((d) => d.criterion === c.text);
+      return {
+        criterion: c.text,
+        status: c.status === "met" ? "met" : c.status === "open" ? "open" : "covered",
+        tests: c.test
+          ? c.canonical?.length && det
+            ? det.tests
+            : [`${c.test.file} › ${c.test.title}`]
+          : [],
+        ...(c.canonical ? { canonical: c.canonical } : {}),
+        ...(c.asked ? { asked: c.asked } : {}),
+      };
+    }),
   );
+  const met = criteria.filter((c) => c.status === "met").length;
   const gaps = input.delivery
     ? notIncluded(input.delivery).map((e) => ({
         capability: e.capability,
@@ -757,6 +808,16 @@ export function verifiedGuide(
     verified: ok,
     ...(input.delivery ? { delivery: input.delivery, brokenPromises: broken } : {}),
     checks: `${input.gate.steps.filter((x) => x.ok).length}/${input.gate.steps.length}`,
+    ...(criteria.length > 0
+      ? {
+          functional_coverage: {
+            met,
+            total: criteria.length,
+            ratio: functionalRatio(met, criteria.length),
+            label: verdictLabel({ gateOk: ok, met, total: criteria.length }),
+          },
+        }
+      : {}),
     failures: input.gate.ok ? [] : (input.failures ?? []),
     criteria,
     gaps,

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
 import { trackerLogs, trackers } from "@/db/schema";
 import { requireMember } from "@/server/authz";
-import { completion, history, streak, totalsByDay } from "@/server/streaks";
+import { completion, history, streak, totalsByDay, weekTotal } from "@/server/streaks";
 import { deleteTracker, logValue } from "../actions";
 
 const n = (v: number) => new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(v);
@@ -38,7 +38,7 @@ export default async function TrackerPage({ params }: { params: Promise<{ id: st
   const target = Number(t.dailyTarget);
   const totals = totalsByDay(logs.map((l) => ({ day: l.day, value: Number(l.value) })));
   const days = history(totals, target, today, 30);
-  const week = days.slice(-7).reduce((s, d) => s + Math.round(d.total * 100), 0) / 100;
+  const week = weekTotal(days);
   const todayTotal = totals.get(today) ?? 0;
   const unit = t.unit ? ` ${t.unit}` : "";
   return (

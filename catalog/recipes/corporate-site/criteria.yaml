@@ -1,0 +1,93 @@
+# Canonical acceptance criteria (ADR-0063) of the corporate-site use case: one per function its catalogue text
+# advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: corporate-site.browse-pages
+  criterion: "A visitor browses the home page, the services page, about and contact"
+  advertises: "home"
+  says: ["home|services?|about|contact|pages?|navigat|menu|site|website", "visitor|browse|navigat|menu|home|page|see|view|public"]
+  terms: >-
+    home homepage page pages services service about us team company contact navigation navigate navigates menu
+    main browse browses link links website site public visitor visitors what we do offer offers describe
+    describes information info section sections each
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
+
+- id: corporate-site.services
+  criterion: "A visitor browses the services page"
+  advertises: "services"
+  says: ["services?|offer|what we do|solutions"]
+  terms: >-
+    services service page pages list lists offer offers offering what we do solutions describe describes
+    description descriptions browse browses visitor visitors public navigation menu home
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
+
+- id: corporate-site.about
+  criterion: "A visitor browses the about page"
+  advertises: "about"
+  says: ["about|who we are|our (story|team|company)|company"]
+  terms: >-
+    about us page who we are our story team company history mission values browse browses visitor visitors
+    public navigation menu
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
+
+- id: corporate-site.blog
+  criterion: "The admin publishes a post that appears on the blog, RSS and sitemap"
+  advertises: "blog with RSS"
+  says: ["blog|post|article|news|rss|feed"]
+  terms: >-
+    blog blogs post posts article articles news publish publishes published write writes writing create creates
+    rss feed feeds sitemap appear appears listed public read reads visitor visitors admin owner staff markdown
+    text title summary page detail slug
+  actors: [admin, administrator, owner, staff, visitor, editor]
+  tests:
+    - "tests/e2e/site.spec.ts › the admin publishes a post that appears on the blog, RSS and sitemap"
+
+- id: corporate-site.contact-form
+  criterion: "A visitor submits the contact form and gets a confirmation"
+  advertises: "contact form"
+  says: ["contact|message|enquir|inquir|get in touch|quote", "form|submit|send|message|confirm"]
+  terms: >-
+    contact form forms submit submits send sends message messages enquiry inquiry enquiries inquiries get in
+    touch quote request fill fills in name email text confirmation confirm thanks thank receive receives visitor visitors
+    public stored saved
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/site.spec.ts › a visitor submits the contact form and gets a confirmation"
+
+- id: corporate-site.edit-content
+  criterion: "The owner (admin) edits the website headline and the home page shows it"
+  advertises: "admin panel to edit content"
+  says: ["admin|owner|staff|panel|dashboard|cms|manag", "edit|chang|updat|content|text|headline|manag"]
+  terms: >-
+    admin administrator owner staff panel dashboard cms back office manage manages edit edits change changes
+    update updates content contents text texts copy headline home page website site saved save shows shown
+    appear appears public reflect without code
+  actors: [admin, administrator, owner, staff, manager, editor]
+  tests:
+    - "tests/e2e/site.spec.ts › the owner (admin) edits the website headline and the home page shows it"
+
+- id: corporate-site.messages
+  criterion: "The owner (admin) reads the contact message in the dashboard"
+  advertises: "messages"
+  says: ["messages?|enquir|inquir|submission|contact", "admin|owner|staff|dashboard|panel|read|see|view|list"]
+  terms: >-
+    message messages contact enquiry enquiries inquiry inquiries submission submissions form read reads see
+    sees view views list lists dashboard panel admin owner staff received incoming
+  actors: [admin, administrator, owner, staff, manager]
+  tests:
+    - "tests/e2e/site.spec.ts › the owner (admin) reads the contact message in the dashboard"
+
+- id: corporate-site.search-ready
+  criterion: "It is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)"
+  advertises: "Corporate website"
+  says: ["\\bseo\\b|search engine|sitemap|structured data|json-ld|answer engine|schema\\.org|robots|llms"]
+  terms: >-
+    seo search engines engine sitemap structured data json ld answer ai robots llms txt metadata google indexed
+    index ready optimized optimised
+  actors: [visitor]
+  tests:
+    - "tests/e2e/site.spec.ts › is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)"

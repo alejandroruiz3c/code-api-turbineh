@@ -1,0 +1,63 @@
+# Canonical acceptance criteria (ADR-0063): one per function the tracker use case advertises, each linked to the test
+# that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: tracker.goals
+  criterion: "Amounts are compared with the daily goal"
+  advertises: "goals"
+  says: ["goal|target|objective"]
+  terms: >-
+    goal goals target targets objective objectives daily day per set sets define defines amount amounts quantity
+    quantities progress towards reach reached reaches meet meets met total totals tracker trackers habit habits
+    health money unit units km step steps glass glasses
+  actors: [owner, member]
+  tests:
+    - "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"
+    - "tests/unit/streaks.test.ts › adds amounts exactly and compares with the daily goal"
+
+- id: tracker.quick-logging
+  criterion: "An amount: logs add up towards the daily goal"
+  advertises: "quick logging"
+  says: ["\\blog|record|check[ -]?in|enter|add|track|mark"]
+  terms: >-
+    log logs logged logging record records recorded enter entry entries add adds added quick quickly fast one
+    click tap check checkin check-in mark marks done today day daily amount amounts value values quantity
+    quantities tracker trackers habit habits note notes total totals expense expenses workout workouts
+  actors: [owner, member]
+  tests:
+    - "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"
+    - "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
+
+- id: tracker.streaks
+  criterion: "A habit: check in today starts a streak"
+  advertises: "streaks"
+  says: ["streak|consecutive|in a row|chain"]
+  terms: >-
+    streak streaks consecutive row chain days day daily habit habits check checkin check-in today count counts
+    counted current longest keep kept going start starts goal met done
+  actors: [owner, member]
+  tests:
+    - "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
+    - "tests/unit/streaks.test.ts › counts the streak up to today, or up to yesterday when today is still open"
+
+- id: tracker.history
+  criterion: "The 30-day history marks today as goal met"
+  advertises: "30-day history"
+  says: ["histor|last (30|thirty) days|30[- ]day|past (30|thirty|month)|calendar|heatmap|month"]
+  terms: >-
+    history histories last past month monthly days day calendar heatmap grid chart view see shows completion
+    rate percentage goal met not each per tracker trackers habit habits logs logged
+  actors: [owner, member]
+  tests:
+    - "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+    - "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
+
+- id: tracker.weekly-totals
+  criterion: "The weekly total adds up the logs of the last 7 days"
+  advertises: "weekly totals"
+  says: ["week|7[- ]days?|seven days"]
+  terms: >-
+    week weekly weeks last past seven days day total totals sum sums summary amount amounts logs logged per
+    tracker trackers habit habits see shows view
+  actors: [owner, member]
+  tests:
+    - "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+    - "tests/unit/streaks.test.ts › the weekly total adds up exactly the last 7 days of logs, not older ones"

@@ -557,6 +557,7 @@ export function generateByKind(input: KindPlanInput): KindPlan {
   const generatedPages = pageEntities.filter(
     (e) => !plan.generatedAs.some((g) => g.entity === e.name),
   );
+  let isolationPlaced = false;
   for (const e of input.entities) {
     if (plan.generatedAs.some((g) => g.entity === e.name)) continue;
     if (!generatedPages.includes(e) && kindOf(e.name) !== "event") continue;
@@ -597,7 +598,10 @@ export function generateByKind(input: KindPlanInput): KindPlan {
       ...(input.ownerLabel ? { ownerLabel: input.ownerLabel } : {}),
       // References become tenant-scoped foreign keys only to entities with a table and a page of their own.
       referenceable: generatedPages.map((x) => x.name),
+      // One multi-tenancy E2E per app, on the first CRUD entity (ADR-0063).
+      isolation: !settings && !isolationPlaced && generatedPages.includes(e),
     };
+    if (!settings && generatedPages.includes(e)) isolationPlaced = true;
     own(e.name, generateEntity(shaped, input.features, input.entities, opts));
     const href = settings ? `/dashboard/settings/${n.slug}` : `/dashboard/${n.slug}`;
     plan.nav.push({ label: settings ? `Settings · ${n.labelPlural}` : n.labelPlural, href });

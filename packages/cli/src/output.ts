@@ -1,3 +1,4 @@
+import { STATE_TEXT } from "@turbineh/shared";
 import type { NotCoveredExplanation, ProductError } from "@turbineh/shared";
 
 /**
@@ -26,17 +27,10 @@ export const red = paint("31");
 export const yellow = paint("33");
 export const cyan = paint("36");
 
-export const STATE_LABEL: Record<string, string> = {
-  planning: "preparing the plan",
-  planned: "plan ready — nothing generated yet",
-  generating: "generating and verifying",
-  generated: "delivered, not verified — checks not all green (see the failure and fix)",
-  verified: "build checks passed in the TurbineH sandbox (see requirements met)",
-  integrated: "integrated in this project (not verified here yet)",
-  integration_verified: "integrated and verified in this project",
-  deployed: "deployed",
-  failed: "failed",
-};
+/** One source of state texts (ADR-0063): the CLI line of each state, from @turbineh/shared. */
+export const STATE_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(STATE_TEXT).map(([state, t]) => [state, t.line]),
+);
 
 /** The --json document of a result (also what the MCP server returns): everything but the human lines. */
 export const jsonOf = (result: CommandResult) => ({ ...result, lines: undefined });

@@ -138,7 +138,11 @@ export function salientStems(text: string): Set<string> {
   );
 }
 
-const rolesIn = (text: string): Set<string> =>
+/** True when the text states a refusal ("cannot", "rejects", "never"…). */
+export const statesRefusal = (text: string): boolean => NEGATION.test(text);
+
+/** The role and actor words a text names ("customer", "staff", "owner"…), singular. */
+export const rolesIn = (text: string): Set<string> =>
   new Set(
     words(text)
       .map((w) => w.replace(/s$/, ""))

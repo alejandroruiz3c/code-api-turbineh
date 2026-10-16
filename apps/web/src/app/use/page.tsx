@@ -1,5 +1,6 @@
 import { checkLabel } from "@turbineh/engine";
 import type { FlowState } from "@turbineh/shared";
+import { FLOW_STEPS } from "@turbineh/shared/status-texts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -323,16 +324,7 @@ export default function UsePage() {
 
         <Sub title="The flow">
           <ol className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
-            {[
-              ["Describe", "New flow: the capability you need, in your words."],
-              ["Plan", "Your environment, then one plan: components, files, settings, decisions."],
-              ["Generate", "Live trace while the package is assembled, tested and scanned."],
-              [
-                "Verified result",
-                "Build checks and requirements met, shown apart, and the settings you provide.",
-              ],
-              ["Integrate", "Download the ZIP, or receive a pull request on your repository."],
-            ].map(([t, d], i) => (
+            {FLOW_STEPS.map(([t, d], i) => (
               <li key={t} className="rounded-xl border border-line bg-panel/30 p-4">
                 <p className="eyebrow text-teal">Step {i + 1}</p>
                 <p className="mt-1 font-semibold text-cream">{t}</p>

@@ -1,4 +1,5 @@
 import type { Decider } from "@turbineh/decider";
+import { ellipsize } from "@turbineh/shared";
 import type { PlanScope, ScopeRequirement } from "@turbineh/shared";
 
 /**
@@ -22,6 +23,10 @@ export const NOT_COVERED_ACTION =
   "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).";
 /** Raw reason stored on the build row (`builds.error`); `explainFailure` maps it back. */
 export const NOT_COVERED_REASON = "Use case not covered by the library";
+
+/** Why a requirement is not covered when none of the request maps to a verified function (ADR-0063). */
+export const NO_VERIFIED_FUNCTION =
+  "No requirement of this request maps to a function the library verified (0 % functional coverage)";
 
 /** A covered use case may offer its covered part only when at least this share of the requirements is covered. */
 export const PARTIAL_MIN_SHARE = 0.5;
@@ -190,7 +195,7 @@ export async function scopeGate(
   const headlineWhy = headline ? uncoveredByCode(headline, ctx) : null;
   if (headline && headlineWhy)
     results.push({
-      requirement: `${headline} (the use case itself)`,
+      requirement: `${ellipsize(headline, 140)} (the use case itself)`,
       covered: false,
       why: headlineWhy,
     });
@@ -199,7 +204,11 @@ export async function scopeGate(
     const why = uncoveredByCode(part, ctx);
     if (!why || reasons.has(why)) continue;
     reasons.add(why);
-    results.push({ requirement: `${part} (stated in the request)`, covered: false, why });
+    results.push({
+      requirement: `${ellipsize(part, 140)} (stated in the request)`,
+      covered: false,
+      why,
+    });
   }
 
   const open = results.flatMap((r, i) => (r === null ? [i] : []));
@@ -238,12 +247,24 @@ export async function scopeGate(
               };
     }
   }
-  const requirements = results as ScopeRequirement[];
+  let requirements = results as ScopeRequirement[];
+  // Functional floor (ADR-0063, audit v2 N-05): a use case is built only when at least one requirement maps to a function
+  // the library verified (a canonical criterion or a shipped test). A detailed specification in a domain the library
+  // does not cover is refused like a vague one: 0 % functional coverage can never be built.
+  const functionalZero =
+    input.useCase !== null &&
+    input.provenByTests !== undefined &&
+    input.requirements.length > 0 &&
+    !input.requirements.some((r) => input.provenByTests?.has(r));
+  if (functionalZero)
+    requirements = requirements.map((r) =>
+      r.covered ? { requirement: r.requirement, covered: false, why: NO_VERIFIED_FUNCTION } : r,
+    );
   const notCovered = requirements.filter((r) => !r.covered);
   const coveredShare =
     requirements.length === 0 ? 0 : (requirements.length - notCovered.length) / requirements.length;
   const status: ScopeVerdict["status"] =
-    requirements.length === 0 || headlineWhy
+    requirements.length === 0 || headlineWhy || functionalZero
       ? "uncovered"
       : notCovered.length === 0
         ? "covered"

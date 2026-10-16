@@ -14,7 +14,12 @@ test.describe.serial("projects", () => {
     await page.getByRole("button", { name: "Add task" }).click();
     const card = page.locator('[data-task="Write the homepage copy"]');
     await expect(card).toBeVisible();
-    await expect(card).toContainText("Overdue");
+    await expect(card, "the task shows the assignee chosen on creation (the owner)").toContainText(
+      "E2E Owner",
+    );
+    await expect(card, "the task shows its priority").toContainText("high");
+    await expect(card, "the task shows its due date").toContainText("2020-01-01");
+    await expect(card, "a task past its due date is flagged overdue").toContainText("Overdue");
   });
 
   test("the owner moves a task on the Kanban board from To do to In progress and the new status is persisted", async ({

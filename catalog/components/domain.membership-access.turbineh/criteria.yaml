@@ -1,0 +1,57 @@
+# Canonical acceptance criteria (ADR-0063) of the membership and access component: invitations, roles, per-record scope.
+- id: membership.invite
+  criterion: "The owner invites a teammate by email with a role and the invitation email is sent"
+  advertises: "invitations"
+  says: ["invit", "e-?mail|role|teammate|member|people|user|colleague"]
+  terms: >-
+    invite invites invited invitation invitations email emails teammate teammates colleague colleagues member members
+    people user users role roles specified chosen given assign assigns assigned sent send sends link join joins team
+    workspace
+  actors: [owner, admin, administrator, manager, teammate, member]
+  tests:
+    - "tests/e2e/membership.spec.ts › the owner invites a teammate by email with a role and the invitation email is sent"
+- id: membership.accept
+  criterion: "The invited person creates an account from the link, accepts and joins with the invited role"
+  advertises: "invitations"
+  says: ["invit|join|accept", "account|link|role|join|accept|sign"]
+  terms: >-
+    invited invitation person teammate member user account sign signs up link accept accepts accepted join joins
+    joined role roles assigned workspace team the specified
+  actors: [teammate, member, guest]
+  tests:
+    - "tests/e2e/membership.spec.ts › the invited person creates an account from the link, accepts and joins with the invited role"
+- id: membership.single-use-link
+  criterion: "An invitation link works only once and only for the invited email"
+  advertises: "invitations"
+  says: ["invit", "once|single|expire|only|reuse|twice|other email|another email"]
+  terms: invitation link links once single use used reuse twice only invited email expire expired token another other
+  tests:
+    - "tests/e2e/membership.spec.ts › an invitation link works only once and only for the invited email"
+- id: membership.cannot-manage
+  criterion: "A member whose role cannot manage the workspace cannot invite people or change roles"
+  advertises: "roles"
+  says: ["invit|role|manage", "cannot|can't|not|only|denied|refus"]
+  terms: >-
+    member members role roles manage managing workspace invite invites people change changes permission permissions
+    only owners admins allowed denied refused viewer viewers editor editors
+  actors: [member, viewer, editor, owner, admin]
+  tests:
+    - "tests/e2e/membership.spec.ts › a member whose role cannot manage the workspace cannot invite people or change roles"
+- id: membership.change-role
+  criterion: "The owner changes a member's role"
+  advertises: "roles"
+  says: ["role", "chang|updat|promot|demot|edit|assign"]
+  terms: change changes changed update updates role roles member members promote demote assign assigns teammate
+  actors: [owner, admin, member, teammate]
+  tests:
+    - "tests/e2e/membership.spec.ts › the owner changes a member's role"
+- id: membership.scope
+  criterion: "A member restricted to their own company sees only that company, never the others"
+  advertises: "per-record scope"
+  says: ["own|their|only|restrict|scope", "compan|client|account|organi[sz]ation|project|shop|store|record"]
+  terms: >-
+    member members restricted restrict own their only company companies client clients account accounts organization
+    organisation project projects shop store records record see sees other others never scope access
+  actors: [member, client, customer]
+  tests:
+    - "tests/e2e/membership.spec.ts › a member restricted to their own company sees only that company, never the others"

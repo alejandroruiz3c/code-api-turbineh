@@ -18,6 +18,11 @@ export interface ReportFacts {
   recipe: string;
   entities: string[];
   acceptanceCriteria: string[];
+  /**
+   * Criteria already linked to canonical criteria and their tests (ADR-0063): decided by the declared link, so the
+   * decider is never asked about them (it only sees the residual criteria).
+   */
+  linkedCriteria?: string[];
   /** Evidence actually produced by the verification of this build (test names, checks). */
   evidence: string[];
   /** Key assertions of each test in `evidence` (expect lines), so a match is judged on what the test checks. */
@@ -270,7 +275,9 @@ async function mapCriteria(
     verified: false,
     confidence,
   });
+  const linked = new Set(facts.linkedCriteria ?? []);
   const items = facts.acceptanceCriteria.flatMap((criterion, index) => {
+    if (linked.has(criterion)) return [];
     const tests = criterionCandidates(criterion, facts.evidence, detail);
     return lexical[index] || tests.length === 0 ? [] : [{ index, criterion, tests, detail }];
   });

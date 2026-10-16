@@ -5,6 +5,7 @@ import { chunkText } from "@/server/chunking";
 // turbineh:module batch-processes
 import { outputText, parseLabels, schemaFor } from "@/server/process-schema";
 // turbineh:end-module batch-processes
+import { allowedTools, needsConfirmation } from "@/lib/ai/guard";
 import { isTool, TOOL_REGISTRY } from "@/server/tools";
 
 describe("recipe ai-agents", () => {
@@ -39,5 +40,21 @@ describe("recipe ai-agents", () => {
     expect(isTool("email_me")).toBe(true);
     expect(isTool("rm_rf")).toBe(false);
     expect(TOOL_REGISTRY.find((t) => t.name === "email_me")?.irreversible).toBe(true);
+  });
+
+  it("an assistant with instructions gets only the tools allowed for it; the irreversible one asks first", () => {
+    const allowed = allowedTools(TOOL_REGISTRY, ["escalate_to_human", "rm_rf"]);
+    expect(
+      allowed.map((t) => t.name),
+      "only the registry tools enabled for this assistant are allowed",
+    ).toEqual(["escalate_to_human"]);
+    expect(allowedTools(TOOL_REGISTRY, []), "an assistant with no tools allowed gets none").toEqual(
+      [],
+    );
+    const email = TOOL_REGISTRY.find((t) => t.name === "email_me");
+    expect(
+      email && needsConfirmation(email),
+      "sending email waits for the user's confirmation",
+    ).toBe(true);
   });
 });

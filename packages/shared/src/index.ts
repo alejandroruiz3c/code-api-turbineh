@@ -6,3 +6,4 @@ export * from "./crypto.js";
 export * from "./product.js";
 export * from "./criterion-proof.js";
 export * from "./delivery.js";
+export * from "./status-texts.js";

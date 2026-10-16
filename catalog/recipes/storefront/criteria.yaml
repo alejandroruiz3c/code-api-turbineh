@@ -1,0 +1,182 @@
+# Canonical acceptance criteria (ADR-0063): one per function the storefront use case advertises, each linked to the
+# test that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: storefront.catalog
+  criterion: "A shopper clicks a product in the list and lands on that product's detail page with its price"
+  advertises: "product catalog"
+  says: ["product|catalog|item|shop|store", "list|brows|catalog|page|detail|view|see|click|open"]
+  terms: >-
+    product products catalog catalogue item items shop store list lists listing browse browses page pages detail
+    details view views see sees click clicks open opens price prices description name category categories
+    collection collections public online
+  actors: [shopper, customer, visitor, guest, buyer, client]
+  tests:
+    - "tests/e2e/shop.spec.ts › a shopper clicks a product in the list and lands on that product's detail page with its price"
+
+- id: storefront.search
+  criterion: "Shoppers search the catalogue by product name: the list filters to only the matching products"
+  advertises: "product catalog"
+  says: ["search|filter|find|look up"]
+  terms: >-
+    search searches find finds look lookup filter filters filtered matching match matches name names keyword
+    keywords description product products catalog catalogue item items list results result
+  actors: [shopper, customer, visitor, guest, buyer, client]
+  tests:
+    - "tests/e2e/shop.spec.ts › shoppers search the catalogue by product name: the list filters to only the matching products"
+    - "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
+
+- id: storefront.images
+  criterion: "The admin creates a product with an image"
+  advertises: "images"
+  says: ["image|photo|picture|thumbnail"]
+  terms: >-
+    image images photo photos picture pictures thumbnail thumbnails upload uploads uploaded url link https
+    product products add adds create creates new show shows shown page detail catalog catalogue
+  actors: [admin, owner, staff, manager, shopper, customer, visitor]
+  tests:
+    - "tests/e2e/shop.spec.ts › the admin creates a product with an image"
+    - "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
+
+- id: storefront.variants
+  criterion: "The admin adds options with their own SKU, price and stock"
+  advertises: "product variants"
+  says: ["variant|option|\\bsizes?\\b|colou?rs?|\\bsku\\b"]
+  terms: >-
+    variant variants option options size sizes colour colours color colors sku skus own each price prices stock
+    stocks inventory product products add adds create creates choose chooses select selects pick
+  actors: [admin, owner, staff, manager, shopper, customer]
+  tests:
+    - "tests/e2e/shop.spec.ts › the admin adds options with their own SKU, price and stock"
+
+- id: storefront.cart
+  criterion: "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+  advertises: "cart"
+  says: ["\\bcart\\b|basket|\\bbag\\b"]
+  terms: >-
+    cart carts basket bag add adds added remove removes product products item items quantity quantities change
+    changes update updates subtotal total totals price prices one more update
+  actors: [shopper, customer, visitor, guest, buyer, client]
+  tests:
+    - "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+
+- id: storefront.discount-codes
+  criterion: "Uses a discount code: applied on the server, counted once on payment, then used up"
+  advertises: "discount codes"
+  says: ["discount|coupon|promo|voucher"]
+  terms: >-
+    discount discounts coupon coupons promo promotion promotions voucher vouchers code codes percent percentage
+    fixed amount minimum order usage limit limits expiry expire expires expired apply applies applied checkout
+    once used up create creates admin shopper customer total
+  actors: [admin, owner, staff, manager, shopper, customer, buyer]
+  tests:
+    - "tests/e2e/shop.spec.ts › uses a discount code: applied on the server, counted once on payment, then used up"
+    - "tests/e2e/shop.spec.ts › the admin creates a one-use discount code"
+    - "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
+
+- id: storefront.currencies
+  criterion: "Pays in a second currency: fixed prices, shipping in that currency, order in USD"
+  advertises: "several currencies with fixed prices per currency"
+  says: ["currenc|usd|eur|gbp|dollar|euro|pound"]
+  terms: >-
+    currency currencies usd eur gbp dollar dollars euro euros pound pounds second several multiple fixed price
+    prices per each shipping order orders pay pays checkout sell sells choose chooses select
+  actors: [admin, owner, staff, shopper, customer, buyer]
+  tests:
+    - "tests/e2e/shop.spec.ts › pays in a second currency: fixed prices, shipping in that currency, order in USD"
+    - "tests/e2e/shop.spec.ts › the admin sells in a second currency with explicit prices and shipping"
+
+- id: storefront.shipping
+  criterion: "The admin sets shipping by country and a tax rate"
+  advertises: "shipping options by country and currency"
+  says: ["shipping|delivery|ship"]
+  terms: >-
+    shipping ship ships delivery deliver option options rate rates cost costs fee fees country countries
+    currency currencies free threshold set sets add adds admin cart checkout order
+  actors: [admin, owner, staff, manager, shopper, customer]
+  tests:
+    - "tests/e2e/shop.spec.ts › the admin sets shipping by country and a tax rate"
+    - "tests/unit/shop.test.ts › applies shipping by country with an optional free threshold"
+
+- id: storefront.taxes
+  criterion: "Picks the country's tax rate, else the default"
+  advertises: "taxes by country"
+  says: ["\\btax(es)?\\b|\\bvat\\b"]
+  terms: >-
+    tax taxes vat rate rates country countries inclusive exclusive included include added set sets admin
+    cart checkout order total totals compute computes calculated
+  actors: [admin, owner, staff, manager, shopper, customer]
+  tests:
+    - "tests/e2e/shop.spec.ts › the admin sets shipping by country and a tax rate"
+    - "tests/unit/shop.test.ts › picks the country's tax rate, else the default"
+
+- id: storefront.stripe-tax
+  criterion: "Lets Stripe Tax compute tax: automatic_tax, tax behaviour on every amount, no manual tax line"
+  advertises: "automatic Stripe Tax"
+  says: ["stripe tax|automatic(ally)? tax|tax(es)? automatic"]
+  terms: >-
+    stripe tax taxes automatic automatically compute computes computed calculate calculated checkout order
+    amount amounts
+  actors: [admin, owner, shopper, customer]
+  tests:
+    - "tests/unit/shop.test.ts › lets Stripe Tax compute tax: automatic_tax, tax behaviour on every amount, no manual tax line"
+    - "tests/unit/shop.test.ts › records Stripe Tax amounts only from a well-formed signed event in the order's currency"
+
+- id: storefront.checkout
+  criterion: "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
+  advertises: "Stripe Checkout payments"
+  says: ["stripe|checkout|\\bpay(s|ment|ments|ing)?\\b|\\bpaid\\b|card|purchas|buy"]
+  terms: >-
+    stripe checkout pay pays paid payment payments card cards purchase purchases buy buys order orders amount
+    amounts server computed total totals webhook webhooks signed confirm confirmed confirmation email cart
+    secure online
+  actors: [shopper, customer, visitor, guest, buyer, client]
+  tests:
+    - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+    - "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
+
+- id: storefront.orders-stock
+  criterion: "The signed webhook marks the order paid and decrements each product's stock"
+  advertises: "orders and stock"
+  says: ["order|stock|inventory|purchas"]
+  terms: >-
+    order orders paid pay payment purchase purchases stock inventory decrement decrements decremented reduce
+    reduces reduced update updates updated product products quantity quantities sold sell webhook signed
+    confirmation email after
+  actors: [shopper, customer, buyer, admin, owner]
+  tests:
+    - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+    - "tests/e2e/shop.spec.ts › an out-of-stock product cannot be added to the cart"
+
+- id: storefront.admin-orders
+  criterion: "The owner accesses the admin area and sees the list of all orders with their payment status"
+  advertises: "orders and stock"
+  says: ["orders?\\b", "admin|owner|staff|manag|dashboard|panel"]
+  terms: >-
+    order orders list lists all see sees view views payment status statuses paid admin area panel dashboard
+    owner manage manages track tracks completed
+  actors: [admin, owner, staff, manager]
+  tests:
+    - "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
+
+- id: storefront.admin-panel
+  criterion: "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it"
+  advertises: "an admin panel"
+  says: ["admin|owner|staff|manag|dashboard|panel|back[- ]?office", "product|item|catalog|price|manag|edit|creat|add|delet|remov"]
+  terms: >-
+    admin area panel dashboard backoffice back office owner staff manage manages management product products
+    item items catalog catalogue create creates add adds edit edits update updates change changes delete
+    deletes remove removes hide hides price prices detail details list read reads public follows
+  actors: [admin, owner, staff, manager]
+  tests:
+    - "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+
+- id: storefront.admin-stock
+  criterion: "The owner (admin) updates a product's stock level and the public catalogue reflects it at once"
+  advertises: "price and stock"
+  says: ["\\b(stock|inventory)\\b", "admin|owner|staff|manag|updat|chang|edit|set|adjust"]
+  terms: >-
+    stock stocks inventory level levels quantity update updates change changes edit edits set sets adjust
+    adjusts manage manages admin owner staff product products public catalog catalogue reflect reflects shown
+    available availability
+  actors: [admin, owner, staff, manager]
+  tests:
+    - "tests/e2e/shop.spec.ts › the owner (admin) updates a product's stock level and the public catalogue reflects it at once"

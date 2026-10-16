@@ -1,3 +1,4 @@
+import { KPI_TEXT } from "@turbineh/shared/status-texts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -31,7 +32,12 @@ export default async function ActivityPage() {
         aria-label="Summary"
         className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6"
       >
-        <Stat value={`${s.verified}/${s.flows}`} label="Flows verified" accent />
+        <Stat value={`${s.verified}/${s.flows}`} label={KPI_TEXT.checksPassed} accent />
+        <Stat
+          value={s.requirementsTotal ? `${s.requirementsMet}/${s.requirementsTotal}` : "—"}
+          label={KPI_TEXT.requirementsMet}
+          accent
+        />
         <Stat value={secs(s.avgSeconds)} label="Average time to a verified package" />
         <Stat value={pct(s.avgReusedShare)} label="Code reused from verified components" />
         <Stat value={s.reusedLines.toLocaleString("en")} label="Lines you did not have to write" />
