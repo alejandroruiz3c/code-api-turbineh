@@ -1,0 +1,26 @@
+# Canonical acceptance criteria (ADR-0063) of the audit log component.
+- id: audit.see-changes
+  criterion: "The owner sees each change in the audit log with who made it and when, and exports it as CSV"
+  advertises: "audit log"
+  says: ["audit|activity log|history|change log"]
+  terms: >-
+    audit log logs activity history change changes changed record recorded every each who made when time user action
+    see sees view views visible owner export csv download trail
+  actors: [owner, admin, administrator, manager]
+  tests:
+    - "tests/e2e/audit-log.spec.ts › the owner sees each change in the audit log with who made it and when, and exports it as CSV"
+- id: audit.filter
+  criterion: "The owner filters the audit log by action and by date"
+  advertises: "audit log"
+  says: ["audit|activity log", "filter|search|date|action"]
+  terms: audit log filter filters action actions date dates range search by owner
+  actors: [owner, admin, administrator, manager]
+  tests:
+    - "tests/e2e/audit-log.spec.ts › the owner filters the audit log by action and by date"
+- id: audit.immutable
+  criterion: "Audit entries cannot be changed or deleted, not even directly in the database"
+  advertises: "audit log"
+  says: ["audit|log|history|trail", "cannot|immutable|append|never|\\bnot\\b|tamper"]
+  terms: audit entries entry log logs changed deleted edit delete tamper append only immutable database directly never
+  tests:
+    - "tests/e2e/audit-log.spec.ts › audit entries cannot be changed or deleted, not even directly in the database"

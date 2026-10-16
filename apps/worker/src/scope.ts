@@ -20,6 +20,13 @@ import {
 } from "@turbineh/engine";
 import type { NotCoveredExplanation, Plan } from "@turbineh/shared";
 import { parse } from "yaml";
+import {
+  mapToCanonical,
+  readCanonical,
+  requestWords,
+  resolveCanonical,
+  sourceIn,
+} from "@turbineh/assembler";
 import { catalogEntries, componentPlan, type PlanRequest } from "./product.js";
 
 /**
@@ -185,7 +192,12 @@ export async function explainUncovered(input: {
 }): Promise<{ explanation: NotCoveredExplanation; result: OfferResult | null }> {
   const catalog = offerCatalog(input.componentsDir);
   const result = await offerComponents(
-    { need: input.prompt, verdict: input.verdict, catalog },
+    {
+      need: input.prompt,
+      verdict: input.verdict,
+      catalog,
+      declared: declaredOffers(input.verdict, input.componentsDir, input.prompt),
+    },
     input.decider,
   ).catch(() => null);
   const offer = result
@@ -199,6 +211,38 @@ export async function explainUncovered(input: {
     }),
     result,
   };
+}
+
+/**
+ * Requirements of an uncovered request that a component's canonical criteria describe (ADR-0063): code links them
+ * (index → component, proving test), so an offer never says "not included" about a function the component's own
+ * suite proves (e.g. social publishing's scheduled times and retries).
+ */
+export function declaredOffers(
+  verdict: Pick<ScopeVerdict, "requirements">,
+  componentsDir: string,
+  prompt: string,
+): Record<number, { id: string; test: string; gives: string }[]> {
+  const ids = catalogEntries(componentsDir)
+    .map((c) => c.id)
+    .filter((id) => existsSync(join(componentsDir, id, "criteria.yaml")));
+  const canon = ids.flatMap((id) =>
+    resolveCanonical(
+      readCanonical(join(componentsDir, id, "criteria.yaml"), id),
+      sourceIn(join(componentsDir, id, "files")),
+    ),
+  );
+  const out: Record<number, { id: string; test: string; gives: string }[]> = {};
+  verdict.requirements.forEach((r, index) => {
+    const mapped = mapToCanonical(plainRequirement(r.requirement), canon, [], requestWords(prompt));
+    if (mapped.length === 0) return;
+    out[index] = mapped.map((m) => ({
+      id: m.from,
+      test: m.tests[0] ?? "",
+      gives: m.criterion,
+    }));
+  });
+  return out;
 }
 
 const plainRequirement = (r: string) =>

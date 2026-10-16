@@ -280,7 +280,8 @@ function evidenceOf(repoDir: string): { evidence: string[]; detail: Record<strin
   for (const dir of [
     "tests/e2e",
     "tests/unit",
-    "tests/unit/components",
+    // Not tests/unit/components: library contract tests prove a component, never a requirement of the request
+    // (ADR-0063, audit v2 F-14).
     "tests/unit/backup",
     "tests/unit/rules",
   ]) {
@@ -341,6 +342,29 @@ export function provenOnlyByTests<
         : c;
     }),
   };
+}
+
+/** The report's criteria as the agent guide decided them (canonical links, then proofs, then the decider). */
+export function reportCriteria(
+  guide: readonly { text: string; status: string; test?: { file: string; title: string } }[],
+  mapped: readonly { criterion: string; evidence: string; verified: boolean; confidence: number }[],
+): { criterion: string; evidence: string; verified: boolean; confidence: number }[] {
+  return guide.map((c) => {
+    const before = mapped.find((m) => m.criterion === c.text);
+    if (!c.test || c.status === "open")
+      return {
+        criterion: c.text,
+        evidence: "Not verified automatically",
+        verified: false,
+        confidence: before?.confidence ?? 0,
+      };
+    return {
+      criterion: c.text,
+      evidence: `${c.test.file.startsWith("tests/e2e") ? "End-to-end test" : "Unit test"}: ${c.test.title}`,
+      verified: c.status === "met",
+      confidence: 1,
+    };
+  });
 }
 
 /**
@@ -683,6 +707,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     })),
     evidence: produced.evidence,
     evidenceDetail: produced.detail,
+    linkedCriteria: readAcceptanceJson(input.repoDir)
+      .filter((a) => a.canonical?.length)
+      .map((a) => a.criterion),
     checks: result.steps.map((s) => ({ name: s.name, ok: s.ok })),
     alerts,
     remediation,
@@ -690,12 +717,11 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     improvement,
     finalVersion: input.scope === "improve",
   };
-  const report = provenOnlyByTests(
+  let report = provenOnlyByTests(
     input.repoDir,
     await buildReport(facts, deps.decider, deps.writer),
     facts.evidence,
   );
-  await deps.emit("reporting", "done", { report });
 
   const handover = {
     appName: input.facts.appName,
@@ -735,6 +761,9 @@ export async function finalize(input: FinalizeInput, deps: FinalizeDeps): Promis
     backup: (facts.backupGenerated ?? []).map((b) => ({ capability: b.capability, file: b.file })),
     ...(manifest ? { delivery: manifest } : {}),
   });
+  // One answer per criterion on every surface (ADR-0063): the report says exactly what turbineh.json says.
+  if (guide) report = { ...report, criteria: reportCriteria(guide.criteria, report.criteria) };
+  await deps.emit("reporting", "done", { report });
   const acceptance = guide
     ? guide.criteria.map((c) => ({
         criterion: c.text,

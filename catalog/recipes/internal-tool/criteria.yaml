@@ -1,0 +1,14 @@
+# Canonical acceptance criteria (ADR-0063). The internal tool's functions are the base SaaS's generated CRUD screens;
+# each advertised function points at the canonical criterion that proves it (`same`).
+- id: internal-tool.tables
+  advertises: "tables"
+  same: saas-crud.crud-list
+- id: internal-tool.search
+  advertises: "search"
+  same: saas-crud.search
+- id: internal-tool.csv-import
+  advertises: "CSV import and export"
+  same: saas-crud.csv-import
+- id: internal-tool.csv-export
+  advertises: "CSV import and export"
+  same: saas-crud.csv-export

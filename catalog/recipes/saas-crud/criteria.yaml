@@ -1,0 +1,154 @@
+# Canonical acceptance criteria (ADR-0063) of the base SaaS: sign-in, workspaces, roles and CRUD screens. Every recipe
+# extends it, so these apply to every build. `generated`: CRUD functions the assembler generates per entity — the
+# criterion's {entity}/{entities} is the entity the request names, linked to that entity's generated E2E test whose
+# title matches the pattern. `when: open-sign-up`: only where anyone may create an account.
+# The base SaaS's nouns, absorbed by every criterion below (what the functions act on, never what they do).
+- vocabulary: workspace workspaces their team account app application dashboard
+
+- id: saas-crud.sign-in
+  criterion: "A returning user signs out, signs in again and resumes their workspace"
+  advertises: "sign-in"
+  says: ["sign[ -]?(in|out)|log[ -]?(in|out)|login|logout|authenticat|password|credential|account"]
+  terms: >-
+    sign signs signed in out log logs logged login logout password passwords email credential credentials account
+    accounts authenticate authentication session sessions access back again return returning resume resumes
+    workspace dashboard their own existing registered
+  actors: [owner, admin, member, manager, staff, employee, customer, client]
+  tests:
+    - "tests/e2e/auth.spec.ts › a returning user signs out, signs in again and resumes their workspace"
+
+- id: saas-crud.protected
+  criterion: "A user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page"
+  advertises: "sign-in"
+  says: ["sign[ -]?in|log[ -]?in|login|authenticat|unauthenticated|anonymous|protect|private|restricted", "access|dashboard|page|redirect|see|view|data|area|app"]
+  terms: >-
+    sign signed in log logged login authenticated unauthenticated anonymous visitor visitors protect protected
+    private restricted access dashboard page pages redirect redirected sent area app application data require
+    requires required only must logged-in
+  actors: [visitor, guest, anonymous]
+  tests:
+    - "tests/e2e/auth.spec.ts › a user who is not authenticated and attempts to access the dashboard is redirected to the sign-in page"
+
+- id: saas-crud.workspace-sign-up
+  criterion: "A new user signs up: their workspace is created with them as owner"
+  advertises: "workspaces"
+  says: ["sign[ -]?up|register|create (an |their |a )?(account|workspace|organi[sz]ation|team)|workspace|organi[sz]ation|tenant", "creat|sign|regist|own|new"]
+  terms: >-
+    sign signs signed up register registers registration account accounts workspace workspaces organization
+    organizations organisation organisations team teams tenant tenants company companies multi multi-tenant
+    create creates created new owner owners own their becomes first separate each
+  actors: [owner]
+  tests:
+    - "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+
+- id: saas-crud.roles
+  criterion: "A member cannot approve, export, change settings, manage members or read the audit log"
+  advertises: "roles"
+  says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|\\bnot\\b|only|restrict|limit|denied|deny|permission|prevent|block|refus|forbid|non-"]
+  terms: >-
+    role roles permission permissions privilege privileges right rights restrict restricted limit limited only
+    admin admins administrator owner owners member members regular approve export settings setting configure
+    manage members audit log read change changes access allowed denied
+    csv records data list
+  actors: [member, admin, owner, administrator]
+  tests:
+    - "tests/unit/permissions.test.ts › a member cannot approve, export, change settings, manage members or read the audit log"
+
+- id: saas-crud.crud-create
+  criterion: "The owner creates a {entity} and sees it in the list"
+  advertises: "CRUD screens"
+  generated: "creates an? .+ and sees it in the list$"
+  says: ["\\b(creat|add|new|record|register|enter|submit|log|save)", "."]
+  terms: >-
+    create creates created add adds added new record records register registers enter enters submit submits
+    save saves saved list lists listed table tables see sees view views appear appears form details
+    their own manage manages store stores track tracks
+  actors: [owner]
+
+- id: saas-crud.crud-list
+  criterion: "The owner sees the {entities} in a list after creating one"
+  advertises: "CRUD screens"
+  generated: "creates an? .+ and sees it in the list$"
+  says: ["\\b(list|table|overview|all (the |their )?|browse|see|view)"]
+  terms: >-
+    list lists listed table tables overview all browse see sees view views show shows page dashboard their
+    own records existing creating create created
+  actors: [owner]
+
+- id: saas-crud.crud-edit
+  criterion: "The owner edits a {entity} and sees the change"
+  advertises: "CRUD screens"
+  generated: "edits an? .+ and sees the change"
+  says: ["\\b(edit|updat|chang|modif|correct|amend)"]
+  terms: >-
+    edit edits edited update updates updated change changes changed modify modifies modified correct corrects
+    amend details detail field fields value values existing save saves saved see sees change
+  actors: [owner]
+
+- id: saas-crud.crud-delete
+  criterion: "The owner deletes a {entity} and it is no longer in the list"
+  advertises: "CRUD screens"
+  generated: "deletes an? .+ and it is no longer in the list$"
+  says: ["\\b(delet|remov|archiv|discard)"]
+  terms: >-
+    delete deletes deleted remove removes removed discard discards list lists no longer gone disappear
+    disappears existing their
+  actors: [owner]
+
+- id: saas-crud.csv-export
+  criterion: "The owner triggers a download of all {entities} records in CSV format"
+  advertises: "CRUD screens"
+  generated: "download of all .+ records in CSV format"
+  says: ["\\b(export|download|csv)"]
+  terms: >-
+    export exports exported download downloads downloaded csv file files spreadsheet excel all records data
+    list header row columns
+  actors: [owner]
+
+- id: saas-crud.search
+  criterion: "The owner searches {entities} by text and the list shows only the matching {entities}"
+  advertises: "CRUD screens"
+  generated: "searches .+ by text"
+  says: ["\\b(search|find|look ?up|filter)"]
+  terms: >-
+    search searches searched find finds look up lookup filter filters filtered text name names keyword keywords
+    query matching match matches only list results result type types typing
+  actors: [owner]
+
+- id: saas-crud.csv-import
+  criterion: "{entities} are imported from a CSV file"
+  advertises: "CRUD screens"
+  generated: "import from CSV$"
+  says: ["\\b(import|upload)", "csv|spreadsheet|file|bulk"]
+  terms: >-
+    import imports imported upload uploads uploaded csv file files spreadsheet bulk many records rows owner
+    data
+  actors: [owner]
+
+- id: saas-crud.tag-filter
+  criterion: "The owner filters {entities} by tag and the list shows only the {entities} with that tag"
+  advertises: "CRUD screens"
+  generated: "filters .+ by tag"
+  says: ["\\btag"]
+  terms: tag tags tagged label labels filter filters filtered only list with that
+  actors: [owner]
+
+- id: saas-crud.sort
+  criterion: "The owner sorts {entities} and the list is reordered, newest or oldest first"
+  advertises: "CRUD screens"
+  generated: "sorts .+ by .+ reorders the list"
+  says: ["\\b(sort|order(ed)? by|newest|oldest|chronolog)"]
+  terms: sort sorts sorted order ordered by newest oldest first last date dates chronological list reorder
+  actors: [owner]
+
+- id: saas-crud.tenant-isolation
+  criterion: "A person in another workspace never sees this workspace's {entities}"
+  advertises: "Multi-tenant SaaS"
+  generated: "another workspace never sees this workspace's"
+  when: open-sign-up
+  says: ["workspace|tenant|organi[sz]ation|company|team|account|isolat|other user|another user|private", "never|\\bnot\\b|only|isolat|separate|private|cannot|own"]
+  terms: >-
+    workspace workspaces tenant tenants organization organizations organisation company companies team teams
+    account accounts isolated isolation separate separated private own their only other another never see sees
+    access data records multi multi-tenant users user
+  actors: [owner, member]

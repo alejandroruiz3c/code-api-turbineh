@@ -303,17 +303,41 @@ export async function offerComponents(
     need: string;
     verdict: Pick<ScopeVerdict, "requirements" | "notCovered">;
     catalog: readonly OfferEntry[];
+    /**
+     * Requirements linked by code to a component's canonical criteria (ADR-0063; index in `verdict.requirements`): the
+     * component and the test that proves the function. Candidates like the hints', narrowed by the engine as well.
+     */
+    declared?: Readonly<Record<number, readonly { id: string; test: string; gives: string }[]>>;
   },
   decider?: Pick<Decider, "componentsServe"> | null,
 ): Promise<OfferResult | null> {
   const requirements = input.verdict.requirements;
+  const declaredFor = (r: ScopeRequirement, index: number): Candidate[] =>
+    isUseCaseItself(r) || (!r.covered && BLOCKED.test(r.why))
+      ? []
+      : (input.declared?.[index] ?? []).flatMap((d) => {
+          const entry = input.catalog.find((e) => e.id === d.id);
+          if (!entry || NOT_OFFERED.has(entry.id)) return [];
+          // The component's own plain-words result when a hint declares one, else its canonical criterion.
+          const known = OFFER_HINTS.find((h) => entry.provides.includes(h.provides));
+          // Check 1 holds for declared links too: the function must be asked for in the request itself.
+          if (known && !known.ask.test(input.need)) return [];
+          const hint: OfferHint = known ?? {
+            ask: /./,
+            provides: entry.provides[0] ?? entry.id,
+            proof: /./,
+            gives: d.gives.charAt(0).toLowerCase() + d.gives.slice(1),
+          };
+          return [{ entry, hint, evidence: d.test }];
+        });
   const items = requirements
-    .map((r, index) => ({
-      index,
-      r,
-      text: plain(r.requirement),
-      candidates: candidatesFor(r, input.need, input.catalog),
-    }))
+    .map((r, index) => {
+      const fromHints = candidatesFor(r, input.need, input.catalog);
+      const declared = declaredFor(r, index).filter(
+        (d) => !fromHints.some((c) => c.entry.id === d.entry.id),
+      );
+      return { index, r, text: plain(r.requirement), candidates: [...fromHints, ...declared] };
+    })
     .filter((x) => x.candidates.length > 0);
   if (items.length === 0) return null;
 

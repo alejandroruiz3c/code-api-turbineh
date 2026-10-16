@@ -9,6 +9,12 @@ import type {
   ProductError,
   Requirement,
 } from "@turbineh/shared";
+import {
+  FUNCTIONAL_THRESHOLD,
+  functionalRatio,
+  verdictLabel,
+  verdictMeaning,
+} from "@turbineh/shared";
 import { ERRORS } from "./errors.js";
 import { asProductError, explainFailure } from "./messages.js";
 
@@ -104,7 +110,7 @@ export function flowState(row: FlowRow): FlowState {
  */
 export function checksAndRequirements(
   row: Pick<FlowRow, "metrics">,
-): Pick<FlowOutcome, "checks" | "requirements" | "badge"> {
+): Pick<FlowOutcome, "checks" | "requirements" | "functional" | "badge"> {
   const m = row.metrics;
   const h = m.handover as
     { checksPassed?: number; checksTotal?: number; checksWithWarnings?: number } | undefined;
@@ -147,19 +153,36 @@ export function checksAndRequirements(
     : a && total > 0
       ? { met: a.met ?? 0, total }
       : undefined;
-  const parts = [
-    checks
-      ? `Checks ${checks.passed}/${checks.total}${checks.warnings ? ` (${checks.warnings} with warnings)` : ""}`
-      : null,
-    requirements ? `Requirements ${requirements.met}/${requirements.total} met` : null,
-    offer
-      ? `components only: ${servedCount} served by a component, ${offer.outOfScope.length} out of scope`
-      : null,
-  ].filter((x): x is string => x !== null);
+  const functional = requirements
+    ? {
+        met: requirements.met,
+        total: requirements.total,
+        ratio: functionalRatio(requirements.met, requirements.total),
+        threshold: FUNCTIONAL_THRESHOLD,
+      }
+    : undefined;
+  // ADR-0063: one verdict line from the shared status texts ("Technically verified · checks 11/11 · functional 2/5").
+  const badge =
+    checks || requirements
+      ? verdictLabel({
+          // A package delivered although its gate failed (ADR-0037 §D1) is never "verified", whatever it counted.
+          gateOk:
+            checks !== undefined &&
+            checks.passed === checks.total &&
+            (m.delivery as { kind?: string } | undefined)?.kind !== "unverified",
+          met: requirements?.met ?? 0,
+          total: requirements?.total ?? 0,
+          ...(checks ? { checks } : {}),
+        }) +
+        (offer
+          ? ` · components only: ${servedCount} served by a component, ${offer.outOfScope.length} out of scope`
+          : "")
+      : undefined;
   return {
     ...(checks ? { checks } : {}),
     ...(requirements ? { requirements } : {}),
-    ...(parts.length ? { badge: parts.join(" · ") } : {}),
+    ...(functional ? { functional } : {}),
+    ...(badge ? { badge } : {}),
   };
 }
 
@@ -212,11 +235,11 @@ export function flowOutcome(row: FlowRow): FlowOutcome {
   const o = stateOutcome(row);
   if (o.kind === "working" || o.kind === "planned" || o.kind === "failed") return o;
   const s = checksAndRequirements(row);
-  const open = s.requirements ? s.requirements.total - s.requirements.met : 0;
-  // F18: passing checks never read as "everything the request asked for is done" while requirements are open.
+  // F18 / ADR-0063: passing checks never read as "everything the request asked for is done": the title states the
+  // functional coverage, and "verified" alone only when it reaches the threshold.
   const title =
-    o.kind === "app_verified" && open > 0
-      ? `Build checks passed in the TurbineH sandbox · ${open} requirement(s) not met yet`
+    o.kind === "app_verified" && s.functional
+      ? `${verdictLabel({ gateOk: true, met: s.functional.met, total: s.functional.total })} — ${verdictMeaning({ gateOk: true, met: s.functional.met, total: s.functional.total })}`
       : o.title;
   return { ...o, title, ...s };
 }
@@ -315,7 +338,7 @@ function stateOutcome(row: FlowRow): FlowOutcome {
         state === "deployed"
           ? "Deployed in your own accounts"
           : state === "integration_verified"
-            ? "Integrated and verified inside your project"
+            ? "Integrated in your project; its build checks passed there"
             : "Integrated in your project, checks pending",
       meaning:
         state === "integrated"

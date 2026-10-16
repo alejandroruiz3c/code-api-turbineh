@@ -73,9 +73,12 @@ describe("state badge · checks and requirements apart (F18)", () => {
     error: null,
   };
 
-  it('reads "Checks 11/11 · Requirements 6/8 met", never "Package verified"', () => {
+  it('reads "Technically verified · checks 11/11 · functional 6/8", never "verified" alone (ADR-0063)', () => {
     const b = badgeOf(flowOutcome(row));
-    expect(b.label).toBe("Checks 11/11 · Requirements 6/8 met");
+    expect(b.label).toBe("Technically verified · checks 11/11 · functional 6/8");
+    // No state label says "verified" without a qualifier.
+    for (const s of Object.values(STATE_LABEL))
+      expect(s.label).not.toMatch(/^(package )?verified$/i);
     expect(STATE_LABEL.verified.label).not.toMatch(/verified/i);
     expect(
       badgeOf(

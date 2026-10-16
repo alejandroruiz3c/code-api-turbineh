@@ -12,6 +12,10 @@
     "./criterion-proof-pairs": {
       "types": "./dist/criterion-proof-pairs.d.ts",
       "import": "./dist/criterion-proof-pairs.js"
+    },
+    "./status-texts": {
+      "types": "./dist/status-texts.d.ts",
+      "import": "./dist/status-texts.js"
     }
   },
   "scripts": {

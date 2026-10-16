@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-10-16T21:06:23.502Z",
+  "id": "FB07",
+  "band": "B",
+  "flowId": "f5893a4a-81f5-4b84-bda0-1e11e8a087c2",
+  "refused": false,
+  "error": null,
+  "planCriteria": null,
+  "approved": [
+    "Build verified components only, \"Verified components: a waitlist\": the library doesn't cover this use case yet, so it is not built. You get a waitlist — working and verified, as separate components to add to your app. (growth.waitlist.turbineh). Not included: Given a user on the landing page, when they submit the form with a valid name and email, then the signup is recorded in the admin list; Given a new signup is processed, when the database entry is created, then the user's email is automatically added to the Mailchimp audience; Given an admin user accesses the admin dashboard, when they view the signup page, then they can see a list of all registered names and emails; and the application itself (its screens, data and flows) — only these components. This package is not the complete product you described."
+  ],
+  "state": "generated",
+  "badge": "Not verified · functional 0/4 · components only: 1 served by a component, 3 out of scope",
+  "functional": {
+    "met": 0,
+    "total": 4,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": null,
+  "criteria": [],
+  "minutes": 6.7,
+  "finishedAt": "2026-10-16T21:13:05.746Z"
+}

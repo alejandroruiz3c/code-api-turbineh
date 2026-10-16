@@ -5,7 +5,7 @@
   covers: ["twice|duplicate|already|same email|enumerat|again"]
 - test: "tests/e2e/waitlist.spec.ts › the owner (admin) sees the list of waitlist signups in the dashboard"
   covers: ["admin|owner|staff|team", "see|view|list|export|sign[- ]?ups|entries|waitlist"]
-- test: "tests/e2e/waitlist.spec.ts › shows benefits, how it works and an FAQ"
+- test: "tests/e2e/waitlist.spec.ts › shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
   covers: ["benefit|feature|how it works|faq|question|hero|landing"]
 - test: "tests/e2e/waitlist.spec.ts › is ready for search engines (metadata, sitemap, robots)"
   covers: ["\\bseo\\b|search engine|sitemap|metadata|robots|open ?graph"]

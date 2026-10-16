@@ -87,6 +87,38 @@ test.describe.serial("AI assistants", () => {
   });
   // turbineh:end-module batch-processes
 
+  // turbineh:module batch-processes
+  test("summarises and extracts records in batch processes: each item is processed through the orchestrator and its validated structured output is stored", async ({
+    page,
+  }) => {
+    for (const [name, kind] of [
+      ["Ticket summaries", "summarize"],
+      ["Order fields", "extract"],
+    ] as const) {
+      await page.goto("/dashboard/processes");
+      await page.getByLabel("Name").fill(name);
+      await page.getByLabel("Kind").selectOption(kind);
+      await page.getByLabel("Instruction").fill("Process each support ticket for the team.");
+      await page.getByRole("button", { name: "Create process" }).click();
+      await expect(page.getByRole("heading", { name })).toBeVisible();
+      await page.getByLabel("One item per line").fill("Order A-1 for 20 EUR arrived damaged");
+      await page.getByRole("button", { name: "Add items" }).click();
+      await expect(page.getByText("1 queued")).toBeVisible();
+      await page.getByRole("button", { name: "Run now" }).click();
+      await expect(page.getByText("0 queued")).toBeVisible();
+      await expect(
+        page.locator("tr[data-item]").first(),
+        `the ${kind} item is processed (status done)`,
+      ).toContainText("done");
+      if (kind === "summarize")
+        await expect(
+          page.locator("tr[data-item]").first(),
+          "the item's summary (validated structured output from the AI simulator) is stored and shown",
+        ).toContainText("sample text");
+    }
+  });
+  // turbineh:end-module batch-processes
+
   test("shows AI usage and the audit trail", async ({ page }) => {
     await page.goto("/dashboard/usage");
     await expect(page.locator('[data-metric="requests"]')).not.toHaveText("0");

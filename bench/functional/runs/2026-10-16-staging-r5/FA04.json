@@ -1,0 +1,167 @@
+{
+  "startedAt": "2026-10-16T20:10:19.646Z",
+  "id": "FA04",
+  "band": "A",
+  "flowId": "a2f3ebd8-6c94-41ad-8ac4-aa64f1329405",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a project exists, a user can create a task within that project.",
+        "Given a task exists, a user can assign a specific team member to it."
+      ],
+      "tests": [
+        "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+      ],
+      "status": "covered",
+      "canonical": ["projects.tasks-assignees"],
+      "criterion": "The owner creates a project and a task assigned to them"
+    },
+    {
+      "asked": ["Given a task exists, a user can set a priority level for it."],
+      "tests": [
+        "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue",
+        "tests/unit/board.test.ts › orders my tasks by due date, then priority"
+      ],
+      "status": "covered",
+      "canonical": ["projects.priorities"],
+      "criterion": "The owner creates a task with a priority"
+    },
+    {
+      "asked": [
+        "Given a task exists, a user can assign a due date to it.",
+        "Given a task's due date has passed, the system flags the task as overdue."
+      ],
+      "tests": [
+        "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue",
+        "tests/unit/board.test.ts › flags overdue tasks that are not done"
+      ],
+      "status": "covered",
+      "canonical": ["projects.due-dates"],
+      "criterion": "A task past its due date is flagged overdue"
+    },
+    {
+      "asked": [
+        "Given a project exists, a user can view a Kanban board with 'To Do', 'In Progress', and 'Done' columns."
+      ],
+      "tests": [
+        "tests/e2e/projects.spec.ts › the owner moves a task on the Kanban board from To do to In progress and the new status is persisted",
+        "tests/unit/board.test.ts › moves between neighbouring columns only"
+      ],
+      "status": "covered",
+      "canonical": ["projects.kanban"],
+      "criterion": "The owner moves a task on the Kanban board from To do to In progress and the new status is persisted"
+    },
+    {
+      "asked": ["Given a task exists, a user can add a text comment to it."],
+      "tests": [
+        "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
+      ],
+      "status": "covered",
+      "canonical": ["projects.comments"],
+      "criterion": "The owner adds a comment that is visible on that task"
+    },
+    {
+      "asked": [
+        "Given a user is logged in, the system displays a 'My Tasks' list containing only tasks assigned to them."
+      ],
+      "tests": [
+        "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task",
+        "tests/unit/board.test.ts › orders my tasks by due date, then priority"
+      ],
+      "status": "covered",
+      "canonical": ["projects.my-tasks"],
+      "criterion": "A task assigned to the owner shows in My tasks"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 6/6",
+  "functional": {
+    "met": 6,
+    "total": 6,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 6,
+    "total": 6,
+    "ratio": 1,
+    "label": "Verified · functional 6/6"
+  },
+  "criteria": [
+    {
+      "text": "The owner creates a project and a task assigned to them",
+      "status": "met",
+      "canonical": ["projects.tasks-assignees"],
+      "asked": [
+        "Given a project exists, a user can create a task within that project.",
+        "Given a task exists, a user can assign a specific team member to it."
+      ],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+      }
+    },
+    {
+      "text": "The owner creates a task with a priority",
+      "status": "met",
+      "canonical": ["projects.priorities"],
+      "asked": ["Given a task exists, a user can set a priority level for it."],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+      }
+    },
+    {
+      "text": "A task past its due date is flagged overdue",
+      "status": "met",
+      "canonical": ["projects.due-dates"],
+      "asked": [
+        "Given a task exists, a user can assign a due date to it.",
+        "Given a task's due date has passed, the system flags the task as overdue."
+      ],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+      }
+    },
+    {
+      "text": "The owner moves a task on the Kanban board from To do to In progress and the new status is persisted",
+      "status": "met",
+      "canonical": ["projects.kanban"],
+      "asked": [
+        "Given a project exists, a user can view a Kanban board with 'To Do', 'In Progress', and 'Done' columns."
+      ],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "the owner moves a task on the Kanban board from To do to In progress and the new status is persisted"
+      }
+    },
+    {
+      "text": "The owner adds a comment that is visible on that task",
+      "status": "met",
+      "canonical": ["projects.comments"],
+      "asked": ["Given a task exists, a user can add a text comment to it."],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
+      }
+    },
+    {
+      "text": "A task assigned to the owner shows in My tasks",
+      "status": "met",
+      "canonical": ["projects.my-tasks"],
+      "asked": [
+        "Given a user is logged in, the system displays a 'My Tasks' list containing only tasks assigned to them."
+      ],
+      "test": {
+        "file": "tests/e2e/projects.spec.ts",
+        "title": "a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
+      }
+    }
+  ],
+  "minutes": 15.46,
+  "finishedAt": "2026-10-16T20:25:47.007Z"
+}

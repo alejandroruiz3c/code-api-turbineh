@@ -1,0 +1,78 @@
+# Canonical acceptance criteria (ADR-0063): one per function the projects use case advertises, each linked to the test
+# that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: projects.kanban
+  criterion: "The owner moves a task on the Kanban board from To do to In progress and the new status is persisted"
+  advertises: "kanban boards"
+  says: ["kanban|board|column|move|status|stage|progress"]
+  terms: >-
+    kanban board boards column columns move moves moved status statuses stage stages
+    progress todo to do doing done in progress review lane lanes persist persisted saved reload stays keep task
+    tasks card cards project projects team teams
+    categorized categorised grouped columns column display displays
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner moves a task on the Kanban board from To do to In progress and the new status is persisted"
+    - "tests/unit/board.test.ts › moves between neighbouring columns only"
+
+- id: projects.tasks-assignees
+  criterion: "The owner creates a project and a task assigned to them"
+  advertises: "assignees"
+  says: ["assign|owner of|responsible|creat|add|new", "task|project|card|issue"]
+  terms: >-
+    assign assigns assigned assignee assignees responsible team member members teammate project projects task
+    tasks card cards issue issues create creates created add adds new
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+
+- id: projects.priorities
+  criterion: "The owner creates a task with a priority"
+  advertises: "priorities"
+  says: ["priorit|urgent|importan"]
+  terms: >-
+    priority priorities prioritise prioritize urgent important importance high medium low level levels set
+    sets task tasks card cards issue issues project projects create creates add adds new order ordered sort
+    sorted
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+    - "tests/unit/board.test.ts › orders my tasks by due date, then priority"
+
+- id: projects.due-dates
+  criterion: "A task past its due date is flagged overdue"
+  advertises: "due dates"
+  says: ["due|deadline|overdue|late"]
+  terms: >-
+    due date dates deadline deadlines overdue late past flag flags flagged highlight highlighted mark marked
+    show shows task tasks card cards set sets create creates add adds
+    earlier past passed visually highlighted highlight flag flagged current other than
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+    - "tests/unit/board.test.ts › flags overdue tasks that are not done"
+
+- id: projects.comments
+  criterion: "The owner adds a comment that is visible on that task"
+  advertises: "comments"
+  says: ["comment|discuss|note|reply"]
+  terms: >-
+    comment comments commented discuss discussion note notes reply replies add adds added write writes post
+    posts task tasks card cards visible see shows thread
+    text
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
+
+- id: projects.my-tasks
+  criterion: "A task assigned to the owner shows in My tasks"
+  advertises: "a personal task list"
+  says: ["my tasks|personal|assigned to (me|them|the user|him|her)|own tasks|their tasks"]
+  terms: >-
+    my personal own their tasks task list lists assigned assignee across projects project view page see shows
+    order ordered due date priority
+    sign signs log logs logged filter filtered filters only
+    personalized personalised
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
+    - "tests/unit/board.test.ts › orders my tasks by due date, then priority"

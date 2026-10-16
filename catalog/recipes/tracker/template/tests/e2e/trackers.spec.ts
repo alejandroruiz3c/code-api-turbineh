@@ -30,4 +30,23 @@ test.describe.serial("trackers", () => {
     await page.goto("/dashboard/trackers");
     await expect(page.locator('[data-streak="Running"]')).toContainText("1 day streak");
   });
+
+  test("an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/trackers");
+    await page.getByRole("link", { name: "Running" }).first().click();
+    await expect(page.getByRole("heading", { name: "Running" })).toBeVisible();
+    await expect(
+      page.locator('[data-stat="Last 7 days"]'),
+      "the weekly total is the sum of this week's logs (2.5 + 3 km)",
+    ).toHaveText("5.5 km");
+    const days = page.getByRole("list", { name: "Last 30 days" }).getByRole("listitem");
+    await expect(days, "the history shows the last 30 days").toHaveCount(30);
+    await expect(days.last(), "today's goal is marked as met in the history").toHaveAttribute(
+      "aria-label",
+      /goal met$/,
+    );
+    await expect(page.locator('[data-stat="Goal met (30 days)"]')).toHaveText("3%");
+  });
 });

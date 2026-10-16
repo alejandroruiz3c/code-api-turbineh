@@ -16,6 +16,9 @@ export interface ActivityItem {
   generatedLines: number | null;
   checksPassed: number | null;
   checksTotal: number | null;
+  /** Requirements a passing test proves / requirements of the request (ADR-0063); null before generation. */
+  requirementsMet: number | null;
+  requirementsTotal: number | null;
   securityFixed: number;
   alerts: number;
   deployed: boolean;
@@ -42,6 +45,7 @@ type Row = {
     delivery?: { kind?: string };
     /** ADR-0065: present when fixes were counted by a re-scan (flows before it only recorded the fixer's claims). */
     audit?: { fixed?: unknown[] };
+    acceptance?: { met?: number; covered?: number; open?: string[] };
   } | null;
   has_zip: boolean;
 };
@@ -76,6 +80,10 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
       generatedLines: m.reuse?.generatedLines ?? null,
       checksPassed: m.handover?.checksPassed ?? null,
       checksTotal: m.handover?.checksTotal ?? null,
+      requirementsMet: m.acceptance ? (m.acceptance.met ?? 0) : null,
+      requirementsTotal: m.acceptance
+        ? (m.acceptance.met ?? 0) + (m.acceptance.covered ?? 0) + (m.acceptance.open?.length ?? 0)
+        : null,
       // Only fixes a new scan confirmed (ADR-0065); earlier flows recorded the fixer's claims and are not counted.
       securityFixed: m.audit?.fixed?.length ?? 0,
       alerts: m.handover?.alerts ?? 0,
@@ -94,7 +102,11 @@ export async function workspaceActivity(ownerId: string, limit = 50): Promise<Ac
 
 export interface ActivitySummary {
   flows: number;
+  /** Flows whose build checks all passed (never "verified flows": ADR-0063, audit v2 N-04). */
   verified: number;
+  /** Requirements met across the workspace's generated flows (aggregate, ADR-0063). */
+  requirementsMet: number;
+  requirementsTotal: number;
   avgSeconds: number | null;
   avgReusedShare: number | null;
   reusedLines: number;
@@ -107,6 +119,8 @@ export function summarize(items: ActivityItem[]): ActivitySummary {
   return {
     flows: items.length,
     verified: done.length,
+    requirementsMet: items.reduce((a, i) => a + (i.requirementsMet ?? 0), 0),
+    requirementsTotal: items.reduce((a, i) => a + (i.requirementsTotal ?? 0), 0),
     avgSeconds: avg(done.map((i) => i.seconds).filter((x): x is number => x !== null)),
     avgReusedShare: avg(done.map((i) => i.reusedShare).filter((x): x is number => x !== null)),
     reusedLines: done.reduce((a, i) => a + (i.reusedLines ?? 0), 0),

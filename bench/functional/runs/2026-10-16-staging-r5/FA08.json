@@ -1,0 +1,120 @@
+{
+  "startedAt": "2026-10-16T20:31:58.003Z",
+  "id": "FA08",
+  "band": "A",
+  "flowId": "9b04ca9b-e485-4b61-8524-a31f30641809",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a client is logged in, when they submit a new request with a PDF attachment, then the request is saved to the database with a 'Pending' status."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a client is logged in, when they view their dashboard, then they can see a list of all their previously submitted requests and their current statuses."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a staff member is logged in, when they access the request queue, then they can view a list of all submitted client requests."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a staff member is viewing a specific request, when they change the status field, then the new status is updated and persisted in the system."
+    },
+    {
+      "asked": [
+        "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
+      ],
+      "tests": [
+        "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees",
+        "tests/e2e/requests.spec.ts › the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status"
+      ],
+      "status": "covered",
+      "canonical": ["client-portal.file-uploads"],
+      "criterion": "A client submits a request with a file"
+    },
+    {
+      "asked": [
+        "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
+      ],
+      "tests": [
+        "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      ],
+      "status": "covered",
+      "canonical": ["client-portal.submit-request"],
+      "criterion": "A client submits a request and follows its status"
+    }
+  ],
+  "approved": null,
+  "state": "generated",
+  "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/6",
+  "functional": {
+    "met": 0,
+    "total": 6,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 0,
+    "total": 6,
+    "ratio": 0,
+    "label": "Not verified · functional 0/6"
+  },
+  "criteria": [
+    {
+      "text": "Given a client is logged in, when they submit a new request with a PDF attachment, then the request is saved to the database with a 'Pending' status.",
+      "status": "unverified",
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    },
+    {
+      "text": "Given a client is logged in, when they view their dashboard, then they can see a list of all their previously submitted requests and their current statuses.",
+      "status": "unverified",
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    },
+    {
+      "text": "Given a staff member is logged in, when they access the request queue, then they can view a list of all submitted client requests.",
+      "status": "open"
+    },
+    {
+      "text": "Given a staff member is viewing a specific request, when they change the status field, then the new status is updated and persisted in the system.",
+      "status": "open"
+    },
+    {
+      "text": "A client submits a request with a file",
+      "status": "unverified",
+      "canonical": ["client-portal.file-uploads"],
+      "asked": [
+        "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
+      ],
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    },
+    {
+      "text": "A client submits a request and follows its status",
+      "status": "unverified",
+      "canonical": ["client-portal.submit-request"],
+      "asked": [
+        "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
+      ],
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    }
+  ],
+  "minutes": 6.69,
+  "finishedAt": "2026-10-16T20:38:39.173Z"
+}

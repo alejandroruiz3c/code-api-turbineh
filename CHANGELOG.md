@@ -109,6 +109,36 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   Facebook, Instagram and X publishing (autonomy, AI drafts without AI, and other networks stay uncovered).
   `verify:recipe saas-crud+social.connections.turbineh+social.publish.turbineh+social.metrics.turbineh` and
   `verify:spec social-publisher` run them through the full gate.
+- Functional coverage, a first-class dimension (ADR-0063; external audit v2 N-01, F-01, N-04, N-05, F-14, N-06):
+  - Canonical acceptance criteria: every recipe (and the bookings, workflow, membership-access and audit-log
+    components) declares in `criteria.yaml` one criterion per function its catalogue text advertises, linked to the test
+    that proves it; saas-crud declares the generated CRUD functions per entity (create, list, edit, delete, CSV
+    export/import, search, tag filter, sort, tenant isolation). A CI audit fails when an advertised function has no
+    canonical criterion, a linked test is missing or does not prove the wording.
+  - The plan replaces a request criterion with the canonical wording when it maps to it (the request's words are kept
+    as `asked`); the package links criteria to canonical criteria and their tests; the decider only sees residual
+    criteria. The report, ACCEPTANCE.md, turbineh.json and the API now say the same per criterion.
+  - `outcome.functional` and the verdict line on the web, API, CLI and MCP; `functional_coverage` in turbineh.json.
+    "Verified" without a qualifier only at ≥ 80 % functional coverage: "Technically verified · checks 11/11 ·
+    functional 2/5" below. Home/Activity KPIs "Checks passed (flows)" and "Requirements met (aggregate)" replace
+    "Flows verified". One source of status texts (`@turbineh/shared` status-texts), word-boundary ellipsis, /use step
+    4 "Checked result".
+  - Scope gate functional floor: a request where no requirement maps to a verified function is refused (0 %
+    functional coverage is never built).
+  - Generated E2E per entity: delete, and once per app "a person in another workspace never sees this workspace's
+    records" (open sign-up apps). New template tests for advertised functions that were untested (tracker weekly
+    totals/history, client-portal client and staff flow, landing confirmation email, analytics manual entry, AI batch
+    summarise/extract and allowed tools, storefront uploaded image, projects assignee/priority/due date, bookings "any
+    team member" assignment).
+  - `bench/functional`: 10 band-A and 10 band-B labelled requests and a staging runner that measures functional
+    coverage per band and false "verified".
+
+### Changed
+
+- Library contract tests (`tests/unit/components`) are no longer evidence for any acceptance criterion.
+
+### Added
+
 - Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,
   outcomes, checks, requirements, capabilities/components, time to verified, downloads, pull requests, deploys,
   uncovered requests, AI use of generated apps) and Intelligence Orchestration (requests, tokens, p50/p95, cost,

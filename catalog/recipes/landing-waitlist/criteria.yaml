@@ -1,0 +1,63 @@
+# Canonical acceptance criteria (ADR-0063) of the landing-waitlist use case: one per function its catalogue text
+# advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- id: landing-waitlist.join
+  criterion: "A visitor on the landing page submits their name and email and joins the waitlist"
+  advertises: "waitlist form"
+  says: ["waitlist|wait list|early access|sign[ -]?up|join|register|subscribe", "name|email|form|landing|page|join|submit"]
+  terms: >-
+    waitlist wait list early access sign signs up register registers subscribe subscribes join joins joined form
+    field fields name email address submit submits enter enters landing page home public anonymous account
+    without confirm confirmation message stored saved added list on spot place
+    accept accepts accepted
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/waitlist.spec.ts › a visitor on the landing page submits their name and email and joins the waitlist"
+
+- id: landing-waitlist.landing-page
+  criterion: "The page shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
+  advertises: "Public landing page"
+  says: ["landing|home ?page|public page|homepage|website|hero|benefit|how it works|faq|section", "benefit|how it works|faq|question|feature|value|hero|section|show|explain|brand|advantage|step"]
+  terms: >-
+    landing page home homepage public website site section sections benefits benefit features feature how it
+    works steps step faq faqs frequently asked questions question answers hero headline value proposition
+    explains explain describes describe product visitor visitors brand branding name tagline advantages advantage
+    outline outlines guide usage step-by-step display displays contains list provides key
+  actors: [visitor, guest, anonymous]
+  tests:
+    - "tests/e2e/waitlist.spec.ts › shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
+
+- id: landing-waitlist.confirmation-email
+  criterion: "A visitor joins the waitlist and a confirmation email is sent to their address"
+  advertises: "confirmation email"
+  says: ["confirm|e-?mail|welcome|thank", "waitlist|wait list|join|sign[ -]?up|regist|subscri|e-?mail"]
+  terms: >-
+    confirmation confirm confirms email emails mail message receive receives received get gets welcome thank
+    thanks you sent send sends signup signups automatically automatic immediately after joining join joins signing sign up
+    waitlist wait list address inbox their name greeting
+    provide provided signup signups
+  actors: [visitor, guest, anonymous, customer, client]
+  tests:
+    - "tests/e2e/waitlist.spec.ts › a visitor joins the waitlist and a confirmation email is sent to their address"
+
+- id: landing-waitlist.admin-signups
+  criterion: "The owner (admin) sees the list of waitlist signups in the dashboard"
+  advertises: "admin panel"
+  says: ["admin|owner|staff|dashboard|panel|team", "sign[ -]?ups?|waitlist|entries|list|subscri|regist|lead"]
+  terms: >-
+    admin admins administrator owner staff team dashboard panel back office backoffice view views see sees list
+    lists signups signup sign ups entries entry waitlist people subscribers registrations leads all who joined
+    names emails table
+  actors: [owner, admin, administrator, staff, manager]
+  tests:
+    - "tests/e2e/waitlist.spec.ts › the owner (admin) sees the list of waitlist signups in the dashboard"
+
+- id: landing-waitlist.no-enumeration
+  criterion: "Joining twice gives the same answer (no enumeration)"
+  advertises: "waitlist form"
+  says: ["twice|duplicate|again|already|same email|enumerat|once"]
+  terms: >-
+    twice duplicate duplicates again already same email address once enumeration reveal reveals answer message
+    join joins joined waitlist sign up stored only
+  actors: [visitor, guest, anonymous]
+  tests:
+    - "tests/e2e/waitlist.spec.ts › joining twice gives the same answer (no enumeration)"

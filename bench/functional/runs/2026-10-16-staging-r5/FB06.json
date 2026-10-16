@@ -1,0 +1,95 @@
+{
+  "startedAt": "2026-10-16T20:48:57.049Z",
+  "id": "FB06",
+  "band": "B",
+  "flowId": "ce7adb76-4b82-477e-92e4-116af230443d",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user has set a daily goal, when they complete the task, then the goal is marked as finished for that day."
+    },
+    {
+      "asked": [
+        "Given a user is on the dashboard, when they tap a habit, then a quick check-in is recorded immediately."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal",
+        "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.quick-logging"],
+      "criterion": "An amount: logs add up towards the daily goal"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user completes a habit multiple days in a row, then the streak counter increments accordingly."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views the history tab, then they can see a log of their habit completions for the last 30 days."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views the weekly summary, then the app displays the total number of completions for the current week."
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"StrideHabit (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given the user has an Apple Watch paired, when the app syncs, then the daily step count is automatically updated in the tracker."
+  ],
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 2/5",
+  "functional": {
+    "met": 2,
+    "total": 5,
+    "ratio": 0.4,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 2,
+    "total": 5,
+    "ratio": 0.4,
+    "label": "Technically verified · functional 2/5"
+  },
+  "criteria": [
+    {
+      "text": "Given a user has set a daily goal, when they complete the task, then the goal is marked as finished for that day.",
+      "status": "open"
+    },
+    {
+      "text": "An amount: logs add up towards the daily goal",
+      "status": "met",
+      "canonical": ["tracker.quick-logging"],
+      "asked": [
+        "Given a user is on the dashboard, when they tap a habit, then a quick check-in is recorded immediately."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: logs add up towards the daily goal"
+      }
+    },
+    {
+      "text": "Given a user completes a habit multiple days in a row, then the streak counter increments accordingly.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/streaks.test.ts",
+        "title": "counts the streak up to today, or up to yesterday when today is still open"
+      }
+    },
+    {
+      "text": "Given a user views the history tab, then they can see a log of their habit completions for the last 30 days.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user views the weekly summary, then the app displays the total number of completions for the current week.",
+      "status": "open"
+    }
+  ],
+  "minutes": 7.03,
+  "finishedAt": "2026-10-16T20:55:58.771Z"
+}

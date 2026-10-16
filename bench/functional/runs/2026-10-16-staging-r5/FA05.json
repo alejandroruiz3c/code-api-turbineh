@@ -1,0 +1,155 @@
+{
+  "startedAt": "2026-10-16T20:31:57.985Z",
+  "id": "FA05",
+  "band": "A",
+  "flowId": "72bbd8dc-368f-40c6-a09f-fa74227be616",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a user has set a daily water goal, when they log an amount, the current daily total updates immediately.",
+        "Given a user has set a daily sleep goal, when they log an amount, the current daily total updates immediately."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal",
+        "tests/unit/streaks.test.ts › adds amounts exactly and compares with the daily goal"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.goals"],
+      "criterion": "Amounts are compared with the daily goal"
+    },
+    {
+      "asked": [
+        "Given a user logs data from the dashboard, the input process is completed in minimal steps."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal",
+        "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.quick-logging"],
+      "criterion": "An amount: logs add up towards the daily goal"
+    },
+    {
+      "asked": [
+        "Given a user meets their daily goal, when they view the dashboard, the current streak count increments.",
+        "Given a user fails to meet a daily goal, when they view the dashboard, the current streak count resets to zero."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak",
+        "tests/unit/streaks.test.ts › counts the streak up to today, or up to yesterday when today is still open"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.streaks"],
+      "criterion": "A habit: check in today starts a streak"
+    },
+    {
+      "asked": [
+        "Given a user views the history section, they can see a list of logs for the past 30 days."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met",
+        "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.history"],
+      "criterion": "The 30-day history marks today as goal met"
+    },
+    {
+      "asked": [
+        "Given a user views the summary section, they can see the sum of all water logged in the current week.",
+        "Given a user views the summary section, they can see the sum of all sleep logged in the current week."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met",
+        "tests/unit/streaks.test.ts › the weekly total adds up exactly the last 7 days of logs, not older ones"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.weekly-totals"],
+      "criterion": "The weekly total adds up the logs of the last 7 days"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/5",
+  "functional": {
+    "met": 5,
+    "total": 5,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 5,
+    "total": 5,
+    "ratio": 1,
+    "label": "Verified · functional 5/5"
+  },
+  "criteria": [
+    {
+      "text": "Amounts are compared with the daily goal",
+      "status": "met",
+      "canonical": ["tracker.goals"],
+      "asked": [
+        "Given a user has set a daily water goal, when they log an amount, the current daily total updates immediately.",
+        "Given a user has set a daily sleep goal, when they log an amount, the current daily total updates immediately."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: logs add up towards the daily goal"
+      }
+    },
+    {
+      "text": "An amount: logs add up towards the daily goal",
+      "status": "met",
+      "canonical": ["tracker.quick-logging"],
+      "asked": [
+        "Given a user logs data from the dashboard, the input process is completed in minimal steps."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: logs add up towards the daily goal"
+      }
+    },
+    {
+      "text": "A habit: check in today starts a streak",
+      "status": "met",
+      "canonical": ["tracker.streaks"],
+      "asked": [
+        "Given a user meets their daily goal, when they view the dashboard, the current streak count increments.",
+        "Given a user fails to meet a daily goal, when they view the dashboard, the current streak count resets to zero."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "a habit: check in today starts a streak"
+      }
+    },
+    {
+      "text": "The 30-day history marks today as goal met",
+      "status": "met",
+      "canonical": ["tracker.history"],
+      "asked": [
+        "Given a user views the history section, they can see a list of logs for the past 30 days."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+      }
+    },
+    {
+      "text": "The weekly total adds up the logs of the last 7 days",
+      "status": "met",
+      "canonical": ["tracker.weekly-totals"],
+      "asked": [
+        "Given a user views the summary section, they can see the sum of all water logged in the current week.",
+        "Given a user views the summary section, they can see the sum of all sleep logged in the current week."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+      }
+    }
+  ],
+  "minutes": 8.36,
+  "finishedAt": "2026-10-16T20:40:19.787Z"
+}

@@ -1,0 +1,83 @@
+{
+  "startedAt": "2026-10-16T21:06:23.523Z",
+  "id": "FB09",
+  "band": "B",
+  "flowId": "437bc5fc-b211-4bea-a8fb-d9c80749c6cd",
+  "refused": true,
+  "error": null,
+  "planCriteria": null,
+  "approved": null,
+  "state": null,
+  "badge": null,
+  "functional": null,
+  "guideFunctional": null,
+  "criteria": [],
+  "minutes": 6.58,
+  "problem": [
+    {
+      "code": "use_case_not_covered",
+      "message": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+      "action": "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+      "notCovered": [
+        "Given a user is on the home page, when they navigate to the services page, then they should see a list of dental treatments offered.",
+        "Given a user is on the about page, when they read the content, then they should see information regarding the clinic's history and staff.",
+        "Given a user is on the blog page, when they click the RSS link, then they should receive a valid XML feed of recent posts.",
+        "Given a user is on the contact page, when they submit the contact form with valid data, then the message should be stored in the admin panel.",
+        "Given an administrator is logged into the admin panel, when they edit a blog post, then the changes should reflect on the public blog page.",
+        "Given an administrator is logged into the admin panel, when they view the messages section, then they should see all submissions from the contact form.",
+        "Given a user is browsing any page, when the live chat widget is clicked, then it should open a Zendesk chat interface.",
+        "Given a user is interacting with the live chat widget, when they send a message, then the message should be delivered to the Zendesk account."
+      ],
+      "explanation": {
+        "offer": null,
+        "title": "The library doesn't cover this use case yet",
+        "useCase": "Website for a dental clinic: home",
+        "canDoNow": "No verified component implements a function you asked for, so nothing was built and nothing is offered. We'll notify you with priority as soon as it does. Meanwhile you can start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+        "priority": "We recorded your request and will notify you with priority as soon as the library covers it (by email when your account's address is known).",
+        "notCovered": [
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a user is on the home page, when they navigate to the services page, then they should see a list of dental treatments offered."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a user is on the about page, when they read the content, then they should see information regarding the clinic's history and staff."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a user is on the blog page, when they click the RSS link, then they should receive a valid XML feed of recent posts."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a user is on the contact page, when they submit the contact form with valid data, then the message should be stored in the admin panel."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given an administrator is logged into the admin panel, when they edit a blog post, then the changes should reflect on the public blog page."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given an administrator is logged into the admin panel, when they view the messages section, then they should see all submissions from the contact form."
+          },
+          {
+            "why": "Needs something outside the verified use case and components",
+            "covered": false,
+            "requirement": "Given a user is browsing any page, when the live chat widget is clicked, then it should open a Zendesk chat interface."
+          },
+          {
+            "why": "Needs something outside the verified use case and components",
+            "covered": false,
+            "requirement": "Given a user is interacting with the live chat widget, when they send a message, then the message should be delivered to the Zendesk account."
+          }
+        ]
+      }
+    }
+  ],
+  "finishedAt": "2026-10-16T21:12:58.272Z"
+}

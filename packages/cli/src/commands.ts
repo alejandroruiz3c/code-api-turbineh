@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readZip } from "@turbineh/engine";
-import type { CapabilitySummary, FlowResult, Plan } from "@turbineh/shared";
+import { ellipsize, type CapabilitySummary, type FlowResult, type Plan } from "@turbineh/shared";
 import { api, sleep } from "./api.js";
 import { applyPullRequest } from "./github.js";
 import { readHidden, readStdin } from "./secret-input.js";
@@ -309,7 +309,7 @@ async function waitFor(
 
 /** The CLI command behind each one-click plan action (ADR-0050). */
 function actionHint(id: string, p: Plan): string {
-  const need = JSON.stringify(p.need.length > 60 ? `${p.need.slice(0, 57)}…` : p.need);
+  const need = JSON.stringify(ellipsize(p.need, 60));
   if (id === "generate") return dim(`  turbineh apply ${p.id}`);
   if (id === "build_nextjs_app") return dim(`  turbineh plan ${need} --stack nextjs`);
   if (id === "connect_repo") return dim("  turbineh connect github");
@@ -933,7 +933,7 @@ export async function status(c: Ctx): Promise<CommandResult> {
       bold(`Workspace ${project?.workspace.slice(0, 8) ?? "(no project — run turbineh init)"}`),
       ...a.flows.map(
         (f) =>
-          `  ${f.id.slice(0, 8)}  ${(STATE_LABEL[f.state] ?? f.state).padEnd(44)} ${f.need.slice(0, 60)}`,
+          `  ${f.id.slice(0, 8)}  ${(STATE_LABEL[f.state] ?? f.state).padEnd(44)} ${ellipsize(f.need, 60)}`,
       ),
       ...(project?.integrations.length
         ? [

@@ -1,4 +1,15 @@
+import { existsSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+
+/** Emails the app recorded (no provider in tests: src/lib/email.ts writes them to EMAIL_OUTBOX_FILE). */
+function outbox(): { to: string; subject: string; text?: string }[] {
+  const file = process.env.EMAIL_OUTBOX_FILE ?? "";
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as { to: string; subject: string; text?: string });
+}
 
 test.describe("public waitlist", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -11,6 +22,25 @@ test.describe("public waitlist", () => {
     await page.getByLabel("Email").fill("ada.visitor@example.com");
     await page.getByRole("button", { name: "Join the waitlist" }).click();
     await expect(page.getByRole("status")).toContainText("You're on the list");
+  });
+
+  test("a visitor joins the waitlist and a confirmation email is sent to their address", async ({
+    page,
+  }) => {
+    const email = `joiner-${Date.now()}@example.com`;
+    await page.goto("/");
+    await page.getByLabel("Name").fill("Joan Joiner");
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Join the waitlist" }).click();
+    await expect(page.getByRole("status")).toContainText("You're on the list");
+    await expect
+      .poll(() => outbox().filter((m) => m.to === email).length, {
+        message: "the confirmation email is sent to the visitor's address",
+      })
+      .toBe(1);
+    const mail = outbox().find((m) => m.to === email);
+    expect(mail?.subject, "the email confirms the waitlist sign-up").toContain("waitlist");
+    expect(mail?.text, "the email greets the visitor by name").toContain("Joan Joiner");
   });
 
   test("joining twice gives the same answer (no enumeration)", async ({ page }) => {
@@ -32,11 +62,28 @@ test("the owner (admin) sees the list of waitlist signups in the dashboard", asy
 test.describe("public landing", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("shows benefits, how it works and an FAQ", async ({ page }) => {
+  test("shows the hero with the app's name and tagline, the benefits, how it works and an FAQ", async ({
+    page,
+  }) => {
     await page.goto("/");
+    const hero = page.locator("#join");
+    await expect(hero.getByRole("heading", { level: 1 }), "the hero names the app").not.toBeEmpty();
+    await expect(
+      hero.locator("p").first(),
+      "the hero shows the tagline (value proposition)",
+    ).not.toBeEmpty();
+    const benefits = page.locator('section[aria-labelledby="features"] li');
+    expect(await benefits.count(), "the benefits section lists the app's benefits").toBeGreaterThan(
+      0,
+    );
     await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
+    const steps = page.locator('section[aria-labelledby="how"] li');
+    expect(await steps.count(), "how it works lists its steps").toBeGreaterThan(0);
     await expect(page.getByRole("heading", { name: "Frequently asked questions" })).toBeVisible();
-    await expect(page.locator("details").first()).toBeVisible();
+    await expect(
+      page.locator("details").first(),
+      "the FAQ lists questions and answers",
+    ).toBeVisible();
   });
 
   test("is ready for search engines (metadata, sitemap, robots)", async ({ page, request }) => {

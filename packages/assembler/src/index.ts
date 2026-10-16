@@ -15,3 +15,4 @@ export * from "./kinds.js";
 export * from "./aliases.js";
 export * from "./modules.js";
 export * from "./footprint.js";
+export * from "./canonical.js";

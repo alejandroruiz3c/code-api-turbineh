@@ -468,7 +468,7 @@ describe("one explanation everywhere (ADR-0062)", () => {
       error: null,
     };
     expect(checksAndRequirements(row).badge).toBe(
-      "Checks 2/2 · Requirements 0/5 met · components only: 1 served by a component, 4 out of scope",
+      "Technically verified · checks 2/2 · functional 0/5 · components only: 1 served by a component, 4 out of scope",
     );
     const o = flowOutcome(row);
     expect(o.kind).toBe("package_verified");

@@ -12,7 +12,17 @@ export async function signUp(page: Page, email = `owner-${Date.now()}@example.co
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByLabel("Workspace name").fill("E2E Workspace");
-  await page.getByRole("button", { name: "Create account" }).click();
+  // better-auth allows 3 sign-up requests per 10 s per client in production builds: a suite that signs up several
+  // people (other workspaces, staff, visitors) waits for the window instead of failing.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.getByRole("button", { name: "Create account" }).click();
+    try {
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 8_000 });
+      return;
+    } catch {
+      await page.waitForTimeout(10_500);
+    }
+  }
   await expect(page).toHaveURL(/\/dashboard/);
 }
 

@@ -1,0 +1,68 @@
+# Canonical acceptance criteria (ADR-0063) of the client-portal use case: one per function its catalogue text
+# advertises, each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# Clients are members of the business's workspace; staff are its owners and admins.
+# The portal's nouns, absorbed by every criterion below.
+- vocabulary: >-
+    request requests document documents file files attach attached client clients portal
+
+- id: client-portal.submit-request
+  criterion: "A client submits a request and follows its status"
+  advertises: "submit requests"
+  says: ["request|ticket|case|enquir|inquir|submission", "submit|creat|open|send|raise|file|log|new|add"]
+  terms: >-
+    request requests ticket tickets case cases enquiry enquiries inquiry inquiries submission submissions
+    submit submits submitted create creates open opens send sends raise raises log logs new add adds title
+    description details portal own their account signed sign in logged
+  actors: [client, customer, member, user]
+  tests:
+    - "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+
+- id: client-portal.file-uploads
+  criterion: "A client submits a request with a file"
+  advertises: "file uploads"
+  says: ["file|upload|attach|document|pdf"]
+  terms: >-
+    file files upload uploads uploaded attach attaches attachment attachments document documents pdf pdfs
+    image images add adds request requests ticket case submission their own portal download downloads
+    downloaded safe safely stored
+  actors: [client, customer, member, staff, owner, admin]
+  tests:
+    - "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+    - "tests/e2e/requests.spec.ts › the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status"
+
+- id: client-portal.follow-status
+  criterion: "A client follows the status of their request and sees the status staff set"
+  advertises: "follow their status"
+  says: ["status|progress|state|track|follow", "client|customer|their|own|see|view|track|follow|portal"]
+  terms: >-
+    status statuses progress state states track tracks follow follows see sees view views check checks own
+    their request requests ticket tickets case cases portal update updates updated change changes current
+    submitted review in needs information completed
+  actors: [client, customer, member, staff]
+  tests:
+    - "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+
+- id: client-portal.staff-review
+  criterion: "Staff review a client's request and update its status, which the client then sees"
+  advertises: "staff review and update them"
+  says: ["staff|admin|owner|team|employee|agent", "review|updat|chang|status|move|process|handl|approv|manag"]
+  terms: >-
+    staff admin admins owner owners team employee employees agent agents review reviews reviewed update
+    updates updated change changes status statuses move moves process processes handle handles manage manages
+    request requests ticket tickets case cases client clients customer customers all every list dashboard
+    in needs information completed
+  actors: [staff, admin, administrator, owner, manager, employee, client]
+  tests:
+    - "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+
+- id: client-portal.unsafe-file-rejected
+  criterion: "An HTML file disguised as a PDF is rejected"
+  advertises: "file uploads"
+  says: ["html|disguis|unsafe|malicious|type|svg|executable|reject|block|only (pdf|image|document)"]
+  terms: >-
+    html file files disguised disguise pdf type types unsafe malicious svg executable executables binary
+    binaries upload uploads rejected reject refuse refused blocked only allowed content
+  actors: [client, customer, member, staff, owner]
+  tests:
+    - "tests/e2e/requests.spec.ts › an HTML file disguised as a PDF is rejected"
+    - "tests/unit/portal.test.ts › rejects HTML, SVG and binaries"

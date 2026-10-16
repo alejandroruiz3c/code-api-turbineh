@@ -38,6 +38,13 @@ test.describe.serial("storefront", () => {
       .setInputFiles({ name: "shirt.png", mimeType: "image/png", buffer: PNG });
     await page.getByRole("button", { name: "Create product" }).click();
     await expect(page.getByRole("cell", { name: "Linen Shirt" })).toBeVisible();
+    await page.goto("/shop/linen-shirt");
+    const image = page.getByRole("img", { name: "Linen Shirt" });
+    await expect(image, "the uploaded product image is shown on the product page").toBeVisible();
+    const res = await page.request.get((await image.getAttribute("src")) ?? "");
+    expect(res.headers()["content-type"], "the shop serves the uploaded image as a PNG").toContain(
+      "image/png",
+    );
   });
 
   test("the admin adds a product with an https image URL; shoppers find it by its description", async ({

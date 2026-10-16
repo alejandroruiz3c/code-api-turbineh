@@ -37,3 +37,7 @@ export function history(totals: Map<string, number>, target: number, today: stri
 /** Share of days meeting the target over the history window, 0–100. */
 export const completion = (h: { met: boolean }[]) =>
   h.length ? Math.round((h.filter((d) => d.met).length / h.length) * 100) : 0;
+
+/** Total of the last 7 days of a history (cents-exact), shown as the weekly total. */
+export const weekTotal = (h: { total: number }[]) =>
+  h.slice(-7).reduce((s, d) => s + cents(d.total), 0) / 100;

@@ -1,0 +1,226 @@
+# Canonical acceptance criteria (ADR-0063): one per function the bookings use case advertises, each linked to the test
+# that proves it. A request criterion that maps here (every `says` pattern matches, every role it names is served,
+# nothing of it is left over once the wording, the tests' titles, `terms`, `actors` and this app's aliases are
+# absorbed) is replaced by the canonical wording in the plan, and is met exactly when the linked tests are in the
+# package and the gate passed. `advertises`: the words of the catalogue text this criterion proves.
+# The booking domain's nouns (what the functions act on), absorbed by every criterion below.
+- vocabulary: >-
+    booking bookings appointment appointments reservation reservations session sessions visit visits class classes
+    lesson lessons slot slots time times date dates day days hour hours minute minutes service services treatment
+    treatments customer customers client clients patient patients team member members staff resource resources
+    calendar schedule existing system app website page online select selects selected selection choose chooses
+
+- id: bookings.public-booking
+  criterion: "A customer books a free time on the public page without an account and the booking is created"
+  advertises: "public booking page"
+  says: ["\\bbook|appointment|reserv|slot|schedul|session|choos|select|pick", "public|online|page|site|without|account|sign|pick|choose|select|free|availab|slot|time|service|any"]
+  terms: >-
+    slot slots session sessions visit visits minute minutes duration hour hours select selects pick picks choose
+    chooses service services treatment team member members staff any available availability online website form
+    detail details name email phone number calendar date day days time times real shown offered open
+    provide provides fill fills book booked bookings appointment appointments reservation reservations make makes
+    made schedule schedules scheduled
+    assign assigns assigned automatically
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+
+- id: bookings.confirmation-email
+  criterion: "A customer books a free time and a confirmation email with a cancel link is sent"
+  advertises: "confirmation email with a cancel link"
+  says: ["confirm|e-?mail", "\\bbook|appointment|reserv|cancel|link|email"]
+  terms: >-
+    receive receives received get gets mail message notification notify notified link links url cancellation
+    cancel cancelling slot session visit appointment reservation detail details reference after once
+    immediately automatic automatically sent send sends
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+
+- id: bookings.cancel-notice
+  criterion: "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
+  advertises: "notice policy"
+  says: ["cancel", "link|notice|\\d+ ?(h|hours?)|before|email|policy|advance"]
+  terms: >-
+    cancellation cancellations cancelled cancelling link email mail hour hours notice period policy advance
+    prior least before window allowed allow late too refused refuse appointment reservation session visit
+    self-service themselves own their start time
+    less more than through interface app occur occurs successfully denied deny cancellation
+    remove removes removed delete deletes deleted click clicks
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+
+- id: bookings.no-double-booking
+  criterion: "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+  advertises: "no double bookings"
+  says: ["double|overlap|conflict|clash|same (time|slot)|twice|already (taken|booked|occupied)|occupied"]
+  terms: >-
+    double doubles overlapping overlap overlaps conflict conflicting clash clashes slot slots time times staff
+    member team therapist professional resource same twice taken already booked booking bookings appointment
+    appointments reservation reservations system prevent prevents avoid avoids ensure ensures allow allowed
+    must never two people
+    occupied chosen selected select attempt made
+    unavailable available availability
+    mark marks marked
+  actors: [customer, client, patient, visitor, guest, staff]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+    - "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)"
+
+- id: bookings.staff-calendar
+  criterion: "A staff member signs in and sees the bookings in the day and week calendar per team member"
+  advertises: "staff calendar per team member"
+  says: ["calendar|day and week|week view|day view|agenda|schedule", "staff|team|per|each|member|employee|therapist|stylist|their|own|personal|log|sign|view"]
+  terms: >-
+    calendar calendars agenda schedule schedules day daily week weekly view views team member members each per
+    their own booking bookings appointment appointments reservation session sessions sign signs in log logs
+    dashboard upcoming see sees list
+    toggle toggles switch between personal interface
+  actors: [staff, admin, owner, employee, manager]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+
+- id: bookings.time-off
+  criterion: "A staff member blocks time off and those time slots are no longer offered for booking"
+  advertises: "time off"
+  says: ["time off|days? off|block|holiday|absence|vacation|leave|unavailab"]
+  terms: >-
+    time off block blocks blocked holiday holidays absence absences vacation leave unavailable unavailability
+    slot slots offered offer no longer available customers booking bookings appointment appointments period
+    day days hours mark marks
+    calendar schedule scheduled date dates mark marks specific
+    unavailable
+    select selects selected
+  actors: [staff, admin, owner, employee, manager, customer]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
+
+- id: bookings.staff-move-cancel
+  criterion: "A staff member moves an existing booking to a different time slot, then cancels it, triggering an email to the customer each time"
+  advertises: "move and cancel with customer emails"
+  says: ["move|reschedul|cancel|change", "staff|admin|owner|team|member|employee|e-?mail|notif"]
+  terms: >-
+    move moves moved reschedule reschedules rescheduled change changes changed cancel cancels cancelled email
+    emails emailed notify notified notification notifications automated automatic automatically customer
+    customers booking bookings appointment appointments slot slots time different new another each
+    manage manages calendar send sends sent
+  actors: [staff, admin, owner, employee, manager, customer]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
+
+- id: bookings.opening-hours
+  criterion: "A booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"
+  advertises: "real free times"
+  says: ["opening hours|outside|closed|working hours|business hours|availab|free (time|slot)s?|real"]
+  terms: >-
+    opening open hours working business closed closing day days weekday weekdays outside time times slot slots
+    offered offer only real free available availability reject rejected refused minute minutes duration
+    grid start starts end ends local zone
+    select selects selected chosen specific show shows shown display that their
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/bookings.spec.ts › a booking outside the opening hours is rejected: on a closed day no time is offered, and a time after closing is refused"
+    - "tests/unit/bookings.test.ts › never offers taken, past or closed times"
+
+- id: bookings.staff-only
+  criterion: "People who are not staff cannot see the bookings"
+  advertises: "staff calendar"
+  says: ["staff|admin|sign[ -]?in|log[ -]?in|only|private|protect", "see|view|access|bookings|appointments|calendar|dashboard"]
+  terms: >-
+    staff only access accessible protected private sign signed in log logged dashboard calendar see view
+    bookings appointments list non anonymous visitor visitors public people unauthorised unauthorized
+  actors: [staff, admin, owner, visitor, guest, customer, anonymous]
+  tests:
+    - "tests/e2e/bookings.spec.ts › people who are not staff cannot see the bookings"
+
+# The booking assistant (AI apps only: files-ai). These resolve only when the assistant's tests are in the package.
+- id: bookings.assistant-books
+  criterion: "A customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["assistant|chat|agent|bot|ai\\b|conversation", "\\bbook|appointment|reserv|slot|session"]
+  terms: >-
+    assistant assistants chat chatbot bot agent ai conversation conversational message messages ask asks book
+    books booked booking bookings appointment appointments reservation session sessions slot slots free real
+    available availability confirm confirms confirmed confirmation date time staff member team email emails
+    sent triggers natural language through via
+  actors: [customer, client, patient, visitor, guest, staff]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"
+    - "tests/e2e/booking-assistant.spec.ts › never books an invented time"
+
+- id: bookings.assistant-reschedule
+  criterion: "A customer requests to reschedule: the assistant moves an existing booking to a new free slot after the customer confirms"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["assistant|chat|agent|bot|ai\\b|conversation", "reschedul|\\bmove|change (a|the|their|my) (booking|appointment|session|reservation)"]
+  terms: >-
+    assistant chat chatbot bot agent ai conversation reschedule reschedules rescheduled move moves moved change
+    changes booking bookings appointment appointments session sessions reservation slot slots new free
+    another different time date confirm confirms confirmed request requests ask asks tool reference email
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a customer requests to reschedule: the assistant uses the booking tool to move an existing booking to a new free slot, with its reference and email, after the customer confirms"
+
+- id: bookings.assistant-cancel-notice
+  criterion: "A customer requests to cancel a booking inside the notice period: the assistant refuses the cancellation"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["assistant|chat|agent|bot|ai\\b|conversation", "cancel"]
+  terms: >-
+    assistant chat chatbot bot agent ai conversation cancel cancels cancelled cancellation booking bookings
+    appointment appointments session reservation notice period hours hour less than before policy late
+    refuse refuses refused request requests ask asks start starts away within
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a customer requests to cancel a booking that starts less than the notice hours away (inside the notice period): the assistant refuses the cancellation"
+
+- id: bookings.assistant-prices
+  criterion: "A customer asks about prices: the assistant responds stating each service with its price"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["assistant|chat|agent|bot|ai\\b|conversation|answer", "pric|cost|fee|rate|service"]
+  terms: >-
+    assistant chat chatbot bot agent ai conversation answer answers respond responds question questions ask
+    asks price prices pricing cost costs fee fees rate rates service services treatment treatments each list
+    business data information
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a customer asks about prices: the assistant responds stating each service with its price, from the business's data"
+
+- id: bookings.assistant-find-by-email
+  criterion: "Finds bookings by email without revealing them in the chat"
+  advertises: "find bookings by email"
+  when: ai
+  says: ["(find|look ?up|search|retriev|list).*e-?mail|e-?mail.*(find|look ?up|search|list)"]
+  terms: >-
+    find finds look lookup search retrieve list lists booking bookings appointment appointments email emails
+    address their own upcoming chat assistant reveal revealing private privacy without sent
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › finds bookings by email without revealing them in the chat"
+
+- id: bookings.assistant-injection
+  criterion: "A malicious prompt injection input is refused with a 400 error: the booking assistant does not process it"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["injection|jailbreak|manipulat|malicious|override"]
+  terms: >-
+    prompt prompts injection injections jailbreak manipulate manipulation malicious override instruction
+    instructions input inputs refuse refused reject rejected block blocked error assistant chat bot agent ai
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a malicious prompt injection input is refused with a 400 error: the booking assistant does not process it"
+
+- id: bookings.assistant-input-limit
+  criterion: "A request to the assistant whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["abuse|input limit|character limit|too long|oversiz|exceed|length"]
+  terms: >-
+    abuse input inputs limit limits character characters length long oversized exceed exceeds message messages
+    request requests reject rejected refuse refused error assistant chat bot agent ai prevent
+  actors: [customer, client, patient, visitor, guest, user]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a user who sends the assistant a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"

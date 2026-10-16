@@ -277,7 +277,7 @@ export const USE_CASES: UseCase[] = [
   {
     "id": "tracker",
     "name": "Tracker",
-    "description": "Personal trackers for habits, health, money or any daily quantity — goals, quick logging, streaks, 30-day history and weekly totals",
+    "description": "Personal trackers (habits, health, money or any daily quantity) — goals, quick logging, streaks, 30-day history and weekly totals",
     "extends": "saas-crud",
     "capabilities": [
       "data.pagination",

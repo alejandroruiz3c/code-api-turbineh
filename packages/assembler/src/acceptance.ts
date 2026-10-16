@@ -31,6 +31,31 @@ export interface CriterionStatus {
   criterion: string;
   status: "met" | "covered" | "open";
   tests: string[];
+  /** Canonical criteria this criterion is linked to (ADR-0063): met exactly when their tests pass. */
+  canonical?: string[];
+  /** The request's own wording a canonical criterion replaced (ADR-0063). */
+  asked?: string[];
+}
+
+/** Canonical links (ADR-0063) take precedence over rule matching: declared, not guessed. */
+export function withCanonicalLinks(
+  statuses: readonly CriterionStatus[],
+  links: ReadonlyMap<string, { canonical: string[]; tests: string[] }>,
+  asked: Record<string, string[]> = {},
+  gatePassed: boolean | null = null,
+): CriterionStatus[] {
+  return statuses.map((s) => {
+    const l = links.get(s.criterion);
+    const a = asked[s.criterion];
+    const base = a?.length ? { ...s, asked: a } : s;
+    if (!l || l.tests.length === 0) return base;
+    return {
+      ...base,
+      tests: l.tests,
+      canonical: l.canonical,
+      status: gatePassed ? "met" : "covered",
+    };
+  });
 }
 
 export function readCoverage(file: string, from: string): CoverageRule[] {
@@ -157,7 +182,7 @@ export function acceptanceSection(statuses: readonly CriterionStatus[]): string 
     "| --- | --- | --- |",
     ...statuses.map(
       (s) =>
-        `| ${s.criterion.replace(/\|/g, "/")} | ${icon[s.status]} | ${s.tests.map((t) => `\`${t}\``).join("<br>") || "—"} |`,
+        `| ${s.criterion.replace(/\|/g, "/")}${s.asked?.length ? `<br><sub>asked as: ${s.asked.map((a) => a.replace(/\|/g, "/")).join(" · ")}</sub>` : ""} | ${icon[s.status]} | ${s.tests.map((t) => `\`${t}\``).join("<br>") || "—"} |`,
     ),
     "",
   ].join("\n");

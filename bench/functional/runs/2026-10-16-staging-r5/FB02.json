@@ -1,0 +1,127 @@
+{
+  "startedAt": "2026-10-16T20:40:25.389Z",
+  "id": "FB02",
+  "band": "B",
+  "flowId": null,
+  "refused": true,
+  "error": null,
+  "planCriteria": null,
+  "approved": null,
+  "state": null,
+  "badge": null,
+  "functional": null,
+  "guideFunctional": null,
+  "criteria": [],
+  "minutes": 0.07,
+  "problem": {
+    "type": "about:blank",
+    "title": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+    "status": 422,
+    "code": "use_case_not_covered",
+    "message": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+    "action": "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+    "notCovered": [
+      "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings.",
+      "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided address.",
+      "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the schedule.",
+      "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week.",
+      "Given a new appointment is successfully booked, when the system processes the event, then the appointment must appear on the assigned physiotherapist's Google Calendar.",
+      "Plus: sync every appointment to the physiotherapist's Google Calendar. (stated in the request)"
+    ],
+    "explanation": {
+      "offer": null,
+      "title": "The library doesn't cover this use case yet",
+      "useCase": "Online appointments for a physiotherapy clinic: patients book 45-minute sessions",
+      "canDoNow": "No verified component implements a function you asked for, so nothing was built and nothing is offered. We'll notify you with priority as soon as it does. Meanwhile you can start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+      "priority": "We recorded your request and will notify you with priority as soon as the library covers it (by email when your account's address is known).",
+      "notCovered": [
+        {
+          "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+          "covered": false,
+          "requirement": "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings."
+        },
+        {
+          "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+          "covered": false,
+          "requirement": "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided address."
+        },
+        {
+          "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+          "covered": false,
+          "requirement": "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the schedule."
+        },
+        {
+          "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+          "covered": false,
+          "requirement": "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week."
+        },
+        {
+          "why": "Needs something outside the verified use case and components",
+          "covered": false,
+          "requirement": "Given a new appointment is successfully booked, when the system processes the event, then the appointment must appear on the assigned physiotherapist's Google Calendar."
+        },
+        {
+          "why": "Integration with Google Calendar: no verified component connects to it yet",
+          "covered": false,
+          "requirement": "Plus: sync every appointment to the physiotherapist's Google Calendar. (stated in the request)"
+        }
+      ]
+    },
+    "id": "a2e500c5-9723-46fd-a02b-aa651c7a2f51",
+    "status_url": "/v1/plans/a2e500c5-9723-46fd-a02b-aa651c7a2f51",
+    "events_url": "/v1/plans/a2e500c5-9723-46fd-a02b-aa651c7a2f51/events",
+    "error": {
+      "code": "use_case_not_covered",
+      "message": "The library doesn't cover this use case yet. We'll notify you with priority as soon as it does.",
+      "action": "Nothing was built. Start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+      "notCovered": [
+        "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings.",
+        "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided address.",
+        "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the schedule.",
+        "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week.",
+        "Given a new appointment is successfully booked, when the system processes the event, then the appointment must appear on the assigned physiotherapist's Google Calendar.",
+        "Plus: sync every appointment to the physiotherapist's Google Calendar. (stated in the request)"
+      ],
+      "explanation": {
+        "offer": null,
+        "title": "The library doesn't cover this use case yet",
+        "useCase": "Online appointments for a physiotherapy clinic: patients book 45-minute sessions",
+        "canDoNow": "No verified component implements a function you asked for, so nothing was built and nothing is offered. We'll notify you with priority as soon as it does. Meanwhile you can start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (`components` in the API, `--components` in the CLI).",
+        "priority": "We recorded your request and will notify you with priority as soon as the library covers it (by email when your account's address is known).",
+        "notCovered": [
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided address."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the schedule."
+          },
+          {
+            "why": "No requirement of this request maps to a function the library verified (0 % functional coverage)",
+            "covered": false,
+            "requirement": "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week."
+          },
+          {
+            "why": "Needs something outside the verified use case and components",
+            "covered": false,
+            "requirement": "Given a new appointment is successfully booked, when the system processes the event, then the appointment must appear on the assigned physiotherapist's Google Calendar."
+          },
+          {
+            "why": "Integration with Google Calendar: no verified component connects to it yet",
+            "covered": false,
+            "requirement": "Plus: sync every appointment to the physiotherapist's Google Calendar. (stated in the request)"
+          }
+        ]
+      }
+    }
+  },
+  "finishedAt": "2026-10-16T20:40:29.787Z"
+}

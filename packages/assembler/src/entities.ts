@@ -235,6 +235,8 @@ export interface EntityOptions {
   auditLog?: boolean;
   /** The request's name for the owner role (e.g. "Manager"): generated E2E titles name the actor that way. */
   ownerLabel?: string;
+  /** Generate the multi-tenancy E2E (another workspace never sees these records): once per app. */
+  isolation?: boolean;
   /**
    * Entities that get a table and a page of their own (a reference to one of them becomes a tenant-scoped foreign key);
    * default: every entity in `all`.
@@ -1505,7 +1507,7 @@ test("${en.labelPlural.toLowerCase()} cannot be changed or deleted, not even dir
 
   const e2e = `${GENERATED}
 import { expect, test } from "@playwright/test";
-${eventTests.length ? `import pg from "pg";\n${events.some((l) => l.map.actor) ? `import { OWNER_EMAIL } from "./helpers";\n` : ""}` : ""}
+${eventTests.length ? `import pg from "pg";\n${events.some((l) => l.map.actor) ? `import { OWNER_EMAIL } from "./helpers";\n` : ""}` : ""}${opts.isolation && !settings && markerText("isolated") ? `import { SIGN_UP_POLICY } from "../../src/lib/sign-up-policy";\nimport { PASSWORD } from "./helpers";\n` : ""}
 test("${actor} creates a ${n.labelSingular.toLowerCase()} and sees it in the list", async ({ page }) => {
 ${seeds().length ? `${seeds().join("\n")}\n` : ""}  await page.goto("${base}");
 ${fills}
@@ -1542,6 +1544,59 @@ test("${actor} edits a ${n.labelSingular.toLowerCase()} and sees the change${opt
 `
     : ""
 }${
+    // CRUD's delete (ADR-0063): a record this test created, removed from the list. Not for settings (no delete) nor for
+    // workflow records (their history is kept).
+    !settings && !workflow && markerText("deleted")
+      ? `
+test("${actor} deletes a ${n.labelSingular.toLowerCase()} and it is no longer in the list", async ({ page }) => {
+${createWith("deleted")}
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "${markerText("deleted")}", exact: true }) })
+    .first()
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(
+    page.getByRole("cell", { name: "${markerText("deleted")}", exact: true }),
+    "the deleted ${n.labelSingular.toLowerCase()} is no longer in the list",
+  ).toHaveCount(0);
+});
+`
+      : ""
+  }${
+    // Multi-tenancy (ADR-0063): another workspace never sees this workspace's records. Once per app (opts.isolation),
+    // only where anyone may sign up (a staff-only app has no second workspace).
+    opts.isolation && !settings && markerText("isolated")
+      ? `
+test("a person in another workspace never sees this workspace's ${n.labelPlural.toLowerCase()}", async ({ page, browser }) => {
+  test.skip(SIGN_UP_POLICY !== "open", "staff-only sign-up: no second workspace can be created");
+${createWith("isolated")}
+  const other = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const stranger = await other.newPage();
+  await stranger.goto("/sign-up");
+  await stranger.getByLabel("Name", { exact: true }).fill("Other Owner");
+  await stranger.getByLabel("Email").fill(\`other-\${Date.now()}@example.com\`);
+  await stranger.getByLabel("Password").fill(PASSWORD);
+  await stranger.getByLabel("Workspace name").fill("Other Workspace");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await stranger.getByRole("button", { name: "Create account" }).click();
+    try {
+      await expect(stranger).toHaveURL(/\\/dashboard/, { timeout: 8_000 });
+      break;
+    } catch {
+      await stranger.waitForTimeout(10_500);
+    }
+  }
+  await stranger.goto("${base}");
+  await expect(
+    stranger.getByRole("cell", { name: "${markerText("isolated")}", exact: true }),
+    "a ${n.labelSingular.toLowerCase()} of this workspace is never listed in another workspace",
+  ).toHaveCount(0);
+  await other.close();
+});
+`
+      : ""
+  }${
     features.csvExport
       ? `
 test("${actor} triggers a download of all ${n.labelPlural.toLowerCase()} records in CSV format (export as CSV with a header row)", async ({ page }) => {

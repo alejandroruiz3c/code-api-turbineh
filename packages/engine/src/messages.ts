@@ -1,3 +1,4 @@
+import { ellipsize } from "@turbineh/shared";
 import type { NotCoveredExplanation, ProductError, ScopeRequirement } from "@turbineh/shared";
 import { notCoveredExplanation } from "./component-offer.js";
 import { productError } from "./errors.js";
@@ -39,7 +40,8 @@ const problem = (
   resume?: string,
 ): FlowProblem => ({ ...productError(code, `${title}. ${why}`, action, resume), title, why, next });
 
-const short = (s: string, n = 220) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+// Word-boundary ellipsis from the shared status texts (ADR-0063, N-06): never "…character-x".
+const short = (s: string, n = 220) => ellipsize(s, n);
 
 /** Only the shared contract fields (API `errors[]`, CLI `--json`). */
 export const asProductError = (p: FlowProblem): ProductError => ({

@@ -1,3 +1,4 @@
+import { KPI_TEXT } from "@turbineh/shared/status-texts";
 import Link from "next/link";
 import { PackageChecks } from "@/components/package-checks";
 import { StateBadge, Stat, pct, secs } from "@/components/ui";
@@ -184,7 +185,12 @@ export default async function Home() {
         ) : (
           <>
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat value={`${s.verified}/${s.flows}`} label="Flows verified" accent />
+              <Stat value={`${s.verified}/${s.flows}`} label={KPI_TEXT.checksPassed} accent />
+              <Stat
+                value={s.requirementsTotal ? `${s.requirementsMet}/${s.requirementsTotal}` : "—"}
+                label={KPI_TEXT.requirementsMet}
+                accent
+              />
               <Stat value={secs(s.avgSeconds)} label="Average time to a verified package" />
               <Stat value={pct(s.avgReusedShare)} label="Code reused from verified components" />
               <Stat

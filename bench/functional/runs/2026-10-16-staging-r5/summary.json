@@ -1,0 +1,212 @@
+{
+  "bandA": {
+    "statements": 10,
+    "built": 10,
+    "refused": [],
+    "errors": [],
+    "functionalCoverageMean": 0.639,
+    "functionalCoveragePooled": 0.629,
+    "labelledRecallMean": 0.583,
+    "perFlow": [
+      {
+        "id": "FA01",
+        "coverage": "9/9",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 9/9",
+        "recall": 1,
+        "open": []
+      },
+      {
+        "id": "FA02",
+        "coverage": "5/6",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/6",
+        "recall": 0.6666666666666666,
+        "open": [
+          "Given a customer selects a specific barber, the system only shows time slots where that specific barber is free."
+        ]
+      },
+      {
+        "id": "FA03",
+        "coverage": "8/9",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 8/9",
+        "recall": 0.6666666666666666,
+        "open": [
+          "Given an admin user logs into the admin panel, they can create, update, or delete product entries."
+        ]
+      },
+      {
+        "id": "FA04",
+        "coverage": "6/6",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 6/6",
+        "recall": 1,
+        "open": []
+      },
+      {
+        "id": "FA05",
+        "coverage": "5/5",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/5",
+        "recall": 1,
+        "open": []
+      },
+      {
+        "id": "FA06",
+        "coverage": "5/5",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/5",
+        "recall": 1,
+        "open": []
+      },
+      {
+        "id": "FA07",
+        "coverage": "0/8",
+        "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/8",
+        "recall": 0,
+        "open": [
+          "The home page displays the firm's branding and introductory content.",
+          "A visitor browses the services page",
+          "The about us page contains the firm's history and mission statement.",
+          "The admin publishes a post that appears on the blog, RSS and sitemap",
+          "The blog provides a valid RSS feed URL for syndication.",
+          "A visitor submits the contact form and gets a confirmation",
+          "The owner (admin) edits the website headline and the home page shows it",
+          "The owner (admin) reads the contact message in the dashboard"
+        ]
+      },
+      {
+        "id": "FA08",
+        "coverage": "0/6",
+        "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/6",
+        "recall": 0,
+        "open": [
+          "Given a client is logged in, when they submit a new request with a PDF attachment, then the request is saved to the database with a 'Pending' status.",
+          "Given a client is logged in, when they view their dashboard, then they can see a list of all their previously submitted requests and their current statuses.",
+          "Given a staff member is logged in, when they access the request queue, then they can view a list of all submitted client requests.",
+          "Given a staff member is viewing a specific request, when they change the status field, then the new status is updated and persisted in the system.",
+          "A client submits a request with a file",
+          "A client submits a request and follows its status"
+        ]
+      },
+      {
+        "id": "FA09",
+        "coverage": "0/7",
+        "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/7",
+        "recall": 0,
+        "open": [
+          "Sales records are imported from a CSV file",
+          "Given sales data is entered manually via the input form, the system saves the records to the database.",
+          "Given sales data is present, the dashboard displays KPI values compared against the previous period's metrics.",
+          "Given sales data is present, the dashboard renders a time series chart showing sales trends over time.",
+          "Given sales data is present, the dashboard displays a breakdown of sales categorized by region.",
+          "Given active filters are applied, the dashboard updates the displayed KPIs, chart, and regional breakdown accordingly.",
+          "Given active filters are applied, the user can export the filtered dataset as a CSV file."
+        ]
+      },
+      {
+        "id": "FA10",
+        "coverage": "6/9",
+        "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 6/9",
+        "recall": 0.5,
+        "open": [
+          "The owner deletes a workspace and it is no longer in the list",
+          "An admin member can export the contact list to a CSV file.",
+          "A non-admin member is prevented from exporting contacts to CSV."
+        ]
+      }
+    ]
+  },
+  "bandB": {
+    "statements": 10,
+    "built": 7,
+    "refused": ["FB02", "FB09"],
+    "errors": [],
+    "functionalCoverageMean": 0.391,
+    "functionalCoveragePooled": 0.375,
+    "labelledRecallMean": 0.262,
+    "perFlow": [
+      {
+        "id": "FB01",
+        "coverage": "5/5",
+        "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/5",
+        "recall": 0.6,
+        "open": []
+      },
+      {
+        "id": "FB03",
+        "coverage": "4/7",
+        "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 4/7",
+        "recall": 0.5,
+        "open": [
+          "Given a user views the catalogue, when they select a coffee bag, then they can choose between 250g and 1kg variants.",
+          "Given a product variant is selected, when the user views the details, then the specific price and stock level for that weight are displayed.",
+          "Given a successful Stripe payment, when the transaction completes, then an order confirmation email is sent to the customer."
+        ]
+      },
+      {
+        "id": "FB04",
+        "coverage": "0/7",
+        "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/7",
+        "recall": 0,
+        "open": [
+          "Given a user is browsing the product catalogue, when they view a product, then they must see a high-resolution image of the poster.",
+          "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
+          "Uses a discount code: applied on the server, counted once on payment, then used up",
+          "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
+          "Given a user selects a shipping destination, when they view the checkout summary, then the shipping rate must be calculated based on the selected country.",
+          "Given a user successfully places an order, when the transaction is finalized, then an order confirmation email must be sent to the user's provided email address.",
+          "Given an administrator adds a new product to the catalogue, when the product is saved, then a post containing the product details must be automatically published to the shop's Instagram account."
+        ]
+      },
+      {
+        "id": "FB05",
+        "coverage": "3/5",
+        "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 3/5",
+        "recall": 0.3333333333333333,
+        "open": [
+          "Given a user is on the project dashboard, when they create a new project, then the project is saved to the database.",
+          "Given a list of tasks, when a user views the Kanban board, then tasks are displayed in columns based on their status."
+        ]
+      },
+      {
+        "id": "FB06",
+        "coverage": "2/5",
+        "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 2/5",
+        "recall": 0.2,
+        "open": [
+          "Given a user has set a daily goal, when they complete the task, then the goal is marked as finished for that day.",
+          "Given a user views the history tab, then they can see a log of their habit completions for the last 30 days.",
+          "Given a user views the weekly summary, then the app displays the total number of completions for the current week."
+        ]
+      },
+      {
+        "id": "FB08",
+        "coverage": "0/5",
+        "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/5",
+        "recall": 0,
+        "open": [
+          "Given a client is logged in, when they submit a document request with an attached file, then the request is created in the system with a 'Pending' status.",
+          "Given a client is logged in, when they view their dashboard, then they can see a list of all their submitted document requests and their current statuses.",
+          "Given a lawyer is logged in, when they select a pending document request, then they can update the status to 'In Progress' or 'Completed'.",
+          "The owner edits a client and sees the change",
+          "A client submits a request with a file"
+        ]
+      },
+      {
+        "id": "FB10",
+        "coverage": "1/6",
+        "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 1/6",
+        "recall": 0.2,
+        "open": [
+          "Given imported campaign data, when the user views a KPI, then the system displays the value alongside the percentage change from the previous period.",
+          "Given a selected date range, when the user views the dashboard, then the system renders a time series chart of the KPIs.",
+          "Given imported campaign data, when the user selects a breakdown dimension, then the system renders a chart segmented by that dimension.",
+          "Given the dashboard is active, when the user applies a filter, then the displayed KPIs and charts update to reflect the filtered data.",
+          "Given the dashboard is populated, when the user clicks the export button, then the system generates and downloads a CSV file of the current view."
+        ]
+      }
+    ]
+  },
+  "falseVerified": [],
+  "targets": {
+    "bandA": 0.9,
+    "bandB": 0.7,
+    "falseVerified": 0
+  }
+}
