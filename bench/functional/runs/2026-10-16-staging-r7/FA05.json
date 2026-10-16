@@ -16,9 +16,7 @@
         "tests/unit/streaks.test.ts › adds amounts exactly and compares with the daily goal"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.goals"
-      ],
+      "canonical": ["tracker.goals"],
       "criterion": "Amounts are compared with the daily goal"
     },
     {
@@ -45,9 +43,7 @@
         "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.history"
-      ],
+      "canonical": ["tracker.history"],
       "criterion": "The 30-day history marks today as goal met"
     },
     {
@@ -59,9 +55,7 @@
         "tests/unit/streaks.test.ts › the weekly total adds up exactly the last 7 days of logs, not older ones"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.weekly-totals"
-      ],
+      "canonical": ["tracker.weekly-totals"],
       "criterion": "The weekly total adds up the logs of the last 7 days"
     }
   ],
@@ -84,9 +78,7 @@
     {
       "text": "Amounts are compared with the daily goal",
       "status": "met",
-      "canonical": [
-        "tracker.goals"
-      ],
+      "canonical": ["tracker.goals"],
       "asked": [
         "Given a user has set a daily water goal, when they log an amount, the current daily total increases by that amount.",
         "Given a user has set a daily sleep goal, when they log an amount, the current daily total increases by that amount."
@@ -119,9 +111,7 @@
     {
       "text": "The 30-day history marks today as goal met",
       "status": "met",
-      "canonical": [
-        "tracker.history"
-      ],
+      "canonical": ["tracker.history"],
       "asked": [
         "Given a user views the history section, a list of the last 30 days of logged data is displayed."
       ],
@@ -133,9 +123,7 @@
     {
       "text": "The weekly total adds up the logs of the last 7 days",
       "status": "met",
-      "canonical": [
-        "tracker.weekly-totals"
-      ],
+      "canonical": ["tracker.weekly-totals"],
       "asked": [
         "Given a user views the summary section, the sum of all water and sleep logged in the last 7 days is displayed."
       ],

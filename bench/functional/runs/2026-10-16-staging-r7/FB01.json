@@ -14,9 +14,7 @@
         "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.public-booking"
-      ],
+      "canonical": ["bookings.public-booking"],
       "criterion": "A customer books a free time on the public page without an account and the booking is created"
     },
     {
@@ -27,9 +25,7 @@
         "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.confirmation-email"
-      ],
+      "canonical": ["bookings.confirmation-email"],
       "criterion": "A customer books a free time and a confirmation email with a cancel link is sent"
     },
     {
@@ -41,9 +37,7 @@
         "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.cancel-notice"
-      ],
+      "canonical": ["bookings.cancel-notice"],
       "criterion": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
     },
     {
@@ -54,9 +48,7 @@
         "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.staff-calendar"
-      ],
+      "canonical": ["bookings.staff-calendar"],
       "criterion": "A staff member signs in and sees the bookings in the day and week calendar per team member"
     },
     {
@@ -67,9 +59,7 @@
         "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.time-off"
-      ],
+      "canonical": ["bookings.time-off"],
       "criterion": "A staff member blocks time off and those time slots are no longer offered for booking"
     }
   ],
@@ -94,9 +84,7 @@
     {
       "text": "A customer books a free time on the public page without an account and the booking is created",
       "status": "met",
-      "canonical": [
-        "bookings.public-booking"
-      ],
+      "canonical": ["bookings.public-booking"],
       "asked": [
         "A student can successfully book a 60-minute class with a specific teacher in an available time slot."
       ],
@@ -108,9 +96,7 @@
     {
       "text": "A customer books a free time and a confirmation email with a cancel link is sent",
       "status": "met",
-      "canonical": [
-        "bookings.confirmation-email"
-      ],
+      "canonical": ["bookings.confirmation-email"],
       "asked": [
         "A student receives a confirmation email containing a unique cancellation link immediately after booking."
       ],
@@ -122,9 +108,7 @@
     {
       "text": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused",
       "status": "met",
-      "canonical": [
-        "bookings.cancel-notice"
-      ],
+      "canonical": ["bookings.cancel-notice"],
       "asked": [
         "A student can successfully cancel a booking using the link if the cancellation occurs more than 12 hours before the class start time.",
         "A student is prevented from cancelling a booking via the link if the cancellation attempt is within 12 hours of the class start time."
@@ -137,9 +121,7 @@
     {
       "text": "A staff member signs in and sees the bookings in the day and week calendar per team member",
       "status": "met",
-      "canonical": [
-        "bookings.staff-calendar"
-      ],
+      "canonical": ["bookings.staff-calendar"],
       "asked": [
         "A teacher can view a weekly calendar view displaying all their scheduled classes."
       ],
@@ -151,9 +133,7 @@
     {
       "text": "A staff member blocks time off and those time slots are no longer offered for booking",
       "status": "met",
-      "canonical": [
-        "bookings.time-off"
-      ],
+      "canonical": ["bookings.time-off"],
       "asked": [
         "A teacher can mark specific dates as holidays on their calendar to prevent bookings."
       ],

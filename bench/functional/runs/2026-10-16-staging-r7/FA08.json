@@ -35,9 +35,7 @@
         "tests/e2e/requests.spec.ts › the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status"
       ],
       "status": "covered",
-      "canonical": [
-        "client-portal.file-uploads"
-      ],
+      "canonical": ["client-portal.file-uploads"],
       "criterion": "A client submits a request with a file"
     },
     {
@@ -48,9 +46,7 @@
         "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
       ],
       "status": "covered",
-      "canonical": [
-        "client-portal.submit-request"
-      ],
+      "canonical": ["client-portal.submit-request"],
       "criterion": "A client submits a request and follows its status"
     }
   ],
@@ -97,9 +93,7 @@
     {
       "text": "A client submits a request with a file",
       "status": "unverified",
-      "canonical": [
-        "client-portal.file-uploads"
-      ],
+      "canonical": ["client-portal.file-uploads"],
       "asked": [
         "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
       ],
@@ -111,9 +105,7 @@
     {
       "text": "A client submits a request and follows its status",
       "status": "unverified",
-      "canonical": [
-        "client-portal.submit-request"
-      ],
+      "canonical": ["client-portal.submit-request"],
       "asked": [
         "Given a staff member is reviewing a request, when they open the request details, then they can view and download the uploaded PDF file."
       ],

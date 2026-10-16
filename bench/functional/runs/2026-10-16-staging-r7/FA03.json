@@ -15,9 +15,7 @@
         "tests/e2e/shop.spec.ts › the admin adds a product with an https image URL; shoppers find it by its description"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.images"
-      ],
+      "canonical": ["storefront.images"],
       "criterion": "The admin creates a product with an image"
     },
     {
@@ -29,9 +27,7 @@
         "tests/e2e/shop.spec.ts › the admin adds options with their own SKU, price and stock"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.variants"
-      ],
+      "canonical": ["storefront.variants"],
       "criterion": "The admin adds options with their own SKU, price and stock"
     },
     {
@@ -44,9 +40,7 @@
         "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.discount-codes"
-      ],
+      "canonical": ["storefront.discount-codes"],
       "criterion": "Uses a discount code: applied on the server, counted once on payment, then used up"
     },
     {
@@ -57,9 +51,7 @@
         "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.discount-refused"
-      ],
+      "canonical": ["storefront.discount-refused"],
       "criterion": "Inactive, expired, used-up and below-minimum codes are refused"
     },
     {
@@ -71,9 +63,7 @@
         "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.checkout"
-      ],
+      "canonical": ["storefront.checkout"],
       "criterion": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
     },
     {
@@ -94,9 +84,7 @@
         "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.admin-panel"
-      ],
+      "canonical": ["storefront.admin-panel"],
       "criterion": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it"
     },
     {
@@ -107,9 +95,7 @@
         "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
       ],
       "status": "covered",
-      "canonical": [
-        "storefront.admin-orders"
-      ],
+      "canonical": ["storefront.admin-orders"],
       "criterion": "The owner accesses the admin area and sees the list of all orders with their payment status"
     }
   ],
@@ -132,9 +118,7 @@
     {
       "text": "The admin creates a product with an image",
       "status": "met",
-      "canonical": [
-        "storefront.images"
-      ],
+      "canonical": ["storefront.images"],
       "asked": [
         "Given a user views the product catalogue, they can see high-quality photos of the ceramic items."
       ],
@@ -146,9 +130,7 @@
     {
       "text": "The admin adds options with their own SKU, price and stock",
       "status": "met",
-      "canonical": [
-        "storefront.variants"
-      ],
+      "canonical": ["storefront.variants"],
       "asked": [
         "Given a user views a mug, they can select from three distinct colours, each displaying its specific price and stock level.",
         "Given a user adds a specific colour of mug to the cart, the cart correctly reflects that unique SKU."
@@ -161,9 +143,7 @@
     {
       "text": "Uses a discount code: applied on the server, counted once on payment, then used up",
       "status": "met",
-      "canonical": [
-        "storefront.discount-codes"
-      ],
+      "canonical": ["storefront.discount-codes"],
       "asked": [
         "Given a user enters a valid discount code before the expiry date, the total price is reduced accordingly."
       ],
@@ -175,9 +155,7 @@
     {
       "text": "Inactive, expired, used-up and below-minimum codes are refused",
       "status": "met",
-      "canonical": [
-        "storefront.discount-refused"
-      ],
+      "canonical": ["storefront.discount-refused"],
       "asked": [
         "Given a user enters an expired discount code, the system rejects the code and applies no discount."
       ],
@@ -189,9 +167,7 @@
     {
       "text": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
       "status": "met",
-      "canonical": [
-        "storefront.checkout"
-      ],
+      "canonical": ["storefront.checkout"],
       "asked": [
         "Given a user completes a purchase via Stripe Checkout, the payment is processed successfully."
       ],
@@ -219,9 +195,7 @@
     {
       "text": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it",
       "status": "met",
-      "canonical": [
-        "storefront.admin-panel"
-      ],
+      "canonical": ["storefront.admin-panel"],
       "asked": [
         "Given an admin user logs into the admin panel, they can create, update, or delete product entries."
       ],
@@ -233,9 +207,7 @@
     {
       "text": "The owner accesses the admin area and sees the list of all orders with their payment status",
       "status": "met",
-      "canonical": [
-        "storefront.admin-orders"
-      ],
+      "canonical": ["storefront.admin-orders"],
       "asked": [
         "Given an admin user accesses the admin panel, they can view a list of all historical orders."
       ],

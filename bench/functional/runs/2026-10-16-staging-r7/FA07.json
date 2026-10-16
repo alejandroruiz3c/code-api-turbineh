@@ -12,16 +12,12 @@
       "criterion": "The home page displays the firm's branding and introductory content."
     },
     {
-      "asked": [
-        "The services page lists the architectural offerings provided by the firm."
-      ],
+      "asked": ["The services page lists the architectural offerings provided by the firm."],
       "tests": [
         "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
       ],
       "status": "covered",
-      "canonical": [
-        "corporate-site.services"
-      ],
+      "canonical": ["corporate-site.services"],
       "criterion": "A visitor browses the services page"
     },
     {
@@ -38,9 +34,7 @@
         "tests/e2e/site.spec.ts › the admin publishes a post that appears on the blog, RSS and sitemap"
       ],
       "status": "covered",
-      "canonical": [
-        "corporate-site.blog"
-      ],
+      "canonical": ["corporate-site.blog"],
       "criterion": "The admin publishes a post that appears on the blog, RSS and sitemap"
     },
     {
@@ -49,42 +43,30 @@
       "criterion": "The blog provides a valid RSS feed URL for syndication."
     },
     {
-      "asked": [
-        "The contact form allows users to submit their name, email, and message."
-      ],
+      "asked": ["The contact form allows users to submit their name, email, and message."],
       "tests": [
         "tests/e2e/site.spec.ts › a visitor submits the contact form and gets a confirmation"
       ],
       "status": "covered",
-      "canonical": [
-        "corporate-site.contact-form"
-      ],
+      "canonical": ["corporate-site.contact-form"],
       "criterion": "A visitor submits the contact form and gets a confirmation"
     },
     {
-      "asked": [
-        "The admin panel allows staff to update text content on any site page."
-      ],
+      "asked": ["The admin panel allows staff to update text content on any site page."],
       "tests": [
         "tests/e2e/site.spec.ts › the owner (admin) edits the website headline and the home page shows it"
       ],
       "status": "covered",
-      "canonical": [
-        "corporate-site.edit-content"
-      ],
+      "canonical": ["corporate-site.edit-content"],
       "criterion": "The owner (admin) edits the website headline and the home page shows it"
     },
     {
-      "asked": [
-        "The admin panel allows staff to view a list of received contact messages."
-      ],
+      "asked": ["The admin panel allows staff to view a list of received contact messages."],
       "tests": [
         "tests/e2e/site.spec.ts › the owner (admin) reads the contact message in the dashboard"
       ],
       "status": "covered",
-      "canonical": [
-        "corporate-site.messages"
-      ],
+      "canonical": ["corporate-site.messages"],
       "criterion": "The owner (admin) reads the contact message in the dashboard"
     }
   ],
@@ -111,12 +93,8 @@
     {
       "text": "A visitor browses the services page",
       "status": "unverified",
-      "canonical": [
-        "corporate-site.services"
-      ],
-      "asked": [
-        "The services page lists the architectural offerings provided by the firm."
-      ],
+      "canonical": ["corporate-site.services"],
+      "asked": ["The services page lists the architectural offerings provided by the firm."],
       "test": {
         "file": "tests/e2e/site.spec.ts",
         "title": "a visitor browses the home page, the services page, about and contact"
@@ -129,9 +107,7 @@
     {
       "text": "The admin publishes a post that appears on the blog, RSS and sitemap",
       "status": "unverified",
-      "canonical": [
-        "corporate-site.blog"
-      ],
+      "canonical": ["corporate-site.blog"],
       "asked": [
         "The blog section displays a list of published articles.",
         "The admin panel allows staff to create and publish new blog posts."
@@ -148,12 +124,8 @@
     {
       "text": "A visitor submits the contact form and gets a confirmation",
       "status": "unverified",
-      "canonical": [
-        "corporate-site.contact-form"
-      ],
-      "asked": [
-        "The contact form allows users to submit their name, email, and message."
-      ],
+      "canonical": ["corporate-site.contact-form"],
+      "asked": ["The contact form allows users to submit their name, email, and message."],
       "test": {
         "file": "tests/e2e/site.spec.ts",
         "title": "a visitor submits the contact form and gets a confirmation"
@@ -162,12 +134,8 @@
     {
       "text": "The owner (admin) edits the website headline and the home page shows it",
       "status": "unverified",
-      "canonical": [
-        "corporate-site.edit-content"
-      ],
-      "asked": [
-        "The admin panel allows staff to update text content on any site page."
-      ],
+      "canonical": ["corporate-site.edit-content"],
+      "asked": ["The admin panel allows staff to update text content on any site page."],
       "test": {
         "file": "tests/e2e/site.spec.ts",
         "title": "the owner (admin) edits the website headline and the home page shows it"
@@ -176,12 +144,8 @@
     {
       "text": "The owner (admin) reads the contact message in the dashboard",
       "status": "unverified",
-      "canonical": [
-        "corporate-site.messages"
-      ],
-      "asked": [
-        "The admin panel allows staff to view a list of received contact messages."
-      ],
+      "canonical": ["corporate-site.messages"],
+      "asked": ["The admin panel allows staff to view a list of received contact messages."],
       "test": {
         "file": "tests/e2e/site.spec.ts",
         "title": "the owner (admin) reads the contact message in the dashboard"

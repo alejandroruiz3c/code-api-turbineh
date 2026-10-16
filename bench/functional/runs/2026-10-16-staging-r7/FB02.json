@@ -15,9 +15,7 @@
         "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.no-double-booking"
-      ],
+      "canonical": ["bookings.no-double-booking"],
       "criterion": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
     },
     {
@@ -28,9 +26,7 @@
         "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.confirmation-email"
-      ],
+      "canonical": ["bookings.confirmation-email"],
       "criterion": "A customer books a free time and a confirmation email with a cancel link is sent"
     },
     {
@@ -41,9 +37,7 @@
         "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.cancel-notice"
-      ],
+      "canonical": ["bookings.cancel-notice"],
       "criterion": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
     },
     {
@@ -54,9 +48,7 @@
         "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
       ],
       "status": "covered",
-      "canonical": [
-        "bookings.staff-calendar"
-      ],
+      "canonical": ["bookings.staff-calendar"],
       "criterion": "A staff member signs in and sees the bookings in the day and week calendar per team member"
     }
   ],
@@ -81,9 +73,7 @@
     {
       "text": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
       "status": "met",
-      "canonical": [
-        "bookings.no-double-booking"
-      ],
+      "canonical": ["bookings.no-double-booking"],
       "asked": [
         "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings."
       ],
@@ -95,9 +85,7 @@
     {
       "text": "A customer books a free time and a confirmation email with a cancel link is sent",
       "status": "met",
-      "canonical": [
-        "bookings.confirmation-email"
-      ],
+      "canonical": ["bookings.confirmation-email"],
       "asked": [
         "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided email address."
       ],
@@ -109,9 +97,7 @@
     {
       "text": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused",
       "status": "met",
-      "canonical": [
-        "bookings.cancel-notice"
-      ],
+      "canonical": ["bookings.cancel-notice"],
       "asked": [
         "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the system."
       ],
@@ -123,9 +109,7 @@
     {
       "text": "A staff member signs in and sees the bookings in the day and week calendar per team member",
       "status": "met",
-      "canonical": [
-        "bookings.staff-calendar"
-      ],
+      "canonical": ["bookings.staff-calendar"],
       "asked": [
         "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week."
       ],
