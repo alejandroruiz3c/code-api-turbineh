@@ -6,18 +6,7 @@ import { TURBINEH_LOGO_SVG } from "./brand.js";
  * verified facts — no model text, no external resources.
  */
 
-interface EnvVar {
-  key: string;
-  note: string;
-}
-
-const REQUIRED = new Set([
-  "DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "ADMIN_EMAILS",
-  "TURBINEH_AI_TOKEN",
-]);
+/** Plain-language notes for well-known settings (shown instead of the .env.example comment). */
 const EXPLAIN: Record<string, string> = {
   DATABASE_URL: "Connection string of your production PostgreSQL database.",
   BETTER_AUTH_SECRET:
@@ -39,29 +28,26 @@ const EXPLAIN: Record<string, string> = {
   TURBINEH_AI_URL: "TurbineH AI address. Keep the default `https://software.turbineh.com/v1/ai`.",
 };
 
-/** Keys and comments from the app's own .env.example. */
-export function envVarsOf(envExample: string): EnvVar[] {
-  const out: EnvVar[] = [];
-  let comment = "";
-  for (const raw of envExample.split("\n")) {
-    const line = raw.trim();
-    if (line.startsWith("#")) {
-      comment = line.replace(/^#\s*/, "");
-      continue;
-    }
-    const m = /^([A-Z][A-Z0-9_]*)=/.exec(line);
-    if (m?.[1]) out.push({ key: m[1], note: EXPLAIN[m[1]] ?? comment });
-    comment = "";
-  }
-  return out;
+/** A setting of the app's env schema (src/env.ts + declared component settings, ADR-0064). */
+export interface EnvSetting {
+  name: string;
+  about: string;
 }
 
-export function deployGuide(appName: string, envExample: string): string {
-  const vars = envVarsOf(envExample);
-  const required = vars.filter((v) => REQUIRED.has(v.key));
-  const optional = vars.filter((v) => !REQUIRED.has(v.key));
-  const jobs = vars.some((v) => v.key === "JOBS_RUNNER_SECRET");
-  const row = (v: EnvVar) => `| \`${v.key}\` | ${v.note} |`;
+/** The note DEPLOY.md shows for a setting. */
+export const settingNote = (e: EnvSetting) => EXPLAIN[e.name] ?? e.about;
+
+/**
+ * DEPLOY.md from the app's single env schema (ADR-0064): the same Required / Optional split as the plan, the result,
+ * AGENTS.md and turbineh.json.
+ */
+export function deployGuide(
+  appName: string,
+  env: { required: EnvSetting[]; optional: EnvSetting[] },
+): string {
+  const { required, optional } = env;
+  const jobs = [...required, ...optional].some((v) => v.name === "JOBS_RUNNER_SECRET");
+  const row = (v: EnvSetting) => `| \`${v.name}\` | ${settingNote(v).replace(/\|/g, "\\|")} |`;
   return `# Deploy ${appName}
 
 From this package to a live app your customers can use. Takes about 30 minutes the first time.
@@ -79,9 +65,7 @@ From this package to a live app your customers can use. Takes about 30 minutes t
 
 Set these in your host's dashboard. Never commit them to the repository.
 
-| Required | What it is |
-|---|---|
-${required.map(row).join("\n")}
+${required.length ? `| Required | What it is |\n|---|---|\n${required.map(row).join("\n")}\n` : "No setting is required.\n"}
 ${optional.length ? `\n| Optional | What it is |\n|---|---|\n${optional.map(row).join("\n")}\n` : ""}
 ## 3 · Go live — option A: Vercel + Neon (simplest)
 

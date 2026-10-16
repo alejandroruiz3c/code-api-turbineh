@@ -61,6 +61,16 @@ export interface ReportFacts {
   improvement?: ImprovementEstimate | null;
   /** True for the delivery produced by "Improve & redeliver": no further improvement is offered. */
   finalVersion?: boolean;
+  /**
+   * From the reconciled delivery manifest (ADR-0064): what the package does not include, the approved promises it
+   * does not keep and the required settings. These steps are written by code and never rephrased, so they say exactly
+   * what the plan, AGENTS.md, turbineh.json and DEPLOY.md say.
+   */
+  delivery?: {
+    notIncluded: { capability: string; label: string }[];
+    brokenPromises: { capability: string; label: string; promised: string; reason: string }[];
+    requiredEnv: string[];
+  };
 }
 
 export interface RuleSpecFact {
@@ -299,11 +309,78 @@ function fallbackText(facts: ReportFacts): {
   };
 }
 
+/** Next steps stated by the delivery manifest (ADR-0064): fixed words, never rephrased by the writer. */
+export function manifestSteps(d: NonNullable<ReportFacts["delivery"]>): string[] {
+  const list = (xs: { label: string; capability: string }[]) =>
+    xs.map((x) => `${x.label} (${x.capability})`).join("; ");
+  return [
+    ...(d.brokenPromises.length
+      ? [
+          `Not delivered although the plan you approved promised it: ${list(d.brokenPromises)}. The package is not verified until it is implemented and proven by a test (AGENTS.md › What is left).`,
+        ]
+      : []),
+    ...(d.notIncluded.length
+      ? [
+          `Not included in this version: ${list(d.notIncluded)}. Add it yourself or ask for it in a new build (AGENTS.md › What is left says why).`,
+        ]
+      : []),
+    ...(d.requiredEnv.length
+      ? [
+          `Before deploying, set the required settings: ${d.requiredEnv.map((n) => `\`${n}\``).join(", ")} (DEPLOY.md explains each one and lists the optional ones).`,
+        ]
+      : []),
+  ];
+}
+
 /**
  * The closed list of next steps, built by code from verified facts (max 5). The writer may only rephrase them,
- * one by one; it cannot add steps.
+ * one by one; it cannot add steps. With a delivery manifest, its steps come first and are never rephrased.
  */
 function stepFacts(facts: ReportFacts): string[] {
+  if (facts.delivery) return [...manifestSteps(facts.delivery), ...otherSteps(facts)].slice(0, 6);
+  return legacySteps(facts);
+}
+
+/** Next steps that do not come from the manifest (business rules, Backup Coder code, alerts). */
+function otherSteps(facts: ReportFacts): string[] {
+  const fixable = (facts.improvement?.fixable ?? 0) > 0;
+  const dropped = (facts.businessRules ?? []).filter((r) => r.implemented === false);
+  const missing = facts.rulesNotImplemented ?? [];
+  return [
+    ...dropped
+      .slice(0, 1)
+      .map(
+        (r) =>
+          `Not implemented automatically: ${r.rules.join("; ")} (${r.entity}). The checks could not be made to pass, so the app accepts these records as usual; add the rule yourself or ask for it in a new build.`,
+      ),
+    ...(dropped.length === 0 && missing.length > 0
+      ? [
+          `${missing.length} business rule(s) of the request are not enforced by the app (listed with ids under "Business rules"): add them yourself or ask for them in a new build.`,
+        ]
+      : []),
+    ...(facts.backupGenerated ?? [])
+      .slice(0, 1)
+      .map(
+        (b) =>
+          `Review ${b.file} (${b.label}): NOT catalogue-verified — the Backup Coder (a model) wrote it because no approved component provides it; only this build's checks and its own tests cover it.`,
+      ),
+    ...facts.alerts
+      .slice(0, 2)
+      .map(
+        (a) =>
+          `${a.title} (${a.level === "warning" ? "in what is shipped to users" : "development-only tool, not shipped to users"}): ${
+            facts.finalVersion
+              ? "it could not be fixed automatically; update it when a patched version is released."
+              : fixable
+                ? "it can be fixed with Improve & redeliver."
+                : "no patched version exists yet; update it when one is released."
+          }`,
+      ),
+  ].slice(0, 3);
+}
+
+/** Next steps of builds without a delivery manifest (improvements of packages built before ADR-0064). */
+function legacySteps(facts: ReportFacts): string[] {
   const fixable = (facts.improvement?.fixable ?? 0) > 0;
   const dropped = (facts.businessRules ?? []).filter((r) => r.implemented === false);
   const missing = facts.rulesNotImplemented ?? [];
@@ -354,6 +431,9 @@ export async function buildReport(
   writer: WriterConfig,
 ): Promise<BuildReport> {
   const fb = fallbackText(facts);
+  // ADR-0064: the manifest's steps are fixed words (never rephrased); the writer may rephrase only the others.
+  const fixedSteps = facts.delivery ? manifestSteps(facts.delivery) : [];
+  const rephrasable = fb.nextSteps.slice(fixedSteps.length);
   const securityFacts = {
     checks: facts.checks,
     // Only findings a new scan confirmed fixed (ADR-0065); attempts that did not work are said as such.
@@ -408,17 +488,19 @@ export async function buildReport(
       "Explain the security status: what protects the app, what was fixed automatically before delivery, and what alerts remain and why they matter or not.",
       securityFacts,
     ).catch(() => null),
-    writePart(
-      writer,
-      Steps,
-      '{"next_steps": string[]}',
-      "Rewrite each fact as one clear next step for the founder: same order, exactly one step per fact, keep names, " +
-        "versions and severities, add nothing else.",
-      { facts: fb.nextSteps },
-    )
-      // A different number of steps means the writer added or dropped something: use the facts as written.
-      .then((r) => (r.next_steps.length === fb.nextSteps.length ? r : null))
-      .catch(() => null),
+    rephrasable.length === 0
+      ? Promise.resolve({ next_steps: [] as string[] })
+      : writePart(
+          writer,
+          Steps,
+          '{"next_steps": string[]}',
+          "Rewrite each fact as one clear next step for the founder: same order, exactly one step per fact, keep names, " +
+            "versions and severities, add nothing else.",
+          { facts: rephrasable },
+        )
+          // A different number of steps means the writer added or dropped something: use the facts as written.
+          .then((r) => (r.next_steps.length === rephrasable.length ? r : null))
+          .catch(() => null),
   ]);
   return {
     headline: summary?.headline ?? fb.headline,
@@ -431,7 +513,7 @@ export async function buildReport(
       fixedBeforeDelivery: facts.audit?.fixed.length ?? 0,
     },
     ...(facts.audit ? { audit: facts.audit } : {}),
-    nextSteps: steps?.next_steps ?? fb.nextSteps,
+    nextSteps: [...fixedSteps, ...(steps?.next_steps ?? rephrasable)],
     businessRules: (facts.businessRules ?? []).map((r) => ({
       entity: r.entity,
       rules: r.rules,

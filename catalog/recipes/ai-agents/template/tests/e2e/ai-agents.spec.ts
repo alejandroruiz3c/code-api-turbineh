@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 // Runs against the deterministic AI simulator of the verification sandbox (services/ai-mock): every model and
 // decider call still goes through the orchestrator and the AI Safety Pack.
 test.describe.serial("AI assistants", () => {
+  // turbineh:module knowledge-base
   test("adds a document to the knowledge base", async ({ page }) => {
     await page.goto("/dashboard/knowledge");
     await page.getByLabel("Title").fill("Refund policy");
@@ -16,6 +17,9 @@ test.describe.serial("AI assistants", () => {
     await expect(page.locator('[data-document="Refund policy"]')).toBeVisible();
   });
 
+  // turbineh:end-module knowledge-base
+
+  // turbineh:module knowledge-base
   test("creates an assistant that answers from the knowledge base", async ({ page }) => {
     await page.goto("/dashboard/agents");
     await page.getByLabel("Name").fill("Support bot");
@@ -31,6 +35,21 @@ test.describe.serial("AI assistants", () => {
     await expect(answer).toContainText("How do refunds work?");
     await expect(answer).toContainText("Sources: Refund policy");
   });
+  // turbineh:end-module knowledge-base
+  // turbineh:without-module knowledge-base
+  test("creates an assistant that answers a question", async ({ page }) => {
+    await page.goto("/dashboard/agents");
+    await page.getByLabel("Name").fill("Support bot");
+    await page.getByLabel("Instructions").fill("Answer customer questions politely and briefly.");
+    await page.getByLabel("Escalate to a person").check();
+    await page.getByRole("button", { name: "Create assistant" }).click();
+    await expect(page.getByRole("heading", { name: "Support bot" })).toBeVisible();
+    await page.getByLabel("Message").fill("How do refunds work?");
+    await page.getByRole("button", { name: "Send" }).click();
+    const answer = page.locator('article[data-role="assistant"]').last();
+    await expect(answer).toContainText("How do refunds work?");
+  });
+  // turbineh:end-without-module knowledge-base
 
   test("refuses a prompt-injection attempt with a safe message", async ({ page }) => {
     await page.goto("/dashboard/agents");
@@ -44,6 +63,7 @@ test.describe.serial("AI assistants", () => {
     await expect(page.locator('article[data-role="user"]')).toHaveCount(1);
   });
 
+  // turbineh:module batch-processes
   test("classifies records in a batch process", async ({ page }) => {
     await page.goto("/dashboard/processes");
     await page.getByLabel("Name").fill("Ticket triage");
@@ -65,6 +85,7 @@ test.describe.serial("AI assistants", () => {
       await expect(row).toContainText("billing");
     }
   });
+  // turbineh:end-module batch-processes
 
   test("shows AI usage and the audit trail", async ({ page }) => {
     await page.goto("/dashboard/usage");

@@ -13,3 +13,5 @@ export * from "./ownership.js";
 export * from "./fidelity.js";
 export * from "./kinds.js";
 export * from "./aliases.js";
+export * from "./modules.js";
+export * from "./footprint.js";

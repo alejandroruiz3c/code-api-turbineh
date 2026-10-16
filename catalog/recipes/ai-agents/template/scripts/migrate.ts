@@ -17,8 +17,10 @@ const { pool } = await import("../src/db/client");
 
 const { runMigrations } = await getMigrations(auth.options);
 await runMigrations();
+// turbineh:module knowledge-base
 // Knowledge base embeddings (recipe ai-agents): pgvector, available on Neon, most managed Postgres and pnpm db:local.
 await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
+// turbineh:end-module knowledge-base
 if (existsSync("./drizzle/meta/_journal.json")) {
   await migrate(drizzle(pool), { migrationsFolder: "./drizzle" });
 }

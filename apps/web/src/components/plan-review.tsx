@@ -190,13 +190,16 @@ export function PlanReview({
         </Panel>
       ) : null}
 
-      <Panel title={`Decisions · why each component`}>
+      <Panel title={`Decisions · what each part is for`}>
         <ul className="flex flex-col gap-3">
           {plan.decisions.map((d) => (
             <li key={d.topic} className="rounded-lg border border-line px-4 py-3 text-sm">
               <p className="font-mono text-xs text-muted">{d.topic}</p>
               <p className="mt-1 text-cream">{d.choice}</p>
               <p className="mt-1 text-ice-2">{d.why}</p>
+              {d.way === "not_included" ? (
+                <p className="mt-1 text-xs text-amber">Not included in this build</p>
+              ) : null}
               {d.alternatives.length > 0 ? (
                 <p className="mt-1 text-xs text-muted">
                   Also considered: {d.alternatives.join(", ")}
@@ -206,6 +209,24 @@ export function PlanReview({
           ))}
         </ul>
       </Panel>
+
+      {plan.delivery?.notSelected.length ? (
+        <Panel title={`Left out · ${plan.delivery.notSelected.length} not asked for`}>
+          <p className="text-xs text-muted">
+            Considered, but no requirement of your request asks for them, so they are not built.
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2 text-xs" data-testid="not-selected">
+            {plan.delivery.notSelected.map((n) => (
+              <li
+                key={n.capability}
+                className="rounded-full border border-line px-3 py-1 text-ice-2"
+              >
+                {n.label}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Panel title={`${standalone ? "What you receive" : "Files"} · ${plan.files.length}`}>
@@ -229,14 +250,28 @@ export function PlanReview({
               </li>
             ))}
           </ul>
-          <ul className="mt-3 flex flex-col gap-1 text-xs">
-            {plan.config.map((c) => (
-              <li key={c.name}>
-                <span className="font-mono text-ice-2">{c.name}</span>{" "}
-                <span className="text-muted">— {c.why}</span>
-              </li>
-            ))}
-          </ul>
+          {/* ADR-0064 (F-11): the app's single env schema, required and optional apart — the same split as the result,
+              DEPLOY.md, AGENTS.md and turbineh.json. */}
+          {(
+            [
+              ["Required", plan.config.filter((c) => c.kind !== "env" || c.required === true)],
+              ["Optional", plan.config.filter((c) => c.kind === "env" && c.required !== true)],
+            ] as const
+          ).map(([title, rows]) =>
+            rows.length > 0 ? (
+              <div key={title} className="mt-3" data-testid={`settings-${title.toLowerCase()}`}>
+                <p className="text-xs font-semibold text-cream">{title}</p>
+                <ul className="mt-1 flex flex-col gap-1 text-xs">
+                  {rows.map((c) => (
+                    <li key={c.name}>
+                      <span className="font-mono text-ice-2">{c.name}</span>{" "}
+                      <span className="text-muted">— {c.why}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null,
+          )}
         </Panel>
       </div>
 

@@ -271,6 +271,32 @@ export interface RuleCandidate {
 }
 
 /**
+ * Relevance (ADR-0064): which requirement of the request justifies each capability a build would otherwise include
+ * for its own sake. A capability nothing justifies is left out of the build.
+ */
+export interface RelevanceInput {
+  summary: string;
+  /** The request's acceptance criteria (referenced by index). */
+  criteria: string[];
+  /** Other requirements the request states: its sentences and non-functional requirements (referenced by index). */
+  requirements: string[];
+  /** Capabilities to justify, each with what it means in plain words. */
+  capabilities: { id: string; label: string }[];
+}
+
+/**
+ * capability → what justifies it: a criterion or a requirement (by index), or null when nothing in the request does.
+ * A capability absent here got no answer (the caller's rules decide).
+ */
+export interface RelevanceAnswer {
+  justified: Record<
+    string,
+    { by: { kind: "criterion" | "requirement"; index: number } | null; confidence: number }
+  >;
+  meta: { model: string; latencyMs: number };
+}
+
+/**
  * A decider bound to its backends: every resource decision of the pipeline. Methods that may have no answer return
  * null; callers then decide with code. Errors propagate (callers keep their own fallbacks).
  */
@@ -291,6 +317,8 @@ export interface Decider {
   fixableFindings(findings: FindingInput[]): Promise<boolean[] | null>;
   matchCriteria(input: CriteriaInput): Promise<CriteriaMatches | null>;
   businessRules(input: RulesInput): Promise<RuleCandidate[]>;
+  /** Optional (ADR-0064): an engine without it leaves relevance to the public rules (`openRelevance`). */
+  capabilityRelevance?(input: RelevanceInput): Promise<RelevanceAnswer | null>;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

@@ -336,16 +336,20 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
   }
 
   // Public pages: one page per record, portfolio and listing pages.
+  // ADR-0064 (audit N-02): the public booking page of an appointment business is the booking domain's own page, never
+  // a collection of public pages; outside a corporate site, an entity gets public pages only when a sentence of the
+  // request asks for pages of that entity.
+  const corporate = input.recipe === "corporate-site";
   const pageSentences = said(
     /\b(its|their) own page\b|\bpage (?:per|for each)\b|\bportfolio\b|\bcareers?\b|\bpublic (page|profile)s?\b/i,
-  );
-  if (pageSentences.length > 0 || input.recipe === "corporate-site") {
+  ).filter((s) => corporate || !/\b(book\w*|appointments?|reservations?|slots?)\b/i.test(s));
+  if (pageSentences.length > 0 || corporate) {
     const pages = business
       .filter((b) => {
         const w = nameWords(b);
         return (
           pageSentences.some((s) => new RegExp(nounPattern(w.slice(-1)), "i").test(s)) ||
-          /position|job|project|service|team/i.test(b)
+          (corporate && /position|job|project|service|team/i.test(b))
         );
       })
       .filter((b) => !/contact|request|message|submission|lead/i.test(b))

@@ -1,3 +1,5 @@
+import type { DeliveryManifest, DeliveryWay, Justification } from "./delivery.js";
+
 /**
  * Product engine contract (PLAN §16.4): the same states, results and errors for the web UI, the HTTP API and the
  * `turbineh` CLI (human output and `--json`). Changing a shape here is a contract change for all three.
@@ -35,6 +37,11 @@ export interface Requirement {
   name: string; // e.g. "STRIPE_SECRET_KEY"
   why: string;
   satisfied: boolean;
+  /**
+   * Settings (ADR-0064): true when the app cannot do what was asked without it, false when it is optional — from the
+   * app's single env schema (src/env.ts + declared component settings), the same split in every surface.
+   */
+  required?: boolean;
 }
 
 export interface CapabilitySummary {
@@ -109,6 +116,10 @@ export interface Decision {
   why: string; // reason in plain words
   alternatives: string[];
   confidence: number; // 0..1
+  /** How the capability is delivered (ADR-0064): a verified component, written by TurbineH, or not included. */
+  way?: DeliveryWay;
+  /** What in the request justifies it (ADR-0064): criteria, stated requirements, transversal requirements. */
+  justifiedBy?: Justification[];
 }
 
 export interface FileChange {
@@ -177,6 +188,11 @@ export interface Plan {
    * ADR-0062) that needs the person's approval and never builds the use case.
    */
   scope?: PlanScope;
+  /**
+   * The delivery manifest (ADR-0064): the single source of truth this plan was rendered from — every decision with
+   * what justifies it, the criteria, the settings (required / optional) and what is not included.
+   */
+  delivery?: DeliveryManifest;
 }
 
 /** One requirement of the request and whether the library covers it (ADR-0052). */

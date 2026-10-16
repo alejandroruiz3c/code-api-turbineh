@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { proofVerdict } from "@turbineh/shared";
+import { appSettings, notIncluded, proofVerdict, type DeliveryManifest } from "@turbineh/shared";
 import { aliasesFor } from "./aliases.js";
 import { splitTestRef, testBlocks, writeAcceptance, type CriterionStatus } from "./acceptance.js";
 
@@ -52,7 +52,7 @@ export interface GuideFailure {
 }
 
 export interface GuideLeft {
-  kind: "criterion" | "gap" | "gate" | "setting";
+  kind: "criterion" | "gap" | "gate" | "setting" | "promise";
   what: string;
   where: string;
   how: string;
@@ -75,7 +75,14 @@ export interface PackageGuide {
   /** What a coding agent still has to do. Empty = nothing: the package meets the spec and passed the gate. */
   left: GuideLeft[];
   criteria: GuideCriterion[];
-  gaps: { capability: string; reason: string }[];
+  /** Capabilities the package does not include (from the delivery manifest), each with why. */
+  gaps: { capability: string; label?: string; reason: string }[];
+  /**
+   * Promises of the approved plan the package does not keep (ADR-0064). Non-empty ⇒ the package is not verified.
+   */
+  brokenPromises?: { capability: string; label: string; promised: string; reason: string }[];
+  /** The delivery manifest (ADR-0064): every capability, how it is delivered and what justifies it. */
+  delivery?: DeliveryManifest;
   gate: {
     ok: boolean;
     verifiedAt: string;
@@ -191,47 +198,18 @@ export function fileMap(outDir: string): PackageGuide["files"] {
     .map((area) => ({ area, files: groups.get(area) ?? [] }));
 }
 
-/** Environment variables from src/env.ts (required unless optional/defaulted) plus .env.example comments. */
+/**
+ * The app's settings from its single env schema (ADR-0064, `appSettings`): src/env.ts (Zod) plus the settings its
+ * .env.example declares beyond it — the split every surface shows (plan, result, DEPLOY.md, AGENTS.md, turbineh.json).
+ */
 export function envOf(outDir: string): PackageGuide["env"] {
-  const example = existsSync(join(outDir, ".env.example"))
-    ? readFileSync(join(outDir, ".env.example"), "utf8")
-    : "";
-  const comments = new Map<string, string>();
-  let last = "";
-  const exampleVars: string[] = [];
-  for (const line of example.split("\n")) {
-    if (line.startsWith("#")) last = line.replace(/^#\s*/, "");
-    const m = /^([A-Z][A-Z0-9_]*)=/.exec(line);
-    if (m?.[1]) {
-      comments.set(m[1], last);
-      exampleVars.push(m[1]);
-      last = "";
-    }
-  }
-  const required: { name: string; about: string }[] = [];
-  const optional: { name: string; about: string }[] = [];
-  const seen = new Set<string>();
-  const envTs = existsSync(join(outDir, "src/env.ts"))
-    ? readFileSync(join(outDir, "src/env.ts"), "utf8")
-    : "";
-  const keys = [...envTs.matchAll(/^ {2}([A-Z][A-Z0-9_]*):/gm)];
-  keys.forEach((k, i) => {
-    const name = k[1] as string;
-    const chunk = envTs.slice(k.index, keys[i + 1]?.index ?? envTs.length);
-    const isOptional = /\.optional\(\)|\.default\(/.test(chunk) || ["NODE_ENV"].includes(name);
-    const about = comments.get(name) ?? "";
-    (isOptional ? optional : required).push({ name, about });
-    seen.add(name);
-  });
-  // Variables declared only by components (.env.example): optional unless the comment says required.
-  for (const name of exampleVars.filter((v) => !seen.has(v))) {
-    const about = comments.get(name) ?? "";
-    (/\brequired\b/i.test(about) && !/optional/i.test(about) ? required : optional).push({
-      name,
-      about,
-    });
-  }
-  return { required, optional };
+  const read = (rel: string) =>
+    existsSync(join(outDir, rel)) ? readFileSync(join(outDir, rel), "utf8") : "";
+  const env = appSettings({ envTs: read("src/env.ts"), envExample: read(".env.example") });
+  return {
+    required: env.required.map((e) => ({ name: e.name, about: e.about })),
+    optional: env.optional.map((e) => ({ name: e.name, about: e.about })),
+  };
 }
 
 /** Theme tokens of src/app/globals.css (`@theme`). */
@@ -446,11 +424,20 @@ export function leftOf(g: Omit<PackageGuide, "left">): GuideLeft[] {
       how: `Implement it in the files listed and prove it with an E2E test in ${spec} whose title states the criterion; nothing proves it yet.`,
     });
   }
+  for (const b of g.brokenPromises ?? []) {
+    left.push({
+      kind: "promise",
+      what: `Not delivered although approved: ${b.label} (${b.capability}) — the plan promised ${b.promised}`,
+      where: "—",
+      how: `${b.reason}. Implement it (then prove it with a test) or ask for it in a new build; until then the package is not verified.`,
+    });
+  }
   for (const t of g.todo ?? []) left.push({ kind: "gap", ...t });
-  for (const gap of g.gaps) {
+  const broken = new Set((g.brokenPromises ?? []).map((b) => b.capability));
+  for (const gap of g.gaps.filter((x) => !broken.has(x.capability))) {
     left.push({
       kind: "gap",
-      what: `Capability not included: ${gap.capability}`,
+      what: `Not included: ${gap.label ?? gap.capability} (${gap.capability})`,
       where: "—",
       how: gap.reason,
     });
@@ -646,7 +633,11 @@ export function initialGuide(input: {
     gate: null,
     files,
     extend: [
-      ...(input.recipe.guide?.extend ?? []),
+      // Tree-shaking (ADR-0064): an extension point whose files were all removed with their module is not offered.
+      ...(input.recipe.guide?.extend ?? []).filter((e) => {
+        const files = [...e.where.matchAll(/\bsrc\/[\w./[\]-]+\.tsx?\b/g)].map((m) => m[0]);
+        return files.length === 0 || files.some((f) => existsSync(join(input.outDir, f)));
+      }),
       ...(input.components ?? []).flatMap((c) =>
         c.extend.map((e) => ({ ...e, what: `${e.what} (${c.id})` })),
       ),
@@ -675,6 +666,11 @@ export function verifiedGuide(
     failures?: GuideFailure[];
     /** Backup Coder files kept in the package: labelled not catalogue-verified (ADR-0055). */
     backup?: { capability: string; file: string }[];
+    /**
+     * The reconciled delivery manifest (ADR-0064): what is not included and the broken promises come from it, and a
+     * broken promise makes the package not verified.
+     */
+    delivery?: DeliveryManifest;
   },
 ): PackageGuide | null {
   const path = join(outDir, GUIDE_FILE);
@@ -734,23 +730,32 @@ export function verifiedGuide(
       tests: c.test ? [`${c.test.file} › ${c.test.title}`] : [],
     })),
   );
-  const gaps = input.gaps
-    ? prev.gaps
-        .filter((g) => input.gaps?.includes(g.capability))
-        .concat(
-          input.gaps
-            .filter((c) => !prev.gaps.some((g) => g.capability === c))
-            .map((capability) => ({
-              capability,
-              reason:
-                "Removed before delivery because it could not be made green; add it yourself or ask for it in a new build.",
-            })),
-        )
-    : prev.gaps;
+  const gaps = input.delivery
+    ? notIncluded(input.delivery).map((e) => ({
+        capability: e.capability,
+        label: e.label,
+        reason: e.reason ?? "Not included in this build.",
+      }))
+    : input.gaps
+      ? prev.gaps
+          .filter((g) => input.gaps?.includes(g.capability))
+          .concat(
+            input.gaps
+              .filter((c) => !prev.gaps.some((g) => g.capability === c))
+              .map((capability) => ({
+                capability,
+                reason:
+                  "Removed before delivery because it could not be made green; add it yourself or ask for it in a new build.",
+              })),
+          )
+      : prev.gaps;
+  const broken = input.delivery?.brokenPromises ?? [];
+  const ok = input.gate.ok && broken.length === 0;
   return writeAgentGuide(outDir, {
     ...prev,
-    status: input.gate.ok ? "verified" : "failed",
-    verified: input.gate.ok,
+    status: ok ? "verified" : "failed",
+    verified: ok,
+    ...(input.delivery ? { delivery: input.delivery, brokenPromises: broken } : {}),
     checks: `${input.gate.steps.filter((x) => x.ok).length}/${input.gate.steps.length}`,
     failures: input.gate.ok ? [] : (input.failures ?? []),
     criteria,

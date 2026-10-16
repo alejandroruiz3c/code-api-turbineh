@@ -13,7 +13,9 @@ import { sendEmail } from "@/lib/email";
 import { toUserMessage, UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
+// turbineh:module knowledge-base
 import { searchKnowledge } from "@/server/knowledge";
+// turbineh:end-module knowledge-base
 import { isTool, TOOL_REGISTRY } from "@/server/tools";
 
 const agentSchema = z.object({
@@ -110,7 +112,12 @@ export async function sendMessage(_prev: ChatState, formData: FormData): Promise
           .orderBy(desc(messages.createdAt))
           .limit(10)
       : [];
+    // turbineh:module knowledge-base
     const docs = agent.useKnowledge ? await searchKnowledge(ctx, text) : [];
+    // turbineh:end-module knowledge-base
+    // turbineh:without-module knowledge-base
+    const docs: { title: string; content: string }[] = [];
+    // turbineh:end-without-module knowledge-base
     const result = await orchestrate({
       task: "Reply to the user's message as this assistant. Use the reference documents when they are relevant.",
       input: text,

@@ -50,8 +50,14 @@ import {
 } from "./fidelity.js";
 import { generateByKind, type KindPlan } from "./kinds.js";
 import { pascal } from "./naming.js";
-import { initialGuide, writeAgentGuide } from "./agent-guide.js";
+import { envOf, initialGuide, writeAgentGuide } from "./agent-guide.js";
 import { ownersOf, recordOwners } from "./ownership.js";
+import {
+  componentModules,
+  treeShake,
+  type TemplateModule,
+  type TreeShakeResult,
+} from "./modules.js";
 
 export interface SelectedComponent {
   capability: string;
@@ -87,12 +93,19 @@ export interface AssembleInput {
    * pattern (selected or missing). Absent = the generic CRUD generation of before.
    */
   fidelity?: FidelityAssembly;
+  /**
+   * Recipe tree-shaking (ADR-0064): capabilities the request justifies. A template or component module whose
+   * capability is not in the set is removed. Absent = every module ships (tools that assemble without a request).
+   */
+  modules?: { justified: ReadonlySet<string> };
 }
 
 export interface AssembleResult {
   files: { path: string; generated: boolean; lines: number }[];
   generatedLines: number;
   reusedLines: number;
+  /** Modules removed because nothing in the request asked for them (ADR-0064). */
+  removedModules: TreeShakeResult["removed"];
 }
 
 const TEXT_EXT = new Set([
@@ -215,6 +228,24 @@ export function assemble(input: AssembleInput): AssembleResult {
     owners[d.paramsFile] = `component:${d.component}`;
   }
   if (aiApp) writeToolkits(outDir);
+  // Tree-shaking (ADR-0064): optional modules of the recipe chain and of the selected native components ship only
+  // when the request justifies them.
+  const modules: TemplateModule[] = [
+    ...chain.flatMap((m) => (m.modules ?? []).map((x) => ({ ...x, owner: `recipe:${m.id}` }))),
+    ...[...new Set(input.selected.map((s) => s.component.id))].flatMap((id) =>
+      componentModules(join(componentsDir, id), id),
+    ),
+  ];
+  const shaken = treeShake(
+    outDir,
+    modules,
+    (m) => !input.modules || input.modules.justified.has(m.capability),
+  );
+  for (const [f] of Object.entries(owners))
+    if (!existsSync(join(outDir, f))) Reflect.deleteProperty(owners, f);
+  const dropNav = new Set(shaken.nav);
+  recipe.nav = recipe.nav.filter((n) => !dropNav.has(n.href));
+  componentNav.splice(0, componentNav.length, ...componentNav.filter((n) => !dropNav.has(n.href)));
   // Component guides (ADR-0033) → docs/components/<id>[.<part>].md: what each component does, how to extend it.
   for (const id of new Set(input.selected.map((s) => s.component.id))) {
     for (const g of readGuides(join(componentsDir, id))) {
@@ -288,9 +319,7 @@ export function assemble(input: AssembleInput): AssembleResult {
             (e) =>
               `${entityNames(e.name).labelPlural}: create, list and delete, scoped to your workspace`,
           ),
-      existsSync(join(outDir, ".env.example"))
-        ? readFileSync(join(outDir, ".env.example"), "utf8")
-        : "",
+      envOf(outDir),
     ),
   ];
   for (const f of generated) {
@@ -398,12 +427,17 @@ export function assemble(input: AssembleInput): AssembleResult {
     files,
     generatedLines: code.filter((f) => f.generated).reduce((a, f) => a + f.lines, 0),
     reusedLines: code.filter((f) => !f.generated).reduce((a, f) => a + f.lines, 0),
+    removedModules: shaken.removed,
   };
 }
 
 const MD = "<!-- turbineh:generated -->";
 
-function docs(input: AssembleInput, entityLabels: string[], envExample: string): GeneratedFile[] {
+function docs(
+  input: AssembleInput,
+  entityLabels: string[],
+  env: ReturnType<typeof envOf>,
+): GeneratedFile[] {
   const { spec, selected, gaps, buildId } = input;
   const uniq = [...new Map(selected.map((s) => [s.component.id, s])).values()];
   const readme = `${MD}
@@ -509,7 +543,7 @@ Components in use: ${uniq.map((s) => `\`${s.component.id}\``).join(", ")}.
     { path: "README.md", content: readme },
     { path: "COMPONENTS.md", content: components },
     { path: "ARCHITECTURE.md", content: architecture },
-    { path: "DEPLOY.md", content: `${MD}\n${deployGuide(spec.app_name, envExample)}` },
+    { path: "DEPLOY.md", content: `${MD}\n${deployGuide(spec.app_name, env)}` },
   ];
 }
 
@@ -620,6 +654,15 @@ export function writeToolkits(outDir: string): string[] {
 export function writeReports(outDir: string, security: string, report: string): void {
   writeFileSync(join(outDir, "SECURITY.md"), `${MD}\n${security}`);
   writeFileSync(join(outDir, "TURBINEH_REPORT.md"), `${MD}\n${report}`);
+}
+
+/** DEPLOY.md from the delivered app's env schema (ADR-0064), after verification and every correction. */
+export function writeDeployGuide(
+  outDir: string,
+  appName: string,
+  env: Parameters<typeof deployGuide>[1],
+): void {
+  writeFileSync(join(outDir, "DEPLOY.md"), `${MD}\n${deployGuide(appName, env)}`);
 }
 
 /** START_HERE.html after verification: the client's entry point, with the real results. */

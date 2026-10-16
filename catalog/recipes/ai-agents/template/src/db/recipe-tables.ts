@@ -1,15 +1,19 @@
 import {
   boolean,
   index,
-  integer,
   jsonb,
   pgTable,
   text,
   timestamp,
   uuid,
   varchar,
-  vector,
 } from "drizzle-orm/pg-core";
+// turbineh:module knowledge-base
+import { integer as kbInteger, vector } from "drizzle-orm/pg-core";
+// turbineh:end-module knowledge-base
+// turbineh:module batch-processes
+import { integer } from "drizzle-orm/pg-core";
+// turbineh:end-module batch-processes
 
 /** Assistants of a workspace (recipe ai-agents): instructions and the tools an admin enabled for each. */
 export const agents = pgTable(
@@ -75,6 +79,7 @@ export const pendingActions = pgTable("pending_actions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// turbineh:module knowledge-base
 /** Knowledge base documents and their chunks with embeddings (pgvector, cosine). */
 export const documents = pgTable(
   "documents",
@@ -82,7 +87,7 @@ export const documents = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: varchar("organization_id", { length: 64 }).notNull(),
     title: varchar("title", { length: 160 }).notNull(),
-    chars: integer("chars").notNull(),
+    chars: kbInteger("chars").notNull(),
     createdBy: varchar("created_by", { length: 64 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -97,7 +102,7 @@ export const chunks = pgTable(
     documentId: uuid("document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    position: integer("position").notNull(),
+    position: kbInteger("position").notNull(),
     content: text("content").notNull(),
     embedding: vector("embedding", { dimensions: 1024 }).notNull(),
   },
@@ -107,6 +112,9 @@ export const chunks = pgTable(
   ],
 );
 
+// turbineh:end-module knowledge-base
+
+// turbineh:module batch-processes
 /** Batch AI processing over records: classify, extract or summarise each item. */
 export const processes = pgTable(
   "processes",
@@ -140,3 +148,4 @@ export const processItems = pgTable(
   },
   (t) => [index("process_items_queue_idx").on(t.status, t.updatedAt)],
 );
+// turbineh:end-module batch-processes

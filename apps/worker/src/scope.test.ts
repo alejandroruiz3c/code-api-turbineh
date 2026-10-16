@@ -5,6 +5,7 @@ import { openDecider, type Decider } from "@turbineh/decider";
 import { detectStack, isGapNotice } from "@turbineh/engine";
 import { describe, expect, it } from "vitest";
 import { componentPlan, flowPlan } from "./product.js";
+import { emptyDelivery } from "./manifest.js";
 import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
 
 const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
@@ -157,10 +158,8 @@ describe("scope gate in the worker (ADR-0052), against the real catalogue", () =
         recipeId: "bookings",
         selected: {},
         decisions: [],
-        gaps: [],
         templateDeps: {},
-        templateEnv: "",
-        componentsDir,
+        delivery: emptyDelivery("bookings"),
         entities: [],
         labels: (c) => c,
       }),

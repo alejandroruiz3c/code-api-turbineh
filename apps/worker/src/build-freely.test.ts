@@ -1,10 +1,7 @@
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { detectStack } from "@turbineh/engine";
 import { describe, expect, it } from "vitest";
 import { flowPlan } from "./product.js";
-
-const componentsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../catalog/components");
+import { emptyDelivery } from "./manifest.js";
 
 /** ADR-0050: a need no template matches is built on the closest one, and the plan says what is left and where. */
 describe("free-form need → buildable plan", () => {
@@ -19,10 +16,8 @@ describe("free-form need → buildable plan", () => {
       recipeId: "saas-crud",
       selected: {},
       decisions: [],
-      gaps: [],
       templateDeps: { next: "16.3.8" },
-      templateEnv: "DATABASE_URL=\n",
-      componentsDir,
+      delivery: emptyDelivery("saas-crud"),
       entities: ["Rehearsal"],
       labels: (c) => c,
       ...(scope ? { scope } : {}),

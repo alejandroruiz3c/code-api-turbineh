@@ -113,6 +113,34 @@ export function deliveryOf(v: VerifyResult, attributed: FailureAttribution[]): D
   };
 }
 
+/**
+ * ADR-0064: promises of the approved plan the package does not keep. The package is still delivered, but never
+ * "verified": each broken promise is a failure with what was promised, why it is missing and what to do.
+ */
+export function withBrokenPromises(
+  d: Delivery,
+  broken: readonly { capability: string; label: string; promised: string; reason: string }[],
+): Delivery {
+  if (broken.length === 0 || d.kind === "report_only") return d;
+  const failures: GuideFailure[] = broken.map((b) => ({
+    step: "promise",
+    test: null,
+    where: b.capability,
+    owner: null,
+    message: `The plan you approved promised ${b.label} (${b.promised}); it is not in the package: ${b.reason}.`,
+    rerun: "turbineh left",
+    fix: `Implement ${b.label} (or ask for it in a new build) and prove it with a test; until then the package is not verified.`,
+  }));
+  const n = broken.length;
+  return {
+    ...d,
+    kind: "unverified",
+    verified: false,
+    label: `Delivered, not verified: ${n} approved decision${n === 1 ? "" : "s"} not kept · ${d.checksPassed}/${d.checksTotal} checks passed`,
+    failures: [...failures, ...d.failures],
+  };
+}
+
 /** One-line reason stored as the build's error (API `error`, CLI and UI): label, first failure and its fix. */
 export function deliveryReason(d: Delivery): string {
   if (d.kind === "verified") return d.label;

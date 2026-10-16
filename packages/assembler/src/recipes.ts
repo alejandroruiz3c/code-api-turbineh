@@ -21,10 +21,37 @@ export interface RecipeMeta {
    * AI Safety Pack (ADR-0028). Selected by code in every build of the recipe, never left to the decider.
    */
   requiredComponents?: Record<string, string>;
+  /**
+   * Transversal requirements (ADR-0064): capabilities every app of the recipe needs whatever the request says, by
+   * requirement (auth, security, persistence, interface). They justify those capabilities in the delivery manifest.
+   */
+  transversal?: Partial<Record<"auth" | "security" | "persistence" | "interface", string[]>>;
+  /**
+   * Optional modules of the template (ADR-0064, tree-shaking): parts that ship only when a requirement of the request
+   * asks for them. Each lists its files (removed otherwise) and the blocks of shared files marked
+   * `turbineh:module <id>` / `turbineh:end-module <id>`.
+   */
+  modules?: RecipeModule[];
   /** Extra dashboard navigation entries. */
   nav: { label: string; href: string }[];
   /** Agent guide inputs (AGENTS.md / turbineh.json): recipe-specific extension points. */
   guide?: RecipeGuide;
+}
+
+export interface RecipeModule {
+  id: string;
+  /** What it is, in plain words (shown when it is removed). */
+  about: string;
+  /** Capability it delivers: the module ships only when that capability is justified by the request. */
+  capability: string;
+  /** Files of the module (relative to the app), removed with it. Directories end with "/". */
+  files: string[];
+  /** Settings only this module reads, dropped from .env.example with it. */
+  env?: string[];
+  /** Navigation entries (href) only this module adds. */
+  nav?: string[];
+  /** Provided capabilities of the template that only this module implements (not claimed when it is removed). */
+  provides?: string[];
 }
 
 export function readRecipe(recipesDir: string, id: string): RecipeMeta {
@@ -71,6 +98,13 @@ export function mergedRecipe(chain: RecipeMeta[]): Omit<RecipeMeta, "extends"> {
       {},
       ...chain.map((m) => m.requiredComponents ?? {}),
     ) as Record<string, string>,
+    transversal: Object.fromEntries(
+      (["auth", "security", "persistence", "interface"] as const).map((k) => [
+        k,
+        [...new Set(chain.flatMap((m) => m.transversal?.[k] ?? []))],
+      ]),
+    ),
+    modules: chain.flatMap((m) => m.modules ?? []),
     nav: chain.flatMap((m) => m.nav),
     // Most specific recipe first.
     guide: { extend: [...chain].reverse().flatMap((m) => m.guide?.extend ?? []) },

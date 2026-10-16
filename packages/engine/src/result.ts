@@ -1,3 +1,4 @@
+import { envRequirements, notIncluded, type DeliveryManifest } from "@turbineh/shared";
 import type {
   CheckResult,
   FlowOutcome,
@@ -233,10 +234,14 @@ function stateOutcome(row: FlowRow): FlowOutcome {
   const pv = row.metrics.packageVerification as
     | { ran?: boolean; ok?: boolean; summary?: string; failures?: { component: string }[] }
     | undefined;
-  const needs = (plan?.config ?? [])
-    .filter((r) => !r.satisfied)
+  const needs = flowNeeds(row)
+    .filter((r) => r.required !== false)
     .map((r) => `Set ${r.name}: ${r.why}`);
-  const planLeft = (plan?.left ?? []).map((l) => (l.where ? `${l.part} — ${l.where}` : l.part));
+  // ADR-0064: once generated, what is left comes from the delivered package (its acceptance result and manifest),
+  // never from the plan's prediction — a criterion a shipped test proves is not "left".
+  const delivered = deliveredLeft(row);
+  const planLeft =
+    delivered ?? (plan?.left ?? []).map((l) => (l.where ? `${l.part} — ${l.where}` : l.part));
   const deps = (plan?.dependencies ?? []).map((d) => `${d.name}@${d.version}`);
   const repo = plan?.repository?.repo;
   const integrationActions: FlowOutcomeAction[] = [
@@ -379,6 +384,50 @@ function stateOutcome(row: FlowRow): FlowOutcome {
   };
 }
 
+/**
+ * Settings to provide (ADR-0064): from the delivered app's env schema (the reconciled manifest) once generated, else
+ * the plan's — required ones first, each marked required or optional.
+ */
+export function flowNeeds(row: Pick<FlowRow, "metrics">): Requirement[] {
+  const manifest = row.metrics.manifest as DeliveryManifest | undefined;
+  const plan = row.metrics.plan as Plan | undefined;
+  if (manifest) {
+    const services = (plan?.config ?? []).filter((r) => r.kind !== "env" && !r.satisfied);
+    return [...services, ...envRequirements(manifest.env)];
+  }
+  return (plan?.config ?? []).filter((r) => !r.satisfied);
+}
+
+/**
+ * What is left after generation, from the delivered package (ADR-0064): broken promises, criteria no passing test
+ * proves (metrics.acceptance.open — the same list as turbineh.json and ACCEPTANCE.md) and capabilities not included.
+ * Null before generation or for flows recorded before ADR-0064 without an acceptance result.
+ */
+export function deliveredLeft(row: Pick<FlowRow, "metrics">): string[] | null {
+  const m = row.metrics;
+  const acceptance = m.acceptance as { open?: string[] } | undefined;
+  const manifest = m.manifest as DeliveryManifest | undefined;
+  if (!acceptance && !manifest) return null;
+  const broken = manifest?.brokenPromises ?? [];
+  const brokenCaps = new Set(broken.map((b) => b.capability));
+  return [
+    ...broken.map(
+      (b) =>
+        `Not delivered although the plan you approved promised it: ${b.label} (${b.capability}) — ${b.reason}`,
+    ),
+    ...(acceptance?.open ?? []).map(
+      (c) =>
+        `${c} — no passing test proves it yet: AGENTS.md › What is left says where to implement and prove it`,
+    ),
+    ...(manifest ? notIncluded(manifest) : [])
+      .filter((e) => !brokenCaps.has(e.capability))
+      .map(
+        (e) =>
+          `Not included: ${e.label} (${e.capability}) — ${e.reason ?? "not part of this build"}`,
+      ),
+  ];
+}
+
 export function agentInstructions(slug: string): string {
   return `Integrate this package into the project following turbineh/${slug}/agent/INTEGRATE.md. Check compatibility, keep the existing conventions and run the included verifications. Explain any adaptation that is still pending.`;
 }
@@ -407,7 +456,7 @@ export function flowResult(
   const state = flowState(row);
   const integrations = (row.metrics.integrations as IntegrationRecord[] | undefined) ?? [];
   const lastIntegration = integrations.at(-1);
-  const needs: Requirement[] = (plan?.config ?? []).filter((r) => !r.satisfied);
+  const needs: Requirement[] = flowNeeds(row);
   const errors: ProductError[] = [];
   if (deliveredUnverified(row)) {
     errors.push(
