@@ -1,0 +1,774 @@
+{
+  "schema": "turbineh.validation-statements/v1",
+  "about": "Section 9 go-validation sample (audit report v2): 30 statements never used elsewhere in the repository. Band A matches an existing use case, band B is a use case plus 1-2 new capabilities, band C has a core that depends on integrations the library does not cover. `requirements` are what a reviewer expects (canonical, written before any run); `match` are case-insensitive regular expressions that must all match one compiled criterion for the automatic mapping, which a person confirms in review.json. `gaps` are the capabilities that must be warned about before generating (B: the new ones, C: the core); `knownToGate` says whether the platform is named in the scope gate's code list on the day the statements were written (2026-10-16), to separate keyword hits from real detection.",
+  "statements": [
+    {
+      "id": "A01",
+      "band": "A",
+      "recipe": "bookings",
+      "expected": "build",
+      "prompt": "Online booking for Paws & Suds, a dog grooming salon in Valencia with two groomers. Customers pick a service (bath 40 min, full groom 90 min, nail trim 15 min), a groomer or \"any groomer\", and a free time, without creating an account. They get a confirmation email with a link to cancel up to 12 hours before. Groomers see their calendar by day and by week, can block days off, and can move or cancel appointments; the customer gets an email when that happens. Never allow two appointments for the same groomer at the same time.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Customers book a service with a chosen groomer or any groomer",
+          "match": ["book|appointment", "groomer|staff|team member|any"]
+        },
+        {
+          "id": "R2",
+          "text": "Only real free times are offered; no double booking for the same groomer",
+          "match": [
+            "double|overlap|same time|already (booked|taken|occupied)|occupied|free (time|slot)|availab"
+          ]
+        },
+        {
+          "id": "R3",
+          "text": "Booking needs no customer account",
+          "match": ["account|sign.?up|guest|without (log|sign)"]
+        },
+        {
+          "id": "R4",
+          "text": "Confirmation email with a cancel link",
+          "match": ["confirm", "email"]
+        },
+        {
+          "id": "R5",
+          "text": "Cancellation allowed only up to 12 hours before",
+          "match": ["cancel", "12|hours? before|notice"]
+        },
+        {
+          "id": "R6",
+          "text": "Staff calendar per groomer by day and week",
+          "match": ["calendar|schedule|agenda", "day|week"]
+        },
+        {
+          "id": "R7",
+          "text": "Groomers block days off",
+          "match": ["days? off|time off|block|unavailab|holiday|absence"]
+        },
+        {
+          "id": "R8",
+          "text": "Staff move or cancel; the customer is emailed",
+          "match": ["move|reschedul|cancel", "email|notif"]
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A02",
+      "band": "A",
+      "recipe": "bookings",
+      "expected": "build",
+      "prompt": "Booking website for Ink Harbor tattoo studio: clients choose a consultation (30 min) or a session (2 h), pick an artist and a free slot, and get an email confirmation. Artists see their week and can take days off.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Clients book a consultation or a session with an artist",
+          "match": ["book|appointment", "artist|staff|team member|service"]
+        },
+        {
+          "id": "R2",
+          "text": "Only free slots are offered (no double booking)",
+          "match": [
+            "double|overlap|free (time|slot)|availab|already (booked|taken|occupied)|occupied"
+          ]
+        },
+        { "id": "R3", "text": "Email confirmation", "match": ["confirm", "email"] },
+        {
+          "id": "R4",
+          "text": "Artists see their week",
+          "match": ["calendar|schedule|agenda|week"]
+        },
+        {
+          "id": "R5",
+          "text": "Artists take days off",
+          "match": ["days? off|time off|block|unavailab|holiday|absence"]
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A03",
+      "band": "A",
+      "recipe": "storefront",
+      "expected": "build",
+      "prompt": "Online shop for Hoja Verde, a loose-leaf tea brand. Each tea comes in 50 g, 100 g and 250 g, each size with its own price, SKU and stock. Prices in EUR and GBP (fixed per currency, no conversion). Shipping to Spain and the United Kingdom with a flat rate per country. A WELCOME10 code gives 10% off the first order above 25 EUR. Card payment with Stripe Checkout, stock goes down when an order is paid, and an admin panel to manage teas, sizes, codes and orders.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Product catalogue with images and prices",
+          "match": ["catalog|product", "price|image|photo"]
+        },
+        {
+          "id": "R2",
+          "text": "Variants by size with own price, SKU and stock",
+          "match": ["variant|size", "sku|stock|price"]
+        },
+        { "id": "R3", "text": "Fixed prices in EUR and GBP", "match": ["currenc|eur|gbp|£"] },
+        {
+          "id": "R4",
+          "text": "Shipping rate per country (Spain, UK)",
+          "match": ["shipping|delivery", "country|spain|kingdom|uk"]
+        },
+        {
+          "id": "R5",
+          "text": "Percent discount code with minimum order",
+          "match": ["discount|code|coupon"]
+        },
+        { "id": "R6", "text": "Stripe Checkout card payment", "match": ["stripe|checkout|pay"] },
+        {
+          "id": "R7",
+          "text": "Stock decreases when an order is paid",
+          "match": ["stock|inventory", "order|paid|decrease|reduc"]
+        },
+        {
+          "id": "R8",
+          "text": "Admin manages products, codes and orders",
+          "match": ["admin", "order|product|manage"]
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A04",
+      "band": "A",
+      "recipe": "storefront",
+      "expected": "build",
+      "prompt": "Small online shop for my hand-poured soy candles: about 20 products with photos, a cart, card payment and an admin page where I see orders and update stock.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Catalogue with photos and prices",
+          "match": ["catalog|product", "photo|image|price"]
+        },
+        { "id": "R2", "text": "Cart", "match": ["cart|basket"] },
+        { "id": "R3", "text": "Card payment", "match": ["pay|checkout|stripe|card"] },
+        { "id": "R4", "text": "Admin sees orders", "match": ["admin|owner", "order"] },
+        { "id": "R5", "text": "Admin updates stock", "match": ["stock|inventory"] }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A05",
+      "band": "A",
+      "recipe": "client-portal",
+      "expected": "build",
+      "prompt": "Client portal for Lingua Bridge, a translation agency. Clients sign in and submit a translation request with a title, language pair, deadline and description, attaching the documents to translate (PDF or DOCX, up to 20 MB each). They follow the status of each request (received, in progress, delivered). Project managers see all requests, change the status and leave a comment for the client. A client never sees another client's requests.",
+      "requirements": [
+        { "id": "R1", "text": "Clients sign in", "match": ["sign.?in|log.?in|account|auth"] },
+        {
+          "id": "R2",
+          "text": "Submit a request with title, language pair, deadline and description",
+          "match": ["request|submit", "title|deadline|language|description"]
+        },
+        {
+          "id": "R3",
+          "text": "Attach PDF/DOCX documents up to 20 MB",
+          "match": ["attach|upload|file|document"]
+        },
+        { "id": "R4", "text": "Clients follow the status of each request", "match": ["status"] },
+        {
+          "id": "R5",
+          "text": "Staff change the status",
+          "match": ["staff|manager|admin|agency", "status|update|review"]
+        },
+        {
+          "id": "R6",
+          "text": "Staff comment for the client",
+          "match": ["comment|note|message|reply"]
+        },
+        {
+          "id": "R7",
+          "text": "Clients only see their own requests",
+          "match": ["own|another|other client|isolat|only (see|their)"]
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A06",
+      "band": "A",
+      "recipe": "projects",
+      "expected": "build",
+      "prompt": "Planning board for Olive & Vow, a wedding planning agency. Each wedding is a project with a kanban (To do, Booked, Confirmed, Done). Tasks are assigned to a planner, with a due date and a priority, and planners discuss them in comments. Every planner has a \"My tasks\" page with what is due first.",
+      "requirements": [
+        { "id": "R1", "text": "Projects (one per wedding)", "match": ["project"] },
+        {
+          "id": "R2",
+          "text": "Kanban board with columns; move tasks between them",
+          "match": ["kanban|board|column|move|drag"]
+        },
+        { "id": "R3", "text": "Tasks assigned to a planner", "match": ["assign"] },
+        { "id": "R4", "text": "Due date and priority", "match": ["due|priority|deadline"] },
+        { "id": "R5", "text": "Comments on tasks", "match": ["comment|discuss"] },
+        {
+          "id": "R6",
+          "text": "My tasks page ordered by due date",
+          "match": ["my tasks|personal|assigned to (me|them)|own tasks"]
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A07",
+      "band": "A",
+      "recipe": "tracker",
+      "expected": "build",
+      "prompt": "A tracker for my hydration and sleep: I log glasses of water and hours slept each day, set a daily goal for each, see my streak and the last 30 days, plus weekly totals.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Quick logging of water and sleep per day",
+          "match": ["log|record|entry|track"]
+        },
+        { "id": "R2", "text": "Daily goal per tracker", "match": ["goal|target"] },
+        { "id": "R3", "text": "Streak", "match": ["streak"] },
+        { "id": "R4", "text": "Last 30 days history", "match": ["30|history|last (month|days)"] },
+        { "id": "R5", "text": "Weekly totals", "match": ["week"] }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A08",
+      "band": "A",
+      "recipe": "internal-tool",
+      "expected": "build",
+      "prompt": "Internal tool for Rueda Libre, a bike rental shop, to manage the fleet: each bike has frame number, model, size, status (available, rented, in repair) and last service date. Staff sign in, search and filter the table, import the current fleet from a CSV file and export the list to CSV.",
+      "requirements": [
+        { "id": "R1", "text": "Staff sign in", "match": ["sign.?in|log.?in|auth|account"] },
+        {
+          "id": "R2",
+          "text": "Bikes table with frame number, model, size, status and last service date",
+          "match": ["bike|record|item|table|list", "frame|model|size|status|service"]
+        },
+        { "id": "R3", "text": "Search and filter", "match": ["search|filter"] },
+        { "id": "R4", "text": "CSV import", "match": ["import"] },
+        { "id": "R5", "text": "CSV export", "match": ["export"] }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A09",
+      "band": "A",
+      "recipe": "analytics-dashboard",
+      "expected": "build",
+      "prompt": "Dashboard for our customer support team. Every week we upload a CSV with tickets per day by channel (email, chat, phone) and the average first response time. Show the KPIs compared with the previous period, a line chart over time, a breakdown by channel, a date range filter and an export of the filtered data.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "CSV upload of tickets per day and channel",
+          "match": ["import|upload|csv"]
+        },
+        {
+          "id": "R2",
+          "text": "KPIs compared with the previous period",
+          "match": ["kpi|total|metric", "previous|compar|period|change"]
+        },
+        {
+          "id": "R3",
+          "text": "Line chart over time",
+          "match": ["chart|time series|over time|trend"]
+        },
+        {
+          "id": "R4",
+          "text": "Breakdown by channel",
+          "match": ["breakdown|by channel|group|split|per channel"]
+        },
+        { "id": "R5", "text": "Date range filter", "match": ["filter|date range|range"] },
+        { "id": "R6", "text": "Export of filtered data", "match": ["export|download"] }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "A10",
+      "band": "A",
+      "recipe": "corporate-site",
+      "expected": "build",
+      "prompt": "Website for Cervecera Tramuntana, a craft brewery in Girona: home, our beers, about the brewery, a news blog with an RSS feed, a contact form, and an admin panel to edit the pages and posts and read the messages.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Home, beers (services) and about pages",
+          "match": ["home|about|service|beer|page"]
+        },
+        { "id": "R2", "text": "News blog", "match": ["blog|post|news"] },
+        { "id": "R3", "text": "RSS feed", "match": ["rss|feed"] },
+        { "id": "R4", "text": "Contact form", "match": ["contact"] },
+        {
+          "id": "R5",
+          "text": "Admin edits pages and posts",
+          "match": ["admin|edit", "page|post|content"]
+        },
+        { "id": "R6", "text": "Admin reads messages", "match": ["message|inbox|submission"] }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "B01",
+      "band": "B",
+      "recipe": "bookings",
+      "expected": "partial_or_offer",
+      "prompt": "Booking app for Pilates Norte studio: clients book 55-minute private classes with an instructor of their choice in a free slot, get a confirmation email and can cancel up to 24 hours before. Instructors see their calendar and can take days off. On top of that, every client gets an automatic WhatsApp reminder 24 hours before the class and can cancel by replying CANCEL to that WhatsApp message.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Clients book with a chosen instructor",
+          "match": ["book|appointment", "instructor|staff|team member"]
+        },
+        {
+          "id": "R2",
+          "text": "Only free slots (no double booking)",
+          "match": [
+            "double|overlap|free (time|slot)|availab|already (booked|taken|occupied)|occupied"
+          ]
+        },
+        { "id": "R3", "text": "Confirmation email", "match": ["confirm", "email"] },
+        {
+          "id": "R4",
+          "text": "Cancel up to 24 hours before",
+          "match": ["cancel", "24|hours? before|notice"]
+        },
+        {
+          "id": "R5",
+          "text": "Instructor calendar and days off",
+          "match": ["calendar|schedule|days? off|time off"]
+        },
+        {
+          "id": "R6",
+          "text": "WhatsApp reminder 24 hours before",
+          "match": ["whats ?app"],
+          "new": true
+        },
+        {
+          "id": "R7",
+          "text": "Cancel by replying on WhatsApp",
+          "match": ["whats ?app|reply", "cancel"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        { "text": "WhatsApp reminders and replies", "match": ["whats ?app"], "knownToGate": true }
+      ]
+    },
+    {
+      "id": "B02",
+      "band": "B",
+      "recipe": "storefront",
+      "expected": "partial_or_offer",
+      "prompt": "Online shop for Almazara Sierra, a family olive oil mill: bottles of 500 ml, 1 l and 5 l with their own price and stock, cart, Stripe Checkout, shipping to Spain and Portugal, and an admin panel for orders. Every paid order must produce an electronic invoice compliant with Spain's Verifactu system, submitted automatically to the tax agency (AEAT), and the customer receives the invoice PDF by email.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Catalogue with bottle sizes as variants (own price and stock)",
+          "match": ["variant|size|bottle", "price|stock|sku"]
+        },
+        { "id": "R2", "text": "Cart and Stripe Checkout", "match": ["cart|checkout|stripe|pay"] },
+        {
+          "id": "R3",
+          "text": "Shipping to Spain and Portugal",
+          "match": ["shipping|delivery", "country|spain|portugal"]
+        },
+        { "id": "R4", "text": "Admin manages orders", "match": ["admin", "order"] },
+        { "id": "R5", "text": "Stock decreases on paid orders", "match": ["stock|inventory"] },
+        {
+          "id": "R6",
+          "text": "Verifactu e-invoice submitted to AEAT",
+          "match": ["verifactu|aeat|tax agency|e-?invoic|electronic invoice"],
+          "new": true
+        },
+        {
+          "id": "R7",
+          "text": "Invoice PDF emailed to the customer",
+          "match": ["invoice", "pdf|email"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        {
+          "text": "Verifactu electronic invoicing to AEAT",
+          "match": ["verifactu|aeat|tax agency|e-?invoic|electronic invoice"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "B03",
+      "band": "B",
+      "recipe": "bookings",
+      "expected": "partial_or_offer",
+      "prompt": "Appointment booking for a practice with two nutritionists: patients choose first visit (60 min) or follow-up (30 min), a nutritionist and a free time, and get a confirmation email with a cancel link. Each nutritionist's appointments must sync both ways with their Google Calendar (their private events block slots), and online consultations get a Zoom meeting link created automatically.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Patients book a service with a nutritionist",
+          "match": ["book|appointment", "nutritionist|staff|team member|service"]
+        },
+        {
+          "id": "R2",
+          "text": "Only free times; no double booking",
+          "match": [
+            "double|overlap|free (time|slot)|availab|already (booked|taken|occupied)|occupied"
+          ]
+        },
+        {
+          "id": "R3",
+          "text": "Confirmation email with cancel link",
+          "match": ["confirm|cancel", "email|link"]
+        },
+        { "id": "R4", "text": "Staff calendar", "match": ["calendar|schedule|agenda"] },
+        { "id": "R5", "text": "Two-way Google Calendar sync", "match": ["google"], "new": true },
+        {
+          "id": "R6",
+          "text": "Zoom link for online consultations",
+          "match": ["zoom|video|meeting link|online consult"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        { "text": "Google Calendar two-way sync", "match": ["google"], "knownToGate": true },
+        { "text": "Zoom meeting links", "match": ["zoom|video|meeting link"], "knownToGate": false }
+      ]
+    },
+    {
+      "id": "B04",
+      "band": "B",
+      "recipe": "client-portal",
+      "expected": "partial_or_offer",
+      "prompt": "Tenant portal for Casa Prado property management. Tenants sign in, report maintenance issues with a description and photos, and follow their status. Staff review the issues and update the status. Lease renewals are signed electronically with DocuSign from the portal, and the signed PDF is stored with the tenant.",
+      "requirements": [
+        { "id": "R1", "text": "Tenants sign in", "match": ["sign.?in|log.?in|account|auth"] },
+        {
+          "id": "R2",
+          "text": "Report issues with description and photos",
+          "match": ["request|issue|report|submit", "photo|attach|upload|description|file"]
+        },
+        { "id": "R3", "text": "Tenants follow the status", "match": ["status"] },
+        {
+          "id": "R4",
+          "text": "Staff review and update status",
+          "match": ["staff|admin|manager|review", "status|update"]
+        },
+        {
+          "id": "R5",
+          "text": "Tenants only see their own issues",
+          "match": ["own|another|other (tenant|client)|isolat|only (see|their)"]
+        },
+        {
+          "id": "R6",
+          "text": "DocuSign e-signature of leases",
+          "match": ["docusign|e-?sign|electronic(ally)? sign|signature"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        {
+          "text": "DocuSign electronic signature",
+          "match": ["docusign|e-?sign|electronic(ally)? sign|signature"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "B05",
+      "band": "B",
+      "recipe": "storefront",
+      "expected": "partial_or_offer",
+      "prompt": "Online store for Surco Records, a second-hand vinyl shop: each record has photos, a price and a condition (mint, very good, good) as variants with their own stock, cart, card payment with Stripe and shipping inside the EU. When an order is paid, the shipping label must be created automatically in Sendcloud and the customer gets the tracking number by SMS.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Catalogue with photos and prices",
+          "match": ["catalog|product|record", "photo|image|price"]
+        },
+        {
+          "id": "R2",
+          "text": "Condition variants with own stock",
+          "match": ["variant|condition", "stock|price|sku"]
+        },
+        { "id": "R3", "text": "Cart and Stripe payment", "match": ["cart|checkout|stripe|pay"] },
+        { "id": "R4", "text": "EU shipping", "match": ["shipping|delivery"] },
+        {
+          "id": "R5",
+          "text": "Admin manages orders and stock",
+          "match": ["admin|order", "order|stock"]
+        },
+        {
+          "id": "R6",
+          "text": "Sendcloud shipping label on payment",
+          "match": ["sendcloud|label"],
+          "new": true
+        },
+        {
+          "id": "R7",
+          "text": "Tracking number by SMS",
+          "match": ["sms|text message|tracking"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        { "text": "Sendcloud shipping labels", "match": ["sendcloud|label"], "knownToGate": false },
+        { "text": "SMS with tracking number", "match": ["sms|text message"], "knownToGate": true }
+      ]
+    },
+    {
+      "id": "B06",
+      "band": "B",
+      "recipe": "projects",
+      "expected": "partial_or_offer",
+      "prompt": "Task board for our web development agency: projects with a kanban board, tasks with assignee, due date and priority, comments, and a personal task list. Post a message to our Slack channel whenever a task moves to Done or someone is mentioned in a comment.",
+      "requirements": [
+        { "id": "R1", "text": "Projects with kanban", "match": ["kanban|board|column|project"] },
+        { "id": "R2", "text": "Assignee, due date and priority", "match": ["assign|due|priority"] },
+        { "id": "R3", "text": "Comments", "match": ["comment"] },
+        {
+          "id": "R4",
+          "text": "Personal task list",
+          "match": ["my tasks|personal|assigned to (me|them)|own tasks"]
+        },
+        { "id": "R5", "text": "Slack message on Done or mention", "match": ["slack"], "new": true }
+      ],
+      "gaps": [{ "text": "Slack notifications", "match": ["slack"], "knownToGate": true }]
+    },
+    {
+      "id": "B07",
+      "band": "B",
+      "recipe": "landing-waitlist",
+      "expected": "partial_or_offer",
+      "prompt": "Pre-launch landing page for Cocina Lista, a meal-kit startup in Madrid: hero, three benefits, a waitlist form (name, email), a confirmation email and an admin list of signups with export. Every signup must also be added to our Mailchimp audience with the tag \"madrid-launch\".",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Landing with waitlist form (name, email)",
+          "match": ["waitlist|sign.?up|join|form"]
+        },
+        { "id": "R2", "text": "Confirmation email", "match": ["confirm", "email"] },
+        { "id": "R3", "text": "Admin list of signups", "match": ["admin|list"] },
+        { "id": "R4", "text": "Export of signups", "match": ["export|csv|download"] },
+        {
+          "id": "R5",
+          "text": "Mailchimp audience sync with tag",
+          "match": ["mail ?chimp"],
+          "new": true
+        }
+      ],
+      "gaps": [{ "text": "Mailchimp audience sync", "match": ["mail ?chimp"], "knownToGate": true }]
+    },
+    {
+      "id": "B08",
+      "band": "B",
+      "recipe": "corporate-site",
+      "expected": "partial_or_offer",
+      "prompt": "Website for Es Racó Retreats, a yoga retreat centre in Mallorca: home, retreats, about us, blog, contact form and an admin panel to edit everything. The home page must show our latest Instagram posts, pulled automatically from our Instagram account every hour.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Home, retreats and about pages",
+          "match": ["home|about|retreat|service|page"]
+        },
+        { "id": "R2", "text": "Blog", "match": ["blog|post"] },
+        { "id": "R3", "text": "Contact form", "match": ["contact"] },
+        { "id": "R4", "text": "Admin edits content", "match": ["admin|edit"] },
+        {
+          "id": "R5",
+          "text": "Latest Instagram posts pulled every hour",
+          "match": ["instagram"],
+          "new": true
+        }
+      ],
+      "gaps": [{ "text": "Instagram feed import", "match": ["instagram"], "knownToGate": true }]
+    },
+    {
+      "id": "B09",
+      "band": "B",
+      "recipe": "tracker",
+      "expected": "partial_or_offer",
+      "prompt": "Running tracker: I log kilometres per day, set a weekly goal, see my streak, the last 30 days and weekly totals. My runs should also be imported automatically from my Strava account after each activity.",
+      "requirements": [
+        { "id": "R1", "text": "Log kilometres per day", "match": ["log|record|entry|track"] },
+        { "id": "R2", "text": "Weekly goal", "match": ["goal|target"] },
+        { "id": "R3", "text": "Streak", "match": ["streak"] },
+        { "id": "R4", "text": "Last 30 days and weekly totals", "match": ["30|history|week"] },
+        { "id": "R5", "text": "Automatic Strava import", "match": ["strava"], "new": true }
+      ],
+      "gaps": [{ "text": "Strava import", "match": ["strava"], "knownToGate": false }]
+    },
+    {
+      "id": "B10",
+      "band": "B",
+      "recipe": "saas-crud",
+      "expected": "partial_or_offer",
+      "prompt": "CRM for Brillo, a home cleaning company. Each office is a workspace with admin and staff roles. Manage clients (name, address, phone, cleaning frequency) and visits (date, assigned cleaner, status). The day before each visit, send the client an SMS reminder through Twilio.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Workspaces with admin and staff roles",
+          "match": ["workspace|organi[sz]ation|role|admin"]
+        },
+        {
+          "id": "R2",
+          "text": "Clients CRUD (name, address, phone, frequency)",
+          "match": ["client|customer", "name|address|phone|frequency|create|manage"]
+        },
+        {
+          "id": "R3",
+          "text": "Visits CRUD (date, cleaner, status)",
+          "match": ["visit", "date|cleaner|status|create|manage"]
+        },
+        { "id": "R4", "text": "Sign in", "match": ["sign.?in|log.?in|auth|account"] },
+        {
+          "id": "R5",
+          "text": "Twilio SMS reminder the day before",
+          "match": ["sms|twilio|text message"],
+          "new": true
+        }
+      ],
+      "gaps": [
+        {
+          "text": "SMS reminders via Twilio",
+          "match": ["sms|twilio|text message"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C01",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "A tool for our marketing team that publishes our posts to LinkedIn, Instagram and X on a schedule, drafts the captions with AI from a short brief, and shows likes and comments per network in a dashboard.",
+      "gaps": [
+        {
+          "text": "Publishing to LinkedIn, Instagram and X",
+          "match": ["linked ?in|instagram|\\bx\\b|twitter|social"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Sync our Shopify store with Odoo: orders, customers and stock levels in both directions every 15 minutes, with a log of conflicts that an admin can resolve.",
+      "gaps": [
+        {
+          "text": "Shopify ↔ Odoo synchronisation",
+          "match": ["shopify|odoo|erp|sync"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Bank reconciliation for our accounting team: connect our business accounts at BBVA and Santander through open banking (PSD2), import the transactions every day and match them automatically against the invoices we issued, flagging payments that do not match any invoice.",
+      "gaps": [
+        {
+          "text": "Open banking connection (PSD2) to BBVA and Santander",
+          "match": ["bank|psd2|open banking|bbva|santander"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "A WhatsApp Business chatbot for our restaurant La Brasa that answers questions about the menu and opening hours and takes table reservations directly inside the WhatsApp conversation.",
+      "gaps": [
+        {
+          "text": "WhatsApp Business conversation channel",
+          "match": ["whats ?app"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Multichannel inventory for our home goods brand: keep stock in sync between Amazon Seller Central, eBay and our WooCommerce shop, and import the orders from the three channels into a single list.",
+      "gaps": [
+        {
+          "text": "Amazon, eBay and WooCommerce marketplace sync",
+          "match": ["amazon|ebay|woo ?commerce|marketplace|channel"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Payroll for a 40-employee company in Spain: compute the monthly payslips with IRPF withholding and social security contributions, submit the contribution files to the Sistema RED, and send the salary transfers to the bank as a SEPA file.",
+      "gaps": [
+        {
+          "text": "Spanish payroll filings (Sistema RED) and SEPA transfers",
+          "match": ["sistema red|social security|irpf|sepa|payroll|payslip"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "A native iOS and Android app for the members of our gym to check in by tapping their phone on an NFC reader at the entrance, with push notifications when a class changes.",
+      "gaps": [
+        {
+          "text": "Native mobile app with NFC check-in",
+          "match": ["ios|android|native|nfc|mobile|push"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Monitor the temperature sensors of our 12 cold-storage rooms over MQTT, chart the readings live, and when a room goes above 5 °C send an SMS and place a phone call to the person on duty.",
+      "gaps": [
+        {
+          "text": "MQTT sensor ingestion and SMS/voice alerts",
+          "match": ["mqtt|sensor|sms|phone call|call"],
+          "knownToGate": false
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Two-way synchronisation of contacts, companies and deals between HubSpot and Salesforce, with a field mapping that an admin can configure and a report of records that failed to sync.",
+      "gaps": [
+        {
+          "text": "HubSpot ↔ Salesforce synchronisation",
+          "match": ["hub ?spot|salesforce|crm|sync"],
+          "knownToGate": true
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "band": "C",
+      "recipe": null,
+      "expected": "refuse_or_offer",
+      "prompt": "Manage our Google Ads and Meta Ads campaigns from one place: adjust bids automatically every hour based on ROAS and pause the ads that underperform.",
+      "gaps": [
+        {
+          "text": "Google Ads and Meta Ads management",
+          "match": ["google ads|meta ads|ads|campaign|bid"],
+          "knownToGate": false
+        }
+      ]
+    }
+  ]
+}

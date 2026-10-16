@@ -1,0 +1,551 @@
+{
+  "run": "2026-10-16-staging-dryrun",
+  "env": "staging",
+  "api": "https://staging.software.turbineh.com",
+  "startedAt": "2026-10-16T17:50:13.819Z",
+  "statements": 3,
+  "complete": false,
+  "requirementsReviewed": false,
+  "metrics": [
+    {
+      "metric": "Functional coverage · band A",
+      "value": "75 %",
+      "threshold": "≥ 90 %",
+      "n": "1/10",
+      "verdict": "fail"
+    },
+    {
+      "metric": "Functional coverage · band B",
+      "value": "29 %",
+      "threshold": "≥ 70 %",
+      "n": "1/10",
+      "verdict": "fail"
+    },
+    {
+      "metric": "Gap-detection recall · band C (warned before generating)",
+      "value": "1/1",
+      "threshold": "100 %",
+      "n": "1/10",
+      "verdict": "pass"
+    },
+    {
+      "metric": "False \"verified\" (coverage < 80 %)",
+      "value": "2",
+      "threshold": "0",
+      "n": "2 scored",
+      "verdict": "fail"
+    },
+    {
+      "metric": "Info · \"verified\" with the product's own requirements < 80 % met",
+      "value": "2",
+      "threshold": "— (not in 9.2)",
+      "n": "2 delivered",
+      "verdict": "n/a"
+    },
+    {
+      "metric": "Contradictions between surfaces",
+      "value": "8",
+      "threshold": "0",
+      "n": "2 flows",
+      "verdict": "fail"
+    },
+    {
+      "metric": "Snippets that compile",
+      "value": "not exposed",
+      "threshold": "100 %",
+      "n": "0 snippets",
+      "verdict": "n/a"
+    },
+    {
+      "metric": "Discover precision@5 (20 reference queries)",
+      "value": "0.69",
+      "threshold": "≥ 0.8",
+      "n": "20 queries",
+      "verdict": "fail"
+    },
+    {
+      "metric": "Estimate error, median · lines",
+      "value": "22 %",
+      "threshold": "< 25 %",
+      "n": "2 flows",
+      "verdict": "pass"
+    },
+    {
+      "metric": "Estimate error, median · time",
+      "value": "11 %",
+      "threshold": "< 25 %",
+      "n": "2 flows",
+      "verdict": "pass"
+    },
+    {
+      "metric": "Time to verified p50 / p95 per band",
+      "value": "A: 210 s / 210 s · B: 505 s / 505 s",
+      "threshold": "published and consistent with the landing",
+      "n": "2 verified",
+      "verdict": "manual"
+    },
+    {
+      "metric": "Footprint (components/lines not linked to a criterion)",
+      "value": "not exposed",
+      "threshold": "< 10 %",
+      "n": "0 flows",
+      "verdict": "n/a"
+    },
+    {
+      "metric": "Expert review, band A (blind, 1–5)",
+      "value": "pending",
+      "threshold": "mean ≥ 4",
+      "n": "0/10",
+      "verdict": "manual"
+    }
+  ],
+  "wall": {
+    "A": {
+      "p50s": 209.978,
+      "p95s": 209.978,
+      "n": 1
+    },
+    "B": {
+      "p50s": 504.583,
+      "p95s": 504.583,
+      "n": 1
+    },
+    "C": {
+      "p50s": 11.153,
+      "p95s": 11.153,
+      "n": 1
+    }
+  },
+  "cost": {
+    "flowsWithCost": 2,
+    "totalEur": 0.02277
+  },
+  "rows": [
+    {
+      "id": "A01",
+      "band": "A",
+      "phase": "done",
+      "error": null,
+      "flowId": "b72bd0e9-f5af-4601-8b93-f68d3d21a687",
+      "expected": "build",
+      "observed": "built",
+      "outcomeOk": true,
+      "warned": false,
+      "gaps": [],
+      "finalState": "verified",
+      "badge": "Checks 11/11 · Requirements 7/11 met",
+      "checks": {
+        "passed": 11,
+        "total": 11
+      },
+      "coverage": 0.75,
+      "systemCoverage": {
+        "met": 7,
+        "total": 11
+      },
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Customers book a service with a chosen groomer or any groomer",
+          "new": false,
+          "auto": "open",
+          "status": "open",
+          "reviewed": false,
+          "matched": [
+            "[open] Given a customer selects 'any groomer', when they book, the system assigns the first available groomer for that time.",
+            "[met] Given a groomer uses the calendar, when they block a day off, no appointments can be scheduled for that groomer on that date.",
+            "[met] Given a groomer manages the calendar, when they move or cancel an appointment, a notification email is automatically sent to the customer.",
+            "[met] Given a booking attempt is made, when the selected time slot is already occupied for the chosen groomer, the system prevents the booking."
+          ]
+        },
+        {
+          "id": "R2",
+          "text": "Only real free times are offered; no double booking for the same groomer",
+          "new": false,
+          "auto": "open",
+          "status": "open",
+          "reviewed": false,
+          "matched": [
+            "[open] Given a customer selects 'any groomer', when they book, the system assigns the first available groomer for that time.",
+            "[met] Given a booking attempt is made, when the selected time slot is already occupied for the chosen groomer, the system prevents the booking."
+          ]
+        },
+        {
+          "id": "R3",
+          "text": "Booking needs no customer account",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a customer completes a booking without an account, when the booking is processed, a confirmation email is sent containing a cancellation link."
+          ]
+        },
+        {
+          "id": "R4",
+          "text": "Confirmation email with a cancel link",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a customer completes a booking without an account, when the booking is processed, a confirmation email is sent containing a cancellation link."
+          ]
+        },
+        {
+          "id": "R5",
+          "text": "Cancellation allowed only up to 12 hours before",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a customer clicks the cancellation link, when the current time is more than 12 hours before the appointment, the booking is successfully cancelled.",
+            "[met] Given a customer clicks the cancellation link, when the current time is less than 12 hours before the appointment, the cancellation is denied."
+          ]
+        },
+        {
+          "id": "R6",
+          "text": "Staff calendar per groomer by day and week",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a groomer logs in, when they view their calendar, they can toggle between daily and weekly views.",
+            "[met] Given a groomer uses the calendar, when they block a day off, no appointments can be scheduled for that groomer on that date."
+          ]
+        },
+        {
+          "id": "R7",
+          "text": "Groomers block days off",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a groomer uses the calendar, when they block a day off, no appointments can be scheduled for that groomer on that date."
+          ]
+        },
+        {
+          "id": "R8",
+          "text": "Staff move or cancel; the customer is emailed",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] Given a customer completes a booking without an account, when the booking is processed, a confirmation email is sent containing a cancellation link.",
+            "[met] Given a groomer manages the calendar, when they move or cancel an appointment, a notification email is automatically sent to the customer."
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "text": "Given a customer selects a 'bath' service, when they pick a time, the system reserves a 40-minute slot.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer selects a 'full groom' service, when they pick a time, the system reserves a 90-minute slot.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer selects a 'nail trim' service, when they pick a time, the system reserves a 15-minute slot.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer selects 'any groomer', when they book, the system assigns the first available groomer for that time.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer completes a booking without an account, when the booking is processed, a confirmation email is sent containing a cancellation link.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer clicks the cancellation link, when the current time is more than 12 hours before the appointment, the booking is successfully cancelled.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a customer clicks the cancellation link, when the current time is less than 12 hours before the appointment, the cancellation is denied.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a groomer logs in, when they view their calendar, they can toggle between daily and weekly views.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a groomer uses the calendar, when they block a day off, no appointments can be scheduled for that groomer on that date.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a groomer manages the calendar, when they move or cancel an appointment, a notification email is automatically sent to the customer.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "Given a booking attempt is made, when the selected time slot is already occupied for the chosen groomer, the system prevents the booking.",
+          "status": "met",
+          "source": "turbineh.json"
+        }
+      ],
+      "removed": 0,
+      "offer": null,
+      "approved": null,
+      "verifiedClaims": [
+        "result.state=verified",
+        "outcome.kind=app_verified",
+        "turbineh.json verified",
+        "builds.verified=true"
+      ],
+      "scopeCoverage": 0.75,
+      "falseVerified": true,
+      "contradictions": [
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"given a customer clicks the cancellation link when the current time is less than 12 hours \"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"given a groomer logs in when they view their calendar they can toggle between daily and we\"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"given a groomer uses the calendar when they block a day off no appointments can be schedul\"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"given a groomer manages the calendar when they move or cancel an appointment a notificatio\"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"given a booking attempt is made when the selected time slot is already occupied for the ch\""
+      ],
+      "estimate": {
+        "lines": {
+          "estimate": 360,
+          "real": 296,
+          "error": 0.21621621621621623
+        },
+        "time": {
+          "estimate": 162,
+          "real": 182,
+          "error": 0.10989010989010989
+        }
+      },
+      "footprint": null,
+      "wallMs": 209978,
+      "planMs": 9361,
+      "generateMs": 195752,
+      "toVerifiedMs": 209978,
+      "costEur": 0.01,
+      "expert": null
+    },
+    {
+      "id": "B01",
+      "band": "B",
+      "phase": "done",
+      "error": null,
+      "flowId": "21a02d8b-e8a5-4cca-8b3f-332bbdcb28b3",
+      "expected": "partial_or_offer",
+      "observed": "partial",
+      "outcomeOk": true,
+      "warned": true,
+      "gaps": [
+        {
+          "gap": "WhatsApp reminders and replies",
+          "warned": true
+        }
+      ],
+      "finalState": "verified",
+      "badge": "Checks 11/11 · Requirements 3/5 met",
+      "checks": {
+        "passed": 11,
+        "total": 11
+      },
+      "coverage": 0.2857142857142857,
+      "systemCoverage": {
+        "met": 3,
+        "total": 5
+      },
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Clients book with a chosen instructor",
+          "new": false,
+          "auto": "open",
+          "status": "open",
+          "reviewed": false,
+          "matched": [
+            "[open] A client can successfully book a 55-minute private class by selecting a specific instructor and an available time slot.",
+            "[met] An instructor can mark specific dates as 'days off' to prevent bookings on those dates."
+          ]
+        },
+        {
+          "id": "R2",
+          "text": "Only free slots (no double booking)",
+          "new": false,
+          "auto": "open",
+          "status": "open",
+          "reviewed": false,
+          "matched": [
+            "[open] A client can successfully book a 55-minute private class by selecting a specific instructor and an available time slot."
+          ]
+        },
+        {
+          "id": "R3",
+          "text": "Confirmation email",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] A client receives a confirmation email immediately after a successful booking."
+          ]
+        },
+        {
+          "id": "R4",
+          "text": "Cancel up to 24 hours before",
+          "new": false,
+          "auto": "open",
+          "status": "open",
+          "reviewed": false,
+          "matched": [
+            "[open] A client can cancel a booking through the app interface if the cancellation occurs more than 24 hours before the class start time."
+          ]
+        },
+        {
+          "id": "R5",
+          "text": "Instructor calendar and days off",
+          "new": false,
+          "auto": "met",
+          "status": "met",
+          "reviewed": false,
+          "matched": [
+            "[met] An instructor can view their personal schedule via a calendar interface.",
+            "[met] An instructor can mark specific dates as 'days off' to prevent bookings on those dates."
+          ]
+        },
+        {
+          "id": "R6",
+          "text": "WhatsApp reminder 24 hours before",
+          "new": true,
+          "auto": "removed",
+          "status": "removed",
+          "reviewed": false,
+          "matched": []
+        },
+        {
+          "id": "R7",
+          "text": "Cancel by replying on WhatsApp",
+          "new": true,
+          "auto": "removed",
+          "status": "removed",
+          "reviewed": false,
+          "matched": []
+        }
+      ],
+      "derived": [
+        {
+          "text": "A client can successfully book a 55-minute private class by selecting a specific instructor and an available time slot.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "A client receives a confirmation email immediately after a successful booking.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "A client can cancel a booking through the app interface if the cancellation occurs more than 24 hours before the class start time.",
+          "status": "open",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "An instructor can view their personal schedule via a calendar interface.",
+          "status": "met",
+          "source": "turbineh.json"
+        },
+        {
+          "text": "An instructor can mark specific dates as 'days off' to prevent bookings on those dates.",
+          "status": "met",
+          "source": "turbineh.json"
+        }
+      ],
+      "removed": 2,
+      "offer": null,
+      "approved": [
+        "Build only the covered part, \"Pilates Norte Booking (covered part only)\": the library doesn't cover 2 requirement(s) yet, removed from scope — A client receives an automated WhatsApp message exactly 24 hours before their scheduled class. · A client can cancel their booking by replying with the text 'CANCEL' to the automated WhatsApp reminder.",
+        "No verified component covers ops.idempotency: TurbineH writes it and verifies it with the rest."
+      ],
+      "verifiedClaims": [
+        "result.state=verified",
+        "outcome.kind=app_verified",
+        "turbineh.json verified",
+        "builds.verified=true"
+      ],
+      "scopeCoverage": 0.4,
+      "falseVerified": true,
+      "contradictions": [
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"a client receives a confirmation email immediately after a successful booking\"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"an instructor can view their personal schedule via a calendar interface\"",
+        "next steps: outcome.left lists a criterion turbineh.json marks met: \"an instructor can mark specific dates as days off to prevent bookings on those dates\""
+      ],
+      "estimate": {
+        "lines": {
+          "estimate": 440,
+          "real": 713,
+          "error": 0.38288920056100983
+        },
+        "time": {
+          "estimate": 162,
+          "real": 277,
+          "error": 0.4151624548736462
+        }
+      },
+      "footprint": null,
+      "wallMs": 504583,
+      "planMs": 212774,
+      "generateMs": 288629,
+      "toVerifiedMs": 504583,
+      "costEur": 0.01277,
+      "expert": null
+    },
+    {
+      "id": "C01",
+      "band": "C",
+      "phase": "done",
+      "error": null,
+      "flowId": null,
+      "expected": "refuse_or_offer",
+      "observed": "refused",
+      "outcomeOk": true,
+      "warned": true,
+      "gaps": [
+        {
+          "gap": "Publishing to LinkedIn, Instagram and X",
+          "warned": true
+        }
+      ],
+      "finalState": null,
+      "badge": null,
+      "checks": null,
+      "coverage": null,
+      "systemCoverage": null,
+      "requirements": [],
+      "derived": [],
+      "removed": 0,
+      "offer": null,
+      "approved": null,
+      "verifiedClaims": [],
+      "scopeCoverage": null,
+      "falseVerified": false,
+      "contradictions": [],
+      "estimate": {
+        "lines": null,
+        "time": null
+      },
+      "footprint": null,
+      "wallMs": 11153,
+      "planMs": 11153,
+      "generateMs": null,
+      "toVerifiedMs": null,
+      "costEur": null,
+      "expert": null
+    }
+  ]
+}
