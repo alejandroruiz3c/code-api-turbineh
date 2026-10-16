@@ -16,7 +16,7 @@ import { can, requireMember } from "@/server/authz";
 // turbineh:module knowledge-base
 import { searchKnowledge } from "@/server/knowledge";
 // turbineh:end-module knowledge-base
-import { isTool, TOOL_REGISTRY } from "@/server/tools";
+import { isTool, runReadTool, TOOL_REGISTRY, teamEmails } from "@/server/tools";
 
 const agentSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -175,12 +175,35 @@ export async function sendMessage(_prev: ChatState, formData: FormData): Promise
         .update(conversations)
         .set({ needsHuman: true })
         .where(eq(conversations.id, conversationId));
+      const team = teamEmails();
+      for (const to of team)
+        await sendEmail({
+          to,
+          subject: `Escalation from the assistant "${agent.name}"`,
+          text: `A user asked for a person to follow up.\n\nLast message:\n${text}\n\nOpen /dashboard/agents/${agent.id} to reply.`,
+        });
       await db.insert(messages).values({
         organizationId: ctx.organizationId,
         conversationId,
         role: "tool",
-        content: "A person from the team will follow up on this conversation.",
+        content: team.length
+          ? "A person from the team has been emailed and will follow up on this conversation."
+          : "A person from the team will follow up on this conversation.",
       });
+    } else if (result.tool) {
+      // Read-only tools (e.g. lookup_order): tenant-scoped, the result (or "not found") is relayed to the user.
+      const reply = await runReadTool(
+        result.tool.spec.name,
+        { organizationId: ctx.organizationId, userId: ctx.userId },
+        text,
+      );
+      if (reply)
+        await db.insert(messages).values({
+          organizationId: ctx.organizationId,
+          conversationId,
+          role: "tool",
+          content: reply,
+        });
     }
     revalidatePath(`/dashboard/agents/${agent.id}`);
     return { error: null };

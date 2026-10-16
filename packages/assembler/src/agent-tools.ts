@@ -1,0 +1,111 @@
+import type { BuildSpec } from "@turbineh/compiler";
+import type { GeneratedFile } from "./entities.js";
+import type { Field } from "./fields.js";
+import { camel, entityNames } from "./naming.js";
+
+type Entity = BuildSpec["entities"][number];
+
+const LOOKUP =
+  /\b(look(?:s|ing)?\s*up|check(?:s|ing)?|consult(?:s|ing)?|track(?:s|ing)?|find(?:s|ing)?|status of)\b/i;
+
+/** Entities a criterion (or the summary) says the assistant looks up: "looks up order status by order number". */
+export function lookupEntities(
+  spec: Pick<BuildSpec, "acceptance_criteria" | "summary">,
+  entities: Entity[],
+): Entity[] {
+  const texts = [spec.summary, ...spec.acceptance_criteria].filter((t) => LOOKUP.test(t));
+  return entities.filter((e) => {
+    const n = entityNames(e.name);
+    const words = [n.labelSingular, n.labelPlural].map((w) => w.toLowerCase());
+    return texts.some((t) => words.some((w) => t.toLowerCase().includes(w)));
+  });
+}
+
+const keyField = (e: Entity): Field | undefined =>
+  e.fields.find(
+    (f) => /(number|code|reference|ref|tracking)$/i.test(f.name) && f.type !== "boolean",
+  ) ?? e.fields.find((f) => f.type === "string");
+const statusField = (e: Entity): Field | undefined =>
+  e.fields.find((f) => /(status|state|stage)$/i.test(f.name));
+
+/** src/server/agent-tools.ts with one read-only, tenant-scoped `lookup_<entity>` tool per looked-up entity, plus its test. */
+export function agentToolFiles(
+  spec: Pick<BuildSpec, "acceptance_criteria" | "summary">,
+  entities: Entity[],
+): GeneratedFile[] {
+  const tools = lookupEntities(spec, entities)
+    .map((e) => ({ e, n: entityNames(e.name), key: keyField(e), status: statusField(e) }))
+    .filter((t): t is typeof t & { key: Field } => Boolean(t.key));
+  if (!tools.length) return [];
+  const imports = tools.map((t) => t.n.variable).join(", ");
+  const body = tools
+    .map(({ n, key, status }) => {
+      const k = camel(key.name);
+      const tool = `lookup_${camel(n.pascal).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
+      const label = n.labelSingular.toLowerCase();
+      const statusExpr = status ? `row.${camel(status.name)}` : `"on record"`;
+      return `  {
+    spec: {
+      name: "${tool}",
+      description: "Look up a ${label} of this workspace by ${key.name} and tell the user its status (read-only).",
+      irreversible: false,
+    },
+    label: "Look up a ${label}",
+    params: z.object({ ${k}: z.string().trim().min(1).max(120) }),
+    argsFrom: (text: string) => {
+      const m = /#?\\b([A-Za-z]{0,6}-?\\d[\\w-]{0,40})\\b/.exec(text);
+      return m ? { ${k}: m[1] } : null;
+    },
+    run: async (ctx, args) => {
+      const [row] = await db
+        .select()
+        .from(${n.variable})
+        .where(and(eq(${n.variable}.organizationId, ctx.organizationId), eq(${n.variable}.${k}, args.${k})))
+        .limit(1);
+      if (!row) return \`No ${label} found with ${key.name} \${args.${k}}.\`;
+      return \`${n.labelSingular} \${args.${k}}: \${String(${statusExpr})}.\`;
+    },
+  } satisfies ReadTool<z.ZodObject<{ ${k}: z.ZodString }>>`;
+    })
+    .join(",\n");
+  const content = `import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/db/client";
+import { ${imports} } from "@/db/schema";
+import type { ReadTool } from "@/server/tools";
+
+/**
+ * Read-only agent tools generated from the request (assembler): the assistant looks these records up, scoped to the
+ * workspace. Not found → an explicit message the assistant relays. Registered in src/server/tools.ts.
+ */
+export const GENERATED_READ_TOOLS: readonly ReadTool[] = [
+${body},
+] as unknown as readonly ReadTool[];
+`;
+  const first = tools[0]!;
+  const firstTool = `lookup_${camel(first.n.pascal).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
+  const test = `import { describe, expect, it, vi } from "vitest";
+
+const rows: Record<string, unknown>[] = [];
+vi.mock("@/db/client", () => ({
+  db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => rows }) }) }) },
+}));
+
+describe("agent tools (generated)", () => {
+  it("the assistant looks up a record by its number and relays not found", async () => {
+    const { allowedTools } = await import("@/lib/ai/guard");
+    const { TOOL_REGISTRY, runReadTool } = await import("@/server/tools");
+    expect(allowedTools(TOOL_REGISTRY, ["${firstTool}"]).map((t) => t.name)).toEqual(["${firstTool}"]);
+    const ctx = { organizationId: "org-1", userId: "u-1" };
+    expect(await runReadTool("${firstTool}", ctx, "Where is A-1001?")).toMatch(/not found|No /i);
+    rows.push({ ${camel(first.key.name)}: "A-1001"${first.status ? `, ${camel(first.status.name)}: "shipped"` : ""} });
+    expect(await runReadTool("${firstTool}", ctx, "Where is A-1001?")).toContain("A-1001");
+    expect(await runReadTool("${firstTool}", ctx, "where is it?")).toMatch(/more details/);
+  });
+});
+`;
+  return [
+    { path: "src/server/agent-tools.ts", content },
+    { path: "tests/unit/agent-tools.test.ts", content: test },
+  ];
+}

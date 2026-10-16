@@ -6,7 +6,7 @@ import { chunkText } from "@/server/chunking";
 import { outputText, parseLabels, schemaFor } from "@/server/process-schema";
 // turbineh:end-module batch-processes
 import { allowedTools, needsConfirmation } from "@/lib/ai/guard";
-import { isTool, TOOL_REGISTRY } from "@/server/tools";
+import { isTool, teamEmails, TOOL_REGISTRY } from "@/server/tools";
 
 describe("recipe ai-agents", () => {
   // turbineh:module knowledge-base
@@ -56,5 +56,16 @@ describe("recipe ai-agents", () => {
       email && needsConfirmation(email),
       "sending email waits for the user's confirmation",
     ).toBe(true);
+  });
+
+  it("escalating to a human emails the team on ADMIN_EMAILS", () => {
+    expect(TOOL_REGISTRY.find((t) => t.name === "escalate_to_human")?.description).toMatch(
+      /email/i,
+    );
+    expect(teamEmails("Owner@Shop.test, bad, ops@shop.test")).toEqual([
+      "owner@shop.test",
+      "ops@shop.test",
+    ]);
+    expect(teamEmails(""), "not configured: no email, the criterion stays open").toEqual([]);
   });
 });

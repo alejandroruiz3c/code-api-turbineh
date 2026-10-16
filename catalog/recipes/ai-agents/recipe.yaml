@@ -1,5 +1,5 @@
 id: ai-agents
-description: AI assistants with instructions and allowed tools, chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), usage and audit — every AI call through the TurbineH orchestrator with its AI Safety Pack (ADR-0028)
+description: AI assistants with instructions and allowed tools (escalate to a human by email), chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), usage and audit — every AI call through the TurbineH orchestrator with its AI Safety Pack (ADR-0028)
 extends: saas-crud
 providedEntities:
   [
@@ -27,6 +27,11 @@ providedEntities:
     KnowledgeBaseDocument,
     KnowledgeDocument,
     HelpArticle,
+    Faq,
+    FaqEntry,
+    FaqItem,
+    FaqArticle,
+    KnowledgeArticle,
     Escalation,
     EscalationRequest,
     Classification,
