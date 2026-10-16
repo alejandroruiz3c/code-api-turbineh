@@ -404,15 +404,19 @@ export function componentOffer(
   const useCase = clip(headlineOf(input.need), 80);
   const main = result.components.filter((c) => !c.requiredBy);
   const gives = [...new Set(main.map((c) => c.gives))];
-  const missing = result.outOfScope.map((r) => plain(r.requirement));
+  const sentence = (t: string) => t.replace(/[.\s]+$/, "");
+  const missing = result.outOfScope
+    .filter((r) => !isUseCaseItself(r))
+    .map((r) => sentence(plain(r.requirement)));
+  const app = "the application itself (its screens, data and flows) — only these components";
   return {
     kind: "components_only",
-    title: `Verified components for your ${useCase}: ${main.map((c) => c.id).join(", ")}`,
-    name: clip(`Verified components for ${useCase}`, 60),
+    title: `Verified components for your request “${useCase}”: ${main.map((c) => c.id).join(", ")}`,
+    name: clip(`Verified components: ${gives.map((g) => g.split(" (")[0]).join(", ")}`, 60),
     youGet: `You get ${gives.join("; ")} — working and verified, as separate components to add to your app.`,
     notIncluded: result.coreNotIncluded
-      ? `Not included — the core of your request: ${useCase} itself${missing.length > 1 ? `, and ${missing.filter((m) => m !== headlineOf(input.need)).join("; ")}` : ""}. This package is not that product.`
-      : `Not included: ${missing.length ? `${missing.join("; ")}, and ` : ""}the application itself (its screens, data and flows) — only these components. This package is not the complete product you described.`,
+      ? `Not included — the core of your request: “${useCase}”${missing.length ? `, and: ${missing.join("; ")}` : ""}. This package is not that product.`
+      : `Not included: ${missing.length ? `${missing.join("; ")}; and ` : ""}${app}. This package is not the complete product you described.`,
     coreNotIncluded: result.coreNotIncluded,
     components: result.components,
     outOfScope: result.outOfScope,

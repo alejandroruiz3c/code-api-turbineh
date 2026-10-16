@@ -177,8 +177,8 @@ describe("components-only offer: only real functions the person asked for (ADR-0
     ]);
     const offer = componentOffer(r!, { need: NEED, planId: "p1" });
     expect(offer.youGet).toMatch(/^You get AI generation through the TurbineH orchestrator/);
-    expect(offer.notIncluded).toMatch(
-      /^Not included — the core of your request: autonomous social media publisher itself, and .*published automatically to the connected social accounts.*This package is not that product\.$/,
+    expect(offer.notIncluded).toBe(
+      "Not included — the core of your request: “autonomous social media publisher”, and: Users connect their Instagram and LinkedIn accounts; Scheduled posts are published automatically to the connected social accounts; Users sign in with email and password. This package is not that product.",
     );
   });
 
@@ -336,7 +336,7 @@ describe("components-only offer: only real functions the person asked for (ADR-0
     const judged = await offerComponents({ need: shopNeed, verdict: shop, catalog: CATALOG }, YES);
     expect(judged?.components.map((c) => c.id)).toEqual(["payments.checkout.stripe"]);
     expect(componentOffer(judged!, { need: shopNeed, planId: null }).notIncluded).toBe(
-      "Not included: Orders are synced to Shopify, and the application itself (its screens, data and flows) — only these components. This package is not the complete product you described.",
+      "Not included: Orders are synced to Shopify; and the application itself (its screens, data and flows) — only these components. This package is not the complete product you described.",
     );
     const game = {
       requirements: [
@@ -365,7 +365,7 @@ describe("components-only offer: only real functions the person asked for (ADR-0
     const r = await offerComponents({ need: NEED, verdict: VERDICT, catalog: CATALOG }, YES);
     const offer = componentOffer(r!, { need: NEED, planId: "p1" });
     expect(offer.title).toBe(
-      "Verified components for your autonomous social media publisher: ai.orchestrator.turbineh",
+      "Verified components for your request “autonomous social media publisher”: ai.orchestrator.turbineh",
     );
     expect(offer.approve.api).toBe('POST /v1/plans/p1/generate with {"approve": true}');
     expect(offer.approve.cli).toBe("turbineh resume p1 --approve");

@@ -210,7 +210,7 @@ describe("uncovered use case → components-only offer (ADR-0062), against the r
     expect(offer?.components[0]?.proof[0]?.test).toMatch(/ai-agent\.test\.ts/);
     expect(offer?.coreNotIncluded).toBe(true);
     expect(offer?.notIncluded).toMatch(
-      /^Not included — the core of your request: autonomous social media publisher/,
+      /^Not included — the core of your request: “autonomous social media publisher”/,
     );
     expect(offer?.youGet).toMatch(/^You get AI generation through the TurbineH orchestrator/);
 

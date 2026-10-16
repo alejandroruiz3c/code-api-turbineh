@@ -217,7 +217,7 @@ describe("POST /v1/plans · uncovered use case (ADR-0062)", () => {
     };
     expect(body.scope?.status).toBe("components_only");
     expect(body.offer.title).toMatch(
-      /^Verified components for your autonomous social media publisher/,
+      /^Verified components for your request “autonomous social media publisher”/,
     );
     expect(body.offer.components.map((c) => c.id)).toEqual(["ai.orchestrator.turbineh"]);
     expect(body.offer.components[0]?.proof[0]?.test).toMatch(/then answers/);
