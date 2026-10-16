@@ -58,6 +58,9 @@ interface Run {
   guideFunctional: { met: number; total: number; ratio: number; label: string } | null;
   criteria: GuideCriterion[];
   minutes: number | null;
+  /** ISO times: a statement counts only when staging ran the measured revision for its whole run. */
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 const here = import.meta.dirname;
@@ -214,6 +217,7 @@ async function main() {
     }
     const t0 = Date.now();
     const run: Run = {
+      startedAt: new Date(t0).toISOString(),
       id: s.id,
       band: s.band,
       flowId: null,
@@ -292,6 +296,7 @@ async function main() {
       return run;
     } finally {
       run.minutes = Math.round((Date.now() - t0) / 600) / 100;
+      run.finishedAt = new Date().toISOString();
       writeFileSync(file, `${JSON.stringify(run, null, 2)}\n`);
       process.stderr.write(
         `${s.id}: ${run.error ?? run.badge ?? (run.refused ? "refused" : run.state)}\n`,
