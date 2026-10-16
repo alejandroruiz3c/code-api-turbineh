@@ -820,3 +820,56 @@ describe("canonical criteria: staging bench r5 (ADR-0063)", () => {
     ).toEqual(["storefront.admin-panel"]);
   });
 });
+
+// Staging functional bench r5 (FB02 refused at 0 % because no criterion mapped at planning; FA10 mapped one delete to
+// two entities).
+describe("canonical criteria: staging bench r5, FB02 and FA10 (ADR-0063)", () => {
+  it.each([
+    [
+      "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings.",
+      "bookings.no-double-booking",
+    ],
+    [
+      "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided address.",
+      "bookings.confirmation-email",
+    ],
+    [
+      "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the schedule.",
+      "bookings.cancel-notice",
+    ],
+    [
+      "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week.",
+      "bookings.staff-calendar",
+    ],
+  ])("FB02 maps %j", (asked, id) => {
+    const canon = canonicalForPlan({
+      recipesDir,
+      recipe: "bookings",
+      entities: ["Physiotherapist"],
+    });
+    expect(
+      mapToCanonical(asked, canon, [], requestWords("physiotherapy clinic")).map((c) => c.id),
+    ).toEqual([id]);
+  });
+  it("FA10: deleting a contact from the workspace is the contact's delete only", () => {
+    const canon = canonicalForPlan({
+      recipesDir,
+      recipe: "saas-crud",
+      entities: ["Contact", "Workspace"],
+    });
+    expect(
+      mapToCanonical("A user can delete a contact from their workspace.", canon).map((c) => c.id),
+    ).toEqual(["saas-crud.crud-delete:Contact"]);
+  });
+  it("FA10: a member who may not export contacts is the role policy", () => {
+    const canon = canonicalForPlan({ recipesDir, recipe: "saas-crud", entities: ["Contact"] });
+    expect(
+      mapToCanonical(
+        "A non-admin member is prevented from exporting contacts to CSV.",
+        canon,
+        [],
+        requestWords("Contact"),
+      ).map((c) => c.id),
+    ).toEqual(["saas-crud.roles"]);
+  });
+});

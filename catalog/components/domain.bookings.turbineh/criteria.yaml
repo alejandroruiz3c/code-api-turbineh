@@ -46,6 +46,7 @@
     prior least before window allowed allow late too refused refuse appointment reservation session visit
     self-service themselves own their start time
     less more than through interface app occur occurs successfully denied deny cancellation
+    remove removes removed delete deletes deleted click clicks
   actors: [customer, client, patient, visitor, guest]
   tests:
     - "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
@@ -61,6 +62,7 @@
     must never two people
     occupied chosen selected select attempt made
     unavailable available availability
+    mark marks marked
   actors: [customer, client, patient, visitor, guest, staff]
   tests:
     - "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"

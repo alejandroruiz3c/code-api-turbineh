@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
-import { OWNER_EMAIL, signUp } from "./helpers";
+import { OWNER_EMAIL, PASSWORD } from "./helpers";
 
 test.describe.serial("client requests", () => {
   test("the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status", async ({
@@ -44,6 +44,25 @@ test.describe.serial("client requests", () => {
   });
 });
 
+/** Sign-up with a retry: better-auth allows 3 sign-up requests per 10 s per client in production builds. */
+async function signUpRetrying(page: Page, email: string) {
+  await page.goto("/sign-up");
+  await page.getByLabel("Name", { exact: true }).fill("Client Person");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByLabel("Workspace name").fill("Client Workspace");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.getByRole("button", { name: "Create account" }).click();
+    try {
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 8_000 });
+      return;
+    } catch {
+      await page.waitForTimeout(10_500);
+    }
+  }
+  await expect(page).toHaveURL(/\/dashboard/);
+}
+
 /** The role a client holds: the app's default member role (the request's own key when roles were customised). */
 const CLIENT_ROLE = existsSync("src/membership/params.json")
   ? ((JSON.parse(readFileSync("src/membership/params.json", "utf8")) as { defaultRole?: string })
@@ -63,7 +82,7 @@ test("a client submits a request with a file and follows its status; staff revie
   const client = await (
     await browser.newContext({ storageState: { cookies: [], origins: [] } })
   ).newPage();
-  await signUp(client, clientEmail);
+  await signUpRetrying(client, clientEmail);
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {

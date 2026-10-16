@@ -321,7 +321,8 @@ const NARRATIVE = salientStems(
     "valid particular desired respective respectively relevant own only become becomes occur occurs high quality " +
     "distinct within historical automatically automatic correct one two three four five several various multiple " +
     "given exists exist specified certain additional exactly during provided provide visually personalized " +
-    "personalised immediately where whose which",
+    "personalised immediately where whose which include included includes organized organised access " +
+    "accesses accessed address addresses non",
 );
 
 const leftover = (
@@ -369,7 +370,24 @@ export function mapToCanonical(
   if (alone.length > 0) {
     // Several functions each describe it: the one(s) whose own wording it expresses most.
     const best = Math.max(...alone.map((c) => closeness(derived, c)));
-    return alone.filter((c) => closeness(derived, c) === best);
+    const top = alone.filter((c) => closeness(derived, c) === best);
+    // One generated function for several entities ("delete a contact from their workspace"): the entity named first
+    // is its object.
+    const at = (c: ResolvedCanonical) => {
+      if (!c.entity) return -1;
+      const n = entityNames(c.entity);
+      const m = new RegExp(
+        `\\b(${[n.labelSingular, n.labelPlural].map((w) => escapeWord(w.toLowerCase())).join("|")})\\b`,
+        "i",
+      ).exec(derived);
+      return m ? m.index : Number.MAX_SAFE_INTEGER;
+    };
+    return top.filter((c) => {
+      if (!c.entity) return true;
+      const base = c.id.split(":")[0];
+      const rivals = top.filter((o) => o.entity && o.id.split(":")[0] === base);
+      return rivals.every((o) => at(c) <= at(o));
+    });
   }
   // Only together: the fewest functions (at most two) that absorb it, the closest first — never every candidate.
   const ranked = [...cands].sort((a, b) => closeness(derived, b) - closeness(derived, a));

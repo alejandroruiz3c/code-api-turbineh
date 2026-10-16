@@ -2,6 +2,9 @@
 # extends it, so these apply to every build. `generated`: CRUD functions the assembler generates per entity — the
 # criterion's {entity}/{entities} is the entity the request names, linked to that entity's generated E2E test whose
 # title matches the pattern. `when: open-sign-up`: only where anyone may create an account.
+# The base SaaS's nouns, absorbed by every criterion below (what the functions act on, never what they do).
+- vocabulary: workspace workspaces their team account app application dashboard
+
 - id: saas-crud.sign-in
   criterion: "A returning user signs out, signs in again and resumes their workspace"
   advertises: "sign-in"
@@ -41,11 +44,12 @@
 - id: saas-crud.roles
   criterion: "A member cannot approve, export, change settings, manage members or read the audit log"
   advertises: "roles"
-  says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|\\bnot\\b|only|restrict|limit|denied|deny|permission"]
+  says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|\\bnot\\b|only|restrict|limit|denied|deny|permission|prevent|block|refus|forbid|non-"]
   terms: >-
     role roles permission permissions privilege privileges right rights restrict restricted limit limited only
     admin admins administrator owner owners member members regular approve export settings setting configure
     manage members audit log read change changes access allowed denied
+    csv records data list
   actors: [member, admin, owner, administrator]
   tests:
     - "tests/unit/permissions.test.ts › a member cannot approve, export, change settings, manage members or read the audit log"
