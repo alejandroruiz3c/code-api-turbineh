@@ -22,6 +22,8 @@ const schema = z.object({
   VERCEL_INTEGRATION_SLUG: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_ID: z.string().optional(),
   VERCEL_INTEGRATION_CLIENT_SECRET: z.string().optional(),
+  /** Landing server secret for POST /v1/ai/trial-signups (ADR-0059). Optional: without it the endpoint is 404. */
+  ORCHESTRATION_SIGNUP_SECRET: z.string().optional(),
 });
 
 type Env = z.infer<typeof schema>;

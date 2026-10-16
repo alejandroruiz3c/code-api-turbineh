@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests",
     "migrate": "tsx src/migrate.ts",
     "demand": "tsx src/demand-report.ts",
+    "trials": "tsx src/trials-report.ts",
     "notify-available": "tsx src/notify-available.ts"
   },
   "dependencies": {

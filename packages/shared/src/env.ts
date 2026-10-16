@@ -68,6 +68,12 @@ export const envSchema = z.object({
   EMAIL_FROM: optionalString,
   /** Owner alert for each uncovered request (ADR-0052 demand); default alex.ruiz@turbineh.com. */
   DEMAND_ALERT_EMAIL: optionalString,
+
+  /**
+   * Shared secret of the landing server for POST /v1/ai/trial-signups (ADR-0059, Intelligence Orchestration trials).
+   * Optional: without it the endpoint answers 404.
+   */
+  ORCHESTRATION_SIGNUP_SECRET: optionalString,
 });
 
 export type Env = z.infer<typeof envSchema>;

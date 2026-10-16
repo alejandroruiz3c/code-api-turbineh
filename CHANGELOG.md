@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+
+- Intelligence Orchestration as a product (ADR-0059): `POST /v1/ai/trial-signups` provisions a build-less trial
+  account and an orchestration token for the landing page's "try it free" form (server-to-server,
+  `ORCHESTRATION_SIGNUP_SECRET`; rate limited per email, client IP and day; repeat signups rotate the token and keep
+  the $2 balance); a remote MCP server at `/v1/ai/mcp` (Streamable HTTP, stateless; tools `orchestrate`, `chat`,
+  `trial_status`); orchestrated routing on the OpenAI-compatible chat endpoint (`model: "turbineh-orchestration"`);
+  `X-TurbineH-Trial-Remaining-USD` on every gateway response; trial listing (`pnpm --filter @turbineh/db trials`,
+  `GET /v1/ops/trials`); connect guide in `docs/INTELLIGENCE_ORCHESTRATION.md`.
+
 ### Changed
 
 - Resource decisions behind a private engine (ADR-0058): the decision questions, prompts and thresholds (selection,
