@@ -1,0 +1,66 @@
+schema: turbineh.component/v0.1
+id: social.metrics.turbineh
+version: 0.1.0
+status: approved
+category: social
+source:
+  purl: pkg:generic/turbineh/social.metrics.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Fetches basic engagement metrics of published social media posts on a schedule: LinkedIn reactions and comments (socialMetadata), Facebook Page post reactions, comments and shares, Instagram likes, comments, shares and views (media fields + insights), X (Twitter) likes, replies, reposts + quotes and impressions (public_metrics). Snapshots per fetch, null (never 0) for what a network does not report, a protected runner route and a metrics page with totals per network."
+  does_not: "Does not fetch follower growth, audience demographics, link clicks, LinkedIn share/impression counts (restricted analytics APIs), Facebook impressions (deprecated Graph metric) or metrics of posts not published by the app"
+  use_cases: [saas-crud, ai-agents]
+  pros: ["Maintained by TurbineH", "Contract-tested against mocks of each network's documented read endpoint", "Honest gaps: unknown values stay empty"]
+  cons:
+    [
+      "LinkedIn metrics need a read scope LinkedIn grants only to approved apps (r_member_social_feed / r_organization_social_feed)",
+      "X reads are billed per request; Instagram insights need instagram_manage_insights",
+    ]
+  alternatives: []
+contract:
+  inputs: ["src/social/params/metrics.json (refreshHours, windowDays)", "GET|POST /api/social/metrics/run with x-cron-secret: CRON_SECRET"]
+  outputs: ["social_post_metrics snapshots (likes, comments, shares, impressions; null when not reported)", "{ fetched, failed, skipped } per call", "/dashboard/social/metrics"]
+  errors: ["a refused token marks the connection expired; other provider errors are reported per post and retried on the next call"]
+  limits: ["50 posts per call, posts published within windowDays (default 30), refreshed every refreshHours (default 6)"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: [linkedin, meta-graph, x-api]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/social/{metrics,metrics-api,metrics-config}.ts + params/metrics.json, src/db/component-social-metrics.ts, the runner route, /dashboard/social/metrics, contract + E2E tests."
+  config: [CRON_SECRET]
+  migrations: true
+params:
+  file: src/social/params/metrics.json
+  schema: params.schema.json
+  entities: [PostMetric, PostMetrics, EngagementMetric, Engagement, SocialMetric, Analytics]
+quality:
+  tests:
+    {
+      command: "contract tests of the four networks' read endpoints against the provider mocks + E2E (runner protected, metrics stored for published posts and shown, refreshed only when stale); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-16,
+    }
+security:
+  scanned_at: 2026-10-16
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: runner secret compared in constant time, reads scoped to the workspace, tokens only from accessTokenFor, numbers validated before storage."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Metrics of LinkedIn, Facebook, Instagram and X posts pass contract tests against mocks of the documented read endpoints; the metrics E2E suite passes in the full verification gate"
+    origin: tested
+    ref: "verify:recipe saas-crud --with social.connections.turbineh,social.publish.turbineh,social.metrics.turbineh (ADR-0067)"
+relations:
+  requires: [social.publish.turbineh]
+  provides: [social.metrics]
+  conflicts: []
+  tested_with: [recipe.saas-crud, recipe.ai-agents]

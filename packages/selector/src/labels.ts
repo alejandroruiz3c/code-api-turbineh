@@ -123,6 +123,9 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "content.markdown-to-text": "Markdown to plain text",
   "data.yaml": "YAML reading and writing",
   "email.parsing": "parsing of incoming emails",
+  "social.oauth": "connecting LinkedIn, Facebook, Instagram or X accounts with OAuth",
+  "social.publish": "publishing and scheduling posts on LinkedIn, Facebook, Instagram or X",
+  "social.metrics": "likes, comments and other engagement of published social posts",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;

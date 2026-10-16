@@ -1,0 +1,5 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/social-metrics.spec.ts › a dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule, not fetched again while fresh"
+  covers: ["metric|engagement|likes|comments|shares|impressions|analytics|performance"]
+- test: "tests/e2e/social-metrics.spec.ts › a dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule, not fetched again while fresh"
+  covers: ["dashboard|published posts", "metric|engagement|likes"]

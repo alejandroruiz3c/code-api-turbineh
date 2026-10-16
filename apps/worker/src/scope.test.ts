@@ -54,8 +54,62 @@ describe("scope gate in the worker (ADR-0052), against the real catalogue", () =
         decider: decider(),
       });
       expect(v.status, recipe).toBe("uncovered");
-      expect(v.notCovered.length).toBeGreaterThanOrEqual(3);
+      // Connecting and publishing are covered by the social.* components (ADR-0067); autonomy and AI drafts in a
+      // use case without AI are not.
+      const why = v.notCovered.map((r) => r.why);
+      expect(why).toContain(
+        "Autonomous actions without a person's confirmation: not part of any verified use case",
+      );
+      expect(why.some((w) => w.startsWith("AI generation"))).toBe(true);
+      expect(why.filter((w) => w.startsWith("Integration with"))).toEqual([]);
     }
+  });
+
+  it("social publishing with approval on LinkedIn, Facebook, Instagram and X is covered by the social components (ADR-0067)", async () => {
+    const v = await gateRequest({
+      prompt:
+        "A social media publisher for a small bakery: connects LinkedIn, Instagram, Facebook and X accounts; the owner approves each post before it is published; posts are scheduled and published at the chosen time, retried on failure and logged; a calendar and basic engagement metrics.",
+      spec: spec({
+        acceptance_criteria: [
+          "The owner connects LinkedIn, Instagram, Facebook and X accounts",
+          "Each post is approved before it is published",
+          "Scheduled posts are published to LinkedIn and X at the chosen time",
+          "Failed publications are retried and every publication is logged",
+          "A dashboard shows likes and comments of published posts on Instagram and Facebook",
+        ],
+      }),
+      componentsDir,
+      decider: decider(),
+    });
+    expect(v.notCovered).toEqual([]);
+    expect(v.status).toBe("covered");
+  });
+
+  it("networks no component connects to stay uncovered (TikTok), and so does the audit's autonomous publisher", async () => {
+    const tiktok = await gateRequest({
+      prompt: "Publish our videos to TikTok and YouTube every Friday",
+      spec: spec({ acceptance_criteria: ["Videos are published to TikTok every Friday"] }),
+      componentsDir,
+      decider: decider(),
+    });
+    expect(tiktok.status).toBe("uncovered");
+    expect(tiktok.notCovered.map((r) => r.why)).toContain(
+      "Integration with TikTok: no verified component connects to it yet",
+    );
+    const audit = await gateRequest({
+      prompt:
+        "An autonomous social media publisher for a small business: connects LinkedIn, Instagram, Facebook and X accounts; generates post drafts with AI from a brand voice and a content calendar (topics, frequency per network); adapts each post to each network's format and length; optional human approval before publishing; schedules and publishes automatically at the configured times; retries on failure and logs every publication; dashboard with the calendar, published posts and basic engagement metrics.",
+      spec: spec({
+        recipe: "ai-agents",
+        acceptance_criteria: ["Posts are published to LinkedIn at the configured times"],
+      }),
+      componentsDir,
+      decider: decider(),
+    });
+    expect(audit.status).toBe("uncovered");
+    expect(audit.notCovered.map((r) => r.why)).toContain(
+      "Autonomous actions without a person's confirmation: not part of any verified use case",
+    );
   });
 
   it("a covered recipe passes; an uncovered requirement makes it partial, built only by explicit choice", async () => {

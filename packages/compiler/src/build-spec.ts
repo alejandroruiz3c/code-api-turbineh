@@ -143,6 +143,10 @@ export const CAPABILITIES = [
   "content.markdown-to-text",
   "data.yaml",
   "email.parsing",
+  // Social networks (ADR-0067): OAuth connections, publishing and engagement metrics (LinkedIn, Meta Graph, X)
+  "social.oauth",
+  "social.publish",
+  "social.metrics",
 ] as const;
 
 const item = (t: number, x: number) =>

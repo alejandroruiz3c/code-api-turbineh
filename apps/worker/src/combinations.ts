@@ -29,6 +29,14 @@ export const DOMAIN_PROBES: Record<string, string> = {
     "prompt injection and abuse (input limits, rate limits).",
 };
 
+/** The social publishing request of the social.* combination (ADR-0067). */
+export const SOCIAL_PUBLISHER_PROMPT =
+  'Build "Crumb & Co Social", a social media publisher for a small bakery: the owner connects LinkedIn, Instagram, ' +
+  "Facebook and X accounts; team members write posts, adapted to each network's format and length, and the owner " +
+  "approves each post before it is published; posts are scheduled and published at the chosen time, retried on " +
+  "failure, and every publication is logged; a content calendar and a dashboard with likes, comments and shares of " +
+  "published posts.";
+
 export interface Combination {
   /** "ai-agents" or "ai-agents+domain.bookings.turbineh". */
   name: string;
@@ -446,6 +454,22 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
           },
         ],
       },
+    },
+  },
+  {
+    // Crumb & Co (audit v2 §6, without autonomy or AI drafts — ADR-0067): connect LinkedIn, Facebook + Instagram and
+    // X, approve, schedule, publish with retries and a log, calendar, engagement metrics.
+    recipe: "saas-crud",
+    with: ["social.connections.turbineh", "social.publish.turbineh", "social.metrics.turbineh"],
+    prompt: SOCIAL_PUBLISHER_PROMPT,
+    params: {
+      "social.connections.turbineh": { providers: ["linkedin", "meta", "x"] },
+      "social.publish.turbineh": {
+        networks: ["linkedin", "facebook", "instagram", "x"],
+        requireApproval: true,
+        maxAttempts: 5,
+      },
+      "social.metrics.turbineh": { refreshHours: 6, windowDays: 30 },
     },
   },
 ];

@@ -37,6 +37,20 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   and thresholds (functional coverage, gap-detection recall, false "verified", contradictions between surfaces,
   snippets, precision@5, estimate error, footprint, time p50/p95, cost) plus a review sheet for human confirmation.
   The section 11.3 comparison with Claude Code is prepared, not run (`compare-claude-code.md`).
+- Social networks as first-class components (ADR-0067, audit v2 §5.1/§6/§8 P1): `social.connections.turbineh`
+  (OAuth 2.0 for LinkedIn members, Facebook Pages + their Instagram professional accounts via Facebook Login for
+  Business, X with PKCE; single-use state; tokens AES-256-GCM-encrypted under `SOCIAL_TOKEN_KEY`, bound to their row,
+  refreshed, revoked on disconnect, never in CRUD/CSV/logs), `social.publish.turbineh` (LinkedIn Posts API + Images
+  API, Graph `/feed`, `/photos`, Instagram `/media` + `/media_publish`, X `POST /2/tweets` + `/2/media/upload`;
+  per-network length/format rules incl. X's weighted count, optional approval, scheduling in the author's zone, a
+  unique idempotency key per post, claimed runner route with leases, retries with exponential backoff + Retry-After,
+  append-only publication log, calendar) and `social.metrics.turbineh` (likes, comments, shares, impressions per
+  published post on a schedule; null when a network does not report it). Contract tests against offline mocks of each
+  provider's documented endpoints, E2E suites, capabilities `social.oauth`/`social.publish`/`social.metrics`, fidelity
+  patterns that select them with the request's networks and approval, and the scope gate now covers LinkedIn,
+  Facebook, Instagram and X publishing (autonomy, AI drafts without AI, and other networks stay uncovered).
+  `verify:recipe saas-crud+social.connections.turbineh+social.publish.turbineh+social.metrics.turbineh` and
+  `verify:spec social-publisher` run them through the full gate.
 - Owner usage report across products (ADR-0061): per account for the YES IF library (identity, channels, flows,
   outcomes, checks, requirements, capabilities/components, time to verified, downloads, pull requests, deploys,
   uncovered requests, AI use of generated apps) and Intelligence Orchestration (requests, tokens, p50/p95, cost,

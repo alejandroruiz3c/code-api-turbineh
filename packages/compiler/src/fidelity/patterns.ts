@@ -30,7 +30,10 @@ export type PatternId =
   | "growth.waitlist"
   | "data.analytics-import"
   | "kanban"
-  | "bookings";
+  | "bookings"
+  | "social.connections"
+  | "social.publish"
+  | "social.metrics";
 
 /** Capabilities that implement each pattern, in order of preference (the component's `relations.provides`). */
 export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
@@ -44,6 +47,9 @@ export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
   "data.analytics-import": ["data.analytics-import"],
   kanban: ["ui.kanban", "domain.kanban", "kanban"],
   bookings: ["domain.bookings"],
+  "social.connections": ["social.oauth"],
+  "social.publish": ["social.publish"],
+  "social.metrics": ["social.metrics"],
 };
 
 export interface PatternMatch {
@@ -500,6 +506,95 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
       });
     }
   }
+  out.push(...detectSocial(text, all));
+  return out;
+}
+
+/** Social networks a request names, when it acts on them (publish, schedule, connect, measure). */
+export const SOCIAL_NETWORKS: Record<"linkedin" | "facebook" | "instagram" | "x", RegExp> = {
+  linkedin: /\blinked ?in\b/i,
+  facebook: /\bfacebook\b|\bfb pages?\b/i,
+  instagram: /\binstagram\b|\binsta\b/i,
+  // "X" only where it names the network: "Twitter", "tweets", "X (Twitter)", "X accounts", "… and X".
+  x: /\btwitter\b|\btweets?\b|\bx\.com\b|\bx\s*\(twitter\)|\bx\s+(?:accounts?|posts?|profiles?)\b|(?:,|\band|\bor)\s+x\b(?![-.\w])/i,
+};
+const SOCIAL_ANY = /\bsocial[- ](?:media|networks?|accounts?|channels?|platforms?|posts?)\b/i;
+const SOCIAL_ACTION =
+  /\b(publish|post|schedul|share|connect|integrat|auto-?post|cross-?post|tweet|link (?:their|your|the) |authori[sz])\w*/i;
+/** Share buttons, profile links and handles are plain web content, not an integration. */
+const SOCIAL_CONTENT_ONLY =
+  /\b(share buttons?|links? to|profile links?|icons?|handles?|usernames?|follow us)\b/i;
+const SOCIAL_METRICS =
+  /\b(engagement|metrics?|likes|impressions|reach|insights|analytics|performance)\b/i;
+
+/**
+ * Social publishing (social.connections / social.publish / social.metrics): sentences that connect, publish to or
+ * measure LinkedIn, Facebook, Instagram or X. Networks are the ones named (all four when it only says "social media").
+ * Approval is on unless the request says posts go out without it.
+ */
+export function detectSocial(
+  text: string,
+  all: readonly string[] = sentences(text),
+): PatternMatch[] {
+  const named = (s: string) =>
+    (Object.keys(SOCIAL_NETWORKS) as (keyof typeof SOCIAL_NETWORKS)[]).filter((n) =>
+      SOCIAL_NETWORKS[n].test(s),
+    );
+  const social = all.filter(
+    (s) =>
+      (named(s).length > 0 || SOCIAL_ANY.test(s)) &&
+      SOCIAL_ACTION.test(s) &&
+      !SOCIAL_CONTENT_ONLY.test(s),
+  );
+  if (social.length === 0) return [];
+  const networks = [...new Set(social.flatMap(named))];
+  const assumptions: string[] = [];
+  if (networks.length === 0) {
+    networks.push("linkedin", "facebook", "instagram", "x");
+    assumptions.push("Social networks not named: LinkedIn, Facebook, Instagram and X.");
+  }
+  const providers = [
+    ...new Set(networks.map((n) => (n === "facebook" || n === "instagram" ? "meta" : n))),
+  ];
+  const out: PatternMatch[] = [
+    {
+      id: "social.connections",
+      params: { providers },
+      providedEntities: [],
+      evidence: social,
+      assumptions,
+    },
+  ];
+  const publishes = social.filter((s) =>
+    /\b(publish|post|schedul|share|auto-?post|cross-?post|tweet)\w*/i.test(s),
+  );
+  if (publishes.length > 0) {
+    const noApproval = /\b(without|no) (?:human |manual )?(?:approval|review)\b/i.test(text);
+    out.push({
+      id: "social.publish",
+      params: { networks, requireApproval: !noApproval, maxAttempts: 5 },
+      providedEntities: [],
+      evidence: publishes,
+      assumptions: /\bapprov|\breview/i.test(text)
+        ? []
+        : [
+            "Approval not stated: posts are approved by someone who may approve before they are scheduled.",
+          ],
+    });
+    const measured = all.filter(
+      (s) =>
+        SOCIAL_METRICS.test(s) &&
+        (named(s).length > 0 || SOCIAL_ANY.test(s) || /\bposts?\b/i.test(s)),
+    );
+    if (measured.length > 0)
+      out.push({
+        id: "social.metrics",
+        params: { refreshHours: 6, windowDays: 30 },
+        providedEntities: [],
+        evidence: measured,
+        assumptions: ["Metrics refreshed every 6 hours for posts of the last 30 days."],
+      });
+  }
   return out;
 }
 
@@ -517,6 +612,10 @@ export function criterionTouches(criterion: string, p: PatternMatch): boolean {
     "data.analytics-import": /\bcsv|\bimport|\bupload|\bchart|\brevenue/i,
     kanban: /\bkanban|\bboard|\bdrag/i,
     bookings: /\bbook|\bslot|\bstylist|\bappointment|\bcancel/i,
+    "social.connections":
+      /\bconnect|\blinked ?in|\bfacebook|\binstagram|\btwitter|\bsocial|\boauth/i,
+    "social.publish": /\bpublish|\bpost|\bschedul|\bapprov|\bretr|\bcalendar|\bformat|\blength/i,
+    "social.metrics": /\bmetric|\bengagement|\blikes|\bimpression|\banalytics/i,
   };
   return words[p.id].test(criterion);
 }

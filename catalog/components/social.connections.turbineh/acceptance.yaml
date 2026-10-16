@@ -1,0 +1,7 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/social-connections.spec.ts › a workspace owner connects LinkedIn, Facebook Pages with their Instagram account, and X through each provider's OAuth consent page"
+  covers: ["connect|link|authori[sz]|oauth|sign in with", "linkedin|facebook|instagram|twitter|\\bx\\b|social (media )?(accounts?|networks?|profiles?)"]
+- test: "tests/e2e/social-connections.spec.ts › access tokens are stored encrypted (AES-256-GCM) and never appear on a page"
+  covers: ["token|credential|secret", "encrypt|secure|safe|never (shown|exposed|displayed)|at rest"]
+- test: "tests/e2e/social-connections.spec.ts › disconnecting an account revokes its tokens at the provider and deletes them here"
+  covers: ["disconnect|revoke|remove (the )?(account|access)|unlink"]
