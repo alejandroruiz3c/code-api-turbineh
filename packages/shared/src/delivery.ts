@@ -498,7 +498,10 @@ export function deployFacts(markdown: string): SurfaceFacts {
     return rows;
   };
   // AI connection settings are presented as two equal options in their own section (F-09): its "Settings" row.
-  const ai = /^\| Settings \|(.*)$/m.exec(markdown.slice(Math.max(0, markdown.indexOf("· AI: choose"))))?.[1] ?? "";
+  const ai =
+    /^\| Settings \|(.*)$/m.exec(
+      markdown.slice(Math.max(0, markdown.indexOf("· AI: choose"))),
+    )?.[1] ?? "";
   const aiNames = markdown.includes("· AI: choose")
     ? [...ai.matchAll(/`([A-Z][A-Z0-9_]*)`/g)].map((x) => x[1] as string)
     : [];

@@ -65,8 +65,10 @@ decision(s) not kept`, with the failure, in every surface. Plans never promise w
    recorded in the manifest with the removed modules.
 6. **Settings (F-11).** One env schema (`appSettings`): `src/env.ts` (Zod; a setting required by a refinement is
    required) plus the settings the app's `.env.example` declares (a description starting with "Required" makes it
-   required: e.g. `TURBINEH_AI_TOKEN`, the staff list of a booking calendar). The plan, the result ("Settings":
-   Required / Optional), DEPLOY.md, AGENTS.md, turbineh.json and the CLI show the same split, `BETTER_AUTH_*` included.
+   required: e.g. the staff list of a booking calendar). The plan, the result ("Settings": Required / Optional),
+   DEPLOY.md, AGENTS.md, turbineh.json and the CLI show the same split, `BETTER_AUTH_*` included. The AI connection
+   settings are two equal options (gateway or own provider, F-09): optional in the schema and presented in DEPLOY.md's
+   own AI section, which the consistency check reads too.
 
 ## Consequences
 
