@@ -494,7 +494,7 @@ export function notCoveredExplanation(input: {
     priority: PRIORITY_NOTICE,
     canDoNow: offer
       ? `We can prepare a components-only package now, only for functions you asked for that verified components really implement. ${offer.youGet} ${offer.notIncluded} Nothing is built until you approve it.`
-      : `No verified component implements a function you asked for, so nothing was built and nothing is offered. ${NOT_COVERED_WHY} Meanwhile you can start a new flow limited to what the library covers (the use cases and components on /use and /catalogue), or choose verified components explicitly (\`components\` in the API, \`--components\` in the CLI).`,
+      : `No verified component implements a function you asked for, so nothing was built and nothing is offered. ${NOT_COVERED_WHY} Meanwhile you can start a new flow limited to what the library covers (the use cases and components on /use and /catalog), or choose verified components explicitly (\`components\` in the API, \`--components\` in the CLI).`,
     offer,
   };
 }
