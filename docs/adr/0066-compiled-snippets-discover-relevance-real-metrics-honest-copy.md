@@ -26,7 +26,7 @@
     `noUncheckedIndexedAccess`) against the pinned versions — the catalogue purls, declared `@types`, the harness pins
     and, for the rest of the stack (pg…), the saas-crud template pins. `compiled: { against, typescript, on }` records
     what and when; the date is kept while snippet, packages and TypeScript are unchanged.
-  - `app` (16 TurbineH modules): `snippet.ts` importing the component's own files through `@/…`; compiled inside the
+  - `app` (19 TurbineH modules): `snippet.ts` importing the component's own files through `@/…`; compiled inside the
     assembled apps that contain it (`verify:recipe --all --domains --quick --snippets`; a component no combination
     assembles gets one extra target; a snippet compiled nowhere fails the run).
   - `json` (5): validated against the component's `params.schema.json`.
@@ -42,8 +42,9 @@
   uses the component's own usage instead of the model's example.
 - Found on the way: `files.upload.busboy` declared no types (a generated app importing it fails strict type-check);
   `integration.types: "@types/busboy@1.5.4"` (1.5.5 is newer than 14 days).
-- Result: **160/160** components with a verified example; 137/137 TypeScript snippets and every import signature
-  compile against the pinned versions (2026-10-16), 16/16 app snippets compile in the assembled apps.
+- Result: **163/163** components with a verified example; 137/137 TypeScript snippets and every import signature
+  compile against the pinned versions (2026-10-16), 19/19 app snippets compile in the assembled apps (12/12
+  combinations pass), 5 JSON and 2 CLI/API examples check.
 
 ### 2. Discover relevance (§5.3)
 
@@ -58,9 +59,10 @@
   validation benchmark (`bench/validation/discover-queries.json`, same metric definition) and on 12 held-out queries
   (`fixtures/discover-holdout.json`) written before they were measured and never used for tuning; "support agent"
   must return the AI agents use case first and never colour pickers, YAML or i18n; an unrelated need returns nothing.
-- Measured (catalogue in git, 2026-10-16): reference set **0.69 → 0.91**; held-out **0.81** at first measurement,
-  **0.90** after adding search stop words ("into", "from"…), the only change made after seeing it. Mean recall@5 on
-  the reference set 0.63 → 0.53 and 10.7 → 3.5 results per query: fewer, more precise results. The weights were
+- Measured (catalogue in git, 2026-10-16): reference set **0.69 → 0.89** (0.91 before the three social components
+  of ADR-0067 joined the catalogue); held-out **0.81** at first measurement, **0.90** after adding search stop words
+  ("into", "from"…), the only change made after seeing it. Mean recall@5 on
+  the reference set 0.63 → 0.54 and 10.7 → 3.6 results per query: fewer, more precise results. The weights were
   chosen on the reference set; the held-out number is the honest one.
 - Components on Discover show their example as code with "Snippet compiled against <pkg>@<v> (TypeScript x) on
   <date> · from <source>".

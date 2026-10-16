@@ -13829,7 +13829,11 @@
         "Instagram: only professional (business or creator) accounts linked to a Facebook Page; Instagram Login (graph.instagram.com) is not used",
         "Rate limits are the platforms' (e.g. X users/me 75 per 15 min); this component adds none of its own"
       ],
-      "example": "// A server-only provider call with a connected account:\nconst { token, accountId } = await accessTokenFor(ctx.organizationId, connectionId);\nconst res = await fetch(`https://api.x.com/2/users/${accountId}`, { headers: { authorization: `Bearer ${token}` } });\n",
+      "example": "// Server-only code in the app (e.g. src/social/profile.ts): a provider call with a connected account's token.\nimport { accessTokenFor, type Ctx } from \"@/social/connections\";\n\nexport async function connectedProfile(ctx: Ctx, connectionId: string): Promise<unknown> {\n  // Decrypted on the server for this call only; refreshed when it is about to expire.\n  const { token, accountId, network } = await accessTokenFor(ctx.organizationId, connectionId);\n  if (network !== \"x\") return null;\n  const res = await fetch(`https://api.x.com/2/users/${accountId}`, {\n    headers: { authorization: `Bearer ${token}` },\n  });\n  return res.ok ? res.json() : null;\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "social media",
         "social accounts",
@@ -13996,7 +14000,11 @@
         "X: each read is billed per request (pay-per-use); metrics are fetched one post per request",
         "Needs a scheduler; 50 posts per call"
       ],
-      "example": "// Scheduler (hourly): curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/social/metrics/run\nconst m = await fetchMetrics(\"x\", token, post.externalId); // { likes: 15, comments: 2, shares: 4, impressions: 512 }\n",
+      "example": "// Server-only code in the app: engagement of one published post (the hourly job at /api/social/metrics/run does this\n// for every recent post).\nimport { accessTokenFor, type Ctx } from \"@/social/connections\";\nimport { fetchMetrics } from \"@/social/metrics-api\";\n\nexport async function postMetrics(ctx: Ctx, connectionId: string, externalId: string) {\n  const { token, network } = await accessTokenFor(ctx.organizationId, connectionId);\n  const m = await fetchMetrics(network, token, externalId);\n  return { likes: m.likes, comments: m.comments, shares: m.shares, impressions: m.impressions };\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "social media metrics",
         "engagement",
@@ -14230,7 +14238,11 @@
         "LinkedIn's 3,000-character commentary limit comes from LinkedIn Help (the API only reports FIELD_LENGTH_TOO_LONG); Facebook's 63,206 is the long-standing UI limit",
         "Needs a scheduler calling the runner; posting precision is the scheduler's interval. Instagram containers are polled up to ~30 s per attempt"
       ],
-      "example": "// Scheduler (every minute): curl -X POST -H \"x-cron-secret: $CRON_SECRET\" https://<app>/api/social/publish/run\n// From code: a draft a person will review and submit\nawait composePosts(ctx, { connectionIds: [id], text, versions: { x: shortText }, imageUrl: null,\n  scheduledLocal: \"2026-10-20T09:00\", timeZone: \"Europe/Madrid\", idempotencyKey: key, intent: \"draft\" });\n",
+      "example": "// Server code in the app (e.g. a server action): a draft a person will review and submit; the job at\n// /api/social/publish/run publishes scheduled posts.\nimport type { Ctx } from \"@/social/connections\";\nimport { composePosts } from \"@/social/posts\";\n\nexport async function draftLaunchPost(ctx: Ctx, connectionId: string, formKey: string) {\n  return composePosts(ctx, {\n    connectionIds: [connectionId],\n    text: \"We are live: book your first session online.\",\n    versions: { x: \"We are live — book online.\" },\n    imageUrl: null,\n    scheduledLocal: \"2026-10-20T09:00\",\n    timeZone: \"Europe/Madrid\",\n    idempotencyKey: formKey,\n    intent: \"draft\",\n  });\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
       "keywords": [
         "social media publishing",
         "post scheduler",

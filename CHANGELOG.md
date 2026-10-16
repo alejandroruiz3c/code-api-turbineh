@@ -30,7 +30,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ### Fixed
 
 - Public usage snippets compile (ADR-0066, audit F-04): every component's example is generated from its own contract
-  test (or a `snippet.ts`) and compiled with `tsc --noEmit` against the pinned versions — 137 TypeScript snippets, 16
+  test (or a `snippet.ts`) and compiled with `tsc --noEmit` against the pinned versions — 137 TypeScript snippets, 19
   TurbineH module snippets compiled inside the assembled apps, 5 parameter examples validated against their schema, 2
   CLI/API examples checked against real commands and routes. Wrong imports fixed (exceljs and i18next default exports,
   gray-matter, better-auth client subpaths, MCP SDK subpaths, dinero.js currencies, react-colorful…); `import`
@@ -39,7 +39,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   now declares `@types/busboy@1.5.4`.
 - Discover relevance (ADR-0066, audit §5.3): idf-weighted similarity with a minimum (0.25), a cut relative to the
   best result, rerank by capability description; the Discover fallback uses the same ranking. precision@5 on the 20
-  reference queries 0.69 → 0.91; 0.90 on 12 held-out queries; enforced in CI (≥ 0.8).
+  reference queries 0.69 → 0.89; 0.90 on 12 held-out queries; enforced in CI (≥ 0.8).
 - "Finished in" is `finished_at − started_at` (persisted), the flow page renders the persisted state on the server
   (no "Generating · 0 s" for finished flows), and the home / activity average uses the same formula (ADR-0066, N-03).
 - Plan estimates are calibrated per recipe from finished runs: p50–p90 intervals with their basis, benchmark averages
