@@ -44,22 +44,14 @@ test.describe.serial("client requests", () => {
   });
 });
 
-/** Sign-up with a retry: better-auth allows 3 sign-up requests per 10 s per client in production builds. */
-async function signUpRetrying(page: Page, email: string) {
+/** Signs the client up (the E2E run raises the sign-up rate limit: AUTH_RATE_LIMIT_MAX in playwright.config.ts). */
+async function signUpClient(page: Page, email: string) {
   await page.goto("/sign-up");
   await page.getByLabel("Name", { exact: true }).fill("Client Person");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByLabel("Workspace name").fill("Client Workspace");
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await page.getByRole("button", { name: "Create account" }).click();
-    try {
-      await expect(page).toHaveURL(/\/dashboard/, { timeout: 8_000 });
-      return;
-    } catch {
-      await page.waitForTimeout(10_500);
-    }
-  }
+  await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
@@ -82,7 +74,7 @@ test("a client submits a request with a file and follows its status; staff revie
   const client = await (
     await browser.newContext({ storageState: { cookies: [], origins: [] } })
   ).newPage();
-  await signUpRetrying(client, clientEmail);
+  await signUpClient(client, clientEmail);
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {

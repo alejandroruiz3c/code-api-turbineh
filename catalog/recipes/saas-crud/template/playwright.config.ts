@@ -104,6 +104,9 @@ for (const [api, auth, id, secretName] of socialMocks) {
   process.env[secretName] = secret();
   process.env.SOCIAL_TOKEN_KEY ||= randomBytes(32).toString("base64");
 }
+// Several people sign up from one address within seconds: raise better-auth's 3-per-10 s sign-in/sign-up limit for
+// the run instead of waiting for its window (src/lib/auth.ts).
+process.env.AUTH_RATE_LIMIT_MAX ||= "1000";
 // Scheduled jobs (jobs.scheduled.turbineh): the cron route's shared secret, generated per run.
 process.env.CRON_SECRET ||= secret();
 // Recipe-specific test settings (tests/e2e/test-env.ts), e.g. a second shop currency.

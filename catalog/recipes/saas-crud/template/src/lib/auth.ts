@@ -9,12 +9,27 @@ import { SIGN_UP_POLICY } from "@/lib/sign-up-policy";
 import { maySignUp } from "@/lib/staff";
 import { SIGN_UP_EMAIL_DOMAINS } from "@/server/permissions";
 
+/**
+ * Sign-in/sign-up attempts per client per 10 s (better-auth's default is 3). AUTH_RATE_LIMIT_MAX raises it for a
+ * deployment that needs more (the E2E run sets it, as several people sign up from one address in seconds); bounded.
+ */
+const authAttemptsMax = Math.min(
+  Math.max(Number.parseInt(process.env.AUTH_RATE_LIMIT_MAX ?? "", 10) || 3, 1),
+  1000,
+);
+
 /** Authentication and organizations: catalog component auth.session.better-auth (+ organization plugin). */
 export const auth = betterAuth({
   database: pool,
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   emailAndPassword: { enabled: true, minPasswordLength: 10 },
+  rateLimit: {
+    customRules: {
+      "/sign-in/*": { window: 10, max: authAttemptsMax },
+      "/sign-up/*": { window: 10, max: authAttemptsMax },
+    },
+  },
   // `pnpm db:migrate` is what creates these tables: no "schema mismatch" warning while it runs.
   advanced: { database: { validateSchema: process.env.TURBINEH_DB_MIGRATE !== "1" } },
   // Staff rights depend on the email address, so it must be proven: a verification link is sent on sign-up and staff
