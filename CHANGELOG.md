@@ -23,7 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   (resource-decider 1.2.0), else open rules; the rest is shown as "left out, not asked for". Recipe tree-shaking:
   optional template and component modules ship only when asked for (the public `/assistant` route only with a public
   toolkit); a bookings app no longer gets the public-pages CMS route; the footprint of code linked to no criterion is
-  recorded per flow.
+  recorded per flow. Private resource decider pinned to v1.2.0 (`capabilityRelevance`).
 
 ### Security
 
