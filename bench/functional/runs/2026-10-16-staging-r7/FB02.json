@@ -1,0 +1,140 @@
+{
+  "startedAt": "2026-10-16T21:54:14.092Z",
+  "id": "FB02",
+  "band": "B",
+  "flowId": "ad34412d-93e9-495f-be6e-91a88211de79",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
+        "tests/unit/bookings.test.ts › locks every grid cell a booking covers (database-level double-booking guard)"
+      ],
+      "status": "covered",
+      "canonical": [
+        "bookings.no-double-booking"
+      ],
+      "criterion": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+    },
+    {
+      "asked": [
+        "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided email address."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+      ],
+      "status": "covered",
+      "canonical": [
+        "bookings.confirmation-email"
+      ],
+      "criterion": "A customer books a free time and a confirmation email with a cancel link is sent"
+    },
+    {
+      "asked": [
+        "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the system."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      ],
+      "status": "covered",
+      "canonical": [
+        "bookings.cancel-notice"
+      ],
+      "criterion": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
+    },
+    {
+      "asked": [
+        "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week."
+      ],
+      "tests": [
+        "tests/e2e/bookings.spec.ts › a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+      ],
+      "status": "covered",
+      "canonical": [
+        "bookings.staff-calendar"
+      ],
+      "criterion": "A staff member signs in and sees the bookings in the day and week calendar per team member"
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"PhysioFlow (covered part only)\": the library doesn't cover 2 requirement(s) yet, removed from scope — Given a new appointment is successfully booked, when the system processes the event, then the appointment must appear on the assigned physiotherapist's Google Calendar. · Plus: sync every appointment to the physiotherapist's Google Calendar. (stated in the request)"
+  ],
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 4/4",
+  "functional": {
+    "met": 4,
+    "total": 4,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 4,
+    "total": 4,
+    "ratio": 1,
+    "label": "Verified · functional 4/4"
+  },
+  "criteria": [
+    {
+      "text": "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)",
+      "status": "met",
+      "canonical": [
+        "bookings.no-double-booking"
+      ],
+      "asked": [
+        "Given a patient selects a 45-minute slot, when they complete the booking, then the slot must be marked as unavailable for other users to prevent double bookings."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
+      }
+    },
+    {
+      "text": "A customer books a free time and a confirmation email with a cancel link is sent",
+      "status": "met",
+      "canonical": [
+        "bookings.confirmation-email"
+      ],
+      "asked": [
+        "Given a patient completes a booking without an account, when the booking is processed, then a confirmation email must be sent to the provided email address."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
+      }
+    },
+    {
+      "text": "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused",
+      "status": "met",
+      "canonical": [
+        "bookings.cancel-notice"
+      ],
+      "asked": [
+        "Given a patient receives a confirmation email, when they click the included cancellation link, then the appointment must be removed from the system."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a customer cancels the booking with the link of the confirmation email more than the notice hours before the start time; inside the notice period the link is refused"
+      }
+    },
+    {
+      "text": "A staff member signs in and sees the bookings in the day and week calendar per team member",
+      "status": "met",
+      "canonical": [
+        "bookings.staff-calendar"
+      ],
+      "asked": [
+        "Given a staff member accesses the dashboard, when they view the calendar, then they must see all scheduled appointments organized by day and week."
+      ],
+      "test": {
+        "file": "tests/e2e/bookings.spec.ts",
+        "title": "a staff member signs in and sees the bookings in the day and week calendar per team member (stylist, therapist…)"
+      }
+    }
+  ],
+  "minutes": 5.34,
+  "finishedAt": "2026-10-16T21:59:34.452Z"
+}

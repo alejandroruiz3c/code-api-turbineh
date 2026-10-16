@@ -1,0 +1,134 @@
+{
+  "startedAt": "2026-10-16T20:48:57.031Z",
+  "id": "FB03",
+  "band": "B",
+  "flowId": "7a7b29ea-78b9-4c12-a4d8-c6631fa63ad0",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views the catalogue, when they select a coffee bag, then they can choose between 250g and 1kg variants."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a product variant is selected, when the user views the details, then the specific price and stock level for that weight are displayed."
+    },
+    {
+      "asked": [
+        "Given a user is browsing, when they click 'Add to Cart', then the selected variant is added to their shopping cart."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.cart"],
+      "criterion": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+    },
+    {
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      ],
+      "status": "covered",
+      "criterion": "Given items are in the cart, when the user proceeds to checkout, then they are redirected to a Stripe Checkout session."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a successful Stripe payment, when the transaction completes, then an order confirmation email is sent to the customer."
+    },
+    {
+      "asked": [
+        "Given a successful payment, when the order is processed, then the stock levels for the purchased variants are decremented in the database."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › an out-of-stock product cannot be added to the cart"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.orders-stock"],
+      "criterion": "The signed webhook marks the order paid and decrements each product's stock"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given an administrator logs in, when they access the admin panel, then they can view and manage product details and stock."
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"Roast & Bean (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given a completed order, when the payment is confirmed, then the order data is automatically synced to QuickBooks."
+  ],
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 4/7",
+  "functional": {
+    "met": 4,
+    "total": 7,
+    "ratio": 0.571,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 4,
+    "total": 7,
+    "ratio": 0.571,
+    "label": "Technically verified · functional 4/7"
+  },
+  "criteria": [
+    {
+      "text": "Given a user views the catalogue, when they select a coffee bag, then they can choose between 250g and 1kg variants.",
+      "status": "open"
+    },
+    {
+      "text": "Given a product variant is selected, when the user views the details, then the specific price and stock level for that weight are displayed.",
+      "status": "open"
+    },
+    {
+      "text": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
+      "status": "met",
+      "canonical": ["storefront.cart"],
+      "asked": [
+        "Given a user is browsing, when they click 'Add to Cart', then the selected variant is added to their shopping cart."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      }
+    },
+    {
+      "text": "Given items are in the cart, when the user proceeds to checkout, then they are redirected to a Stripe Checkout session.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given a successful Stripe payment, when the transaction completes, then an order confirmation email is sent to the customer.",
+      "status": "open"
+    },
+    {
+      "text": "The signed webhook marks the order paid and decrements each product's stock",
+      "status": "met",
+      "canonical": ["storefront.orders-stock"],
+      "asked": [
+        "Given a successful payment, when the order is processed, then the stock levels for the purchased variants are decremented in the database."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given an administrator logs in, when they access the admin panel, then they can view and manage product details and stock.",
+      "status": "met",
+      "canonical": ["storefront.admin-panel"],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+      }
+    }
+  ],
+  "minutes": 3.39,
+  "finishedAt": "2026-10-16T20:52:20.217Z"
+}

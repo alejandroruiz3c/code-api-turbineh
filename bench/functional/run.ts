@@ -235,7 +235,10 @@ async function main() {
     try {
       const res = await call("/v1/plans", {
         method: "POST",
-        headers: { "Idempotency-Key": `functional-${RUN}-${s.id}` },
+        // A rerun after a contaminated batch (another revision deployed meanwhile) needs new flows.
+        headers: {
+          "Idempotency-Key": `functional-${RUN}-${s.id}${process.env.FUNCTIONAL_ATTEMPT ? `-${process.env.FUNCTIONAL_ATTEMPT}` : ""}`,
+        },
         body: JSON.stringify({ need: s.prompt, environment: {} }),
       });
       let plan = await body(res);
@@ -266,7 +269,8 @@ async function main() {
         method: "POST",
         body: JSON.stringify(needs.length ? { approve: true } : {}),
       });
-      if (!g.ok) throw new Error(`generate → ${g.status}`);
+      // 409: this flow was already sent to generation (a resumed run with the same idempotency key): follow it.
+      if (!g.ok && g.status !== 409) throw new Error(`generate → ${g.status}`);
       let final = await body(await call(`/v1/plans/${id}`));
       const now = () => String((final.result as Record<string, unknown> | undefined)?.state);
       while (

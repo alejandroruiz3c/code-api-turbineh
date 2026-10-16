@@ -1,0 +1,108 @@
+{
+  "startedAt": "2026-10-16T20:40:25.366Z",
+  "id": "FA09",
+  "band": "A",
+  "flowId": "397390f8-1d69-4737-8e39-6aaf8a107de3",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a valid CSV file is uploaded, the system imports all monthly sales records into the dashboard."
+      ],
+      "tests": ["tests/e2e/<generated for SalesRecord> (saas-crud.csv-import:SalesRecord)"],
+      "status": "covered",
+      "canonical": ["saas-crud.csv-import:SalesRecord"],
+      "criterion": "Sales records are imported from a CSV file"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given sales data is entered manually via the input form, the system saves the records to the database."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given sales data is present, the dashboard displays KPI values compared against the previous period's metrics."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given sales data is present, the dashboard renders a time series chart showing sales trends over time."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given sales data is present, the dashboard displays a breakdown of sales categorized by region."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given active filters are applied, the dashboard updates the displayed KPIs, chart, and regional breakdown accordingly."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given active filters are applied, the user can export the filtered dataset as a CSV file."
+    }
+  ],
+  "approved": null,
+  "state": "generated",
+  "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/7",
+  "functional": {
+    "met": 0,
+    "total": 7,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 0,
+    "total": 7,
+    "ratio": 0,
+    "label": "Not verified · functional 0/7"
+  },
+  "criteria": [
+    {
+      "text": "Sales records are imported from a CSV file",
+      "status": "unverified",
+      "canonical": ["saas-crud.csv-import:SalesRecord"],
+      "asked": [
+        "Given a valid CSV file is uploaded, the system imports all monthly sales records into the dashboard."
+      ],
+      "test": {
+        "file": "tests/e2e/sales-records.spec.ts",
+        "title": "sales records import from CSV"
+      }
+    },
+    {
+      "text": "Given sales data is entered manually via the input form, the system saves the records to the database.",
+      "status": "unverified",
+      "test": {
+        "file": "tests/e2e/sales-records.spec.ts",
+        "title": "owner creates a sales record and sees it in the list"
+      }
+    },
+    {
+      "text": "Given sales data is present, the dashboard displays KPI values compared against the previous period's metrics.",
+      "status": "open"
+    },
+    {
+      "text": "Given sales data is present, the dashboard renders a time series chart showing sales trends over time.",
+      "status": "open"
+    },
+    {
+      "text": "Given sales data is present, the dashboard displays a breakdown of sales categorized by region.",
+      "status": "open"
+    },
+    {
+      "text": "Given active filters are applied, the dashboard updates the displayed KPIs, chart, and regional breakdown accordingly.",
+      "status": "open"
+    },
+    {
+      "text": "Given active filters are applied, the user can export the filtered dataset as a CSV file.",
+      "status": "open"
+    }
+  ],
+  "minutes": 3.27,
+  "finishedAt": "2026-10-16T20:43:41.413Z"
+}

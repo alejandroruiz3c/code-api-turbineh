@@ -1,0 +1,155 @@
+{
+  "startedAt": "2026-10-16T20:40:25.387Z",
+  "id": "FA10",
+  "band": "A",
+  "flowId": "8cb74d55-3a0f-47a5-ad9f-eca80e6c153a",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": ["A user can create a new workspace upon signing up."],
+      "tests": [
+        "tests/e2e/auth.spec.ts › a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+      ],
+      "status": "covered",
+      "canonical": ["saas-crud.workspace-sign-up"],
+      "criterion": "A new user signs up: their workspace is created with them as owner"
+    },
+    {
+      "asked": ["A user can create a contact with a name, email, and company."],
+      "tests": ["tests/e2e/<generated for Contact> (saas-crud.crud-create:Contact)"],
+      "status": "covered",
+      "canonical": ["saas-crud.crud-create:Contact"],
+      "criterion": "The owner creates a contact and sees it in the list"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A user can view a list of all contacts in their workspace."
+    },
+    {
+      "asked": ["A user can edit the details of an existing contact."],
+      "tests": ["tests/e2e/<generated for Contact> (saas-crud.crud-edit:Contact)"],
+      "status": "covered",
+      "canonical": ["saas-crud.crud-edit:Contact"],
+      "criterion": "The owner edits a contact and sees the change"
+    },
+    {
+      "asked": ["A user can delete a contact from their workspace."],
+      "tests": ["tests/e2e/<generated for Contact> (saas-crud.crud-delete:Contact)"],
+      "status": "covered",
+      "canonical": ["saas-crud.crud-delete:Contact"],
+      "criterion": "The owner deletes a contact and it is no longer in the list"
+    },
+    {
+      "asked": ["A user can delete a contact from their workspace."],
+      "tests": ["tests/e2e/<generated for Workspace> (saas-crud.crud-delete:Workspace)"],
+      "status": "covered",
+      "canonical": ["saas-crud.crud-delete:Workspace"],
+      "criterion": "The owner deletes a workspace and it is no longer in the list"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A user can search for contacts by entering a name in the search field."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "An admin member can export the contact list to a CSV file."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "A non-admin member is prevented from exporting contacts to CSV."
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 6/9",
+  "functional": {
+    "met": 6,
+    "total": 9,
+    "ratio": 0.667,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 6,
+    "total": 9,
+    "ratio": 0.667,
+    "label": "Technically verified · functional 6/9"
+  },
+  "criteria": [
+    {
+      "text": "A new user signs up: their workspace is created with them as owner",
+      "status": "met",
+      "canonical": ["saas-crud.workspace-sign-up"],
+      "asked": ["A user can create a new workspace upon signing up."],
+      "test": {
+        "file": "tests/e2e/auth.spec.ts",
+        "title": "a new user signs up: their workspace is created with them as owner, and an allowlisted email gets staff access only after the address is verified"
+      }
+    },
+    {
+      "text": "The owner creates a contact and sees it in the list",
+      "status": "met",
+      "canonical": ["saas-crud.crud-create:Contact"],
+      "asked": ["A user can create a contact with a name, email, and company."],
+      "test": {
+        "file": "tests/e2e/contacts.spec.ts",
+        "title": "owner creates a contact and sees it in the list"
+      }
+    },
+    {
+      "text": "A user can view a list of all contacts in their workspace.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/permissions.test.ts",
+        "title": "a signed-in user with the Owner role can create, read, edit and delete contacts and workspaces"
+      }
+    },
+    {
+      "text": "The owner edits a contact and sees the change",
+      "status": "met",
+      "canonical": ["saas-crud.crud-edit:Contact"],
+      "asked": ["A user can edit the details of an existing contact."],
+      "test": {
+        "file": "tests/e2e/contacts.spec.ts",
+        "title": "owner edits a contact and sees the change"
+      }
+    },
+    {
+      "text": "The owner deletes a contact and it is no longer in the list",
+      "status": "met",
+      "canonical": ["saas-crud.crud-delete:Contact"],
+      "asked": ["A user can delete a contact from their workspace."],
+      "test": {
+        "file": "tests/e2e/contacts.spec.ts",
+        "title": "owner deletes a contact and it is no longer in the list"
+      }
+    },
+    {
+      "text": "The owner deletes a workspace and it is no longer in the list",
+      "status": "open",
+      "asked": ["A user can delete a contact from their workspace."]
+    },
+    {
+      "text": "A user can search for contacts by entering a name in the search field.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/contacts.spec.ts",
+        "title": "owner searches contacts by text: the list updates to show only the matching contacts, and the CSV export holds only those filtered results"
+      }
+    },
+    {
+      "text": "An admin member can export the contact list to a CSV file.",
+      "status": "open"
+    },
+    {
+      "text": "A non-admin member is prevented from exporting contacts to CSV.",
+      "status": "open"
+    }
+  ],
+  "minutes": 5.03,
+  "finishedAt": "2026-10-16T20:45:27.434Z"
+}

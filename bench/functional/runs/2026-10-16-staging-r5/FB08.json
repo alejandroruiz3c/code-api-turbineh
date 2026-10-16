@@ -1,0 +1,107 @@
+{
+  "startedAt": "2026-10-16T21:06:23.522Z",
+  "id": "FB08",
+  "band": "B",
+  "flowId": "92632d79-248b-47d5-a710-502e91d0cae8",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a client is logged in, when they submit a document request with an attached file, then the request is created in the system with a 'Pending' status."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a client is logged in, when they view their dashboard, then they can see a list of all their submitted document requests and their current statuses."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a lawyer is logged in, when they select a pending document request, then they can update the status to 'In Progress' or 'Completed'."
+    },
+    {
+      "asked": [
+        "Given a document request is being processed, when a lawyer changes the status, then the client's view of that request is updated to reflect the new status."
+      ],
+      "tests": ["tests/e2e/<generated for Client> (saas-crud.crud-edit:Client)"],
+      "status": "covered",
+      "canonical": ["saas-crud.crud-edit:Client"],
+      "criterion": "The owner edits a client and sees the change"
+    },
+    {
+      "asked": [
+        "Given a document request is being processed, when a lawyer changes the status, then the client's view of that request is updated to reflect the new status."
+      ],
+      "tests": [
+        "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees",
+        "tests/e2e/requests.spec.ts › the owner submits a document request, uploads a PDF file to it and downloads it as an attachment, then updates the request's status"
+      ],
+      "status": "covered",
+      "canonical": ["client-portal.file-uploads"],
+      "criterion": "A client submits a request with a file"
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"LexFlow Client Portal (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given a lawyer updates a document request status, then the system automatically sends a WhatsApp notification to the client's registered phone number."
+  ],
+  "state": "generated",
+  "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/5",
+  "functional": {
+    "met": 0,
+    "total": 5,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 0,
+    "total": 5,
+    "ratio": 0,
+    "label": "Not verified · functional 0/5"
+  },
+  "criteria": [
+    {
+      "text": "Given a client is logged in, when they submit a document request with an attached file, then the request is created in the system with a 'Pending' status.",
+      "status": "open"
+    },
+    {
+      "text": "Given a client is logged in, when they view their dashboard, then they can see a list of all their submitted document requests and their current statuses.",
+      "status": "unverified",
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    },
+    {
+      "text": "Given a lawyer is logged in, when they select a pending document request, then they can update the status to 'In Progress' or 'Completed'.",
+      "status": "open"
+    },
+    {
+      "text": "The owner edits a client and sees the change",
+      "status": "unverified",
+      "canonical": ["saas-crud.crud-edit:Client"],
+      "asked": [
+        "Given a document request is being processed, when a lawyer changes the status, then the client's view of that request is updated to reflect the new status."
+      ],
+      "test": {
+        "file": "tests/e2e/clients.spec.ts",
+        "title": "owner edits a client and sees the change"
+      }
+    },
+    {
+      "text": "A client submits a request with a file",
+      "status": "unverified",
+      "canonical": ["client-portal.file-uploads"],
+      "asked": [
+        "Given a document request is being processed, when a lawyer changes the status, then the client's view of that request is updated to reflect the new status."
+      ],
+      "test": {
+        "file": "tests/e2e/requests.spec.ts",
+        "title": "a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"
+      }
+    }
+  ],
+  "minutes": 3.39,
+  "finishedAt": "2026-10-16T21:09:47.147Z"
+}

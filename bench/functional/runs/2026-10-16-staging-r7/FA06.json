@@ -1,0 +1,156 @@
+{
+  "startedAt": "2026-10-16T21:54:00.923Z",
+  "id": "FA06",
+  "band": "A",
+  "flowId": "b70a2c7a-40c8-4c5e-b026-5deec50577e6",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "The hero section displays the 'Quill' branding and a value proposition.",
+        "The benefits section outlines the key features of the app.",
+        "The 'how it works' section provides a step-by-step guide to using the app.",
+        "The FAQ section contains a list of frequently asked questions and answers."
+      ],
+      "tests": [
+        "tests/e2e/waitlist.spec.ts › shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
+      ],
+      "status": "covered",
+      "canonical": [
+        "landing-waitlist.landing-page"
+      ],
+      "criterion": "The page shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
+    },
+    {
+      "asked": [
+        "The waitlist form accepts a user's name and email address."
+      ],
+      "tests": [
+        "tests/e2e/waitlist.spec.ts › a visitor on the landing page submits their name and email and joins the waitlist"
+      ],
+      "status": "covered",
+      "canonical": [
+        "landing-waitlist.join"
+      ],
+      "criterion": "A visitor on the landing page submits their name and email and joins the waitlist"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The waitlist form prevents submission if the email format is invalid."
+    },
+    {
+      "asked": [
+        "A confirmation email is sent to the user's email address upon successful waitlist signup."
+      ],
+      "tests": [
+        "tests/e2e/waitlist.spec.ts › a visitor joins the waitlist and a confirmation email is sent to their address"
+      ],
+      "status": "covered",
+      "canonical": [
+        "landing-waitlist.confirmation-email"
+      ],
+      "criterion": "A visitor joins the waitlist and a confirmation email is sent to their address"
+    },
+    {
+      "asked": [
+        "The admin page displays a list of all users who have signed up for the waitlist."
+      ],
+      "tests": [
+        "tests/e2e/waitlist.spec.ts › the owner (admin) sees the list of waitlist signups in the dashboard"
+      ],
+      "status": "covered",
+      "canonical": [
+        "landing-waitlist.admin-signups"
+      ],
+      "criterion": "The owner (admin) sees the list of waitlist signups in the dashboard"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 5/5",
+  "functional": {
+    "met": 5,
+    "total": 5,
+    "ratio": 1,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 5,
+    "total": 5,
+    "ratio": 1,
+    "label": "Verified · functional 5/5"
+  },
+  "criteria": [
+    {
+      "text": "The page shows the hero with the app's name and tagline, the benefits, how it works and an FAQ",
+      "status": "met",
+      "canonical": [
+        "landing-waitlist.landing-page"
+      ],
+      "asked": [
+        "The hero section displays the 'Quill' branding and a value proposition.",
+        "The benefits section outlines the key features of the app.",
+        "The 'how it works' section provides a step-by-step guide to using the app.",
+        "The FAQ section contains a list of frequently asked questions and answers."
+      ],
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "shows the hero with the app's name and tagline, the benefits, how it works and an FAQ"
+      }
+    },
+    {
+      "text": "A visitor on the landing page submits their name and email and joins the waitlist",
+      "status": "met",
+      "canonical": [
+        "landing-waitlist.join"
+      ],
+      "asked": [
+        "The waitlist form accepts a user's name and email address."
+      ],
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "a visitor on the landing page submits their name and email and joins the waitlist"
+      }
+    },
+    {
+      "text": "The waitlist form prevents submission if the email format is invalid.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/authz.test.ts",
+        "title": "refuses invalid input before the handler runs"
+      }
+    },
+    {
+      "text": "A visitor joins the waitlist and a confirmation email is sent to their address",
+      "status": "met",
+      "canonical": [
+        "landing-waitlist.confirmation-email"
+      ],
+      "asked": [
+        "A confirmation email is sent to the user's email address upon successful waitlist signup."
+      ],
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "a visitor joins the waitlist and a confirmation email is sent to their address"
+      }
+    },
+    {
+      "text": "The owner (admin) sees the list of waitlist signups in the dashboard",
+      "status": "met",
+      "canonical": [
+        "landing-waitlist.admin-signups"
+      ],
+      "asked": [
+        "The admin page displays a list of all users who have signed up for the waitlist."
+      ],
+      "test": {
+        "file": "tests/e2e/waitlist.spec.ts",
+        "title": "the owner (admin) sees the list of waitlist signups in the dashboard"
+      }
+    }
+  ],
+  "minutes": 0.1,
+  "finishedAt": "2026-10-16T21:54:06.630Z"
+}

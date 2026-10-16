@@ -1,15 +1,16 @@
 {
-  "startedAt": "2026-10-16T19:28:41.872Z",
+  "startedAt": "2026-10-16T20:10:19.629Z",
   "id": "FA01",
   "band": "A",
-  "flowId": "6b2996eb-734b-47a7-bbbf-9a873c297df0",
+  "flowId": "3b8bf42f-1580-4e23-bc29-f321fd29b99d",
   "refused": false,
   "error": null,
   "planCriteria": [
     {
       "asked": [
         "A client can select a 30-minute consultation, 60-minute small piece, or 180-minute large piece session.",
-        "A client can select a specific artist or the 'any artist' option during booking."
+        "A client can select a specific artist or the 'any artist' option during booking.",
+        "A client can complete a booking without creating an account."
       ],
       "tests": [
         "tests/e2e/bookings.spec.ts › a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
@@ -17,13 +18,6 @@
       "status": "covered",
       "canonical": ["bookings.public-booking"],
       "criterion": "A customer books a free time on the public page without an account and the booking is created"
-    },
-    {
-      "asked": ["A client can complete a booking without creating an account."],
-      "tests": ["tests/e2e/<generated for Booking> (saas-crud.crud-create:Booking)"],
-      "status": "covered",
-      "canonical": ["saas-crud.crud-create:Booking"],
-      "criterion": "The owner creates a booking and sees it in the list"
     },
     {
       "asked": [
@@ -79,15 +73,9 @@
       "criterion": "An artist can cancel an existing session."
     },
     {
-      "asked": [
-        "A client receives an automated email notification whenever their session is moved or cancelled by an artist."
-      ],
-      "tests": [
-        "tests/e2e/bookings.spec.ts › a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
-      ],
-      "status": "covered",
-      "canonical": ["bookings.staff-move-cancel"],
-      "criterion": "A staff member moves an existing booking to a different time slot, then cancels it, triggering an email to the customer each time"
+      "tests": [],
+      "status": "open",
+      "criterion": "A client receives an automated email notification whenever an artist moves or cancels their session."
     },
     {
       "asked": [
@@ -104,18 +92,18 @@
   ],
   "approved": null,
   "state": "verified",
-  "badge": "Verified · checks 11/11 (1 with warnings) · functional 10/10",
+  "badge": "Verified · checks 11/11 (1 with warnings) · functional 9/9",
   "functional": {
-    "met": 10,
-    "total": 10,
+    "met": 9,
+    "total": 9,
     "ratio": 1,
     "threshold": 0.8
   },
   "guideFunctional": {
-    "met": 10,
-    "total": 10,
+    "met": 9,
+    "total": 9,
     "ratio": 1,
-    "label": "Verified · functional 10/10"
+    "label": "Verified · functional 9/9"
   },
   "criteria": [
     {
@@ -124,20 +112,12 @@
       "canonical": ["bookings.public-booking"],
       "asked": [
         "A client can select a 30-minute consultation, 60-minute small piece, or 180-minute large piece session.",
-        "A client can select a specific artist or the 'any artist' option during booking."
+        "A client can select a specific artist or the 'any artist' option during booking.",
+        "A client can complete a booking without creating an account."
       ],
       "test": {
         "file": "tests/e2e/bookings.spec.ts",
         "title": "a customer books a free time on the public page without an account: provides name, email and phone, the booking is created and a confirmation email with a cancel link is sent"
-      }
-    },
-    {
-      "text": "The owner creates a booking and sees it in the list",
-      "status": "met",
-      "asked": ["A client can complete a booking without creating an account."],
-      "test": {
-        "file": "tests/unit/permissions.test.ts",
-        "title": "a signed-in user with the Owner role can create, read, edit and delete session types, artists and bookings"
       }
     },
     {
@@ -206,12 +186,9 @@
       }
     },
     {
-      "text": "A staff member moves an existing booking to a different time slot, then cancels it, triggering an email to the customer each time",
+      "text": "A client receives an automated email notification whenever an artist moves or cancels their session.",
       "status": "met",
       "canonical": ["bookings.staff-move-cancel"],
-      "asked": [
-        "A client receives an automated email notification whenever their session is moved or cancelled by an artist."
-      ],
       "test": {
         "file": "tests/e2e/bookings.spec.ts",
         "title": "a staff member moves an existing booking to a different time slot, then cancels it, triggering an automated email to the customer each time"
@@ -230,6 +207,6 @@
       }
     }
   ],
-  "minutes": 13.59,
-  "finishedAt": "2026-10-16T19:42:17.259Z"
+  "minutes": 18.74,
+  "finishedAt": "2026-10-16T20:29:03.952Z"
 }

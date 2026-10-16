@@ -1,0 +1,99 @@
+{
+  "startedAt": "2026-10-16T21:06:23.523Z",
+  "id": "FB10",
+  "band": "B",
+  "flowId": "8cbcc03e-a1a2-4e48-96db-606af85d7b4d",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "asked": [
+        "Given a valid campaign CSV file, when the user uploads it, then the system imports the data into the dashboard."
+      ],
+      "tests": [
+        "tests/e2e/analytics.spec.ts › the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+      ],
+      "status": "covered",
+      "canonical": ["analytics-dashboard.csv-import"],
+      "criterion": "The owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given imported campaign data, when the user views a KPI, then the system displays the value alongside the percentage change from the previous period."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a selected date range, when the user views the dashboard, then the system renders a time series chart of the KPIs."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given imported campaign data, when the user selects a breakdown dimension, then the system renders a chart segmented by that dimension."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given the dashboard is active, when the user applies a filter, then the displayed KPIs and charts update to reflect the filtered data."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given the dashboard is populated, when the user clicks the export button, then the system generates and downloads a CSV file of the current view."
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"Marketing KPI Dashboard (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given a connected HubSpot account, when the system runs its nightly scheduled task, then it automatically pulls the latest campaign numbers into the dashboard."
+  ],
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 1/6",
+  "functional": {
+    "met": 1,
+    "total": 6,
+    "ratio": 0.167,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 1,
+    "total": 6,
+    "ratio": 0.167,
+    "label": "Technically verified · functional 1/6"
+  },
+  "criteria": [
+    {
+      "text": "The owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts",
+      "status": "met",
+      "canonical": ["analytics-dashboard.csv-import"],
+      "asked": [
+        "Given a valid campaign CSV file, when the user uploads it, then the system imports the data into the dashboard."
+      ],
+      "test": {
+        "file": "tests/e2e/analytics.spec.ts",
+        "title": "the owner imports a CSV, the invalid row is rejected, and the dashboard shows exact KPIs and charts"
+      }
+    },
+    {
+      "text": "Given imported campaign data, when the user views a KPI, then the system displays the value alongside the percentage change from the previous period.",
+      "status": "open"
+    },
+    {
+      "text": "Given a selected date range, when the user views the dashboard, then the system renders a time series chart of the KPIs.",
+      "status": "open"
+    },
+    {
+      "text": "Given imported campaign data, when the user selects a breakdown dimension, then the system renders a chart segmented by that dimension.",
+      "status": "open"
+    },
+    {
+      "text": "Given the dashboard is active, when the user applies a filter, then the displayed KPIs and charts update to reflect the filtered data.",
+      "status": "open"
+    },
+    {
+      "text": "Given the dashboard is populated, when the user clicks the export button, then the system generates and downloads a CSV file of the current view.",
+      "status": "open"
+    }
+  ],
+  "minutes": 6.53,
+  "finishedAt": "2026-10-16T21:12:55.226Z"
+}

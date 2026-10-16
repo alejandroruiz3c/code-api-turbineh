@@ -1,0 +1,141 @@
+{
+  "startedAt": "2026-10-16T20:48:57.048Z",
+  "id": "FB04",
+  "band": "B",
+  "flowId": "493159ca-6132-48c3-82a3-f2e4a88a2884",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user is browsing the product catalogue, when they view a product, then they must see a high-resolution image of the poster."
+    },
+    {
+      "asked": [
+        "Given a user has added items to their cart, when they proceed to checkout, then the cart must display the correct subtotal of all items."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.cart"],
+      "criterion": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+    },
+    {
+      "asked": [
+        "Given a user enters a valid discount code, when they apply it at checkout, then the total price must be reduced by the specified percentage or amount."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › uses a discount code: applied on the server, counted once on payment, then used up",
+        "tests/e2e/shop.spec.ts › the admin creates a one-use discount code",
+        "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.discount-codes"],
+      "criterion": "Uses a discount code: applied on the server, counted once on payment, then used up"
+    },
+    {
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, when the payment is successful, then the user must be redirected to an order success page."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.checkout"],
+      "criterion": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user selects a shipping destination, when they view the checkout summary, then the shipping rate must be calculated based on the selected country."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user successfully places an order, when the transaction is finalized, then an order confirmation email must be sent to the user's provided email address."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given an administrator adds a new product to the catalogue, when the product is saved, then a post containing the product details must be automatically published to the shop's Instagram account."
+    }
+  ],
+  "approved": null,
+  "state": "generated",
+  "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/7",
+  "functional": {
+    "met": 0,
+    "total": 7,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 0,
+    "total": 7,
+    "ratio": 0,
+    "label": "Not verified · functional 0/7"
+  },
+  "criteria": [
+    {
+      "text": "Given a user is browsing the product catalogue, when they view a product, then they must see a high-resolution image of the poster.",
+      "status": "open"
+    },
+    {
+      "text": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
+      "status": "unverified",
+      "canonical": ["storefront.cart"],
+      "asked": [
+        "Given a user has added items to their cart, when they proceed to checkout, then the cart must display the correct subtotal of all items."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      }
+    },
+    {
+      "text": "Uses a discount code: applied on the server, counted once on payment, then used up",
+      "status": "unverified",
+      "canonical": ["storefront.discount-codes"],
+      "asked": [
+        "Given a user enters a valid discount code, when they apply it at checkout, then the total price must be reduced by the specified percentage or amount."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "uses a discount code: applied on the server, counted once on payment, then used up"
+      }
+    },
+    {
+      "text": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
+      "status": "unverified",
+      "canonical": ["storefront.checkout"],
+      "asked": [
+        "Given a user completes a purchase via Stripe Checkout, when the payment is successful, then the user must be redirected to an order success page."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given a user selects a shipping destination, when they view the checkout summary, then the shipping rate must be calculated based on the selected country.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user successfully places an order, when the transaction is finalized, then an order confirmation email must be sent to the user's provided email address.",
+      "status": "unverified",
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given an administrator adds a new product to the catalogue, when the product is saved, then a post containing the product details must be automatically published to the shop's Instagram account.",
+      "status": "open"
+    }
+  ],
+  "minutes": 17.35,
+  "finishedAt": "2026-10-16T21:06:17.805Z"
+}

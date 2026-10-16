@@ -1,0 +1,193 @@
+{
+  "startedAt": "2026-10-16T21:42:28.460Z",
+  "id": "FA07",
+  "band": "A",
+  "flowId": "d3cac470-137e-406d-be55-de4f6b1b956a",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The home page displays the firm's branding and introductory content."
+    },
+    {
+      "asked": [
+        "The services page lists the architectural offerings provided by the firm."
+      ],
+      "tests": [
+        "tests/e2e/site.spec.ts › a visitor browses the home page, the services page, about and contact"
+      ],
+      "status": "covered",
+      "canonical": [
+        "corporate-site.services"
+      ],
+      "criterion": "A visitor browses the services page"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The about us page contains the firm's history and mission statement."
+    },
+    {
+      "asked": [
+        "The blog section displays a list of published articles.",
+        "The admin panel allows staff to create and publish new blog posts."
+      ],
+      "tests": [
+        "tests/e2e/site.spec.ts › the admin publishes a post that appears on the blog, RSS and sitemap"
+      ],
+      "status": "covered",
+      "canonical": [
+        "corporate-site.blog"
+      ],
+      "criterion": "The admin publishes a post that appears on the blog, RSS and sitemap"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "The blog provides a valid RSS feed URL for syndication."
+    },
+    {
+      "asked": [
+        "The contact form allows users to submit their name, email, and message."
+      ],
+      "tests": [
+        "tests/e2e/site.spec.ts › a visitor submits the contact form and gets a confirmation"
+      ],
+      "status": "covered",
+      "canonical": [
+        "corporate-site.contact-form"
+      ],
+      "criterion": "A visitor submits the contact form and gets a confirmation"
+    },
+    {
+      "asked": [
+        "The admin panel allows staff to update text content on any site page."
+      ],
+      "tests": [
+        "tests/e2e/site.spec.ts › the owner (admin) edits the website headline and the home page shows it"
+      ],
+      "status": "covered",
+      "canonical": [
+        "corporate-site.edit-content"
+      ],
+      "criterion": "The owner (admin) edits the website headline and the home page shows it"
+    },
+    {
+      "asked": [
+        "The admin panel allows staff to view a list of received contact messages."
+      ],
+      "tests": [
+        "tests/e2e/site.spec.ts › the owner (admin) reads the contact message in the dashboard"
+      ],
+      "status": "covered",
+      "canonical": [
+        "corporate-site.messages"
+      ],
+      "criterion": "The owner (admin) reads the contact message in the dashboard"
+    }
+  ],
+  "approved": null,
+  "state": "generated",
+  "badge": "Not verified · checks 10/11 (1 with warnings) · functional 0/8",
+  "functional": {
+    "met": 0,
+    "total": 8,
+    "ratio": 0,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 0,
+    "total": 8,
+    "ratio": 0,
+    "label": "Not verified · functional 0/8"
+  },
+  "criteria": [
+    {
+      "text": "The home page displays the firm's branding and introductory content.",
+      "status": "open"
+    },
+    {
+      "text": "A visitor browses the services page",
+      "status": "unverified",
+      "canonical": [
+        "corporate-site.services"
+      ],
+      "asked": [
+        "The services page lists the architectural offerings provided by the firm."
+      ],
+      "test": {
+        "file": "tests/e2e/site.spec.ts",
+        "title": "a visitor browses the home page, the services page, about and contact"
+      }
+    },
+    {
+      "text": "The about us page contains the firm's history and mission statement.",
+      "status": "open"
+    },
+    {
+      "text": "The admin publishes a post that appears on the blog, RSS and sitemap",
+      "status": "unverified",
+      "canonical": [
+        "corporate-site.blog"
+      ],
+      "asked": [
+        "The blog section displays a list of published articles.",
+        "The admin panel allows staff to create and publish new blog posts."
+      ],
+      "test": {
+        "file": "tests/e2e/site.spec.ts",
+        "title": "the admin publishes a post that appears on the blog, RSS and sitemap"
+      }
+    },
+    {
+      "text": "The blog provides a valid RSS feed URL for syndication.",
+      "status": "open"
+    },
+    {
+      "text": "A visitor submits the contact form and gets a confirmation",
+      "status": "unverified",
+      "canonical": [
+        "corporate-site.contact-form"
+      ],
+      "asked": [
+        "The contact form allows users to submit their name, email, and message."
+      ],
+      "test": {
+        "file": "tests/e2e/site.spec.ts",
+        "title": "a visitor submits the contact form and gets a confirmation"
+      }
+    },
+    {
+      "text": "The owner (admin) edits the website headline and the home page shows it",
+      "status": "unverified",
+      "canonical": [
+        "corporate-site.edit-content"
+      ],
+      "asked": [
+        "The admin panel allows staff to update text content on any site page."
+      ],
+      "test": {
+        "file": "tests/e2e/site.spec.ts",
+        "title": "the owner (admin) edits the website headline and the home page shows it"
+      }
+    },
+    {
+      "text": "The owner (admin) reads the contact message in the dashboard",
+      "status": "unverified",
+      "canonical": [
+        "corporate-site.messages"
+      ],
+      "asked": [
+        "The admin panel allows staff to view a list of received contact messages."
+      ],
+      "test": {
+        "file": "tests/e2e/site.spec.ts",
+        "title": "the owner (admin) reads the contact message in the dashboard"
+      }
+    }
+  ],
+  "minutes": 2.03,
+  "finishedAt": "2026-10-16T21:44:30.322Z"
+}
