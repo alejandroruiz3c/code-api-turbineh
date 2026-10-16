@@ -1,0 +1,84 @@
+schema: turbineh.component/v0.1
+id: social.connections.turbineh
+version: 0.1.0
+status: approved
+category: social
+source:
+  purl: pkg:generic/turbineh/social.connections.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Connects a workspace's social media accounts with OAuth 2.0: LinkedIn members (Sign In with LinkedIn + Share on LinkedIn, w_member_social), Facebook Pages and their Instagram professional accounts (Facebook Login for Business, Page tokens), and X (Twitter) accounts (Authorization Code with PKCE, refresh tokens). Single-use state bound to the person and workspace, tokens encrypted at rest with AES-256-GCM (key from SOCIAL_TOKEN_KEY, bound to their row), refreshed before use when the provider allows it, revoked at the provider on disconnect (X, Meta), never shown, exported or logged."
+  does_not: "Does not post anything by itself (social.publish.turbineh), connect LinkedIn organization pages (Community Management API approval, w_organization_social), TikTok, YouTube, Pinterest, Threads, Bluesky or Mastodon, or obtain the platforms' app review for you"
+  use_cases: [saas-crud, ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Official OAuth flows of each provider, contract-tested against mocks of their documented endpoints",
+      "Write-only tokens: encrypted at rest, bound to their row, never in a screen, export or log",
+    ]
+  cons:
+    [
+      "Each provider needs your own developer app and, for accounts beyond its developers, the platform's app review (Meta App Review, LinkedIn product access, X paid API access)",
+      "LinkedIn has no revocation API and no refresh tokens without programmatic refresh: members reconnect every 60 days",
+    ]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/social/params/connections.json (providers: linkedin | meta | x)",
+      "GET /api/social/oauth/<provider>/start and /callback (redirect URI to register with each provider)",
+      "SOCIAL_TOKEN_KEY, LINKEDIN_CLIENT_ID/SECRET, META_APP_ID/SECRET (+ META_LOGIN_CONFIG_ID), X_CLIENT_ID/SECRET",
+    ]
+  outputs:
+    [
+      "social_connections rows (network, account, status, sealed tokens); listConnections() never returns tokens",
+      "accessTokenFor(organizationId, connectionId) → plain token for one provider call (refreshed when needed)",
+    ]
+  errors:
+    [
+      "connect refused without SOCIAL_TOKEN_KEY or the provider's credentials (shown on the page); expired/used state, denied consent and provider refusals are shown, nothing stored",
+      "a refused or expired token marks the connection expired (connect again)",
+    ]
+  limits: ["state valid 10 minutes, single use; refresh 5 minutes before expiry; Meta: one grant per Facebook user (revoking it disconnects its Pages and Instagram accounts)"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: [linkedin, meta-graph, x-api]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/social/{crypto,http,networks,oauth,graph,connections,config}.ts + params/connections.json, src/db/component-social-connections.ts, the OAuth routes, /dashboard/social, unit + contract tests and the provider mocks tests/e2e/mocks/{LINKEDIN_API_BASE,META_GRAPH_API_BASE,X_API_BASE}.ts (shared by the social.* components)."
+  config: [SOCIAL_TOKEN_KEY, LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET, META_APP_ID, META_APP_SECRET, X_CLIENT_ID, X_CLIENT_SECRET]
+  migrations: true
+params:
+  file: src/social/params/connections.json
+  schema: params.schema.json
+  entities: [SocialAccount, SocialConnection, SocialProfile, ConnectedAccount, SocialAccountToken]
+quality:
+  tests:
+    {
+      command: "unit (AES-256-GCM sealing bound to the row, key rotation, PKCE, authorize URLs, error classification and redaction) + contract tests of the three OAuth flows against the provider mocks + E2E (connect each provider through its consent page, tokens encrypted in the database and absent from the page, disconnect revokes); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-16,
+    }
+security:
+  scanned_at: 2026-10-16
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: state single use and bound to user/workspace/provider, PKCE S256 for X, appsecret_proof on every Graph call, tokens sealed with AES-256-GCM + AAD, explicit column lists without token columns, provider messages redacted before storage, no redirects followed on API calls, connecting gated by can(role, \"configure\")."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "OAuth flows of LinkedIn, Meta and X pass contract tests against mocks of their documented endpoints, and the connect/disconnect E2E suite passes in the full verification gate"
+    origin: tested
+    ref: "verify:recipe saas-crud --with social.connections.turbineh,social.publish.turbineh,social.metrics.turbineh (ADR-0067)"
+relations:
+  requires: []
+  provides: [social.oauth]
+  conflicts: []
+  tested_with: [recipe.saas-crud, recipe.ai-agents]

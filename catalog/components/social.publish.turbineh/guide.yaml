@@ -1,0 +1,108 @@
+schema: turbineh.guide/v0.1
+component: social.publish.turbineh
+title: Social publishing to LinkedIn, Facebook Pages, Instagram and X with approval, scheduling, retries and a publication log
+summary: >-
+  People compose a post once for one or more connected accounts (social.connections.turbineh), with an optional
+  version per network; each network's rules are checked live and again on the server — X's weighted 280 characters
+  (links 23, emoji and CJK 2), LinkedIn's 3,000, Instagram's 2,200 with a required image, 30 hashtags and 20 mentions —
+  and nothing is cut silently. When the app requires it, a post waits for someone who may approve; then it is scheduled
+  at the time typed in the author's time zone. A runner route, called by any scheduler with CRON_SECRET, publishes due
+  posts with each network's current official API (LinkedIn Posts API with Linkedin-Version and the Images API; Graph
+  API /feed, /photos and the Instagram container flow; X API v2 /2/tweets and /2/media/upload). Every post has a
+  unique idempotency key and is claimed with a lease, so it is never published twice; 429/5xx/lost requests are retried
+  with exponential backoff and jitter (honouring Retry-After); an interrupted attempt becomes "outcome unknown" for a
+  person to check instead of being re-sent. Every step goes to an append-only publication log, shown per post next to
+  a month calendar.
+keywords:
+  [social media publishing, post scheduler, schedule posts, publish to linkedin, publish to facebook, publish to
+   instagram, tweet, post to x, content calendar, approval workflow, retries, backoff, publication log, idempotency,
+   character limit, hashtags]
+synonyms:
+  post: [publication, update, tweet, social post]
+  schedule: [plan, queue, publish later, content calendar]
+  approval: [human review, sign-off, validation before publishing]
+use_cases:
+  - "A small business schedules posts to LinkedIn, its Facebook Page, Instagram and X, approved by the owner first"
+  - "A marketing team keeps a content calendar with the status of each post and a log of every publication"
+use_when:
+  - "The request publishes or schedules posts on LinkedIn, Facebook, Instagram or X (Twitter)"
+  - "Posts must respect each network's length and format, be approved by a person, retried on failure and logged"
+avoid_when:
+  - "Autonomous publishing without a person creating each post (not covered: an AI agent drafting and posting by itself)"
+  - "Videos, reels, stories, carousels, polls or threads; LinkedIn company pages; TikTok, YouTube, Pinterest, Threads"
+  - "Writing the posts with AI (needs the AI orchestrator / ai-agents recipe; this component publishes what people approve)"
+tradeoffs:
+  - { choice: "Retries spread across runner calls (next attempt stored on the post)", gain: "Serverless-friendly, survives crashes, p-retry's backoff policy without sleeping in a request", cost: "Retry timing is bounded by how often the scheduler calls the route" }
+  - { choice: "Interrupted attempts are marked unknown, not retried", gain: "Never posts twice when a network accepted a post but the answer was lost", cost: "A person checks the network and presses Retry or Cancel" }
+  - { choice: "No silent truncation", gain: "What is published is exactly what a person approved", cost: "Long texts need a shorter version per network" }
+config:
+  - { name: "src/social/params/publish.json", default: "all four networks, requireApproval true, maxAttempts 5", description: "Networks, human approval before publishing, attempts per post (from the request)" }
+  - { name: CRON_SECRET, description: "Shared secret of /api/social/publish/run (≥32 chars); without it the route answers 503" }
+interfaces:
+  - { name: "Runner route", signature: "GET|POST /api/social/publish/run — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { published, retrying, failed, unknown }", where: src/app/api/social/publish/run/route.ts }
+  - { name: runDuePosts, signature: "runDuePosts({ now?, limit?, deps? }) → RunReport — claims due posts, publishes, records the outcome", where: src/social/posts.ts }
+  - { name: "Post service", signature: "composePosts, submitPost, approvePost, rejectPost, cancelPost, retryPost, listPosts, getPost", where: src/social/posts.ts }
+  - { name: publishTo, signature: "publishTo({ network, token, accountId, text, imageUrl }, deps?) → { externalId, externalUrl }", where: src/social/publishers.ts }
+  - { name: "Rules", signature: "RULES, weightedLength(text), checkPost(network, post), compositionProblems(input, networks)", where: src/social/limits.ts }
+  - { name: "Backoff", signature: "backoffMs(attempt, { retryAfterMs?, random? }), afterFailure({ attempt, maxAttempts, retryable, retryAfterMs? })", where: src/social/retry.ts }
+extension_points:
+  - what: "Create posts from code (e.g. an AI draft step)"
+    where: "src/social/posts.ts"
+    how: "Call composePosts(ctx, { …, intent: \"draft\" }) so a person reviews and submits it; never call publishTo directly from a request handler."
+  - what: "Change who approves"
+    where: "src/server/role-policy.ts (approve), src/social/params/publish.json"
+    how: "approvePost checks can(role, \"approve\"); set requireApproval to false only when the request says posts go out without review."
+  - what: "Call the runner on a schedule in production"
+    where: "CRON_SECRET, your scheduler"
+    how: "Vercel Cron: { \"crons\": [{ \"path\": \"/api/social/publish/run\", \"schedule\": \"* * * * *\" }] } with CRON_SECRET set; elsewhere call it with the x-cron-secret header every minute or few minutes."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers and server actions, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [saas-crud, ai-agents]
+  requires: [social.connections.turbineh]
+  works_with: [social.metrics.turbineh, domain.audit-log.turbineh, jobs.scheduled.turbineh]
+  notes: "Shares CRON_SECRET with jobs.scheduled.turbineh when both are present."
+security:
+  - "The runner requires CRON_SECRET (≥32 characters) in a header, compared in constant time; disabled without it"
+  - "Every post action re-checks the workspace and the role in the service (create, approve, update)"
+  - "Images that the app must upload (LinkedIn, X) are downloaded only from public https addresses, checked at DNS resolution, ≤ 5 MB, image types only"
+  - "Tokens are taken from accessTokenFor for one call; provider errors are redacted before they are logged"
+guarantees:
+  - { claim: "Each network's length limit is enforced (X weighted)", test: "tests/unit/social-publish.test.ts › each network's length limit is enforced: X counts 280 weighted characters (links 23, emoji and CJK 2), LinkedIn 3,000, Instagram 2,200" }
+  - { claim: "Instagram needs an image; hashtag and mention limits", test: "tests/unit/social-publish.test.ts › Instagram needs an image, at most 30 hashtags and 20 mentions; images must be public https URLs" }
+  - { claim: "Per-network versions are checked, nothing is cut", test: "tests/unit/social-publish.test.ts › a post adapted per network: the network's own version is checked instead of the common text, nothing is cut silently" }
+  - { claim: "LinkedIn little text format", test: "tests/unit/social-publish.test.ts › LinkedIn commentary uses the little text format: reserved characters escaped, hashtags as hashtag templates" }
+  - { claim: "Exponential backoff with jitter and Retry-After", test: "tests/unit/social-publish.test.ts › failed publications are retried with exponential backoff and jitter, honouring the provider's Retry-After, up to the attempt limit" }
+  - { claim: "Image downloads only from public https hosts", test: "tests/unit/social-publish.test.ts › images for LinkedIn and X are downloaded only from public https addresses (no private, loopback or link-local hosts)" }
+  - { claim: "LinkedIn Posts API request shape", test: "tests/unit/social-publish-contract.test.ts › LinkedIn: POST /rest/posts with Linkedin-Version and Rest.li 2.0 headers, author urn:li:person, little-text commentary; the post URN comes from x-restli-id" }
+  - { claim: "LinkedIn images through the Images API", test: "tests/unit/social-publish-contract.test.ts › LinkedIn with an image: Images API initializeUpload, PUT of the bytes, then the post with content.media.id" }
+  - { claim: "Facebook Page feed and photo posts", test: "tests/unit/social-publish-contract.test.ts › Facebook Page: POST /{page-id}/feed with message and the Page token (appsecret_proof) → page_post id; with an image POST /{page-id}/photos" }
+  - { claim: "Instagram container flow", test: "tests/unit/social-publish-contract.test.ts › Instagram: container POST /{ig-user-id}/media (image_url, caption), status FINISHED, then POST /media_publish (creation_id)" }
+  - { claim: "X posts and media upload", test: "tests/unit/social-publish-contract.test.ts › X: POST /2/tweets {text} with the user token → 201 data.id; with an image, POST /2/media/upload (multipart, tweet_image) then media.media_ids" }
+  - { claim: "Approval, scheduled publication once, and the log", test: "tests/e2e/social-publish.spec.ts › human approval before publishing: the owner approves each post before it is published; approved posts are published automatically at the scheduled time by the runner, once, and every step is logged" }
+  - { claim: "Retry with backoff after a failure, each attempt logged", test: "tests/e2e/social-publish.spec.ts › a failed publication is retried with backoff and then published; each attempt is in the publication log" }
+  - { claim: "An access token about to expire is refreshed before publishing (rotated refresh token stored encrypted)", test: "tests/e2e/social-publish.spec.ts › an X access token about to expire is refreshed before publishing (the rotated refresh token is stored encrypted)" }
+  - { claim: "Unique idempotency key and append-only log in the database", test: "tests/e2e/social-publish.spec.ts › each post has a unique idempotency key and the publication log is append-only in the database" }
+  - { claim: "Content calendar", test: "tests/e2e/social-publish.spec.ts › a content calendar shows the scheduled and published posts on their day with their network and status" }
+  - { claim: "Runner route protected", test: "tests/e2e/social-publish.spec.ts › the runner route refuses calls without the secret" }
+limits:
+  - "Proven against local mocks recorded from each provider's documentation (2026-10), not against the live platforms (no real app credentials; LinkedIn and X have no public sandbox)"
+  - "Platform approval before real customers: Meta App Review for pages_manage_posts and instagram_content_publish (+ Business Verification); LinkedIn Share on LinkedIn (self-serve) posts as the member only; X API is paid per request (posting about $0.015 per post, more with a URL, per X's pricing page in 2026-10)"
+  - "Rate limits are the networks': X 100 posts per 15 minutes per user; Instagram 100 API-published posts per rolling 24 h per account; LinkedIn 150 member requests per day — hitting them is retried with backoff, not avoided"
+  - "Text, and one image by public https URL (JPEG for Instagram); no video, carousel, story, reel, poll, thread, link preview control or first comment"
+  - "LinkedIn's 3,000-character commentary limit comes from LinkedIn Help (the API only reports FIELD_LENGTH_TOO_LONG); Facebook's 63,206 is the long-standing UI limit"
+  - "Needs a scheduler calling the runner; posting precision is the scheduler's interval. Instagram containers are polled up to ~30 s per attempt"
+example: |
+  // Scheduler (every minute): curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/social/publish/run
+  // From code: a draft a person will review and submit
+  await composePosts(ctx, { connectionIds: [id], text, versions: { x: shortText }, imageUrl: null,
+    scheduledLocal: "2026-10-20T09:00", timeZone: "Europe/Madrid", idempotencyKey: key, intent: "draft" });
+params:
+  file: src/social/params/publish.json
+  schema: params.schema.json
+  fields:
+    - { name: "networks[]", description: "linkedin, facebook, instagram, x — the networks the request publishes to" }
+    - { name: "requireApproval", default: "true", description: "Human approval before publishing (someone with the approve permission)" }
+    - { name: "maxAttempts", default: "5", description: "Attempts per post for retryable errors (429, 5xx, lost requests)" }
+  example: |
+    { "networks": ["linkedin", "facebook", "instagram", "x"], "requireApproval": true, "maxAttempts": 5 }

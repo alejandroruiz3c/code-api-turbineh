@@ -339,6 +339,18 @@ export const PATTERN_GUIDE: Record<PatternId, { where: string[]; how: string }> 
     where: ["src/bookings/"],
     how: "Bookings need the domain.bookings component (slots, notice, double-booking guard).",
   },
+  "social.connections": {
+    where: ["src/social/"],
+    how: "Social accounts need the social.connections component (OAuth per provider, tokens encrypted at rest, never in CRUD).",
+  },
+  "social.publish": {
+    where: ["src/social/"],
+    how: "Publishing needs the social.publish component (official APIs, per-network limits, approval, idempotent runner, retries, log).",
+  },
+  "social.metrics": {
+    where: ["src/social/"],
+    how: "Engagement metrics need the social.metrics component (documented read endpoints, null when not reported).",
+  },
 };
 
 const approved = (c: ComponentCard) => c.status === "approved";

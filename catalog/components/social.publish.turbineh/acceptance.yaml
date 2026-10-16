@@ -1,0 +1,19 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/social-publish.spec.ts › human approval before publishing: the owner approves each post before it is published; approved posts are published automatically at the scheduled time by the runner, once, and every step is logged"
+  covers: ["approv|review|sign-?off", "publish|post"]
+- test: "tests/e2e/social-publish.spec.ts › human approval before publishing: the owner approves each post before it is published; approved posts are published automatically at the scheduled time by the runner, once, and every step is logged"
+  covers: ["schedul|configured times?|at the (set|chosen) time|automatically", "publish|post"]
+- test: "tests/e2e/social-publish.spec.ts › a failed publication is retried with backoff and then published; each attempt is in the publication log"
+  covers: ["retr(y|ies|ied)|on failure|fail"]
+- test: "tests/e2e/social-publish.spec.ts › a failed publication is retried with backoff and then published; each attempt is in the publication log"
+  covers: ["log|record|history|audit", "publication|publish|post"]
+- test: "tests/e2e/social-publish.spec.ts › each post is adapted to each network's format and length before it is saved: a text over X's 280 weighted characters is refused with its count and nothing is saved, a shorter X version is saved"
+  covers: ["format|length|character|limit|adapt", "network|linkedin|instagram|facebook|twitter|\\bx\\b|each (social )?platform"]
+- test: "tests/unit/social-publish.test.ts › a post adapted per network: the network's own version is checked instead of the common text, nothing is cut silently"
+  covers: ["adapt|tailor|version|per network|each network"]
+- test: "tests/e2e/social-publish.spec.ts › a content calendar shows the scheduled and published posts on their day with their network and status"
+  covers: ["calendar"]
+- test: "tests/e2e/social-publish.spec.ts › each post has a unique idempotency key and the publication log is append-only in the database"
+  covers: ["once|twice|duplicate|idempot"]
+- test: "tests/e2e/social-publish.spec.ts › the runner route refuses calls without the secret"
+  covers: ["cron|scheduler|runner", "secret|protect|authori|secure"]

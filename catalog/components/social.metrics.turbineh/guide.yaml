@@ -1,0 +1,76 @@
+schema: turbineh.guide/v0.1
+component: social.metrics.turbineh
+title: Engagement metrics of published social posts (likes, comments, shares, impressions) fetched on a schedule
+summary: >-
+  For every post published by social.publish.turbineh in the last windowDays, a protected runner route (called by any
+  scheduler with CRON_SECRET) fetches the engagement each network's official read API gives and stores a snapshot:
+  LinkedIn reactions and comments (socialMetadata), Facebook Page post reactions, comments and shares, Instagram likes,
+  comments, shares and views (media fields + insights), X likes, replies, reposts + quotes and impressions
+  (public_metrics). A metric a network does not report for that post — or that needs a permission the app lacks — stays
+  empty, never 0. Posts are fetched again only when their latest snapshot is older than refreshHours. A metrics page
+  shows the latest numbers per post and totals per network.
+keywords:
+  [social media metrics, engagement, likes, comments, shares, impressions, views, post analytics, linkedin metrics,
+   facebook insights, instagram insights, x public metrics, dashboard]
+synonyms:
+  engagement: [interactions, reactions, performance]
+  impressions: [views, reach]
+use_cases:
+  - "A dashboard with the likes, comments and shares of every post the business published"
+  - "Comparing which network engages more: totals of likes and comments per network over the last 30 days"
+use_when:
+  - "The request shows basic engagement metrics of published posts (likes, comments, shares, impressions)"
+avoid_when:
+  - "Follower growth, audience demographics, link clicks or competitor analytics (not covered)"
+  - "Metrics of posts not published through the app"
+tradeoffs:
+  - { choice: "Snapshots per fetch", gain: "Numbers can be compared over time; nothing is overwritten", cost: "One row per post per refresh (bounded by windowDays and refreshHours)" }
+  - { choice: "null instead of 0 for unreported metrics", gain: "No invented numbers", cost: "Totals per network sum what is known only" }
+config:
+  - { name: "src/social/params/metrics.json", default: "refreshHours 6, windowDays 30", description: "How often and for how long published posts are followed" }
+  - { name: CRON_SECRET, description: "Same secret as the publishing runner" }
+interfaces:
+  - { name: "Runner route", signature: "GET|POST /api/social/metrics/run — x-cron-secret or Bearer CRON_SECRET → { fetched, failed, skipped }", where: src/app/api/social/metrics/run/route.ts }
+  - { name: fetchMetrics, signature: "fetchMetrics(network, token, externalId, deps?) → { likes, comments, shares, impressions } (null = not reported)", where: src/social/metrics-api.ts }
+  - { name: runMetrics, signature: "runMetrics({ now?, limit?, deps?, config? }) → MetricsReport", where: src/social/metrics.ts }
+  - { name: latestMetrics, signature: "latestMetrics(organizationId, since) → posts with their latest snapshot", where: src/social/metrics.ts }
+extension_points:
+  - what: "Add a metric a network reports (e.g. Instagram saves)"
+    where: "src/social/metrics-api.ts, src/db/component-social-metrics.ts"
+    how: "Add the column (nullable), request the field from the documented endpoint, extend the mock and the contract test."
+  - what: "Call the runner on a schedule"
+    where: "CRON_SECRET, your scheduler"
+    how: "Vercel Cron: { \"path\": \"/api/social/metrics/run\", \"schedule\": \"0 * * * *\" } with CRON_SECRET set."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [saas-crud, ai-agents]
+  requires: [social.publish.turbineh]
+  works_with: [social.connections.turbineh, ui.charts.recharts]
+  notes: "Reads posts and tokens through the publish and connections components."
+security:
+  - "The runner requires CRON_SECRET (≥32 characters), compared in constant time"
+  - "Reads are scoped to the workspace; tokens only from accessTokenFor; numbers validated before storage"
+guarantees:
+  - { claim: "Metrics per network where the API gives them, null otherwise", test: "tests/unit/social-metrics-contract.test.ts › fetches likes, comments, shares and impressions per published post where each network's API gives them (null otherwise)" }
+  - { claim: "Documented read endpoints and fields", test: "tests/unit/social-metrics-contract.test.ts › uses each network's documented read endpoint and fields" }
+  - { claim: "Fetched on a schedule and shown per post; fresh ones not refetched", test: "tests/e2e/social-metrics.spec.ts › a dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule, not fetched again while fresh" }
+  - { claim: "Unreported metrics stay empty", test: "tests/e2e/social-metrics.spec.ts › a metric a network does not report stays empty instead of 0 (LinkedIn impressions)" }
+  - { claim: "Runner route protected", test: "tests/e2e/social-metrics.spec.ts › the metrics route refuses calls without the secret" }
+limits:
+  - "Proven against local mocks recorded from each provider's documentation (2026-10), not against the live platforms"
+  - "LinkedIn reads through the socialMetadata API need r_member_social_feed / r_organization_social_feed, which LinkedIn grants only to approved apps; shares and impressions of member posts need the restricted memberCreatorPostAnalytics API (not fetched)"
+  - "Facebook: impressions are not fetched (post_impressions is deprecated in the Graph API); needs pages_read_engagement. Instagram insights need instagram_manage_insights (without it likes and comments are still fetched)"
+  - "X: each read is billed per request (pay-per-use); metrics are fetched one post per request"
+  - "Needs a scheduler; 50 posts per call"
+example: |
+  // Scheduler (hourly): curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<app>/api/social/metrics/run
+  const m = await fetchMetrics("x", token, post.externalId); // { likes: 15, comments: 2, shares: 4, impressions: 512 }
+params:
+  file: src/social/params/metrics.json
+  schema: params.schema.json
+  fields:
+    - { name: "refreshHours", default: "6", description: "Fetch again when the latest snapshot is older than this" }
+    - { name: "windowDays", default: "30", description: "Follow posts published within this many days" }
+  example: |
+    { "refreshHours": 6, "windowDays": 30 }

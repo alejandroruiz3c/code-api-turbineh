@@ -612,4 +612,46 @@ export const LEARNING_SPECS: LearningSpec[] = [
       patterns: ["data.analytics-import", "membership-access"],
     },
   },
+  {
+    // Not a learning-round spec: the audit v2 §6 request without autonomy or AI drafts (ADR-0067), the social.*
+    // components' end-to-end check through verify:spec.
+    id: "social-publisher",
+    prompt:
+      'Build "Crumb & Co Social", a social media publisher for a small bakery: the owner connects LinkedIn, Instagram, Facebook and X accounts; editors write posts, adapted to each network\'s format and length, and the owner approves each post before it is published; posts are scheduled and published at the chosen time, retried on failure, and every publication is logged; a content calendar and a dashboard with likes, comments and shares of published posts.',
+    recipeEntities: [],
+    spec: base(
+      "saas-crud",
+      "Crumb & Co Social",
+      "Publishes approved posts to LinkedIn, Facebook, Instagram and X on schedule, with retries, a log and engagement metrics.",
+      ["owner", "editor"],
+      [
+        { name: "SocialAccount", fields: [f("network", "enum"), f("handle", "string")] },
+        {
+          name: "Post",
+          fields: [f("content", "text"), f("scheduledAt", "datetime"), f("network", "enum")],
+        },
+      ],
+      [
+        "The owner connects LinkedIn, Instagram, Facebook and X accounts.",
+        "Each post is adapted to each network's format and length before it is saved.",
+        "The owner approves each post before it is published.",
+        "Approved posts are published automatically at the scheduled time.",
+        "A failed publication is retried and every publication is logged.",
+        "A content calendar shows the scheduled and published posts.",
+        "A dashboard shows likes, comments and shares of published posts.",
+      ],
+    ),
+    expected: {
+      // Classified as business records; the social components implement them (params.entities), so no CRUD is made.
+      kinds: { SocialAccount: { kind: "business" }, Post: { kind: "business" } },
+      roles: { owner: "Owner", admin: "Owner", member: "Editor" },
+      can: [
+        ["member", "approve", false],
+        ["owner", "approve", true],
+        ["member", "create", true],
+      ],
+      timeZone: "UTC",
+      patterns: ["social.connections", "social.publish", "social.metrics"],
+    },
+  },
 ];
