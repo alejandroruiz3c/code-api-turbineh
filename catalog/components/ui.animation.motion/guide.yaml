@@ -36,8 +36,8 @@ config:
     description: pnpm add motion@13.4.4 (exact version, added by TurbineH)
 interfaces:
   - name: motion
-    signature: import { motion } from "motion"
-    where: motion
+    signature: import { motion } from "motion/react"
+    where: motion/react
 extension_points:
   - what: AnimateView
     where: motion/react-animate-view
@@ -58,11 +58,24 @@ guarantees:
 limits:
   - Not for canvas or 3D
 example: |-
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
   import { motion } from "motion/react";
 
-  function App() {
-    return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>Hello</motion.div>;
-  }
+  const html = renderToString(
+    h(motion.div, { initial: { opacity: 0 }, animate: { opacity: 1 } }, "Hello"),
+  );
+  console.log(html); // → contains "Hello"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders animated elements on the server
+  compiled:
+    against:
+      - motion@13.4.4
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

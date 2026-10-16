@@ -56,20 +56,22 @@ guarantees:
 limits:
   - Unstyled
 example: |-
-  import { Drawer } from 'vaul';
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { Drawer } from "vaul";
 
-  function MyComponent() {
-    return (
-      <Drawer.Root>
-        <Drawer.Trigger>Open</Drawer.Trigger>
-        <Drawer.Portal>
-          <Drawer.Content>
-            <Drawer.Title>Title</Drawer.Title>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
-    );
-  }
+  const html = renderToString(h(Drawer.Root, null, h(Drawer.Trigger, null, "Cart")));
+  console.log(html); // → contains "Cart"
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders a drawer trigger
+  compiled:
+    against:
+      - react@19.3.0
+      - react-dom@19.3.0
+      - vaul@1.1.2
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +88,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

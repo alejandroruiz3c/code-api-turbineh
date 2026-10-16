@@ -42,8 +42,8 @@ config:
     description: Environment variable read by the component's code.
 interfaces:
   - name: pgTable
-    signature: import { pgTable } from "drizzle-orm"
-    where: drizzle-orm
+    signature: import { pgTable } from "drizzle-orm/pg-core"
+    where: drizzle-orm/pg-core
   - name: sql
     signature: import { sql } from "drizzle-orm"
     where: drizzle-orm
@@ -76,12 +76,36 @@ guarantees:
 limits:
   - Does not include built-in connection pooling, authentication, or row-level authorization.
 example: |-
-  import { pgTable, text, uuid, eq, and } from 'drizzle-orm';
+  // Schema (src/db/schema.ts) and a typed query with drizzle-orm on node-postgres.
+  import { and, desc, eq } from "drizzle-orm";
+  import { drizzle } from "drizzle-orm/node-postgres";
+  import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+  import { Pool } from "pg";
 
-  export const users = pgTable('users', {
-    id: uuid('id').primaryKey(),
-    name: text('name').notNull(),
+  export const projects = pgTable("projects", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull(),
+    name: text("name").notNull(),
+    budget: integer("budget").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   });
+
+  const db = drizzle(new Pool({ connectionString: process.env.DATABASE_URL }));
+  const rows = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .where(and(eq(projects.organizationId, "org_1"), eq(projects.name, "Website")))
+    .orderBy(desc(projects.createdAt));
+  console.log(rows);
+example_check:
+  kind: typescript
+  from: snippet.ts
+  compiled:
+    against:
+      - drizzle-orm@0.45.3
+      - pg@8.23.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -98,10 +122,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

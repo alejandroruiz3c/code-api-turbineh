@@ -70,11 +70,24 @@ limits:
   - Does not support text-based formats like .txt, .csv, or .svg
   - Detection is a best-effort hint and does not guarantee file validity
 example: |-
-  import { detectFileType, isAllowedFileType } from '@/integrations/files-type-detection';
+  import { fileTypeFromBuffer } from "file-type";
 
-  const data = new Uint8Array([0x89, 0x50, 0x4E, 0x47]);
-  const type = await detectFileType(data);
-  const allowed = await isAllowedFileType(data, ['image/png']);
+  const png = new Uint8Array(
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  );
+  console.log((await fileTypeFromBuffer(png))?.mime); // → "image/png"
+  console.log((await fileTypeFromBuffer(new TextEncoder().encode("%PDF-1.7\n")))?.ext); // → "pdf"
+example_check:
+  kind: typescript
+  from: contract.test.ts › detects PNG and PDF by magic bytes
+  compiled:
+    against:
+      - file-type@22.1.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -91,10 +104,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

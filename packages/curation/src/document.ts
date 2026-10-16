@@ -1,6 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { componentDocsSchema, DOCS_SCHEMA, type ComponentDocs } from "@turbineh/catalog";
+import {
+  componentSnippet,
+  repairImportSignatures,
+  usageSources,
+  type Snippet,
+} from "@turbineh/catalog/snippets";
 import OpenAI from "openai";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
@@ -45,6 +51,10 @@ export function joinSentences(parts: string[]): string {
 
 export interface ComponentFacts {
   id: string;
+  /** The public usage snippet from the component's own contract test or snippet.ts (ADR-0066), when it has one. */
+  snippet?: Snippet | null;
+  /** Full sources of that usage (contract test, snippet.ts): the real import of each package name. */
+  usage?: string[];
   manifest: Manifest;
   pkg: { name: string; version: string };
   /** Names the code really exposes or uses from the package (imports in tests/glue, exports of glue/files). */
@@ -385,6 +395,8 @@ export async function componentFacts(
     .join("\n\n");
   return {
     id,
+    snippet: componentSnippet(dir),
+    usage: usageSources(dir),
     manifest,
     pkg,
     symbols,
@@ -497,6 +509,8 @@ export function checkDraft(
     }
     return [{ name, signature: sig.signature, where: sig.where }];
   });
+  // Import signatures as the component's own usage really imports each name (default vs named, subpath).
+  const realInterfaces = repairImportSignatures(interfaces, f.usage ?? []);
   const guarantees = d.guarantees.flatMap((g) => {
     const t = f.tests.find((x) => x.title === g.test_title.trim());
     if (!t) {
@@ -513,9 +527,13 @@ export function checkDraft(
     }
     return true;
   });
+  // The example is never model-written when the component has its own usage (contract test or snippet.ts): it is that
+  // usage, compiled afterwards by `pnpm catalog:snippets` (ADR-0066).
   const fixedExample = repairImports(d.example, f.importable);
-  const exampleIssue = exampleProblem(fixedExample, f.importable);
-  const example = exampleIssue ? "" : fixedExample.trim().split("\n").slice(0, 30).join("\n");
+  const exampleIssue = f.snippet ? null : exampleProblem(fixedExample, f.importable);
+  const example =
+    f.snippet?.code.trim() ??
+    (exampleIssue ? "" : fixedExample.trim().split("\n").slice(0, 30).join("\n"));
   if (exampleIssue)
     dropped.push(`example (${exampleIssue}): ${JSON.stringify(d.example.slice(0, 160))}`);
   const m = f.manifest;
@@ -570,7 +588,7 @@ export function checkDraft(
         description: "Environment variable read by the component's code.",
       })),
     ],
-    interfaces,
+    interfaces: realInterfaces,
     extension_points: d.extension_points
       .map((e) => ({ what: e.what.trim(), where: e.where.trim(), how: e.how.trim() }))
       .filter((e) => e.what.length >= 3 && e.where && e.how.length >= 3),
@@ -602,13 +620,15 @@ export function checkDraft(
         "security (after licence and effects)",
         "guarantees",
         "limits",
-        "example",
+        ...(f.snippet ? [] : ["example"]),
       ],
       checked: [
         "interfaces: names exist in the code; signatures copied from the declarations",
         "guarantees: exact test titles in the component's tests",
         "avoid_when alternatives exist in the catalog",
-        "example imports only what the component provides",
+        f.snippet
+          ? "example: the component's contract test or snippet.ts, compiled (example_check)"
+          : "example imports only what the component provides",
         "config, compatibility, licence and effects come from the code and manifest",
       ],
     },

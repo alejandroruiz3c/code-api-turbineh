@@ -70,9 +70,19 @@ limits:
   - maxBytes defaults to 1,000,000
   - maxRows defaults to 1,000
 example: |-
-  import { parseCsv, CSV_LIMITS } from '@/lib/csv';
+  // An import action in the app (e.g. src/app/dashboard/contacts/import/actions.ts).
+  import { CSV_LIMITS, parseCsv } from "@/lib/csv";
 
-  const data = parseCsv('name,age\nAlice,30\nBob,25', CSV_LIMITS);
+  export function importPeople(text: string): { name: string; age: number }[] {
+    // Bounded: throws on files over CSV_LIMITS.maxBytes / maxRows.
+    const rows = parseCsv(text, CSV_LIMITS);
+    return rows.map((r) => ({ name: r.name ?? "", age: Number(r.age ?? 0) }));
+  }
+
+  export const people = importPeople("name,age\nAlice,30\nBob,25"); // → [{ name: "Alice", age: 30 }, …]
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -89,10 +99,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -59,9 +59,19 @@ guarantees:
 limits:
   - Compile-time type inference is not as strong as zod
 example: |-
-  import { number, object, string } from 'yup';
+  import { number, object, string } from "yup";
+
   const schema = object({ name: string().required(), qty: number().min(1).required() });
-  const result = await schema.validate({ name: 'x', qty: '2' });
+  console.log(await schema.validate({ name: "x", qty: "2" })); // → { name: "x", qty: 2 }
+  await schema.validate({ name: "", qty: 0 }).catch((err: unknown) => console.log(err)); // → rejects: throws
+example_check:
+  kind: typescript
+  from: contract.test.ts › validates and casts
+  compiled:
+    against:
+      - yup@1.7.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -78,10 +88,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

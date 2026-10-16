@@ -66,9 +66,21 @@ limits:
   - Maximum input length is 500,000 characters in parseYaml
   - Alias expansion is limited to 50 in parseYaml
 example: |-
-  import { parseYaml, toYaml } from '@/integrations/data-yaml';
-  const obj = parseYaml('agent: triage\nsteps:\n  - classify');
-  const yaml = toYaml(obj);
+  import { parse, stringify } from "yaml";
+
+  const value = parse("agent: triage\nsteps:\n  - classify\n  - reply\nmax_tokens: 512\n");
+  console.log(value); // → { agent: "triage", steps: ["classify", "reply"], max_tokens: 512 }
+  console.log(parse(stringify(value))); // → value
+  parse("a: !!js/function 'return 1'"); // does not throw
+  console.log(typeof parse("a: !!js/function 'return 1'").a); // → not "function"
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses and writes YAML safely
+  compiled:
+    against:
+      - yaml@2.9.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +97,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

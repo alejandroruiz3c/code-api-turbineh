@@ -39,7 +39,7 @@ config:
     description: pnpm add @formkit/auto-animate@0.10.0 (exact version, added by TurbineH)
 interfaces:
   - name: autoAnimate
-    signature: import { autoAnimate } from "@formkit/auto-animate"
+    signature: import autoAnimate from "@formkit/auto-animate"
     where: "@formkit/auto-animate"
 extension_points:
   - what: animation functionality
@@ -57,7 +57,18 @@ guarantees:
     test: contract.test.ts › exposes the animate function
 limits:
   - Not for complex timelines
-example: import { autoAnimate } from "@formkit/auto-animate";
+example: |-
+  import autoAnimate from "@formkit/auto-animate";
+
+  console.log(typeof autoAnimate); // → "function"
+example_check:
+  kind: typescript
+  from: contract.test.ts › exposes the animate function
+  compiled:
+    against:
+      - "@formkit/auto-animate@0.10.0"
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -74,10 +85,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

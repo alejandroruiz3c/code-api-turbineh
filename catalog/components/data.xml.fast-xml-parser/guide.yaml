@@ -65,10 +65,18 @@ limits:
   - No XSLT support
 example: |-
   import { XMLBuilder, XMLParser } from "fast-xml-parser";
-  const parser = new XMLParser();
-  const data = parser.parse("<product><sku>A1</sku><price>9.5</price></product>");
-  const builder = new XMLBuilder();
-  const xml = builder.build({ a: { b: 1 } });
+
+  const data = new XMLParser().parse("<product><sku>A1</sku><price>9.5</price></product>");
+  console.log(data.product.sku); // → "A1"
+  console.log(new XMLBuilder().build({ a: { b: 1 } })); // → "<a><b>1</b></a>"
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses and builds XML without external entities
+  compiled:
+    against:
+      - fast-xml-parser@5.11.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

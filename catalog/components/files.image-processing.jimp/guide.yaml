@@ -64,9 +64,20 @@ limits:
 example: |-
   import { Jimp } from "jimp";
 
-  const img = await Jimp.read(inputBuffer);
+  const img = new Jimp({ width: 400, height: 200, color: 0xff0000ff });
   img.resize({ w: 100 });
+  console.log(img.bitmap.width); // → 100
+  console.log(img.bitmap.height); // → 50
   const png = await img.getBuffer("image/png");
+  console.log(png.subarray(1, 4).toString()); // → "PNG"
+example_check:
+  kind: typescript
+  from: contract.test.ts › creates, resizes and encodes an image
+  compiled:
+    against:
+      - jimp@1.6.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

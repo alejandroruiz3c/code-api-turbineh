@@ -70,6 +70,9 @@ limits:
 example: |
   // src/site-pages/params.json — "projects portfolio with filters by sector and a page per project"
   { "pages": [{ "entity": "Project", "path": "/projects", "detail": true, "filters": ["sector"] }], "seo": true }
+example_check:
+  kind: json
+  from: params.schema.json
 params:
   file: src/site-pages/params.json
   schema: params.schema.json

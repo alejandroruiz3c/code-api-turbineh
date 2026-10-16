@@ -51,9 +51,28 @@ jobs:
       # Pins of the private packages (ADR-0057): format only; the packages themselves are not available here.
       - run: infra/private/sync.sh --validate
 
+  # ADR-0066 (audit F-04): every public usage snippet (Discover, /v1/capabilities, catalogue index, apps' docs) is
+  # derived from the component's own contract test or snippet.ts and compiled with `tsc --noEmit`, one file per snippet,
+  # against the pinned versions; guide.yaml must hold exactly what was compiled. Ephemeral runner without secrets:
+  # packages are installed with --ignore-scripts and only type-checked, never run.
+  snippets:
+    name: Snippets compile · pinned versions
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=@turbineh/curation^...
+      - run: pnpm catalog:snippets --check
+
   # ADR-0037 §D4: recipes assembled together with domain components, exactly as the pipeline assembles them, so a
   # cross-component regression (66af3182) is caught before main. Fast part only (typecheck + unit); the full E2E gate
-  # runs locally with `pnpm --filter @turbineh/worker run verify:recipe --all` (CONTRIBUTING.md).
+  # runs locally with `pnpm --filter @turbineh/worker run verify:recipe --all` (CONTRIBUTING.md). --snippets (ADR-0066):
+  # the app snippets of catalog components (snippet.ts importing `@/…`) are compiled inside the assembled apps.
   assembled:
     name: Assembled combinations · typecheck · unit
     runs-on: ubuntu-24.04
@@ -85,4 +104,4 @@ jobs:
         run: pnpm turbo run build --filter=@turbineh/worker^...
       # Ephemeral runner without secrets: the assembled apps are installed and checked here (CI=true).
       - if: steps.changed.outputs.run == 'true'
-        run: pnpm --filter @turbineh/worker run verify:recipe --all --domains --quick
+        run: pnpm --filter @turbineh/worker run verify:recipe --all --domains --quick --snippets

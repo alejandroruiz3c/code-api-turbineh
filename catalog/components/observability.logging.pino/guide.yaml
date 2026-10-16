@@ -36,7 +36,7 @@ config:
     description: pnpm add pino@10.3.1 (exact version, added by TurbineH)
 interfaces:
   - name: pino
-    signature: import { pino } from "pino"
+    signature: import pino from "pino"
     where: pino
 extension_points:
   - what: Log processing and transport
@@ -56,9 +56,31 @@ guarantees:
 limits:
   - Does not include built-in log transport to backends
 example: |-
-  import pino from 'pino';
-  const logger = pino({ redact: ['password'] });
-  logger.info({ password: '123', user: 'admin' }, 'login');
+  import pino from "pino";
+  import { Writable } from "node:stream";
+
+  const lines: string[] = [];
+  const log = pino(
+    { redact: ["password"] },
+    new Writable({
+      write(c, _e, cb) {
+        lines.push(c.toString());
+        cb();
+      },
+    }),
+  );
+  log.info({ password: "p", user: "u" }, "login");
+  const rec = JSON.parse(lines[0] ?? "{}");
+  console.log(rec.msg); // → "login"
+  console.log(rec.password); // → "[Redacted]"
+example_check:
+  kind: typescript
+  from: contract.test.ts › writes structured JSON and redacts secrets
+  compiled:
+    against:
+      - pino@10.3.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -75,10 +97,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

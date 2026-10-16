@@ -67,7 +67,10 @@ describe("documentation step (facts first, claims checked)", () => {
     expect(docs.config[0]?.name).toBe("install");
     expect(dropped).toHaveLength(3);
     expect(componentDocsSchema.safeParse(docs).success).toBe(true);
-    expect(docs.generated?.sections).toContain("example");
+    // ADR-0066: a component with a contract test shows that usage, never the model's example.
+    expect(docs.generated?.sections).not.toContain("example");
+    expect(docs.example).toBe(f.snippet?.code.trim());
+    expect(docs.example).not.toContain("expect(");
   });
 
   it("rejects examples that import what the component does not provide", () => {

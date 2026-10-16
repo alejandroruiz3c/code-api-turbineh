@@ -38,7 +38,7 @@ config:
     description: pnpm add busboy@1.6.0 (exact version, added by TurbineH)
 interfaces:
   - name: busboy
-    signature: import { busboy } from "busboy"
+    signature: import busboy from "busboy"
     where: busboy
 extension_points:
   - what: event listeners
@@ -58,12 +58,25 @@ limits:
   - Does not store files automatically
 example: |-
   import busboy from "busboy";
-  const bb = busboy({ headers: { "content-type": "multipart/form-data; boundary=X" } });
-  bb.on("field", (name, val) => console.log(name, val));
-  bb.on("file", (name, file, info) => {
-    file.on("data", (data) => console.log(data));
+
+  const boundary = "X";
+  const body = `--X\r\nContent-Disposition: form-data; name="a"\r\n\r\n1\r\n--X--\r\n`;
+  const bb = busboy({ headers: { "content-type": `multipart/form-data; boundary=${boundary}` } });
+  const fields: Record<string, string> = {};
+  await new Promise<void>((resolve) => {
+    bb.on("field", (n: string, v: string) => (fields[n] = v));
+    bb.on("close", () => resolve());
+    bb.end(body);
   });
-  bb.on("close", () => console.log("done"));
+  console.log(fields); // → { a: "1" }
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses a multipart field
+  compiled:
+    against:
+      - busboy@1.6.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -80,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

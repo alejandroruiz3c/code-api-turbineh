@@ -40,7 +40,7 @@ config:
     description: pnpm add papaparse@5.7.0 (exact version, added by TurbineH)
 interfaces:
   - name: Papa
-    signature: import { Papa } from "papaparse"
+    signature: import Papa from "papaparse"
     where: papaparse
 extension_points:
   - what: parsing configuration
@@ -60,12 +60,22 @@ limits:
   - Does not validate rows against a schema
   - Certain config options like download and worker are unavailable when parsing Node.js streams via .pipe()
 example: |-
-  import { Papa } from 'papaparse';
+  import Papa from "papaparse";
 
-  const r = Papa.parse('name,notes\n"Doe, J","a ""b"""\n', {
+  const r = Papa.parse<{ name: string; notes: string }>('name,notes\n"Doe, J","a ""b"""\n', {
     header: true,
     skipEmptyLines: true,
   });
+  console.log(r.errors); // → []
+  console.log(r.data); // → [{ name: "Doe, J", notes: 'a "b"' }]
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses quoted CSV with headers
+  compiled:
+    against:
+      - papaparse@5.7.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -82,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

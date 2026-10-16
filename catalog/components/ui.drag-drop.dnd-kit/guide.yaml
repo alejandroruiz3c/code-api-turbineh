@@ -61,20 +61,26 @@ guarantees:
 limits:
   - Does not include sortable presets.
 example: |-
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
   import { DndContext, useDraggable } from "@dnd-kit/core";
 
   function Card() {
     const { attributes, setNodeRef } = useDraggable({ id: "card-1" });
-    return <div ref={setNodeRef} {...attributes}>Card</div>;
+    return h("div", { ref: setNodeRef, ...attributes }, "Card");
   }
-
-  function App() {
-    return (
-      <DndContext>
-        <Card />
-      </DndContext>
-    );
-  }
+  const html = renderToString(h(DndContext, null, h(Card)));
+  console.log(html); // → contains 'role="button"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders draggable items with accessibility attributes
+  compiled:
+    against:
+      - "@dnd-kit/core@6.3.1"
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -91,10 +97,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

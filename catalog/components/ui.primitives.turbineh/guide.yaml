@@ -77,11 +77,29 @@ guarantees:
 limits:
   - Does not provide complex widgets such as date pickers, charts or data grids
 example: |-
-  import { Button } from '@/components/ui/button';
-  import { Card } from '@/components/ui/card';
-  import { Input } from '@/components/ui/input';
-  import { Label } from '@/components/ui/label';
-  import { Table } from '@/components/ui/table';
+  // A server component in the app (e.g. src/app/dashboard/contacts/new/page.tsx), written without JSX here.
+  import { createElement as h } from "react";
+  import { Button } from "@/components/ui/button";
+  import { Card } from "@/components/ui/card";
+  import { Input } from "@/components/ui/input";
+  import { Label } from "@/components/ui/label";
+  import { Table } from "@/components/ui/table";
+
+  export function NewContact() {
+    const row = h("tr", null, h("td", null, "Ana"), h("td", null, "ana@example.com"));
+    return h(Card, {
+      title: "New contact",
+      children: [
+        h(Label, { key: "label", htmlFor: "name" }, "Name"),
+        h(Input, { key: "input", id: "name", name: "name", required: true }),
+        h(Button, { key: "save", type: "submit" }, "Save"),
+        h(Table, { key: "table", head: ["Name", "Email"], children: row }),
+      ],
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -98,10 +116,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

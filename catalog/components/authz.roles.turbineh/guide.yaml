@@ -104,7 +104,21 @@ guarantees:
     test: recipe template saas-crud/tests/unit/authz.test.ts › sends anonymous callers to sign-in
 limits:
   - Does not support fine-grained per-record permissions
-example: import { Role, Action, can, requireMember } from '@/server/authz';
+example: |-
+  // A server action in the app (e.g. src/app/dashboard/notes/actions.ts): signed-in member, role checked, deny by default.
+  import { can, requireMember } from "@/server/authz";
+  import { UserFacingError } from "@/security/errors";
+
+  export async function archiveNote(
+    noteId: string,
+  ): Promise<{ ok: true; by: string; noteId: string }> {
+    const ctx = await requireMember(); // redirects to /sign-in without a session or workspace
+    if (!can(ctx.role, "update", "notes")) throw new UserFacingError("Your role cannot edit notes.");
+    return { ok: true, by: ctx.userId, noteId };
+  }
+example_check:
+  kind: app
+  from: snippet.ts
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -121,10 +135,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

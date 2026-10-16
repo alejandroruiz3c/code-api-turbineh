@@ -42,11 +42,17 @@ export default async function Home() {
       <h1 className="display animate-fade-up mt-4 max-w-3xl text-4xl font-bold text-cream sm:text-5xl">
         Secured software flows.
         <br />
-        <span className="text-ice">In seconds. Free and open.</span>
+        <span className="text-ice">Verified before you get them.</span>
       </h1>
       <p className="animate-fade-up mt-4 max-w-2xl text-muted">
-        Go from “I need this capability” to “it's integrated and verified”. Built on audited
-        components that already work — your agent writes only the glue.
+        YES IF for Builders is TurbineH&apos;s library of verified software capabilities, for people
+        and coding agents. Go from “I need this capability” to “it's integrated and verified”. Built
+        on audited components that already work — only the glue is written for you.
+      </p>
+      <p data-testid="supported-stack" className="animate-fade-up mt-3 text-sm text-ice-2">
+        Supported stack:{" "}
+        <span className="text-cream">TypeScript · Next.js · PostgreSQL · Drizzle</span>. New apps
+        are always built on it; other stacks get the same app as a separate service.
       </p>
 
       <form action="/discover" role="search" className="animate-fade-up mt-8 flex max-w-2xl gap-3">
@@ -86,15 +92,9 @@ export default async function Home() {
       </p>
 
       <section aria-label="How it works" className="mt-14 grid gap-4 md:grid-cols-3">
-        {STEPS.map((x, i) => (
-          <div
-            key={x.k}
-            className={`rounded-xl border p-5 ${i === 1 ? "border-ice/60 bg-ice/10" : "border-line bg-panel/30"}`}
-          >
-            <p className="eyebrow text-teal">
-              Step {x.k}
-              {i === 1 ? " · the moat" : ""}
-            </p>
+        {STEPS.map((x) => (
+          <div key={x.k} className="rounded-xl border border-line bg-panel/30 p-5">
+            <p className="eyebrow text-teal">Step {x.k}</p>
             <h2 className="display mt-2 text-xl font-semibold text-cream">{x.t}</h2>
             <p className="mt-2 text-sm text-muted">{x.d}</p>
           </div>
@@ -107,6 +107,64 @@ export default async function Home() {
         </Link>{" "}
         speaks to humans and returns structured state to your coding agent.
       </p>
+
+      <section
+        aria-label="Into your existing repository"
+        data-testid="pr-differentiator"
+        className="mt-10 rounded-xl border border-teal/50 p-5"
+      >
+        <h2 className="display text-xl font-semibold text-cream">
+          Into your existing repository, as a verified pull request
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm text-muted">
+          Connect GitHub and pick a repository: TurbineH adapts the package to your conventions,
+          commits on a new <code className="text-ice-2">turbineh/…</code> branch, opens a pull
+          request and verifies it inside your project. It never merges — you review and merge.
+          Undoing it is one commit to revert; your later work stays.{" "}
+          <Link href="/use#people" className="text-teal underline-offset-4 hover:underline">
+            How it works
+          </Link>
+        </p>
+      </section>
+
+      <section
+        aria-label="Free and open"
+        data-testid="free-and-open"
+        className="mt-6 grid gap-4 text-sm md:grid-cols-3"
+      >
+        <div className="rounded-xl border border-line bg-panel/30 p-5">
+          <h2 className="eyebrow text-teal">Open source</h2>
+          <p className="mt-2 text-muted">
+            The library — catalogue components, recipes, the engine and the CLI — is open source
+            under the{" "}
+            <a
+              href="https://github.com/alejandroruiz3c/code-api-turbineh"
+              className="text-teal underline-offset-4 hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Apache-2.0 licence
+            </a>
+            . The code you receive is yours.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-panel/30 p-5">
+          <h2 className="eyebrow text-teal">This hosted service</h2>
+          <p className="mt-2 text-muted">
+            software.turbineh.com is an invitation beta with an access token, free during the beta.
+            Production decision and orchestration engines run here and are not part of the open
+            library.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-panel/30 p-5">
+          <h2 className="eyebrow text-teal">AI in your apps</h2>
+          <p className="mt-2 text-muted">
+            Your choice: the TurbineH gateway with the app&apos;s token (a trial balance included)
+            or your own OpenAI-compatible provider. Orchestration, infrastructure and inference
+            beyond the trial are on quote.
+          </p>
+        </div>
+      </section>
 
       <section aria-label="Your workspace" className="mt-14">
         <div className="flex items-baseline justify-between">

@@ -161,7 +161,7 @@ export function DeployForMe({ id, onDone }: { id: string; onDone: () => void }) 
             </div>
             <p className="mt-2 text-sm text-muted">
               We deploy it into <b className="text-ice-2">your own accounts</b> — you own everything
-              and we keep no access. About 5 minutes. Your package is updated with the live address
+              and we keep no access. Your package is updated with the live address
               and the few steps left for you.
             </p>
 

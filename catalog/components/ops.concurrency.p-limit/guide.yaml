@@ -40,7 +40,7 @@ config:
     description: pnpm add p-limit@7.3.3 (exact version, added by TurbineH)
 interfaces:
   - name: pLimit
-    signature: import { pLimit } from "p-limit"
+    signature: import pLimit from "p-limit"
     where: p-limit
 extension_points:
   - what: limit(fn, ...args)
@@ -60,13 +60,30 @@ limits:
   - Does not persist queued work
   - Does not cancel promises that are already running
 example: |-
-  import { pLimit } from 'p-limit';
+  import pLimit from "p-limit";
 
   const limit = pLimit(2);
-  const results = await Promise.all([
-    limit(() => fetch('https://api.example.com/1')),
-    limit(() => fetch('https://api.example.com/2'))
-  ]);
+  let active = 0;
+  let peak = 0;
+  await Promise.all(
+    Array.from({ length: 6 }, () =>
+      limit(async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise((r) => setTimeout(r, 5));
+        active--;
+      }),
+    ),
+  );
+  console.log(peak); // → 2
+example_check:
+  kind: typescript
+  from: contract.test.ts › never exceeds the concurrency limit
+  compiled:
+    against:
+      - p-limit@7.3.3
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -83,10 +100,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

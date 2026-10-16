@@ -1,4 +1,5 @@
 import type pg from "pg";
+import { RUN_STARTED_AT_SQL } from "./builds.js";
 
 /**
  * Product flows (PLAN §16.4) live on the builds table: the row first carries the plan (`options.mode = "plan"`,
@@ -55,6 +56,8 @@ export interface FlowListRow {
   status: string;
   mode: string | null;
   created_at: string;
+  /** Start of the current run (ADR-0066): when it was last queued. */
+  started_at: string | null;
   finished_at: string | null;
   error: string | null;
   options: Record<string, unknown>;
@@ -65,7 +68,8 @@ export interface FlowListRow {
 /** Flows of a workspace, newest first (metrics trimmed to what the activity view needs). */
 export async function listFlows(db: pg.Pool, ownerId: string, limit = 50): Promise<FlowListRow[]> {
   const res = await db.query<FlowListRow>(
-    `SELECT id, prompt AS need, status, options->>'mode' AS mode, created_at, finished_at, error, options,
+    `SELECT id, prompt AS need, status, options->>'mode' AS mode, created_at, ${RUN_STARTED_AT_SQL} AS started_at,
+       finished_at, error, options,
        jsonb_build_object(
          'plan', metrics->'plan', 'verify', metrics->'verify', 'timings', metrics->'timings',
          'reuse', metrics->'reuse', 'handover', metrics->'handover', 'integrations', metrics->'integrations',
@@ -73,7 +77,7 @@ export async function listFlows(db: pg.Pool, ownerId: string, limit = 50): Promi
          'corrections', metrics->'corrections', 'deployment', metrics->'deployment'
        ) AS metrics,
        artifact
-     FROM builds WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
+     FROM builds b WHERE owner_id = $1 ORDER BY created_at DESC LIMIT $2`,
     [ownerId, Math.min(Math.max(limit, 1), 200)],
   );
   return res.rows.map((r) => ({

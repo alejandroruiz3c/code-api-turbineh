@@ -41,7 +41,7 @@ interfaces:
     signature: import { createParser } from "eventsource-parser"
     where: eventsource-parser
   - name: EventSourceMessage
-    signature: import { EventSourceMessage } from "eventsource-parser"
+    signature: import type { EventSourceMessage } from "eventsource-parser"
     where: eventsource-parser
   - name: readSseStream
     signature: "async function readSseStream( body: ReadableStream<Uint8Array>, onEvent: (event: EventSourceMessage)"
@@ -63,13 +63,22 @@ guarantees:
 limits:
   - Does not open network connections; requires manual feeding of bytes.
 example: |-
-  import { createParser, type EventSourceMessage } from 'eventsource-parser';
-  const parser = createParser({
-    onEvent: (event: EventSourceMessage) => {
-      console.log(event.data);
-    }
-  });
-  parser.feed('data: hello\n\n');
+  import { createParser, type EventSourceMessage } from "eventsource-parser";
+
+  const events: EventSourceMessage[] = [];
+  const parser = createParser({ onEvent: (e) => events.push(e) });
+  parser.feed('data: {"delta":"Hel');
+  parser.feed('lo"}\n\nevent: done\ndata: [DONE]\n\n');
+  console.log(events.map((e) => e.data)); // → ['{"delta":"Hello"}', "[DONE]"]
+  console.log(events[1]?.event); // → "done"
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses a Server-Sent Events stream fed in arbitrary chunks
+  compiled:
+    against:
+      - eventsource-parser@4.1.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +95,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -33,6 +33,7 @@ import {
   sendDemandEmails,
   requeueStale,
   requeueStaleRepoIntegrations,
+  runHistory,
   type BuildRow,
 } from "@turbineh/db";
 import { decisionIO } from "@turbineh/decider";
@@ -57,7 +58,7 @@ import { storeCapabilityPackage, type PlanRequest } from "./product.js";
 import { generateComponentPackage } from "./component-package.js";
 import { runContracts } from "@turbineh/curation";
 import type { BuildSpec } from "@turbineh/compiler";
-import { trackedTokens } from "@turbineh/engine";
+import { runSample, trackedTokens, type RunSample } from "@turbineh/engine";
 import type { Plan } from "@turbineh/shared";
 
 loadLocalEnv();
@@ -163,6 +164,13 @@ async function handle(build: BuildRow): Promise<void> {
     },
     emit: (_id: string, phase: Phase, type: string, data: Record<string, unknown>) =>
       emitEvent(db, build.id, phase, type, data),
+    // ADR-0066: plan estimates calibrated on the recipe's finished runs (persisted start, end and metrics).
+    estimateHistory: async (recipe: string) =>
+      (await runHistory(db, { recipe }))
+        .map((r) =>
+          runSample({ startedAt: r.started_at, finishedAt: r.finished_at, metrics: r.metrics }),
+        )
+        .filter((x): x is RunSample => x !== null),
   };
   const parentId = typeof build.options.parent === "string" ? build.options.parent : null;
   const mode = build.options.mode;

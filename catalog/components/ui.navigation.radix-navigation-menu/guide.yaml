@@ -67,19 +67,29 @@ guarantees:
 limits:
   - Unstyled
 example: |-
-  import { Root, List, Item, Link } from "@radix-ui/react-navigation-menu";
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import * as Nav from "@radix-ui/react-navigation-menu";
 
-  function Nav() {
-    return (
-      <Root>
-        <List>
-          <Item>
-            <Link href="/about">About</Link>
-          </Item>
-        </List>
-      </Root>
-    );
-  }
+  const html = renderToString(
+    h(
+      Nav.Root,
+      null,
+      h(Nav.List, null, h(Nav.Item, null, h(Nav.Link, { href: "/about" }, "About"))),
+    ),
+  );
+  console.log(html); // → contains "<nav"
+  console.log(html); // → contains 'href="/about"'
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders site navigation
+  compiled:
+    against:
+      - "@radix-ui/react-navigation-menu@1.2.22"
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -96,10 +106,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -40,7 +40,7 @@ config:
     description: pnpm add minisearch@7.2.0 (exact version, added by TurbineH)
 interfaces:
   - name: MiniSearch
-    signature: import { MiniSearch } from "minisearch"
+    signature: import MiniSearch from "minisearch"
     where: minisearch
 extension_points:
   - what: search
@@ -59,10 +59,23 @@ guarantees:
 limits:
   - Not for millions of records
 example: |-
-  import { MiniSearch } from 'minisearch';
-  const ms = new MiniSearch({ fields: ['name'], storeFields: ['name'] });
-  ms.addAll([{ id: 1, name: 'Red running shoes' }, { id: 2, name: 'Blue jacket' }]);
-  const results = ms.search('runing', { fuzzy: 0.2 });
+  import MiniSearch from "minisearch";
+
+  const ms = new MiniSearch({ fields: ["name"], storeFields: ["name"] });
+  ms.addAll([
+    { id: 1, name: "Red running shoes" },
+    { id: 2, name: "Blue jacket" },
+  ]);
+  console.log(ms.search("runing", { fuzzy: 0.2 })[0]?.id); // → 1
+  console.log(ms.search("jack", { prefix: true })[0]?.id); // → 2
+example_check:
+  kind: typescript
+  from: contract.test.ts › finds documents with typos and prefixes
+  compiled:
+    against:
+      - minisearch@7.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -79,10 +92,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

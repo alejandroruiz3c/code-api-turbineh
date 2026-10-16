@@ -62,9 +62,18 @@ limits:
   - IANA names require Intl API support; otherwise, only offsets can be used
 example: |-
   import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+
   const utc = new Date("2026-10-13T08:00:00Z");
-  const formatted = formatInTimeZone(utc, "Europe/Madrid", "HH:mm");
-  const zoned = fromZonedTime("2026-10-13 10:00", "Europe/Madrid");
+  console.log(formatInTimeZone(utc, "Europe/Madrid", "HH:mm")); // → "10:00"
+  console.log(fromZonedTime("2026-10-13 10:00", "Europe/Madrid").toISOString()); // → "2026-10-13T08:00:00.000Z"
+example_check:
+  kind: typescript
+  from: contract.test.ts › formats and converts across time zones
+  compiled:
+    against:
+      - date-fns-tz@3.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +90,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

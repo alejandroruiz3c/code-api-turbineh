@@ -1,5 +1,5 @@
 import { listFlows } from "@turbineh/db";
-import { flowState, trackedTokens } from "@turbineh/engine";
+import { flowDurationMs, flowState, trackedTokens } from "@turbineh/engine";
 import type { Plan } from "@turbineh/shared";
 import { db } from "@/server/db";
 import { requireCaller } from "@/server/product";
@@ -18,7 +18,6 @@ export async function GET(req: Request): Promise<Response> {
   const flows = rows.map((r) => {
     const plan = r.metrics.plan as Plan | undefined;
     const checks = (r.metrics.verify as { ok: boolean }[] | undefined) ?? [];
-    const timings = r.metrics.timings as { total?: number } | undefined;
     return {
       id: r.id,
       need: r.need,
@@ -35,7 +34,8 @@ export async function GET(req: Request): Promise<Response> {
         : null,
       components: plan?.components.length ?? 0,
       checks: { passed: checks.filter((c) => c.ok).length, total: checks.length },
-      seconds: Math.round((timings?.total ?? 0) / 1000),
+      // N-03 (ADR-0066): persisted end − start of the run (null while it runs), as on the flow page and the home.
+      seconds: secondsOf(r),
       tokens: trackedTokens(r.metrics),
       reusedShare: (r.metrics.reuse as { reusedShare?: number } | undefined)?.reusedShare ?? null,
       securityFindings: (r.metrics.handover as { alerts?: number } | undefined)?.alerts ?? null,
@@ -49,6 +49,7 @@ export async function GET(req: Request): Promise<Response> {
     ["verified", "integrated", "integration_verified", "deployed"].includes(f.state),
   );
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+  const timed = done.map((f) => f.seconds).filter((x): x is number => x !== null);
   return Response.json(
     {
       totals: {
@@ -58,7 +59,7 @@ export async function GET(req: Request): Promise<Response> {
           (f) => f.state === "integrated" || f.state === "integration_verified",
         ).length,
         tokens: flows.reduce((a, f) => a + f.tokens, 0),
-        avgSecondsToVerified: Math.round(avg(done.map((f) => f.seconds))),
+        avgSecondsToVerified: timed.length ? Math.round(avg(timed)) : null,
         avgReusedShare: Number(avg(done.map((f) => f.reusedShare ?? 0)).toFixed(3)),
         securityFindings: done.reduce((a, f) => a + (f.securityFindings ?? 0), 0),
       },
@@ -66,4 +67,10 @@ export async function GET(req: Request): Promise<Response> {
     },
     { headers: { "Cache-Control": "no-store" } },
   );
+}
+
+function secondsOf(r: { status: string; started_at: string | null; finished_at: string | null }) {
+  if (r.status !== "done" && r.status !== "failed") return null;
+  const ms = flowDurationMs(r.started_at, r.finished_at);
+  return ms === null ? null : Math.round(ms / 1000);
 }

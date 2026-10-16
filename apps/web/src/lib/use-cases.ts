@@ -31,7 +31,10 @@ export const USE_CASES: UseCase[] = [
     requirements: [
       db,
       auth,
-      env("TURBINEH_AI_TOKEN", "Your app's access to TurbineH AI — no model keys needed"),
+      env(
+        "TURBINEH_AI_TOKEN",
+        "AI calls through the TurbineH gateway — or leave it empty and use your own provider (AI_BASE_URL, AI_API_KEY, AI_MODEL)",
+      ),
     ],
     example:
       "A support assistant that answers from a help-centre document and refuses a prompt injection",

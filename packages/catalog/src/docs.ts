@@ -58,6 +58,20 @@ export const componentDocsSchema = z.object({
     .max(20),
   limits: list(1, 10),
   example: z.string().min(10).max(3000),
+  /** Where the example comes from and when it last compiled (ADR-0066); written by `pnpm catalog:snippets`. */
+  example_check: z
+    .object({
+      kind: z.enum(["typescript", "app", "json", "shell"]),
+      from: z.string().min(3),
+      compiled: z
+        .object({
+          against: z.array(z.string()),
+          typescript: z.string(),
+          on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+        .optional(),
+    })
+    .optional(),
   /** Request parameters of a parameterised component (ADR-0041): app file, JSON Schema, fields in words. */
   params: z
     .object({

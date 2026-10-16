@@ -26,7 +26,16 @@ export interface BuildRow {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  /**
+   * Start of the row's current run (ADR-0066): when it was last queued (the generation of an approved plan is queued
+   * again on the same row), else when it was created. Read by `getBuild` only.
+   */
+  started_at?: string | null;
 }
+
+/** SQL for the start of a build's current run (ADR-0066); `b` is the builds row alias. */
+export const RUN_STARTED_AT_SQL = `coalesce(
+  (SELECT max(e.at) FROM build_events e WHERE e.build_id = b.id AND e.type = 'queued'), b.created_at)`;
 
 export interface BuildEvent {
   id: number;
@@ -163,8 +172,9 @@ export async function getBuild(
   ownerId?: string,
 ): Promise<BuildRow | null> {
   const res = await db.query<BuildRow>(
-    `SELECT id, prompt, status, owner_id, options, spec, metrics, artifact, repo_url, error, created_at, finished_at
-     FROM builds WHERE id = $1 ${ownerId ? "AND owner_id = $2" : ""}`,
+    `SELECT id, prompt, status, owner_id, options, spec, metrics, artifact, repo_url, error, created_at, finished_at,
+            ${RUN_STARTED_AT_SQL} AS started_at
+     FROM builds b WHERE id = $1 ${ownerId ? "AND owner_id = $2" : ""}`,
     ownerId ? [id, ownerId] : [id],
   );
   return res.rows[0] ?? null;
@@ -183,6 +193,40 @@ export async function findImprovement(
     [ownerId, parentId],
   );
   return res.rows[0] ?? null;
+}
+
+/** One finished run of a recipe, as persisted (ADR-0066): its start, its end and its metrics. */
+export interface RunHistoryRow {
+  id: string;
+  recipe: string;
+  started_at: string;
+  finished_at: string;
+  metrics: Record<string, unknown>;
+}
+
+/**
+ * Finished app runs of a recipe that delivered a package (verified, or delivered not verified), most recent first:
+ * the history plan estimates are calibrated on (ADR-0066). Plan-only runs and "Improve & re-verify" runs are left
+ * out — they do a different amount of work.
+ */
+export async function runHistory(
+  db: pg.Pool,
+  opts: { recipe?: string; limit?: number; days?: number } = {},
+): Promise<RunHistoryRow[]> {
+  const res = await db.query<RunHistoryRow>(
+    `SELECT b.id, b.metrics->'recipe'->>'built' AS recipe, ${RUN_STARTED_AT_SQL} AS started_at, b.finished_at,
+            b.metrics
+     FROM builds b
+     WHERE b.finished_at IS NOT NULL
+       AND (b.status = 'done' OR coalesce(b.artifact ? 'zipKey', false))
+       AND b.metrics->'recipe'->>'built' IS NOT NULL
+       AND coalesce(b.options->>'mode', 'build') NOT IN ('plan', 'improve')
+       AND ($1::text IS NULL OR b.metrics->'recipe'->>'built' = $1)
+       AND b.finished_at > now() - make_interval(days => $3)
+     ORDER BY b.finished_at DESC LIMIT $2`,
+    [opts.recipe ?? null, opts.limit ?? 50, opts.days ?? 180],
+  );
+  return res.rows;
 }
 
 /** Typical duration of each phase in recent finished flows, per kind of run (ADR-0051, internal timings only). */

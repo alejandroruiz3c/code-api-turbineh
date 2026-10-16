@@ -54,9 +54,21 @@ guarantees:
 limits:
   - Does not include brand logos
 example: |-
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
   import { Check } from "lucide-react";
 
-  const Icon = () => <Check aria-label="done" />;
+  console.log(renderToString(h(Check, { "aria-label": "done" }))); // → matches /^<svg/
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders an accessible SVG icon
+  compiled:
+    against:
+      - lucide-react@1.48.0
+      - react@19.3.0
+      - react-dom@19.3.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -73,10 +85,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

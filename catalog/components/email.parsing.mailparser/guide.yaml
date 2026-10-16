@@ -60,10 +60,40 @@ limits:
   - In maintenance mode; no new features will be added.
   - Inlined images are capped by maxInlinedImagesSize (default 20 MB).
 example: |-
-  import { parseEmail } from "@/integrations/email-parsing";
+  import { simpleParser } from "mailparser";
 
-  const raw = "From: user@example.com\r\nSubject: test\r\n\r\nbody";
-  const parsed = await parseEmail(raw);
+  const raw = [
+    "From: Ana <ana@example.test>",
+    "To: support@example.test",
+    "Subject: Refund for order o-42",
+    "MIME-Version: 1.0",
+    'Content-Type: multipart/mixed; boundary="b1"',
+    "",
+    "--b1",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "The parcel arrived damaged.",
+    "--b1",
+    'Content-Type: text/plain; name="note.txt"',
+    'Content-Disposition: attachment; filename="note.txt"',
+    "",
+    "photo to follow",
+    "--b1--",
+    "",
+  ].join("\r\n");
+  const mail = await simpleParser(raw);
+  console.log(mail.subject); // → "Refund for order o-42"
+  console.log(mail.from?.value[0]?.address); // → "ana@example.test"
+  console.log(mail.text?.trim()); // → "The parcel arrived damaged."
+  console.log(mail.attachments.map((a) => a.filename)); // → ["note.txt"]
+example_check:
+  kind: typescript
+  from: contract.test.ts › parses a raw MIME email with an attachment
+  compiled:
+    against:
+      - mailparser@3.9.31
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -80,10 +110,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

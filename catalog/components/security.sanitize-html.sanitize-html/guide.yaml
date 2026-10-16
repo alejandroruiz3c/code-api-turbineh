@@ -37,7 +37,7 @@ config:
     description: pnpm add sanitize-html@2.17.7 (exact version, added by TurbineH)
 interfaces:
   - name: sanitizeHtml
-    signature: import { sanitizeHtml } from "sanitize-html"
+    signature: import sanitizeHtml from "sanitize-html"
     where: sanitize-html
 extension_points:
   - what: configure permitted tags and attributes
@@ -59,9 +59,20 @@ limits:
   - Does not sanitize CSS in style attributes unless configured
   - HTML comments are not preserved
 example: |-
-  import { sanitizeHtml } from 'sanitize-html';
+  import sanitizeHtml from "sanitize-html";
 
-  const clean = sanitizeHtml('<p onclick="x()">hi<script>alert(1)</script><a href="javascript:x">l</a></p>');
+  const out = sanitizeHtml(
+    '<p onclick="x()">hi<script>alert(1)</script><a href="javascript:x">l</a></p>',
+  );
+  console.log(out); // → "<p>hi<a>l</a></p>"
+example_check:
+  kind: typescript
+  from: contract.test.ts › strips scripts and event handlers
+  compiled:
+    against:
+      - sanitize-html@2.17.7
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -78,10 +89,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

@@ -60,15 +60,23 @@ limits:
   - Does not store events
   - Does not send reminders
 example: |-
-  import { RRule } from 'rrule';
+  import { RRule } from "rrule";
 
   const rule = new RRule({
     freq: RRule.WEEKLY,
     count: 3,
     dtstart: new Date(Date.UTC(2026, 9, 13, 9)),
   });
-
-  const occurrences = rule.all();
+  console.log(rule.all().map((d) => d.toISOString().slice(0, 10))); // → [ "2026-10-13", "2026-10-20", "2026-10-27", ]
+  console.log(rule.toString()); // → contains "FREQ=WEEKLY"
+example_check:
+  kind: typescript
+  from: contract.test.ts › expands weekly occurrences
+  compiled:
+    against:
+      - rrule@2.8.1
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -85,10 +93,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

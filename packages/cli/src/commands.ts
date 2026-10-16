@@ -368,7 +368,7 @@ export function planLines(p: Plan): string[] {
       ? [`  Settings you provide: ${p.config.map((q) => q.name).join(", ")}`]
       : []),
     "",
-    `Estimate: ~${p.estimate.seconds}s · ${p.estimate.tokens.toLocaleString("en")} tokens · ~${p.estimate.newLinesToMaintain} new lines to maintain`,
+    ...estimateLines(p.estimate),
     ...(p.needsApproval.length
       ? [
           "",
@@ -901,4 +901,27 @@ export async function status(c: Ctx): Promise<CommandResult> {
         : []),
     ],
   };
+}
+
+/**
+ * The plan estimate (F-06, ADR-0066): p50–p90 of finished runs of the same recipe, or the benchmark average said as
+ * such when there are too few runs.
+ */
+export function estimateLines(e: Plan["estimate"]): string[] {
+  const c = e.calibration;
+  const r = (a: number, b: number, unit = "") =>
+    a === b
+      ? `~${a.toLocaleString("en")}${unit}`
+      : `${a.toLocaleString("en")}–${b.toLocaleString("en")}${unit}`;
+  if (c?.basis === "history")
+    return [
+      `Estimate: ${r(c.seconds.p50, c.seconds.p90, "s")} · ${r(c.tokens.p50, c.tokens.p90)} tokens · ${r(c.newLinesToMaintain.p50, c.newLinesToMaintain.p90)} new lines to maintain`,
+      `  (median–90th percentile of finished ${c.recipe ? `${c.recipe} ` : ""}runs: time over the last ${c.window?.seconds ?? c.samples}, tokens and lines over the last ${c.window?.lines ?? c.samples})`,
+    ];
+  return [
+    `Estimate: ~${e.seconds}s · ~${e.tokens.toLocaleString("en")} tokens · ~${e.newLinesToMaintain} new lines to maintain`,
+    c
+      ? `  (benchmark average: fewer than ${c.minSamples} finished runs of this recipe yet)`
+      : "  (benchmark average, not calibrated on finished runs)",
+  ];
 }

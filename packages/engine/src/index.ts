@@ -9,6 +9,7 @@ export * from "./messages.js";
 export * from "./types.js";
 export * from "./use-cases.generated.js";
 export * from "./zip.js";
+export * from "./estimate.js";
 export * from "./integration.js";
 export * from "./repo-analysis.js";
 export * from "./adapt.js";

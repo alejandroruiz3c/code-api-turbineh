@@ -55,7 +55,13 @@ import { decideRules, rulesWithoutCode, type RuleCandidate } from "./business-ru
 import { finalize, type FinalizeDeps } from "./finalize.js";
 import { deliveryReason, type Delivery } from "./not-verified.js";
 import { candidatesFor, externalComponent, loadCatalog } from "./catalog-source.js";
-import { notCoveredReason, openCriteriaLeft, type ScopeVerdict } from "@turbineh/engine";
+import {
+  calibrateEstimate,
+  notCoveredReason,
+  openCriteriaLeft,
+  type RunSample,
+  type ScopeVerdict,
+} from "@turbineh/engine";
 import { coveredPart, gateRequest, withScope } from "./scope.js";
 import type { Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
@@ -103,6 +109,11 @@ export interface PipelineDeps {
     type: string,
     data: Record<string, unknown>,
   ) => Promise<void>;
+  /**
+   * Finished runs of a recipe, most recent first (ADR-0066): plan estimates become their p50–p90. Without it, or with
+   * too few runs, the plan keeps the benchmark average, labelled as such.
+   */
+  estimateHistory?: (recipe: string) => Promise<RunSample[]>;
 }
 
 export interface BuildOutcome {
@@ -517,6 +528,11 @@ export async function runBuild(
       ...Object.values(resolution.selected).map((c) => c.id),
     ]);
     plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];
+    plan.estimate = calibrateEstimate(
+      plan.estimate,
+      (await deps.estimateHistory?.(recipeId).catch(() => [])) ?? [],
+      recipeId,
+    );
     if (verdict) withScope(plan, verdict, requestedName);
     return {
       buildId,

@@ -61,15 +61,23 @@ guarantees:
 limits:
   - Does not manage key rotation or storage
 example: |-
-  import { SignJWT, jwtVerify } from 'jose';
+  import { SignJWT, jwtVerify } from "jose";
 
-  const key = new TextEncoder().encode('k'.repeat(32));
-  const jwt = await new SignJWT({ sub: 'u1' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('5m')
+  const key = new TextEncoder().encode("k".repeat(32));
+  const jwt = await new SignJWT({ sub: "u1" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("5m")
     .sign(key);
-
-  const { payload } = await jwtVerify(jwt, key);
+  console.log((await jwtVerify(jwt, key)).payload.sub); // → "u1"
+  await jwtVerify(jwt, new TextEncoder().encode("x".repeat(32))).catch((err: unknown) => console.log(err)); // → rejects: throws
+example_check:
+  kind: typescript
+  from: contract.test.ts › signs and verifies, rejecting a wrong key
+  compiled:
+    against:
+      - jose@6.2.12
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -86,10 +94,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

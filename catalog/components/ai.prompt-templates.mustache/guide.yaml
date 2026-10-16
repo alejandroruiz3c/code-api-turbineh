@@ -42,7 +42,7 @@ interfaces:
     signature: "function renderHtml(template: string, values: Record<string, unknown>): string"
     where: "@/integrations/ai-prompt-templates"
   - name: Mustache
-    signature: import { Mustache } from "mustache"
+    signature: import Mustache from "mustache"
     where: mustache
 extension_points:
   - what: Custom escaping behavior
@@ -63,11 +63,26 @@ limits:
   - Missing values render as empty strings.
   - No support for conditional logic or loops beyond tag expansion.
 example: |-
-  import { renderPrompt } from '@/integrations/ai-prompt-templates';
+  import Mustache from "mustache";
 
-  const template = 'Classify: {{text}}';
-  const values = { text: 'Hello world' };
-  const prompt = renderPrompt(template, values);
+  const tpl = "Classify the ticket from {{customer.name}}:\n{{#lines}}- {{.}}\n{{/lines}}";
+  const out = Mustache.render(
+    tpl,
+    { customer: { name: "Ana" }, lines: ["late {{delivery}}", "<b>broken</b>"] },
+    {},
+    {
+      escape: (s: string) => s,
+    },
+  );
+  console.log(out); // → "Classify the ticket from Ana:\n- late {{delivery}}\n- <b>broken</b>\…
+example_check:
+  kind: typescript
+  from: contract.test.ts › renders logic-less templates; values are inserted, never executed
+  compiled:
+    against:
+      - mustache@4.2.0
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -84,10 +99,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest

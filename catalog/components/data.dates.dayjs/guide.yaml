@@ -41,7 +41,7 @@ config:
     description: pnpm add dayjs@1.11.23 (exact version, added by TurbineH)
 interfaces:
   - name: dayjs
-    signature: import { dayjs } from "dayjs"
+    signature: import dayjs from "dayjs"
     where: dayjs
 extension_points:
   - what: Plugins
@@ -60,11 +60,21 @@ guarantees:
 limits:
   - Does not ship time-zone support without plugins
 example: |-
-  import { dayjs } from "dayjs";
+  import dayjs from "dayjs";
 
-  const date = dayjs("2018-08-08");
-  const nextMonth = date.add(1, "month");
-  const formatted = nextMonth.format("YYYY-MM-DD");
+  const a = dayjs("2026-10-13");
+  const b = a.add(1, "month");
+  console.log(a.format("YYYY-MM-DD")); // → "2026-10-13"
+  console.log(b.format("YYYY-MM-DD")); // → "2026-11-13"
+  console.log(b.diff(a, "day")); // → 31
+example_check:
+  kind: typescript
+  from: contract.test.ts › is immutable and formats
+  compiled:
+    against:
+      - dayjs@1.11.23
+    typescript: 6.0.3
+    on: 2026-10-16
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13
@@ -81,10 +91,9 @@ generated:
     - security (after licence and effects)
     - guarantees
     - limits
-    - example
   checked:
     - "interfaces: names exist in the code; signatures copied from the declarations"
     - "guarantees: exact test titles in the component's tests"
     - avoid_when alternatives exist in the catalog
-    - example imports only what the component provides
+    - "example: the component's contract test or snippet.ts, compiled (example_check)"
     - config, compatibility, licence and effects come from the code and manifest
