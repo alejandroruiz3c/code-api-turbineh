@@ -87,6 +87,7 @@ test.describe.serial("AI assistants", () => {
   });
   // turbineh:end-module batch-processes
 
+  // turbineh:module batch-processes
   test("summarises and extracts records in batch processes: each item is processed through the orchestrator and its validated structured output is stored", async ({
     page,
   }) => {
@@ -116,6 +117,7 @@ test.describe.serial("AI assistants", () => {
         ).toContainText("sample text");
     }
   });
+  // turbineh:end-module batch-processes
 
   test("shows AI usage and the audit trail", async ({ page }) => {
     await page.goto("/dashboard/usage");

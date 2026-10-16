@@ -16,9 +16,7 @@
         "tests/unit/streaks.test.ts › adds amounts exactly and compares with the daily goal"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.goals"
-      ],
+      "canonical": ["tracker.goals"],
       "criterion": "Amounts are compared with the daily goal"
     },
     {
@@ -30,9 +28,7 @@
         "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.quick-logging"
-      ],
+      "canonical": ["tracker.quick-logging"],
       "criterion": "An amount: logs add up towards the daily goal"
     },
     {
@@ -45,9 +41,7 @@
         "tests/unit/streaks.test.ts › counts the streak up to today, or up to yesterday when today is still open"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.streaks"
-      ],
+      "canonical": ["tracker.streaks"],
       "criterion": "A habit: check in today starts a streak"
     },
     {
@@ -59,9 +53,7 @@
         "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.history"
-      ],
+      "canonical": ["tracker.history"],
       "criterion": "The 30-day history marks today as goal met"
     },
     {
@@ -74,9 +66,7 @@
         "tests/unit/streaks.test.ts › the weekly total adds up exactly the last 7 days of logs, not older ones"
       ],
       "status": "covered",
-      "canonical": [
-        "tracker.weekly-totals"
-      ],
+      "canonical": ["tracker.weekly-totals"],
       "criterion": "The weekly total adds up the logs of the last 7 days"
     }
   ],
