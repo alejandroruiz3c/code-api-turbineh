@@ -94,7 +94,8 @@ export const GENERATED_READ_TOOLS: readonly ReadTool[] = [
 ${body},
 ] as unknown as readonly ReadTool[];
 `;
-  const first = tools[0]!;
+  const first = tools[0];
+  if (!first) return [];
   const firstTool = `lookup_${camel(first.n.pascal).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
   const test = `import { describe, expect, it, vi } from "vitest";
 
