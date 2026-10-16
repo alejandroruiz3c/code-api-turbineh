@@ -2,10 +2,13 @@
   "name": "@turbineh/bench",
   "version": "0.0.0",
   "private": true,
-  "description": "Benchmark runners: our pipeline against staging (run.ts) and the closed frontier baseline (baseline/run.ts, ADR-0009)",
+  "description": "Benchmark runners: our pipeline against staging (run.ts), the closed frontier baseline (baseline/run.ts, ADR-0009) and the go-validation benchmark (validation/, audit report v2 section 9)",
   "type": "module",
   "scripts": {
-    "baseline": "tsx baseline/run.ts"
+    "baseline": "tsx baseline/run.ts",
+    "test": "vitest run validation",
+    "validation": "tsx validation/run.ts",
+    "validation:report": "tsx validation/report.ts"
   },
   "dependencies": {
     "@turbineh/engine": "workspace:*",
