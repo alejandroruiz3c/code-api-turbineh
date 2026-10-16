@@ -2,6 +2,8 @@ import {
   addAiOwnerSpend,
   admitAiRequest,
   aiOwnerSpend,
+  aiUsageTotals,
+  recordAiRequest,
   recordAiUsage,
   reserveAiHedge,
   verifyAiAppToken,
@@ -36,6 +38,8 @@ export const gatewayDeps = (): GatewayDeps => {
     addSpend: async (ownerId, usd) => {
       await addAiOwnerSpend(db, ownerId, usd);
     },
+    recordRequest: (m) => recordAiRequest(db, m),
+    usageTotals: (ownerId) => aiUsageTotals(db, ownerId),
     fetch,
     config,
   };

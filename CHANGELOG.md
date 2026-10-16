@@ -6,6 +6,20 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Measurable orchestration (ADR-0060): every orchestrated chat, `/orchestrate`, `/agent`, direct chat answer and MCP
+  `orchestrate`/`chat` result reports this request's `latency_ms`, tokens, `cost_usd` (as charged to the trial), the
+  same tokens at a frontier model's list price (`frontier_reference_cost_usd`) and `savings_usd`/`savings_pct`
+  (`turbineh.metrics`, `structuredContent.metrics`, `X-TurbineH-Latency-Ms`, `X-TurbineH-Cost-USD`,
+  `X-TurbineH-Frontier-Reference-Cost-USD`, `X-TurbineH-Savings-Pct`); cumulative per account in
+  `GET /v1/ai/v1/usage` and the MCP tool `usage_report` (migration 0015 `ai_request_metrics`).
+- The gateway forwards the OpenAI-compatible `reasoning_effort` and reports `finish_reason` to the engine; an engine
+  `NO_ANSWER` is answered 502 `no_answer`; JSON mode on the orchestrated chat is validated structured output.
+
+### Changed
+
+- Private agent orchestrator pinned to v1.1.0 (its ADR-0004): no reasoning on the fast route and in planning, bounded
+  reasoning on larger routes, never an empty answer, agent steps on the fast route without reasoning.
+
 - Intelligence Orchestration as a product (ADR-0059): `POST /v1/ai/trial-signups` provisions a build-less trial
   account and an orchestration token for the landing page's "try it free" form (server-to-server,
   `ORCHESTRATION_SIGNUP_SECRET`; rate limited per email, client IP and day; repeat signups rotate the token and keep

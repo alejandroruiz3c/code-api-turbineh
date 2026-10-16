@@ -23,10 +23,21 @@ import {
   problem,
   ToolName,
   trialGate,
+  trialBalance,
   trialHeaders,
   upstreamOf,
   upstreamProblem,
 } from "./ai-gateway";
+import {
+  metered,
+  metricsHeaders,
+  metricsOf,
+  recordRequest,
+  type RequestMetrics,
+  type Surface,
+  type UsageReport,
+  usageReportOf,
+} from "./ai-metrics";
 
 /**
  * Orchestration endpoints of the AI gateway (ADR-0053): generated apps ship a thin client and the orchestration runs
@@ -102,6 +113,7 @@ const ChatJson = z.object({
   choices: z
     .array(
       z.object({
+        finish_reason: z.string().nullable().optional(),
         message: z.object({
           content: z.string().nullable().optional(),
           tool_calls: z
@@ -138,7 +150,7 @@ export function engineIO(app: AiApp, deps: GatewayDeps): EngineIO {
     structurerModel: list(cfg.AI_GATEWAY_CHAT_MODELS).includes(cfg.AI_GATEWAY_STRUCTURER_MODEL)
       ? cfg.AI_GATEWAY_STRUCTURER_MODEL
       : (list(cfg.AI_GATEWAY_CHAT_MODELS)[0] ?? ""),
-    chat: async (call, timeoutMs): Promise<ChatAnswer> => {
+    chat: async (call, timeoutMs): Promise<ChatAnswer & { finishReason?: string }> => {
       let body: Record<string, unknown>;
       try {
         body = chatBody(call, cfg);
@@ -149,8 +161,11 @@ export function engineIO(app: AiApp, deps: GatewayDeps): EngineIO {
       if (!r.ok) throw fail(r.status, "model call failed");
       const data = ChatJson.safeParse(r.json);
       if (!data.success) throw fail(502, "unexpected model response");
-      const message = data.data.choices[0]?.message;
+      const choice = data.data.choices[0];
+      const message = choice?.message;
       return {
+        // Reported to the engine beyond the v1 interface (ADR-0060): "length" = cut at max_tokens.
+        ...(choice?.finish_reason ? { finishReason: choice.finish_reason } : {}),
         text: message?.content ?? "",
         toolCalls: (message?.tool_calls ?? []).map((c) => ({
           id: c.id,
@@ -189,12 +204,25 @@ export function engineIO(app: AiApp, deps: GatewayDeps): EngineIO {
   };
 }
 
-export type Orchestrated<T> = { ok: true; result: T } | { ok: false; response: Response };
+/** The engine's message when every attempt returned an empty answer (private engine ≥ 1.1.0, ADR-0060). */
+export const NO_ANSWER = "the AI models returned no answer";
+
+export type Orchestrated<T> = ({ ok: true; result: T } | { ok: false; response: Response }) & {
+  /** This request's measurement (ADR-0060): latency, tokens, cost as charged, frontier reference, savings. */
+  metrics: RequestMetrics;
+};
+
+/** Where an orchestration request came from (for its measurement) and when it started (ms epoch). */
+export interface Measure {
+  surface: Surface;
+  startedAt?: number;
+}
 
 /**
  * Runs one validated orchestration request for an authenticated app: trial cap → admit → engine. Shared by the HTTP
  * endpoints, the OpenAI-compatible orchestrated chat and the MCP server (ADR-0059). Failures come back as problem
- * responses (402 trial limit, 429, 422 refusal, 5xx).
+ * responses (402 trial limit, 429, 422 refusal, 5xx). Every outcome is measured; requests that reached a model are
+ * stored for the account's usage report (ADR-0060).
  */
 export async function orchestrateFor(
   app: AiApp,
@@ -202,6 +230,7 @@ export async function orchestrateFor(
   body: OrchestrateRequest,
   deps: GatewayDeps,
   engine: OrchestrationEngine,
+  measure: Measure,
 ): Promise<Orchestrated<OrchestrateResult>>;
 export async function orchestrateFor(
   app: AiApp,
@@ -209,6 +238,7 @@ export async function orchestrateFor(
   body: AgentStepRequest,
   deps: GatewayDeps,
   engine: OrchestrationEngine,
+  measure: Measure,
 ): Promise<Orchestrated<AgentStepResult>>;
 export async function orchestrateFor(
   app: AiApp,
@@ -216,7 +246,24 @@ export async function orchestrateFor(
   body: AgentStepRequest | OrchestrateRequest,
   deps: GatewayDeps,
   engine: OrchestrationEngine,
+  measure: Measure,
 ): Promise<Orchestrated<AgentStepResult | OrchestrateResult>> {
+  const m = metered(deps, measure.startedAt ?? Date.now());
+  const out = await runEngine(app, op, body, m.deps, engine);
+  const metrics = metricsOf(m.meter);
+  await recordRequest(app, measure.surface, out.ok, metrics, deps);
+  return { ...out, metrics };
+}
+
+async function runEngine(
+  app: AiApp,
+  op: "agent" | "orchestrate",
+  body: AgentStepRequest | OrchestrateRequest,
+  deps: GatewayDeps,
+  engine: OrchestrationEngine,
+): Promise<
+  { ok: true; result: AgentStepResult | OrchestrateResult } | { ok: false; response: Response }
+> {
   const cfg = deps.config;
   const refused = (await trialGate(app, deps)) ?? (await admission(app, deps));
   if (refused) return { ok: false, response: refused };
@@ -241,11 +288,26 @@ export async function orchestrateFor(
           }),
         };
       if (err.code === "invalid") return { ok: false, response: problem(400, "Invalid request") };
+      // Every attempt of the engine (without reasoning, then on another route) came back without text (ADR-0060).
+      if (err.message === NO_ANSWER)
+        return {
+          ok: false,
+          response: problem(502, "The AI models returned no answer. Please retry.", {
+            code: "no_answer",
+          }),
+        };
       return { ok: false, response: upstreamProblem(err.status ?? 502) };
     }
     console.error("[ai-gateway] orchestration failed", err instanceof Error ? err.name : "unknown");
     return { ok: false, response: problem(502, "AI provider error") };
   }
+}
+
+/** A problem response with the request's measurement headers (cost already incurred, latency). */
+export function withMetrics(res: Response, metrics: RequestMetrics): Response {
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(metricsHeaders(metrics))) headers.set(k, v);
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
 /** Reads and size-checks a JSON body; a problem response when it is too large or not JSON. */
@@ -270,20 +332,36 @@ export async function handleOrchestration(
   deps: GatewayDeps,
   engine: OrchestrationEngine,
 ): Promise<Response> {
+  const startedAt = Date.now();
   const app = await authenticate(req, deps);
   if (!app) return problem(401, "Invalid or missing AI token");
   const read = await readJson(req, deps.config);
   if (!read.ok) return read.response;
   const parsed = (op === "agent" ? AgentStepBody : OrchestrateBody).safeParse(read.json);
   if (!parsed.success) return problem(400, "Invalid request");
+  const measure = { surface: op, startedAt } as const;
   const out =
     op === "agent"
-      ? await orchestrateFor(app, "agent", parsed.data as AgentStepRequest, deps, engine)
-      : await orchestrateFor(app, "orchestrate", parsed.data as OrchestrateRequest, deps, engine);
-  if (!out.ok) return out.response;
-  return Response.json(out.result, {
-    headers: { "Cache-Control": "no-store", ...(await trialHeaders(app, deps)) },
-  });
+      ? await orchestrateFor(app, "agent", parsed.data as AgentStepRequest, deps, engine, measure)
+      : await orchestrateFor(
+          app,
+          "orchestrate",
+          parsed.data as OrchestrateRequest,
+          deps,
+          engine,
+          measure,
+        );
+  if (!out.ok) return withMetrics(out.response, out.metrics);
+  return Response.json(
+    { ...out.result, turbineh: { metrics: out.metrics } },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+        ...metricsHeaders(out.metrics),
+        ...(await trialHeaders(app, deps)),
+      },
+    },
+  );
 }
 
 /**
@@ -341,11 +419,13 @@ export function chatToOrchestrate(
       content: textOf(m.content).slice(0, 20_000),
     }))
     .slice(-20);
+  const json = chat.response_format?.type === "json_object";
   return {
-    task:
-      chat.response_format?.type === "json_object"
-        ? "Reply to the user's last message with a JSON object."
-        : "Reply to the user's last message.",
+    task: json
+      ? "Reply to the user's last message with a JSON object."
+      : "Reply to the user's last message.",
+    // JSON mode is structured output (ADR-0060): the engine validates it and returns the JSON value only.
+    ...(json ? { schema: { type: "object" } } : {}),
     input: input.slice(0, 200_000),
     ...(instructions ? { instructions } : {}),
     ...(history.length ? { history } : {}),
@@ -354,7 +434,10 @@ export function chatToOrchestrate(
 }
 
 /** An orchestrated answer in the OpenAI chat.completion shape (the model is always the orchestration). */
-export function chatCompletionOf(result: OrchestrateResult): Record<string, unknown> {
+export function chatCompletionOf(
+  result: OrchestrateResult,
+  metrics?: RequestMetrics,
+): Record<string, unknown> {
   return {
     id: `chatcmpl-${randomUUID()}`,
     object: "chat.completion",
@@ -364,7 +447,7 @@ export function chatCompletionOf(result: OrchestrateResult): Record<string, unkn
       {
         index: 0,
         message: { role: "assistant", content: result.text },
-        finish_reason: "stop",
+        finish_reason: result.flags.includes("truncated") ? "length" : "stop",
       },
     ],
     usage: {
@@ -372,7 +455,12 @@ export function chatCompletionOf(result: OrchestrateResult): Record<string, unkn
       completion_tokens: result.usage.outputTokens,
       total_tokens: result.usage.inputTokens + result.usage.outputTokens,
     },
-    turbineh: { route: result.route, calls: result.usage.calls },
+    turbineh: {
+      route: result.route,
+      calls: result.usage.calls,
+      flags: result.flags,
+      ...(metrics ? { metrics } : {}),
+    },
   };
 }
 
@@ -385,6 +473,7 @@ export async function handleChatCompletions(
   deps: GatewayDeps,
   engine: OrchestrationEngine,
 ): Promise<Response> {
+  const startedAt = Date.now();
   const app = await authenticate(req, deps);
   if (!app) return problem(401, "Invalid or missing AI token");
   const raw = await req.text();
@@ -416,9 +505,54 @@ export async function handleChatCompletions(
   if (!parsed.success) return problem(400, "Invalid request");
   const request = chatToOrchestrate(parsed.data);
   if (!request) return problem(400, "The last message must be the user's");
-  const out = await orchestrateFor(app, "orchestrate", request, deps, engine);
-  if (!out.ok) return out.response;
-  return Response.json(chatCompletionOf(out.result), {
-    headers: { "Cache-Control": "no-store", ...(await trialHeaders(app, deps)) },
+  const out = await orchestrateFor(app, "orchestrate", request, deps, engine, {
+    surface: "chat",
+    startedAt,
   });
+  if (!out.ok) return withMetrics(out.response, out.metrics);
+  return Response.json(chatCompletionOf(out.result, out.metrics), {
+    headers: {
+      "Cache-Control": "no-store",
+      ...metricsHeaders(out.metrics),
+      ...(await trialHeaders(app, deps)),
+    },
+  });
+}
+
+/**
+ * The account's cumulative usage report (ADR-0060): measured requests of all its AI apps — calls, tokens, cost as
+ * charged, p50/p95 latency, the same tokens at the frontier reference's list price, savings — and the trial balance.
+ * Null when this deployment does not store measurements.
+ */
+export async function usageReport(app: AiApp, deps: GatewayDeps): Promise<UsageReport | null> {
+  if (!deps.usageTotals) return null;
+  const [totals, balance] = await Promise.all([
+    deps.usageTotals(app.ownerId),
+    trialBalance(app, deps),
+  ]);
+  return usageReportOf(
+    totals,
+    balance ?? {
+      capUsd: null,
+      spentUsd: await deps.trialSpent(app.ownerId),
+      remainingUsd: null,
+      reached: false,
+    },
+  );
+}
+
+/** GET /v1/ai/v1/usage: the usage report of the token's account. Free (no model call, not rate limited). */
+export async function handleUsage(req: Request, deps: GatewayDeps): Promise<Response> {
+  const app = await authenticate(req, deps);
+  if (!app) return problem(401, "Invalid or missing AI token");
+  try {
+    const report = await usageReport(app, deps);
+    if (!report) return problem(503, "Usage report not available");
+    return Response.json(report, {
+      headers: { "Cache-Control": "no-store", ...(await trialHeaders(app, deps)) },
+    });
+  } catch {
+    console.error("[ai-gateway] usage report failed");
+    return problem(503, "Usage report not available");
+  }
 }
