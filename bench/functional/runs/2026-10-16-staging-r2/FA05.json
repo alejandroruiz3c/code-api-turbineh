@@ -1,0 +1,134 @@
+{
+  "id": "FA05",
+  "band": "A",
+  "flowId": "b3058989-0d65-45f8-ada0-8c43de0fd101",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user has set a daily water goal, when they log an amount, the current daily total updates immediately."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user has set a daily sleep goal, when they log an amount, the current daily total updates immediately."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user logs data from the dashboard, the input process is completed in minimal steps."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user meets their daily goal, when they view the dashboard, the current streak count increments."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user fails to meet a daily goal, when they view the dashboard, the current streak count resets to zero."
+    },
+    {
+      "asked": [
+        "Given a user views the history section, they can see a list of logs for the past 30 days."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met",
+        "tests/unit/streaks.test.ts › builds a 30-day history and the completion rate"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.history"],
+      "criterion": "The 30-day history marks today as goal met"
+    },
+    {
+      "asked": [
+        "Given a user views the summary section, they can see the sum of all water logged in the current week.",
+        "Given a user views the summary section, they can see the sum of all sleep logged in the current week."
+      ],
+      "tests": [
+        "tests/e2e/trackers.spec.ts › an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met",
+        "tests/unit/streaks.test.ts › the weekly total adds up exactly the last 7 days of logs, not older ones"
+      ],
+      "status": "covered",
+      "canonical": ["tracker.weekly-totals"],
+      "criterion": "The weekly total adds up the logs of the last 7 days"
+    }
+  ],
+  "approved": null,
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 5/7",
+  "functional": {
+    "met": 5,
+    "total": 7,
+    "ratio": 0.714,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 5,
+    "total": 7,
+    "ratio": 0.714,
+    "label": "Technically verified · functional 5/7"
+  },
+  "criteria": [
+    {
+      "text": "Given a user has set a daily water goal, when they log an amount, the current daily total updates immediately.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: logs add up towards the daily goal"
+      }
+    },
+    {
+      "text": "Given a user has set a daily sleep goal, when they log an amount, the current daily total updates immediately.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: logs add up towards the daily goal"
+      }
+    },
+    {
+      "text": "Given a user logs data from the dashboard, the input process is completed in minimal steps.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user meets their daily goal, when they view the dashboard, the current streak count increments.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user fails to meet a daily goal, when they view the dashboard, the current streak count resets to zero.",
+      "status": "met",
+      "test": {
+        "file": "tests/unit/streaks.test.ts",
+        "title": "counts the streak up to today, or up to yesterday when today is still open"
+      }
+    },
+    {
+      "text": "The 30-day history marks today as goal met",
+      "status": "met",
+      "canonical": ["tracker.history"],
+      "asked": [
+        "Given a user views the history section, they can see a list of logs for the past 30 days."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+      }
+    },
+    {
+      "text": "The weekly total adds up the logs of the last 7 days",
+      "status": "met",
+      "canonical": ["tracker.weekly-totals"],
+      "asked": [
+        "Given a user views the summary section, they can see the sum of all water logged in the current week.",
+        "Given a user views the summary section, they can see the sum of all sleep logged in the current week."
+      ],
+      "test": {
+        "file": "tests/e2e/trackers.spec.ts",
+        "title": "an amount: the weekly total adds up the logs of the last 7 days and the 30-day history marks today as goal met"
+      }
+    }
+  ],
+  "minutes": 10.18
+}

@@ -8,6 +8,7 @@
     product products catalog catalogue item items shop store list lists listing browse browses page pages detail
     details view views see sees click clicks open opens price prices description name category categories
     collection collections public online
+    available availability photo photos image images
   actors: [shopper, customer, visitor, guest, buyer, client]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper clicks a product in the list and lands on that product's detail page with its price"
@@ -32,6 +33,7 @@
     image images photo photos picture pictures thumbnail thumbnails upload uploads uploaded url link https
     product products add adds create creates new show shows shown page detail catalog catalogue
     view views each
+    available availability all
   actors: [admin, owner, staff, manager, shopper, customer, visitor]
   tests:
     - "tests/e2e/shop.spec.ts › the admin creates a product with an image"
@@ -158,6 +160,7 @@
     reduces reduced update updates updated product products quantity quantities sold sell webhook signed
     confirmation email after
     sale sales sold sku skus level levels decremented decrement reduce reduces reduced
+    place placed
   actors: [shopper, customer, buyer, admin, owner]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"

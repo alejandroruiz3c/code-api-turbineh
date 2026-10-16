@@ -294,7 +294,8 @@ const NARRATIVE = salientStems(
     "whenever upon existing option options format formats either successful successfully properly correctly " +
     "valid particular desired respective respectively relevant own only become becomes occur occurs high quality " +
     "distinct within historical automatically automatic correct one two three four five several various multiple " +
-    "given exists exist specified certain additional",
+    "given exists exist specified certain additional exactly during provided provide visually personalized " +
+    "personalised immediately",
 );
 
 const leftover = (
@@ -343,7 +344,18 @@ export function mapToCanonical(
     const best = Math.max(...alone.map((c) => closeness(derived, c)));
     return alone.filter((c) => closeness(derived, c) === best);
   }
-  return leftover(derived, cands, absorbedAlso).length === 0 ? cands : [];
+  // Only together: the fewest functions (at most two) that absorb it, the closest first — never every candidate.
+  const ranked = [...cands].sort((a, b) => closeness(derived, b) - closeness(derived, a));
+  const chosen: ResolvedCanonical[] = [];
+  for (const c of ranked) {
+    const before = leftover(derived, chosen, absorbedAlso).length;
+    if (chosen.length > 0 && leftover(derived, [...chosen, c], absorbedAlso).length >= before)
+      continue;
+    chosen.push(c);
+    if (leftover(derived, chosen, absorbedAlso).length === 0) break;
+    if (chosen.length === 2) break;
+  }
+  return chosen.length > 0 && leftover(derived, chosen, absorbedAlso).length === 0 ? chosen : [];
 }
 
 export interface CanonicalizedCriteria {

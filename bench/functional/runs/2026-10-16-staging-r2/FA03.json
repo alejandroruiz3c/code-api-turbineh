@@ -1,0 +1,197 @@
+{
+  "id": "FA03",
+  "band": "A",
+  "flowId": "2157ba02-a01a-4036-8bc2-375176fc1731",
+  "refused": false,
+  "error": null,
+  "planCriteria": [
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views the product catalogue, they can see photos of all available ceramic products."
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a user views a mug, they can see three distinct colour options, each with its own unique SKU, price, and stock level."
+    },
+    {
+      "asked": ["Given a user selects items, they can add them to a shopping cart."],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.cart"],
+      "criterion": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+    },
+    {
+      "asked": [
+        "Given a user enters a valid discount code before the expiry date, the total price is reduced accordingly."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › uses a discount code: applied on the server, counted once on payment, then used up",
+        "tests/e2e/shop.spec.ts › the admin creates a one-use discount code",
+        "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.discount-codes"],
+      "criterion": "Uses a discount code: applied on the server, counted once on payment, then used up"
+    },
+    {
+      "asked": [
+        "Given a user enters an expired discount code, the system rejects the code and applies no discount."
+      ],
+      "tests": [
+        "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.discount-refused"],
+      "criterion": "Inactive, expired, used-up and below-minimum codes are refused"
+    },
+    {
+      "asked": [
+        "Given a successful payment via Stripe, the user receives an order confirmation email."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email",
+        "tests/e2e/shop.spec.ts › rejects webhooks without a valid signature"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.checkout"],
+      "criterion": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
+    },
+    {
+      "tests": [],
+      "status": "open",
+      "criterion": "Given a successful order is placed, the stock level for the purchased SKUs is automatically reduced in the database."
+    },
+    {
+      "asked": [
+        "Given an admin user logs into the admin panel, they can create, update, or delete products."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.admin-panel"],
+      "criterion": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it"
+    },
+    {
+      "asked": [
+        "Given an admin user logs into the admin panel, they can view a list of all processed orders."
+      ],
+      "tests": [
+        "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
+      ],
+      "status": "covered",
+      "canonical": ["storefront.admin-orders"],
+      "criterion": "The owner accesses the admin area and sees the list of all orders with their payment status"
+    }
+  ],
+  "approved": [
+    "Build only the covered part, \"Clay & Kiln (covered part only)\": the library doesn't cover 1 requirement(s) yet, removed from scope — Given a user proceeds to checkout, they are redirected to a Stripe Checkout session to complete card payments."
+  ],
+  "state": "verified",
+  "badge": "Technically verified · checks 11/11 (1 with warnings) · functional 7/9",
+  "functional": {
+    "met": 7,
+    "total": 9,
+    "ratio": 0.778,
+    "threshold": 0.8
+  },
+  "guideFunctional": {
+    "met": 7,
+    "total": 9,
+    "ratio": 0.778,
+    "label": "Technically verified · functional 7/9"
+  },
+  "criteria": [
+    {
+      "text": "Given a user views the product catalogue, they can see photos of all available ceramic products.",
+      "status": "open"
+    },
+    {
+      "text": "Given a user views a mug, they can see three distinct colour options, each with its own unique SKU, price, and stock level.",
+      "status": "open"
+    },
+    {
+      "text": "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal",
+      "status": "met",
+      "canonical": ["storefront.cart"],
+      "asked": ["Given a user selects items, they can add them to a shopping cart."],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
+      }
+    },
+    {
+      "text": "Uses a discount code: applied on the server, counted once on payment, then used up",
+      "status": "met",
+      "canonical": ["storefront.discount-codes"],
+      "asked": [
+        "Given a user enters a valid discount code before the expiry date, the total price is reduced accordingly."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "uses a discount code: applied on the server, counted once on payment, then used up"
+      }
+    },
+    {
+      "text": "Inactive, expired, used-up and below-minimum codes are refused",
+      "status": "met",
+      "canonical": ["storefront.discount-refused"],
+      "asked": [
+        "Given a user enters an expired discount code, the system rejects the code and applies no discount."
+      ],
+      "test": {
+        "file": "tests/unit/shop.test.ts",
+        "title": "refuses inactive, expired, used-up and below-minimum codes"
+      }
+    },
+    {
+      "text": "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid",
+      "status": "met",
+      "canonical": ["storefront.checkout"],
+      "asked": [
+        "Given a successful payment via Stripe, the user receives an order confirmation email."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "Given a successful order is placed, the stock level for the purchased SKUs is automatically reduced in the database.",
+      "status": "met",
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
+      }
+    },
+    {
+      "text": "The owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it",
+      "status": "met",
+      "canonical": ["storefront.admin-panel"],
+      "asked": [
+        "Given an admin user logs into the admin panel, they can create, update, or delete products."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the owner accesses the admin area, creates a product, reads it in the list, edits its details (price) and deletes (hides) it; the public catalogue follows at once"
+      }
+    },
+    {
+      "text": "The owner accesses the admin area and sees the list of all orders with their payment status",
+      "status": "met",
+      "canonical": ["storefront.admin-orders"],
+      "asked": [
+        "Given an admin user logs into the admin panel, they can view a list of all processed orders."
+      ],
+      "test": {
+        "file": "tests/e2e/shop.spec.ts",
+        "title": "the owner accesses the admin area and sees the list of all orders with their payment status"
+      }
+    }
+  ],
+  "minutes": 14.37
+}

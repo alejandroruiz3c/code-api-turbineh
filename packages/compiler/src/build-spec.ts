@@ -249,6 +249,8 @@ export const buildSpecSchema = z
     acceptance_criteria: z.array(z.string().min(8).max(200)).min(3).max(24),
     // Canonical criterion → the request's own criteria it replaced (ADR-0063), set by code when the plan is made.
     criteria_asked: z.record(z.string(), z.array(z.string())).optional(),
+    // The request's subject words (its own nouns, capability and platform words left out), set by code (ADR-0063).
+    request_words: z.array(z.string()).optional(),
     // Public-site copy (optional part; recipes fall back to deterministic copy when it is null).
     site: sitePart.nullable().optional(),
     // Visual identity stated in the prompt (explicit colours and type), extracted by code; applied as theme tokens.

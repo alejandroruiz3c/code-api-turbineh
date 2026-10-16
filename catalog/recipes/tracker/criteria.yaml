@@ -8,6 +8,7 @@
     goal goals target targets objective objectives daily day per set sets define defines amount amounts quantity
     quantities progress towards reach reached reaches meet meets met total totals tracker trackers habit habits
     health money unit units km step steps glass glasses
+    set sets update updates updated current total immediately log logs amount
   actors: [owner, member]
   tests:
     - "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"
@@ -21,6 +22,7 @@
     log logs logged logging record records recorded enter entry entries add adds added quick quickly fast one
     click tap check checkin check-in mark marks done today day daily amount amounts value values quantity
     quantities tracker trackers habit habits note notes total totals expense expenses workout workouts
+    dashboard input minimal steps step quick quickly fast
   actors: [owner, member]
   tests:
     - "tests/e2e/trackers.spec.ts › an amount: logs add up towards the daily goal"
@@ -33,6 +35,7 @@
   terms: >-
     streak streaks consecutive row chain days day daily habit habits check checkin check-in today count counts
     counted current longest keep kept going start starts goal met done
+    meet meets met count counts increment increments reset resets zero fail fails failed dashboard goal goals daily
   actors: [owner, member]
   tests:
     - "tests/e2e/trackers.spec.ts › a habit: check in today starts a streak"

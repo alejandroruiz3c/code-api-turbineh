@@ -60,6 +60,7 @@
     appointments reservation reservations system prevent prevents avoid avoids ensure ensures allow allowed
     must never two people
     occupied chosen selected select attempt made
+    unavailable available availability
   actors: [customer, client, patient, visitor, guest, staff]
   tests:
     - "tests/e2e/bookings.spec.ts › a customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
@@ -88,6 +89,7 @@
     day days hours mark marks
     calendar schedule scheduled date dates mark marks specific
     unavailable
+    select selects selected
   actors: [staff, admin, owner, employee, manager, customer]
   tests:
     - "tests/e2e/bookings.spec.ts › a staff member blocks time off to make those time slots unavailable for booking; customers are no longer offered them"

@@ -47,6 +47,8 @@ interface Run {
   band: "A" | "B";
   flowId: string | null;
   refused: boolean;
+  /** Why the request was refused (the API's problem), when it was. */
+  problem?: unknown;
   error: string | null;
   planCriteria: unknown;
   approved: string[] | null;
@@ -235,6 +237,7 @@ async function main() {
       let plan = await body(res);
       if (res.status === 422) {
         run.refused = true;
+        run.problem = plan;
         return run;
       }
       const id = typeof plan.id === "string" ? plan.id : null;
@@ -250,6 +253,7 @@ async function main() {
       );
       if (state === "failed") {
         run.refused = true;
+        run.problem = (plan.result as Record<string, unknown> | undefined)?.errors ?? plan;
         return run;
       }
       const needs = (plan.needsApproval as string[] | undefined) ?? [];

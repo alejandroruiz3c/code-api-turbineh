@@ -62,11 +62,28 @@ test("the owner (admin) sees the list of waitlist signups in the dashboard", asy
 test.describe("public landing", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("shows benefits, how it works and an FAQ", async ({ page }) => {
+  test("shows the hero with the app's name and tagline, the benefits, how it works and an FAQ", async ({
+    page,
+  }) => {
     await page.goto("/");
+    const hero = page.locator("#join");
+    await expect(hero.getByRole("heading", { level: 1 }), "the hero names the app").not.toBeEmpty();
+    await expect(
+      hero.locator("p").first(),
+      "the hero shows the tagline (value proposition)",
+    ).not.toBeEmpty();
+    const benefits = page.locator('section[aria-labelledby="features"] li');
+    expect(await benefits.count(), "the benefits section lists the app's benefits").toBeGreaterThan(
+      0,
+    );
     await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
+    const steps = page.locator('section[aria-labelledby="how"] li');
+    expect(await steps.count(), "how it works lists its steps").toBeGreaterThan(0);
     await expect(page.getByRole("heading", { name: "Frequently asked questions" })).toBeVisible();
-    await expect(page.locator("details").first()).toBeVisible();
+    await expect(
+      page.locator("details").first(),
+      "the FAQ lists questions and answers",
+    ).toBeVisible();
   });
 
   test("is ready for search engines (metadata, sitemap, robots)", async ({ page, request }) => {

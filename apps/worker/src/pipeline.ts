@@ -240,15 +240,19 @@ export function planCriteria(
  * them (the request's words are kept in `criteria_asked`), so the plan, the package and every surface measure the same
  * functions the catalogue advertises and its tests prove. Deterministic; idempotent.
  */
-export function canonicalizeSpec(spec: BuildSpec, recipesDir: string): number {
+export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = ""): number {
   if (spec.recipe === "out_of_scope") return 0;
+  if (prompt) spec.request_words = requestWords(prompt);
   const canon = canonicalForPlan({ recipesDir, recipe: spec.recipe, entities: spec.entities });
   const c = canonicalize(
     spec.acceptance_criteria,
     canon,
     roleWords(spec.roles),
     spec.criteria_asked ?? {},
-    requestWords(spec.app_name, spec.summary),
+    [
+      ...requestWords(spec.app_name, spec.summary, ...spec.entities.map((e) => e.name)),
+      ...(spec.request_words ?? []),
+    ],
   );
   spec.acceptance_criteria = c.criteria;
   if (Object.keys(c.asked).length > 0) spec.criteria_asked = c.asked;
@@ -359,7 +363,7 @@ export async function runBuild(
   // The request's criteria in the use case's canonical wording where they map to it (ADR-0063). Approved plans keep
   // the stored spec (canonicalized when planned).
   if (!options.spec) {
-    const mapped = canonicalizeSpec(spec, join(deps.repoRoot, "catalog/recipes"));
+    const mapped = canonicalizeSpec(spec, join(deps.repoRoot, "catalog/recipes"), prompt);
     if (mapped > 0) await deps.emit(buildId, "compiling", "canonical_criteria", { mapped });
   }
   const catalogDir = join(deps.repoRoot, "catalog/components");
@@ -398,7 +402,12 @@ export async function runBuild(
                     {
                       entities: spec.entities,
                       roles: spec.roles,
-                      about: [spec.app_name, spec.summary],
+                      about: [
+                        spec.app_name,
+                        spec.summary,
+                        ...spec.entities.map((e) => e.name),
+                        ...(spec.request_words ?? []),
+                      ],
                     },
                   )
                     .filter((c) => c.status === "covered")
@@ -783,7 +792,12 @@ export async function runBuild(
         entities: spec.entities,
         roles: spec.roles,
         asked: spec.criteria_asked ?? {},
-        about: [spec.app_name, spec.summary],
+        about: [
+          spec.app_name,
+          spec.summary,
+          ...spec.entities.map((e) => e.name),
+          ...(spec.request_words ?? []),
+        ],
       },
     );
     plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];

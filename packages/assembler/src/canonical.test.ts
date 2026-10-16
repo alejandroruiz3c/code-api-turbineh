@@ -725,3 +725,36 @@ describe("canonical criteria: staging functional bench FA02–FA04 (ADR-0063)", 
     ).toEqual([]);
   });
 });
+
+// Staging functional bench r2 (FA02 at planning: no params yet, the request's entity "Barber" as context): one
+// criterion was mapped to five functions by the "together" fallback; at most two, the fewest that absorb it.
+describe("canonical criteria: planning-time precision (FA02 r2, ADR-0063)", () => {
+  const about = requestWords(
+    "Fade & Co",
+    "Appointment booking for a two-chair barber shop",
+    "Barber",
+  );
+  it.each([
+    [
+      "Given a barber is on the calendar view, when they select a date, then they can mark that day as time off.",
+      ["bookings.time-off"],
+    ],
+    [
+      "Given a barber is already booked for a specific time, when another customer attempts to book the same barber, then that time slot must be unavailable.",
+      ["bookings.no-double-booking"],
+    ],
+    [
+      "Given a customer selects 'any barber', when they book a slot, then the system assigns the first available barber.",
+      ["bookings.public-booking"],
+    ],
+  ])("maps %j", (asked, ids) => {
+    expect(mapToCanonical(asked, bookings(), [], about).map((c) => c.id)).toEqual(ids);
+  });
+  it("never maps one criterion to more than two functions", () => {
+    for (const asked of [
+      "Given a barber is on the calendar view, when they select a date, then they can mark that day as time off.",
+      "Customers book, cancel with the link, get emails and staff see the calendar and block time off",
+    ])
+      expect(mapToCanonical(asked, bookings(), [], about).length).toBeLessThanOrEqual(2);
+  });
+});
