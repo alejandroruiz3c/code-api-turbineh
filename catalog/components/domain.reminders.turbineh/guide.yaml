@@ -1,0 +1,103 @@
+schema: turbineh.guide/v0.1
+component: domain.reminders.turbineh
+title: Appointment reminders by email, SMS or WhatsApp — once per appointment, consent first, local time
+summary: >-
+  Reminds each customer of a confirmed appointment a set number of real hours before it starts (24 by default) on the
+  channels the request names: email (always available; logged without an email provider), SMS through
+  messaging.sms.twilio and WhatsApp through messaging.whatsapp.meta. The cron route of jobs.scheduled.turbineh runs the
+  reminder task on every call: a reminder whose time has come is claimed by inserting (appointment, channel, start time)
+  under a unique key before anything is sent, so any number of calls, retries or schedulers send it once. Cancelled
+  appointments are never reminded and a pending retry is dropped when the appointment is cancelled or moved; a moved
+  appointment is reminded for its new time; an appointment booked after its reminder time gets none (its confirmation
+  was just sent). Every text shows the appointment's local date and time in the business's time zone. SMS and WhatsApp
+  go only to people who ticked that channel's box on the public booking form (unticked by default) with a mobile number
+  that can receive them, and never after they replied STOP. Failures that may pass later are retried on later calls
+  with exponential backoff; an attempt interrupted mid-send is marked unknown, never re-sent. Staff see every reminder's
+  status on /dashboard/appointments/reminders.
+keywords:
+  [appointment reminders, booking reminders, reminder email, sms reminder, whatsapp reminder, 24 hours before, day
+   before, no-show, notify before appointment, consent, opt-out, stop, cron, scheduled, time zone]
+synonyms:
+  reminder: [notification before the appointment, heads-up, reminder message, recordatorio]
+  hours before: [day before, in advance, ahead of time, prior to the appointment]
+use_cases:
+  - "A clinic reminds patients by WhatsApp 24 hours before each appointment"
+  - "A salon texts customers who agreed an SMS reminder the day before; everyone gets an email reminder"
+use_when:
+  - "A booking request asks for reminders before appointments (email, SMS or WhatsApp)"
+avoid_when:
+  - "Reminders of things that are not appointments of the booking domain (use jobs.scheduled.turbineh with a custom job)"
+  - "Marketing messages or several reminders per appointment"
+tradeoffs:
+  - { choice: "Real hours before the start (an instant)", gain: "Exactly N hours of notice, also on daylight-saving days", cost: "On those days the reminder's local clock time differs by an hour from the appointment's" }
+  - { choice: "Claimed once per appointment, channel and start time", gain: "Never twice, whatever calls the route; a moved appointment gets its own reminder", cost: "Only one reminder per appointment and channel" }
+  - { choice: "No reminder for an appointment booked after its reminder time", gain: "No duplicate right after the confirmation", cost: "Last-minute bookings get only the confirmation" }
+config:
+  - { name: "src/reminders/params.json", default: "24 hours before, email, template appointment_reminder (en), 3 attempts", description: "From the request: hours before, channels, WhatsApp template, attempts" }
+  - { name: CRON_SECRET, description: "Secret of the cron route (jobs.scheduled.turbineh) that runs the reminder task" }
+interfaces:
+  - { name: runDueReminders, signature: "runDueReminders(now?, { random? }) → { sent, skipped, failed }", where: src/reminders/service.ts }
+  - { name: staffReminders, signature: "staffReminders(now?) → rows with appointment, channel, reminder time, status", where: src/reminders/service.ts }
+  - { name: "Cron task", signature: "GET|POST /api/cron/run?task=booking-reminders (x-cron-secret)", where: src/jobs/tasks.ts }
+  - { name: "Schedule", signature: "dueAt(startsAt, hoursBefore); isDue({ startsAt, createdAt }, hoursBefore, now); emailReminder, smsReminder, whatsappReminderParams", where: src/reminders/schedule.ts }
+  - { name: "Channels", signature: "ReminderChannel { id, normalize(phone), recordConsent(phone, source), send(message) }", where: src/reminders/channels/types.ts }
+extension_points:
+  - what: "Change the notice or the channels"
+    where: "src/reminders/params.json"
+    how: "Edit hoursBefore (1–168) or channels; sms and whatsapp need their messaging component in the app (checked at start-up)."
+  - what: "Change the texts"
+    where: "src/reminders/schedule.ts"
+    how: "emailReminder and smsReminder build the texts; keep the local time (whenText) and, for SMS, the STOP line. The WhatsApp text is the approved template's."
+  - what: "Use another WhatsApp template"
+    where: "src/reminders/params.json, WhatsApp Manager"
+    how: "Create a utility template with four body parameters (customer name, service, date and time, business), get it approved, and set its name and language."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers and server components, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [bookings, ai-agents]
+  requires: [domain.bookings.turbineh, jobs.scheduled.turbineh]
+  works_with: [messaging.sms.twilio, messaging.whatsapp.meta, email.transactional.turbineh]
+  notes: "Shares CRON_SECRET with jobs.scheduled.turbineh: call /api/cron/run every 5–15 minutes."
+security:
+  - "The runner is the cron route of jobs.scheduled.turbineh (CRON_SECRET, constant-time comparison)"
+  - "Consent to SMS/WhatsApp comes only from the person's own ticked box on the booking form; STOP wins over any later tick"
+  - "Staff page behind ADMIN_EMAILS; customers' phone numbers are not shown on it"
+guarantees:
+  - { claim: "Email reminder the set hours before, once, with the local time", test: "tests/e2e/reminders.spec.ts › a customer gets an email reminder the set number of hours before the appointment, once per appointment, with the local time of the business" }
+  - { claim: "Cancelled appointments get no reminder", test: "tests/e2e/reminders.spec.ts › a cancelled appointment never gets a reminder" }
+  - { claim: "Staff see each reminder's status", test: "tests/e2e/reminders.spec.ts › staff see each appointment's reminders and their status" }
+  - { claim: "Due time in real hours across daylight saving; local time in texts", test: "tests/unit/reminders.test.ts › a reminder is due the set number of real hours before the appointment, across daylight saving, and shows the local time in the business's time zone" }
+  - { claim: "No reminder for appointments booked after their reminder time", test: "tests/unit/reminders.test.ts › an appointment booked after its reminder time gets no reminder (its confirmation was just sent)" }
+  - { claim: "SMS reminder once through Twilio to people who agreed", test: "tests/e2e/reminders-sms.spec.ts › a customer who agreed to SMS reminders gets an SMS reminder the set number of hours before the appointment, once, through Twilio's Messages API; the signed delivery update is recorded" }
+  - { claim: "STOP ends SMS reminders", test: "tests/e2e/reminders-sms.spec.ts › a customer who replies STOP gets no more SMS reminders; an unsigned reply is refused" }
+  - { claim: "No SMS without the consent box", test: "tests/e2e/reminders-sms.spec.ts › a customer who did not tick the SMS box gets no SMS reminder" }
+  - { claim: "Retries with backoff; cancelled appointments' retries dropped", test: "tests/e2e/reminders-sms.spec.ts › a failed SMS reminder is retried with backoff on a later run and then sent; once an appointment is cancelled its pending retry is dropped" }
+  - { claim: "WhatsApp reminder as the approved template, once", test: "tests/e2e/reminders-whatsapp.spec.ts › a customer who opted in gets a WhatsApp reminder the set number of hours before the appointment, once, as the approved template with its parameters; Meta's signed statuses are recorded" }
+  - { claim: "STOP ends WhatsApp reminders", test: "tests/e2e/reminders-whatsapp.spec.ts › a customer who writes STOP gets no more WhatsApp reminders; an unsigned webhook call is refused" }
+limits:
+  - "One reminder per appointment and channel; sent by the first runner call after its time (precision = the scheduler's interval)"
+  - "SMS and WhatsApp are proven against local mocks of Twilio and the WhatsApp Cloud API, not the live services"
+  - "WhatsApp needs a template approved in WhatsApp Manager with the four parameters in this order"
+example: |
+  // Server code in the app: run the reminders that are due now (what the cron route's task does on every call) and list
+  // them for staff. Each appointment gets one reminder per channel, however often this runs.
+  import { runDueReminders, staffReminders } from "@/reminders/service";
+
+  export async function remindNow() {
+    const report = await runDueReminders(new Date());
+    const pending = (await staffReminders()).filter((r) => r.status === "scheduled");
+    return { ...report, scheduled: pending.length };
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/reminders/params.json
+  schema: params.schema.json
+  fields:
+    - { name: hoursBefore, default: "24", description: "Real hours between the reminder and the appointment" }
+    - { name: "channels[]", default: "[\"email\"]", description: "email, sms (messaging.sms.twilio), whatsapp (messaging.whatsapp.meta)" }
+    - { name: whatsappTemplate, default: "appointment_reminder / en", description: "Approved template with four body parameters" }
+    - { name: maxAttempts, default: "3", description: "Attempts per reminder for temporary failures" }
+  example: |
+    { "hoursBefore": 24, "channels": ["email", "whatsapp"], "whatsappTemplate": { "name": "appointment_reminder", "language": "es" }, "maxAttempts": 3 }

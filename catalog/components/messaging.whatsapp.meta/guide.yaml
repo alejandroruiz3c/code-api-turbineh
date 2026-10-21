@@ -1,0 +1,107 @@
+schema: turbineh.guide/v0.1
+component: messaging.whatsapp.meta
+title: WhatsApp notifications with the Cloud API — approved templates, opt-in and STOP, retries, signed webhook
+summary: >-
+  Sends WhatsApp notifications with Meta's official WhatsApp Business Cloud API: POST /v26.0/{phone-number-id}/messages
+  on the Graph API with the business's access token, no SDK. A business may message a person outside the 24-hour
+  customer service window only with a message template approved in WhatsApp Manager, so this component sends templates:
+  name, language code and the body's {{n}} values in order. Numbers are validated as E.164 with libphonenumber-js.
+  WhatsApp's Business Messaging Policy requires the person's opt-in: consent is recorded per number (e.g. a ticked box
+  on a form) and a STOP message opts it out until the person writes START; a form tick never overrides a STOP.
+  Throughput limits (130429, 131056, 80007) and 5xx answers are retried in the call with exponential backoff and
+  jitter; an answer that never arrived is marked "unknown" and never re-sent. Every outcome is logged in
+  whatsapp_messages without the text. The webhook answers Meta's verification request with WHATSAPP_VERIFY_TOKEN and
+  records the sent / delivered / read / failed statuses and STOP / START messages after checking X-Hub-Signature-256
+  (HMAC-SHA256 of the raw body with the app secret). Without credentials nothing leaves the app: it is logged as not sent.
+keywords:
+  [whatsapp, whatsapp business, cloud api, message template, whatsapp notifications, whatsapp reminders, opt-in,
+   stop, consent, delivery status, read receipts, webhook signature, x-hub-signature-256, retries, backoff, meta]
+synonyms:
+  whatsapp: [whatsapp business, wa, whatsapp message]
+  template: [message template, approved template, HSM]
+  opt-in: [consent, permission, agreed to receive messages]
+use_cases:
+  - "Appointment reminders on WhatsApp (with domain.reminders.turbineh), only to people who opted in when booking"
+  - "A transactional WhatsApp notification (order ready, status change) from an approved utility template"
+use_when:
+  - "The request sends WhatsApp messages or notifications to people"
+  - "Messages must be approved templates, respect opt-in and STOP, be retried on throughput limits and be logged"
+avoid_when:
+  - "A WhatsApp chatbot or conversations with customers (not covered: inbound messages only change consent)"
+  - "Free-form text, media, interactive buttons or marketing campaigns"
+  - "SMS (messaging.sms.twilio) or email (email.transactional.turbineh)"
+tradeoffs:
+  - { choice: "Templates only", gain: "Works outside the 24-hour window, which is what notifications need", cost: "Each template must be created and approved in WhatsApp Manager before it can be sent" }
+  - { choice: "Lost answers are not retried", gain: "Never sends the same notification twice when Meta accepted it", cost: "A person checks messages marked unknown" }
+  - { choice: "Graph API version pinned in code (v26.0)", gain: "Requests and the mock stay in step", cost: "A yearly version bump with the mock updated from Meta's changelog" }
+config:
+  - { name: WHATSAPP_ACCESS_TOKEN, description: "System User access token with whatsapp_business_messaging" }
+  - { name: WHATSAPP_PHONE_NUMBER_ID, description: "The business phone number id (WhatsApp Manager → API setup)" }
+  - { name: WHATSAPP_APP_SECRET, description: "App secret: checks X-Hub-Signature-256 on webhook calls" }
+  - { name: WHATSAPP_VERIFY_TOKEN, description: "Token you choose when subscribing the webhook; Meta sends it back to verify" }
+  - { name: "src/messaging/whatsapp/params.json", default: "defaultCountry null, maxAttempts 3", description: "Default country for national numbers and attempts per message" }
+interfaces:
+  - { name: sendWhatsAppTemplate, signature: "sendWhatsAppTemplate({ to, template: { name, language, bodyParams }, purpose, reference? }, deps?) → Promise<WhatsAppResult>", where: src/messaging/whatsapp/service.ts }
+  - { name: recordWhatsAppConsent, signature: "recordWhatsAppConsent(phone, source, deps?) → Promise<string | null>", where: src/messaging/whatsapp/service.ts }
+  - { name: handleWhatsAppWebhook, signature: "handleWhatsAppWebhook(payload, deps?) → { statuses, optedOut, optedIn } (after the signature check)", where: src/messaging/whatsapp/service.ts }
+  - { name: "Webhook route", signature: "GET|POST /api/messaging/whatsapp/webhook — hub.verify_token / X-Hub-Signature-256", where: src/app/api/messaging/whatsapp/webhook/route.ts }
+  - { name: sendTemplate, signature: "sendTemplate({ to, template }, settings, fetch?) → CloudApiOutcome (one request, never throws)", where: src/messaging/whatsapp/cloud-api.ts }
+extension_points:
+  - what: "Send a WhatsApp notification from your own feature"
+    where: "src/messaging/whatsapp/service.ts"
+    how: "Create and get the template approved in WhatsApp Manager, record opt-in where the person gives it (recordWhatsAppConsent), then call sendWhatsAppTemplate with its name, language and parameters in order."
+  - what: "Subscribe the webhook"
+    where: "Meta App Dashboard → WhatsApp → Configuration"
+    how: "Callback URL https://<your app>/api/messaging/whatsapp/webhook, verify token WHATSAPP_VERIFY_TOKEN, field \"messages\"."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers and server code, drizzle-orm with PostgreSQL, zod 4, libphonenumber-js 1.13.14"
+  recipes: [bookings, ai-agents, saas-crud]
+  requires: []
+  works_with: [domain.reminders.turbineh, messaging.sms.twilio, jobs.scheduled.turbineh]
+  notes: "With domain.reminders.turbineh it sends appointment reminders from the template in src/reminders/params.json."
+security:
+  - "The access token only comes from the environment and is sent as a Bearer header over HTTPS"
+  - "Webhook POSTs are refused (403) unless X-Hub-Signature-256 matches the raw body with the app secret (constant time); GET verification needs the verify token"
+  - "Message texts are never stored or logged; provider error messages are redacted"
+guarantees:
+  - { claim: "Sends approved templates with the documented Cloud API request", test: "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp template message is sent with the Cloud API (POST /{version}/{phone-number-id}/messages, Bearer token, approved template, E.164 number); Meta's statuses come back signed" }
+  - { claim: "Builds the documented template body", test: "tests/unit/messaging-whatsapp.test.ts › builds the documented template message: messaging_product, E.164 recipient, template name, language and body parameters in order" }
+  - { claim: "Never sends without opt-in or after STOP; logged without credentials", test: "tests/unit/messaging-whatsapp.test.ts › a WhatsApp message is never sent to a number without opt-in, nor after a STOP message until the person writes START" }
+  - { claim: "Unapproved templates, wrong parameter counts and refused tokens are not retried", test: "tests/unit/messaging-whatsapp-contract.test.ts › a template that is not approved (132001) or has another number of parameters (132000) is refused and not retried" }
+  - { claim: "Throughput limits and 5xx retried with backoff", test: "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp message that fails with a throughput limit (130429) or 5xx is retried with backoff and then sent, within the attempt limit" }
+  - { claim: "Webhook signature checked; statuses recorded", test: "tests/unit/messaging-whatsapp.test.ts › WhatsApp webhook calls are checked with X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the app secret) and delivery statuses are recorded" }
+limits:
+  - "Proven against a local mock recorded from Meta's documentation (2026-10), not against the live Cloud API (no real credentials in tests)"
+  - "Templates with text body parameters only; no headers with media, buttons, free-form replies or conversations"
+  - "The business must create the templates, verify the business and register the number in Meta's tools; Meta charges per template message"
+example: |-
+  // Server code in the app: record the opt-in a person gave on a form, then send them an approved template (created in
+  // WhatsApp Manager with two body parameters). Nothing is sent without opt-in or after STOP; logged without credentials.
+  import { recordWhatsAppConsent, sendWhatsAppTemplate } from "@/messaging/whatsapp/service";
+
+  export async function whatsappOrderReady(
+    phone: string,
+    name: string,
+    orderRef: string,
+    optedIn: boolean,
+  ) {
+    if (optedIn) await recordWhatsAppConsent(phone, `order-form:${orderRef}`);
+    return sendWhatsAppTemplate({
+      to: phone,
+      template: { name: "order_ready", language: "en", bodyParams: [name, orderRef] },
+      purpose: "order-ready",
+      reference: orderRef,
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/messaging/whatsapp/params.json
+  schema: params.schema.json
+  fields:
+    - { name: defaultCountry, default: "null", description: "ISO 3166-1 alpha-2 country for numbers without a country code" }
+    - { name: maxAttempts, default: "3", description: "Attempts per message for temporary failures (throughput limits, 5xx)" }
+  example: |
+    { "defaultCountry": "ES", "maxAttempts": 3 }

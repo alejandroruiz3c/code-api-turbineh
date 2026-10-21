@@ -131,6 +131,9 @@ export const CAPABILITY_LABELS: Record<string, string> = {
     "recording the screen and the camera in the browser, with layouts and share links",
   "domain.matching":
     "records ranked against an organization's profile (sectors, activities, regions, keywords)",
+  "messaging.sms": "sending SMS to people who agreed (Twilio), with STOP honoured",
+  "messaging.whatsapp": "sending WhatsApp template notifications to people who opted in",
+  "domain.reminders": "appointment reminders by email, SMS or WhatsApp before each booking",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;

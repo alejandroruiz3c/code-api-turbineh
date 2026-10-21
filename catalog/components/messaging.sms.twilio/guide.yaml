@@ -1,0 +1,112 @@
+schema: turbineh.guide/v0.1
+component: messaging.sms.twilio
+title: SMS with Twilio's Messages API, consent and STOP handling, retries and a logged mode
+summary: >-
+  Sends SMS text messages through Twilio Programmable Messaging with its official REST API — one documented request,
+  POST /2010-04-01/Accounts/{AccountSid}/Messages.json with HTTP Basic auth and a form body (To, From or
+  MessagingServiceSid, Body, StatusCallback); no SDK. Every number is validated as E.164 with libphonenumber-js (a number
+  typed without a country code is read in the app's default country, or refused). Nothing is sent to a number that has
+  not agreed: consent is recorded per number (for example from a ticked box on a form) and a STOP reply — or Twilio's
+  unsubscribed-recipient error 21610 — opts it out until the person replies START; a form tick never overrides a STOP.
+  Answers that may pass later (429, 5xx, Twilio unreachable before the request left) are retried in the call with
+  exponential backoff and jitter, honouring Retry-After; an answer that never arrived is marked "unknown" and never
+  re-sent, because Twilio's Messages API has no idempotency key. Every outcome is logged in sms_messages without the
+  text. Twilio's replies and delivery updates reach a webhook that checks X-Twilio-Signature over the public URL.
+  Without credentials nothing leaves the app: messages are logged as not sent.
+keywords:
+  [sms, text message, twilio, send sms, sms notifications, sms reminders, opt-out, stop, unsubscribe, consent,
+   e164, phone number validation, delivery status, webhook signature, retries, backoff]
+synonyms:
+  sms: [text, text message, texting, mobile message]
+  opt-out: [STOP, unsubscribe, stop messages]
+  consent: [opt-in, permission to text, agreed to receive SMS]
+use_cases:
+  - "Appointment reminders by SMS (with domain.reminders.turbineh), only to people who ticked the box when booking"
+  - "A transactional text (an order is ready, a code, a status change) to a customer who agreed"
+use_when:
+  - "The request sends SMS / text messages to people (reminders, notifications, confirmations)"
+  - "Messages must respect consent and STOP replies, be retried on temporary failures and be logged"
+avoid_when:
+  - "Two-way SMS conversations or a chatbot over SMS (not covered: the webhook only handles STOP/START/HELP and delivery updates)"
+  - "WhatsApp messages (use messaging.whatsapp.meta) or email (email.transactional.turbineh)"
+  - "Bulk marketing campaigns (needs A2P campaign registration and its own consent records)"
+tradeoffs:
+  - { choice: "Plain fetch against the documented REST endpoint, no SDK", gain: "No dependency to install or audit beyond libphonenumber-js; the request is visible and contract-tested", cost: "Only the Messages resource is covered" }
+  - { choice: "Lost answers are not retried", gain: "Never sends the same text twice when Twilio accepted it but the answer was lost", cost: "A person checks the Twilio console for messages marked unknown" }
+  - { choice: "A form tick never overrides a STOP", gain: "Carrier and CTIA rules: only START re-subscribes", cost: "A person who replied STOP must reply START to get texts again" }
+config:
+  - { name: TWILIO_ACCOUNT_SID, description: "Twilio account SID (AC…); with TWILIO_AUTH_TOKEN and a sender, real sending is on" }
+  - { name: TWILIO_AUTH_TOKEN, description: "Auth token: HTTP Basic auth of each request and the key of X-Twilio-Signature on webhooks" }
+  - { name: TWILIO_FROM_NUMBER, description: "Your Twilio number in E.164 (+15551234567); or set TWILIO_MESSAGING_SERVICE_SID instead" }
+  - { name: TWILIO_MESSAGING_SERVICE_SID, default: "unset", description: "Messaging Service (MG…) used instead of a From number (sender pools, A2P campaigns)" }
+  - { name: APP_URL, default: "BETTER_AUTH_URL", description: "Public origin Twilio calls back: StatusCallback and the signature check use it" }
+  - { name: "src/messaging/sms/params.json", default: "defaultCountry null, maxAttempts 3", description: "Default country for national numbers and attempts per message" }
+interfaces:
+  - { name: sendSms, signature: "sendSms({ to, body, purpose, reference? }, deps?) → Promise<SmsResult> — sent | logged | skipped | failed | unknown", where: src/messaging/sms/service.ts }
+  - { name: recordSmsConsent, signature: "recordSmsConsent(phone, source, deps?) → Promise<string | null> (the E.164 number, or null when invalid)", where: src/messaging/sms/service.ts }
+  - { name: handleTwilioWebhook, signature: "handleTwilioWebhook(params, deps?) — STOP/START replies and delivery updates (after the signature check)", where: src/messaging/sms/service.ts }
+  - { name: "Webhook route", signature: "POST /api/messaging/sms/webhook — X-Twilio-Signature required", where: src/app/api/messaging/sms/webhook/route.ts }
+  - { name: sendViaTwilio, signature: "sendViaTwilio({ to, body, statusCallback? }, settings, fetch?) → TwilioOutcome (one request, never throws)", where: src/messaging/sms/twilio.ts }
+  - { name: "Phone numbers", signature: "toE164(input, defaultCountry?) → string | null; maskPhone(e164)", where: src/messaging/sms/phone.ts }
+extension_points:
+  - what: "Send an SMS from your own feature"
+    where: "src/messaging/sms/service.ts"
+    how: "Record consent where the person gives it (recordSmsConsent) and call sendSms with a purpose and reference; never call sendViaTwilio directly (it skips consent and the log)."
+  - what: "Point Twilio at the app"
+    where: "Twilio console → your number → Messaging → A message comes in"
+    how: "Set https://<your app>/api/messaging/sms/webhook (POST). APP_URL must be that public origin: the signature covers the full URL."
+  - what: "Numbers typed without a country code"
+    where: "src/messaging/sms/params.json"
+    how: "Set defaultCountry (ISO 3166 alpha-2, e.g. ES); otherwise people must type the + and country code."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 route handlers and server code, drizzle-orm with PostgreSQL, zod 4, libphonenumber-js 1.13.14"
+  recipes: [bookings, ai-agents, saas-crud]
+  requires: []
+  works_with: [domain.reminders.turbineh, messaging.whatsapp.meta, jobs.scheduled.turbineh]
+  notes: "With domain.reminders.turbineh it sends appointment reminders to people who ticked the SMS box when booking."
+security:
+  - "Credentials only from the environment; requests use HTTP Basic auth over HTTPS to api.twilio.com"
+  - "Webhook calls are refused (403) unless X-Twilio-Signature (HMAC-SHA1 with the auth token over the public URL and sorted parameters) matches, compared in constant time"
+  - "Message texts are never stored or logged; the log keeps status, Twilio's sid and error code"
+  - "Provider error messages are redacted before they are stored"
+guarantees:
+  - { claim: "Sends through Twilio's Messages API with the documented request", test: "tests/unit/messaging-sms-contract.test.ts › an SMS is sent with Twilio's Messages API (POST /2010-04-01/Accounts/{AccountSid}/Messages.json): Basic auth, form-encoded To as an E.164 number, From, Body and a signed StatusCallback" }
+  - { claim: "Never sends without consent or after a STOP reply", test: "tests/unit/messaging-sms.test.ts › an SMS is never sent to a number without consent, nor after a STOP reply until the person replies START" }
+  - { claim: "Twilio's unsubscribed-recipient error opts the number out", test: "tests/unit/messaging-sms-contract.test.ts › a number Twilio reports as unsubscribed after a STOP (21610) is opted out and never sent an SMS again" }
+  - { claim: "429/5xx retried with backoff; refused numbers are not", test: "tests/unit/messaging-sms-contract.test.ts › an SMS that fails with 429 or 5xx is retried with backoff and then sent; a refused number (21211) is not retried" }
+  - { claim: "Attempt limit, wrong credentials and lost answers", test: "tests/unit/messaging-sms-contract.test.ts › gives up after the attempt limit and reports a retryable failure; wrong credentials are refused (20003)" }
+  - { claim: "Logged mode without credentials", test: "tests/unit/messaging-sms.test.ts › without Twilio credentials an SMS is logged, not sent, and an invalid number is never tried" }
+  - { claim: "E.164 validation with libphonenumber-js", test: "tests/unit/messaging-sms.test.ts › phone numbers are validated as E.164 with libphonenumber-js: a national number needs the app's default country" }
+  - { claim: "STOP/START/HELP keywords as Twilio reads them", test: "tests/unit/messaging-sms.test.ts › reads STOP, START and HELP replies the way Twilio's default opt-out does" }
+  - { claim: "X-Twilio-Signature checked over the full URL", test: "tests/unit/messaging-sms.test.ts › checks X-Twilio-Signature over the full URL and the sorted POST parameters (HMAC-SHA1, base64)" }
+limits:
+  - "Proven against a local mock recorded from Twilio's documentation (2026-10), not against Twilio itself (no real credentials in tests)"
+  - "Outbound SMS only: no conversations, MMS or scheduling (callers decide when; domain.reminders.turbineh for appointments)"
+  - "US numbers need A2P 10DLC (or toll-free verification); other countries have their own sender rules — done in the Twilio console, not by the app"
+  - "1,600 characters per message; long texts cost several segments"
+example: |
+  // Server code in the app (a server action or a route): record the consent a person gave on a form, then send them an
+  // SMS. sendSms sends nothing to numbers without consent or that replied STOP, and only logs without Twilio credentials.
+  import { recordSmsConsent, sendSms } from "@/messaging/sms/service";
+
+  export async function textOrderReady(phone: string, orderRef: string, agreed: boolean) {
+    if (agreed) await recordSmsConsent(phone, `order-form:${orderRef}`);
+    return sendSms({
+      to: phone,
+      body: `Your order ${orderRef} is ready for pickup. Reply STOP to opt out.`,
+      purpose: "order-ready",
+      reference: orderRef,
+    });
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/messaging/sms/params.json
+  schema: params.schema.json
+  fields:
+    - { name: defaultCountry, default: "null", description: "ISO 3166-1 alpha-2 country for numbers without a country code" }
+    - { name: maxAttempts, default: "3", description: "Attempts per message for temporary failures (429, 5xx, unreachable)" }
+  example: |
+    { "defaultCountry": "ES", "maxAttempts": 3 }

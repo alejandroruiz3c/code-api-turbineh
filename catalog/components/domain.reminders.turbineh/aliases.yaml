@@ -1,0 +1,11 @@
+# Criteria aliases (ADR-0047): the reminder tests say "customer"; this app's word for it lives in the booking params.
+file: src/bookings/params.json
+tests:
+  - tests/e2e/reminders.spec.ts
+  - tests/e2e/reminders-sms.spec.ts
+  - tests/e2e/reminders-whatsapp.spec.ts
+aliases:
+  - term: customer
+    from: customer.singular
+  - term: customers
+    from: customer.plural

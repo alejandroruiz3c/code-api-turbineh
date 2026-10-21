@@ -1,0 +1,11 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp template message is sent with the Cloud API (POST /{version}/{phone-number-id}/messages, Bearer token, approved template, E.164 number); Meta's statuses come back signed"
+  covers: ["whats ?app", "send|sent|notif|template"]
+- test: "tests/unit/messaging-whatsapp.test.ts › a WhatsApp message is never sent to a number without opt-in, nor after a STOP message until the person writes START"
+  covers: ["whats ?app", "consent|opt|stop|unsubscri"]
+- test: "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp message that fails with a throughput limit (130429) or 5xx is retried with backoff and then sent, within the attempt limit"
+  covers: ["whats ?app", "retr|fail"]
+- test: "tests/unit/messaging-whatsapp.test.ts › WhatsApp webhook calls are checked with X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the app secret) and delivery statuses are recorded"
+  covers: ["whats ?app", "webhook|signature|delivery status|delivered"]
+- test: "tests/unit/messaging-whatsapp-contract.test.ts › a template that is not approved (132001) or has another number of parameters (132000) is refused and not retried"
+  covers: ["whats ?app", "template"]

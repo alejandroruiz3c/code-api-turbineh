@@ -14,6 +14,20 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   isolation on pages and API). Base SaaS: organization switcher, second organization, account page. Role assignment
   requests select membership-access. The gate counts the canonical criteria of the domain components code selects
   before it (`gateComponents`), also for requests no product family matched. Canonical criteria and E2E for all.
+- Appointment reminders and messaging (ADR-0070): `domain.reminders.turbineh` reminds each confirmed appointment a set
+  number of real hours before it (24 by default) by email, SMS or WhatsApp — once per appointment, channel and start
+  time, never for cancelled appointments, local time of the business in every text, retries with backoff, a staff
+  page — run as a task of the `jobs.scheduled.turbineh` cron route (which now runs components' tasks on every call and
+  accepts no job of its own). `messaging.sms.twilio` (Twilio Messages REST API, E.164 with libphonenumber-js, consent
+  and STOP, retries, X-Twilio-Signature webhook, logged mode) and `messaging.whatsapp.meta` (Cloud API approved
+  templates, opt-in and STOP, retries, X-Hub-Signature-256 webhook with verification, logged mode), contract-tested
+  against offline mocks and E2E-tested in the bookings template. Booking forms gain an extension point
+  (`src/bookings/extensions.ts`, `form-extras.tsx`) used for the reminder consent boxes. Canonical criteria for email,
+  SMS and WhatsApp reminders; the plan and the scope gate see the reminder and messaging components a request asks
+  for; SMS/WhatsApp notifications are covered (conversations and bots on them are not); components-only offers for
+  SMS and WhatsApp. `libphonenumber-js@1.13.14` is pinned in the saas-crud and ai-agents templates; new catalogue
+  category `messaging`.
+
 - Contact email for invitation workspaces (ADR-0074): `/access` asks for an email (required, validated, with what it is
   for) and stores it per workspace (`workspace_contacts`, migration 0017); workspaces that entered before are asked
   once per visit by a non-blocking banner (`GET/PUT/DELETE /v1/contact`). New plans and builds carry it as their

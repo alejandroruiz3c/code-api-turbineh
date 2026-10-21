@@ -1,0 +1,57 @@
+# Canonical acceptance criteria (ADR-0063) of SMS sending: what the component proves with its unit and contract tests.
+- vocabulary: >-
+    sms text texts message messages phone number numbers mobile recipient recipients person people customer
+    customers user users app system
+
+- id: messaging-sms.send
+  criterion: "An SMS is sent with Twilio's Messages API to an E.164 number"
+  advertises: "Twilio's official Messages REST API"
+  # Timing ("24 hours before", "a reminder") is domain.reminders.turbineh's function, not this one's.
+  says: ["\\bsms\\b|text messages?", "send|sent|deliver|twilio", "^(?![\\s\\S]*\\b(remind\\w*|before|ahead|prior|in advance)\\b)"]
+  terms: >-
+    send sends sent deliver delivers delivered twilio messages api rest official provider phone number numbers
+    mobile e164 international format valid
+  actors: [customer, client, patient, user, member, visitor]
+  tests:
+    - "tests/unit/messaging-sms-contract.test.ts › an SMS is sent with Twilio's Messages API (POST /2010-04-01/Accounts/{AccountSid}/Messages.json): Basic auth, form-encoded To as an E.164 number, From, Body and a signed StatusCallback"
+
+- id: messaging-sms.consent
+  criterion: "An SMS is never sent to a number without consent, nor after a STOP reply"
+  advertises: "sent only to numbers that agreed and have not replied STOP"
+  says: ["\\bsms\\b|text", "consent|agree|opt|stop|unsubscri|permission"]
+  terms: >-
+    consent consents agree agreed opt opted in out stop stops reply replies replied unsubscribe unsubscribed
+    permission never only send sends sent number numbers start resume again
+  actors: [customer, client, patient, user, member, visitor]
+  tests:
+    - "tests/unit/messaging-sms.test.ts › an SMS is never sent to a number without consent, nor after a STOP reply until the person replies START"
+    - "tests/unit/messaging-sms-contract.test.ts › a number Twilio reports as unsubscribed after a STOP (21610) is opted out and never sent an SMS again"
+
+- id: messaging-sms.retry
+  criterion: "An SMS that fails with 429 or 5xx is retried with backoff and then sent"
+  advertises: "retried with exponential backoff"
+  says: ["\\bsms\\b|text", "retr|fail|error|backoff"]
+  terms: >-
+    retry retries retried fail fails failed failure error errors backoff exponential attempt attempts again
+    temporary rate limit limited send sends sent
+  tests:
+    - "tests/unit/messaging-sms-contract.test.ts › an SMS that fails with 429 or 5xx is retried with backoff and then sent; a refused number (21211) is not retried"
+
+- id: messaging-sms.logged
+  criterion: "Without Twilio credentials an SMS is logged, not sent"
+  advertises: "logged mode"
+  says: ["\\bsms\\b|text", "log|without (credentials|provider|keys?)|not sent|no provider"]
+  terms: >-
+    log logs logged without credentials provider key keys configured not sent send development test mode
+  tests:
+    - "tests/unit/messaging-sms.test.ts › without Twilio credentials an SMS is logged, not sent, and an invalid number is never tried"
+
+- id: messaging-sms.phone
+  criterion: "Phone numbers are validated as E.164 with libphonenumber-js"
+  advertises: "E.164 with libphonenumber-js"
+  says: ["phone|mobile|number", "valid|format|e\\.?164|international"]
+  terms: >-
+    phone phones number numbers mobile validate validates validated validation valid invalid format formats e164
+    international country code refused reject rejected
+  tests:
+    - "tests/unit/messaging-sms.test.ts › phone numbers are validated as E.164 with libphonenumber-js: a national number needs the app's default country"

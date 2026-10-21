@@ -57,6 +57,9 @@ extension_points:
   - what: "Change the cancel link or its notice rule"
     where: "src/bookings/manage.ts (cancelByToken), src/bookings/params.json (policy.cancelNoticeHours)"
     how: "The token is single-use per booking and stored hashed; the notice rule is canChange() in availability.ts."
+  - what: "Add fields to the public booking form (consent boxes, a note) and act once a booking exists"
+    where: "src/bookings/extensions.ts, src/bookings/form-extras.tsx"
+    how: "bookingExtraFields (Zod) joins the form's schema, checkBookingExtras can refuse with a message before anything is booked, afterBooking runs once the booking exists (never undoes it); BookingFormExtras renders the fields. domain.reminders.turbineh replaces both files to add its reminder consent boxes."
   - what: "Different availability rule (breaks, holidays)"
     where: "src/bookings/availability.ts"
     how: "Filter dayStarts()/freeSlots(); everything (assistant, staff form) uses them, so one change applies everywhere."
@@ -65,7 +68,7 @@ compatibility:
   framework: "next ^16, drizzle-orm with PostgreSQL, zod 4"
   recipes: [ai-agents, bookings]
   requires: []
-  works_with: [ai.orchestrator.turbineh, email.transactional.turbineh]
+  works_with: [ai.orchestrator.turbineh, email.transactional.turbineh, domain.reminders.turbineh]
   notes: "The AI part (files-ai/: toolkit, mock script, assistant E2E) is installed only with ai.orchestrator.turbineh; the domain, staff pages and unit tests work without AI."
 security:
   - "Staff pages and server actions require a signed-in member on ADMIN_EMAILS (deny by default)"

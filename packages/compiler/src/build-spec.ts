@@ -150,6 +150,9 @@ export const CAPABILITIES = [
   // Workstream E (ADR-0073): blog, screen + camera recording, deterministic matching against an organization profile
   "media.screen-recording",
   "domain.matching",
+  // Messaging (ADR-0070): SMS through Twilio and WhatsApp through the Cloud API, with consent and STOP
+  "messaging.sms",
+  "messaging.whatsapp",
 ] as const;
 
 const item = (t: number, x: number) =>

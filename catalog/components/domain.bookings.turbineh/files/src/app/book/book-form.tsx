@@ -1,5 +1,6 @@
 "use client";
 import { useActionState } from "react";
+import { BookingFormExtras } from "@/bookings/form-extras";
 import { bookSlot, type BookState } from "./actions";
 
 /** Free times of the chosen day and the customer's details; the server re-checks the time before booking. */
@@ -102,6 +103,7 @@ export function BookForm({
           />
         </div>
       </div>
+      <BookingFormExtras />
       <input
         type="text"
         name="website"

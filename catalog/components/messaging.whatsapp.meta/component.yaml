@@ -1,0 +1,84 @@
+schema: turbineh.component/v0.1
+id: messaging.whatsapp.meta
+version: 0.1.0
+status: approved
+category: messaging
+source:
+  purl: pkg:generic/turbineh/messaging.whatsapp.meta@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Sends WhatsApp notifications with Meta's official WhatsApp Business Cloud API (POST /v26.0/{phone-number-id}/messages on the Graph API, no SDK) as approved message templates, the only messages allowed outside the 24-hour customer service window: numbers validated as E.164 with libphonenumber-js, sent only to people who opted in and have not written STOP, throughput limits and 5xx retried with exponential backoff and jitter, an answer that never arrived marked unknown instead of re-sent, every outcome logged without the text, a webhook that answers Meta's verification and records sent/delivered/read/failed statuses and STOP/START messages after checking X-Hub-Signature-256, and a logged mode that sends nothing without credentials."
+  does_not: "Does not run conversations or a WhatsApp chatbot, send free-form text or media, create or approve templates (done in WhatsApp Manager), or decide what to send and when (domain.reminders.turbineh sends appointment reminders)"
+  use_cases: [bookings, ai-agents, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Contract-tested against a mock of the Cloud API's documented request, error and webhook shapes",
+      "Opt-in first: nothing goes to a number that did not agree or wrote STOP",
+    ]
+  cons:
+    [
+      "Needs a Meta Business account, a WhatsApp Business phone number, a System User token and templates approved by Meta",
+      "Templates are paid per message by Meta's pricing for their category and country",
+    ]
+  alternatives: [messaging.sms.twilio, email.transactional.turbineh]
+contract:
+  inputs:
+    [
+      "src/messaging/whatsapp/params.json (defaultCountry, maxAttempts)",
+      "sendWhatsAppTemplate({ to, template: { name, language, bodyParams }, purpose, reference? }, deps?); recordWhatsAppConsent(phone, source)",
+      "GET|POST /api/messaging/whatsapp/webhook (verification; statuses and messages with X-Hub-Signature-256)",
+    ]
+  outputs:
+    [
+      "WhatsAppResult: accepted (wamid) | logged | skipped (invalid-number, no-consent, opted-out) | failed (code, retryable) | unknown",
+      "whatsapp_consent rows; whatsapp_messages rows (status accepted → sent → delivered → read | failed, Meta id, error code; never the text)",
+    ]
+  errors:
+    [
+      "never throws for provider or network errors; 132001 (template not approved), 132000 (parameter count), 131026 (undeliverable) and 190 (token) are not retried",
+      "webhook: 403 for a wrong verify token or signature, 503 without WHATSAPP_VERIFY_TOKEN / WHATSAPP_APP_SECRET, 413 over 256 KB",
+    ]
+  limits: ["templates only (text body parameters); in-call waits up to 4 s"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: [whatsapp-cloud-api]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/messaging/whatsapp/{config,phone,cloud-api,service}.ts + params.json, src/db/component-messaging-whatsapp.ts, src/app/api/messaging/whatsapp/webhook/route.ts, the Cloud API mock (tests/e2e/mocks) and unit + contract tests. Uses libphonenumber-js (data.phone.libphonenumber-js, pinned in the template)."
+  config: [WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN]
+  migrations: true
+params:
+  file: src/messaging/whatsapp/params.json
+  schema: params.schema.json
+  entities: [WhatsAppMessage, WhatsappMessage, WhatsAppConsent, WhatsAppTemplate]
+quality:
+  tests:
+    {
+      command: "unit (template body, E.164, opt-in and STOP rules, X-Hub-Signature-256, statuses) + contract tests against the Cloud API mock (request shape, 132001, 132000, 190, 130429/5xx retries, signed status webhooks); E2E through domain.reminders.turbineh (WhatsApp reminders, verification, STOP); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: token only from the environment, webhook signature checked in constant time over the raw body, verify token compared before echoing the challenge, body size capped, message texts never stored or logged, provider messages redacted, opt-in enforced in the only sending path."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Template sending, retries and signed webhooks pass contract tests against a mock of the documented Cloud API; WhatsApp reminders pass the full verification gate with the bookings recipe"
+    origin: tested
+    ref: "verify:recipe bookings+domain.reminders.turbineh+messaging.sms.twilio+messaging.whatsapp.meta (ADR-0070)"
+relations:
+  requires: []
+  provides: [messaging.whatsapp]
+  conflicts: []
+  tested_with: [recipe.bookings]

@@ -5,7 +5,11 @@ import { lastOccurrence, parseCron } from "@/jobs/cron";
 /** Contract of jobs.scheduled.turbineh: cron in the job's time zone, one identifiable occurrence per run. */
 describe("scheduled jobs", () => {
   it("the shipped params are valid and reject a bad cron or time zone", () => {
-    expect(scheduledConfig.jobs.length).toBeGreaterThan(0);
+    expect(scheduledConfig.jobs.length).toBeLessThanOrEqual(20);
+    // An app may have no job of its own when another component only hands the route its tasks.
+    expect(ScheduledParams.safeParse({ jobs: [], logWhenNoEmailProvider: true }).success).toBe(
+      true,
+    );
     const job = { id: "x", kind: "daily-digest", cron: "0 7 * * *", timeZone: "UTC", what: "w" };
     expect(ScheduledParams.safeParse({ jobs: [job], logWhenNoEmailProvider: true }).success).toBe(
       true,

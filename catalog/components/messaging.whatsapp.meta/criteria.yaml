@@ -1,0 +1,48 @@
+# Canonical acceptance criteria (ADR-0063) of WhatsApp notifications: what the component proves with its unit and
+# contract tests.
+- vocabulary: >-
+    whatsapp message messages notification notifications phone number numbers mobile recipient recipients person
+    people customer customers user users app system business
+
+- id: messaging-whatsapp.send
+  criterion: "A WhatsApp template message is sent with the Cloud API to an E.164 phone number"
+  advertises: "WhatsApp Business Cloud API"
+  # Timing ("24 hours before", "a reminder") is domain.reminders.turbineh's function, not this one's.
+  says: ["whats ?app", "send|sent|deliver|notif|template", "^(?![\\s\\S]*\\b(remind\\w*|before|ahead|prior|in advance)\\b)"]
+  terms: >-
+    send sends sent deliver delivers delivered notify notifies notification notifications template templates approved
+    cloud api official meta business phone number numbers mobile e164 international
+  actors: [customer, client, patient, user, member, visitor]
+  tests:
+    - "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp template message is sent with the Cloud API (POST /{version}/{phone-number-id}/messages, Bearer token, approved template, E.164 number); Meta's statuses come back signed"
+
+- id: messaging-whatsapp.consent
+  criterion: "A WhatsApp message is never sent to a number without opt-in, nor after a STOP message"
+  advertises: "sent only to people who opted in"
+  says: ["whats ?app", "consent|agree|opt|stop|unsubscri|permission"]
+  terms: >-
+    consent consents agree agreed opt opted in out stop stops write writes wrote reply replies unsubscribe
+    unsubscribed permission never only send sends sent number numbers start resume again
+  actors: [customer, client, patient, user, member, visitor]
+  tests:
+    - "tests/unit/messaging-whatsapp.test.ts › a WhatsApp message is never sent to a number without opt-in, nor after a STOP message until the person writes START"
+
+- id: messaging-whatsapp.retry
+  criterion: "A WhatsApp message that fails with a throughput limit or 5xx is retried with backoff and then sent"
+  advertises: "retried with exponential backoff"
+  says: ["whats ?app", "retr|fail|error|backoff|limit"]
+  terms: >-
+    retry retries retried fail fails failed failure error errors backoff exponential attempt attempts again
+    temporary rate throughput limit limits send sends sent
+  tests:
+    - "tests/unit/messaging-whatsapp-contract.test.ts › a WhatsApp message that fails with a throughput limit (130429) or 5xx is retried with backoff and then sent, within the attempt limit"
+
+- id: messaging-whatsapp.webhook
+  criterion: "WhatsApp webhook calls are checked with X-Hub-Signature-256 and delivery statuses are recorded"
+  advertises: "X-Hub-Signature-256"
+  says: ["whats ?app", "webhook|signature|signed|delivery status|delivered|read receipt"]
+  terms: >-
+    webhook webhooks signature signed verify verified delivery deliveries status statuses delivered read receipt
+    receipts record records recorded meta check checks checked
+  tests:
+    - "tests/unit/messaging-whatsapp.test.ts › WhatsApp webhook calls are checked with X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the app secret) and delivery statuses are recorded"

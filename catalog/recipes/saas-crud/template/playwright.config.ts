@@ -104,6 +104,22 @@ for (const [api, auth, id, secretName] of socialMocks) {
   process.env[secretName] = secret();
   process.env.SOCIAL_TOKEN_KEY ||= randomBytes(32).toString("base64");
 }
+// Messaging (messaging.sms.twilio, messaging.whatsapp.meta): the Twilio and WhatsApp Cloud API mocks check credentials
+// generated here (kept by the workers, which read them to sign webhook calls); the WhatsApp mock posts its status
+// webhooks to the app.
+if (process.env.TWILIO_API_BASE?.startsWith("http://127.0.0.1")) {
+  process.env.TWILIO_ACCOUNT_SID ||= `AC${randomBytes(16).toString("hex")}`;
+  process.env.TWILIO_AUTH_TOKEN ||= secret();
+  // Twilio's documented test "From" number.
+  process.env.TWILIO_FROM_NUMBER ||= "+15005550006";
+}
+if (process.env.WHATSAPP_API_BASE?.startsWith("http://127.0.0.1")) {
+  process.env.WHATSAPP_ACCESS_TOKEN ||= secret();
+  process.env.WHATSAPP_PHONE_NUMBER_ID ||= String(100_000_000_000 + randomBytes(4).readUInt32BE());
+  process.env.WHATSAPP_APP_SECRET ||= secret();
+  process.env.WHATSAPP_VERIFY_TOKEN ||= secret();
+  process.env.WHATSAPP_MOCK_WEBHOOK_URL = `${origin}/api/messaging/whatsapp/webhook`;
+}
 // Several people sign up from one address within seconds: raise better-auth's 3-per-10 s sign-in/sign-up limit for
 // the run instead of waiting for its window (src/lib/auth.ts).
 process.env.AUTH_RATE_LIMIT_MAX ||= "1000";

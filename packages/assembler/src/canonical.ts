@@ -638,6 +638,8 @@ function catalogSource(recipesDir: string, recipe: string, components: readonly 
     ...components.flatMap((id) => [
       join(componentsDir, id, "files"),
       ...(ai ? [join(componentsDir, id, "files-ai")] : []),
+      // Glue shipped only when another of these components is in the app too (ADR-0041), e.g. the SMS reminder suite.
+      ...components.filter((o) => o !== id).map((o) => join(componentsDir, id, "files-with", o)),
     ]),
   ];
   return (file: string): string | null => {
@@ -737,7 +739,14 @@ export function packageConditions(outDir: string): Set<string> {
   const open = existsSync(p) && /SIGN_UP_POLICY[^=]*=\s*"open"/.test(readFileSync(p, "utf8"));
   // AI apps ship the TurbineH orchestrator's agent runtime.
   const ai = existsSync(join(outDir, "src/lib/ai/agent.ts"));
-  return new Set([...(open ? ["open-sign-up"] : []), ...(ai ? ["ai"] : [])]);
+  // Messaging channels (ADR-0070): criteria such as SMS reminders apply only where the channel ships.
+  const channels = [
+    ...(existsSync(join(outDir, "src/messaging/sms/twilio.ts")) ? ["messaging.sms"] : []),
+    ...(existsSync(join(outDir, "src/messaging/whatsapp/cloud-api.ts"))
+      ? ["messaging.whatsapp"]
+      : []),
+  ];
+  return new Set([...(open ? ["open-sign-up"] : []), ...(ai ? ["ai"] : []), ...channels]);
 }
 
 /** A criterion linked to canonical criteria in an assembled package: their ids and the tests that prove them. */

@@ -1,0 +1,107 @@
+# Canonical acceptance criteria (ADR-0063) of appointment reminders: one per function the component advertises, each
+# linked to the test that proves it. SMS and WhatsApp criteria apply only in apps with that messaging component
+# (`when`); their tests ship from files-with/<component>/.
+- vocabulary: >-
+    booking bookings booked appointment appointments reservation reservations session sessions visit visits class
+    classes lesson lessons slot slots time times date dates day days hour hours minute minutes service services
+    treatment treatments customer customers client clients patient patients team member members staff business
+    clinic salon studio system app website confirmed confirm existing scheduled
+
+- id: reminders.email
+  criterion: "A customer gets an email reminder the set number of hours before the appointment, once per appointment"
+  advertises: "email reminders"
+  says: ["e-?mail|\\bmail", "remind|before (the|their|each|an?|his|her) (appointment|booking|session|visit|reservation)|hours? (before|ahead|prior|away)|in advance|day before"]
+  terms: >-
+    reminder reminders remind reminds reminded email emails mail send sends sent dispatch dispatches dispatched
+    deliver delivers delivered automated automatic automatically scheduled schedule upcoming before ahead prior
+    advance away exactly hour hours day once each every notification notify notified message messages local
+    customer client patient their own registered address current
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders.spec.ts › a customer gets an email reminder the set number of hours before the appointment, once per appointment, with the local time of the business"
+
+- id: reminders.sms
+  when: messaging.sms
+  criterion: "A customer who agreed to SMS reminders gets an SMS reminder the set number of hours before the appointment, once"
+  advertises: "SMS reminders"
+  says: ["\\bsms\\b|text messages?|\\btexts?\\b", "remind|before (the|their|each|an?|his|her) (appointment|booking|session|visit|reservation)|hours? (before|ahead|prior|away)|in advance|day before"]
+  terms: >-
+    reminder reminders remind reminds reminded sms text texts message messages send sends sent dispatch dispatches
+    dispatched deliver delivers delivered automated automatic automatically scheduled schedule upcoming before ahead
+    prior advance away exactly hour hours day once each every notification notify notified phone number mobile
+    registered current agreed agree consent opted opt twilio
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders-sms.spec.ts › a customer who agreed to SMS reminders gets an SMS reminder the set number of hours before the appointment, once, through Twilio's Messages API; the signed delivery update is recorded"
+
+- id: reminders.sms-stop
+  when: messaging.sms
+  criterion: "A customer who replies STOP gets no more SMS reminders"
+  advertises: "SMS reminders"
+  says: ["\\bstop\\b|opt[- ]?out|unsubscri|opted out", "\\bsms\\b|text"]
+  terms: >-
+    stop stops reply replies replied opt out opted unsubscribe unsubscribes unsubscribed no more longer any further
+    reminder reminders sms text texts message messages keyword
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders-sms.spec.ts › a customer who replies STOP gets no more SMS reminders; an unsigned reply is refused"
+
+- id: reminders.sms-consent
+  when: messaging.sms
+  criterion: "A customer who did not tick the SMS box gets no SMS reminder"
+  advertises: "SMS reminders"
+  says: ["\\bsms\\b|text", "consent|agree|opt[- ]?in|tick|without|permission|not"]
+  terms: >-
+    consent consents agree agreed agrees opt in opted tick ticked box checkbox permission without not only
+    reminder reminders sms text texts message messages
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders-sms.spec.ts › a customer who did not tick the SMS box gets no SMS reminder"
+
+- id: reminders.whatsapp
+  when: messaging.whatsapp
+  criterion: "A customer who opted in gets a WhatsApp reminder the set number of hours before the appointment, once"
+  advertises: "WhatsApp reminders"
+  says: ["whats ?app", "remind|before (the|their|each|an?|his|her) (appointment|booking|session|visit|reservation)|hours? (before|ahead|prior|away)|in advance|day before"]
+  terms: >-
+    reminder reminders remind reminds reminded whatsapp message messages send sends sent dispatch dispatches
+    dispatched deliver delivers delivered automated automatic automatically scheduled schedule upcoming before ahead
+    prior advance away exactly hour hours day once each every notification notify notified phone number mobile
+    registered current opted opt agreed agree consent template approved
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders-whatsapp.spec.ts › a customer who opted in gets a WhatsApp reminder the set number of hours before the appointment, once, as the approved template with its parameters; Meta's signed statuses are recorded"
+
+- id: reminders.whatsapp-stop
+  when: messaging.whatsapp
+  criterion: "A customer who writes STOP gets no more WhatsApp reminders"
+  advertises: "WhatsApp reminders"
+  says: ["\\bstop\\b|opt[- ]?out|unsubscri|opted out", "whats ?app"]
+  terms: >-
+    stop stops write writes wrote reply replies replied opt out opted unsubscribe unsubscribed no more longer any
+    further reminder reminders whatsapp message messages keyword
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders-whatsapp.spec.ts › a customer who writes STOP gets no more WhatsApp reminders; an unsigned webhook call is refused"
+
+- id: reminders.cancelled
+  criterion: "A cancelled appointment never gets a reminder"
+  advertises: "cancelled appointments are not reminded"
+  says: ["cancel", "remind"]
+  terms: >-
+    cancel cancels cancelled canceled cancellation reminder reminders remind reminded no not never any sent send
+    sends receive receives get gets
+  actors: [customer, client, patient, visitor, guest]
+  tests:
+    - "tests/e2e/reminders.spec.ts › a cancelled appointment never gets a reminder"
+
+- id: reminders.staff
+  criterion: "Staff see each appointment's reminders and their status"
+  advertises: "reminder status for staff"
+  says: ["remind", "staff|admin|owner|dashboard|see|view|list|status|track"]
+  terms: >-
+    staff admin owner dashboard see sees view views list status statuses track tracks each reminder reminders sent
+    scheduled planned failed page
+  actors: [staff, admin, owner, employee, manager]
+  tests:
+    - "tests/e2e/reminders.spec.ts › staff see each appointment's reminders and their status"

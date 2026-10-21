@@ -8,7 +8,7 @@ source:
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
   does: "Scheduled jobs from the request (\"overdue tasks are emailed every morning\"): cron expressions evaluated in each job's IANA time zone (DST-correct), a cron route protected by a secret header (x-cron-secret or Vercel Cron's Bearer), idempotent runs (each scheduled time of each job runs once, recorded under a unique key; failed runs are retried), and email digests — overdue/stuck records to the person who created them and a daily attention digest to the members who manage the workspace — logged when there is no email provider."
-  does_not: "Does not run a clock by itself (an external scheduler calls the route), queue arbitrary background work (jobs.queue.turbineh) or send SMS/push"
+  does_not: "Does not run a clock by itself (an external scheduler calls the route), queue arbitrary background work (jobs.queue.turbineh) or send SMS/push by itself (domain.reminders.turbineh hands it SMS and WhatsApp reminders as a task)"
   use_cases: [projects, internal-tool, client-portal, tracker, saas-crud]
   pros:
     [
@@ -22,9 +22,10 @@ contract:
   inputs:
     [
       "src/jobs/params.json (jobs[]: id, kind overdue-digest|daily-digest|custom, cron, timeZone, what; logWhenNoEmailProvider)",
-      "GET|POST /api/cron/run[?job=<id>] with x-cron-secret: CRON_SECRET or Authorization: Bearer CRON_SECRET",
+      "GET|POST /api/cron/run[?job=<id>|?task=<id>] with x-cron-secret: CRON_SECRET or Authorization: Bearer CRON_SECRET",
+      "src/jobs/tasks.ts (TASKS: work other components hand to the route, run on every call)",
     ]
-  outputs: ["{ ran[], skipped[], failed[] } per call; scheduled_runs rows (job, scheduled time, status, sent, transport)"]
+  outputs: ["{ ran[], skipped[], failed[], tasks[] } per call; scheduled_runs rows (job, scheduled time, status, sent, transport)"]
   errors: ["401 without the secret, 503 without CRON_SECRET, 400 for a malformed job id; a failing digest marks the run failed (retried next call)"]
   limits: ["20 jobs; looks back 8 days for the latest occurrence; minute precision"]
 compat:
@@ -37,7 +38,7 @@ effects:
   external_services: []
 integration:
   strategy: vendored-with-provenance
-  install: "Copied by the assembler from files/: src/jobs/{cron,config,runner,digests}.ts + params.json, src/db/component-scheduled-jobs.ts, src/app/api/cron/run/route.ts, unit and E2E tests. files-with/domain.workflow.turbineh/ replaces src/jobs/digests.ts with the workflow digests and adds their E2E."
+  install: "Copied by the assembler from files/: src/jobs/{cron,config,runner,digests,tasks}.ts + params.json, src/db/component-scheduled-jobs.ts, src/app/api/cron/run/route.ts, unit and E2E tests. files-with/domain.workflow.turbineh/ replaces src/jobs/digests.ts with the workflow digests and adds their E2E."
   config: [CRON_SECRET]
   migrations: true
 params:

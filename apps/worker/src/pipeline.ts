@@ -30,6 +30,8 @@ import {
   detectDomains,
   extractPalette,
   separateGeneral,
+  messagingPatterns,
+  PATTERN_CAPABILITIES,
   separateNonFunctional,
   type BuildSpec,
   type CompileResult,
@@ -72,7 +74,7 @@ import {
 } from "@turbineh/engine";
 import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
 import type { DeliveryManifest, Plan } from "@turbineh/shared";
-import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
+import { catalogEntries, componentPlan, flowPlan, type PlanRequest } from "./product.js";
 import { mergeDomains, wireFidelity, wireFidelitySync } from "./fidelity-wiring.js";
 import { requireRequirements } from "./required-components.js";
 import {
@@ -372,6 +374,37 @@ export function provenAtGate(
       .filter((c) => c.status === "covered")
       .map((c) => c.criterion),
   );
+}
+
+/**
+ * Catalogue components a request selects by code from its own words before the scope gate (ADR-0070): appointment
+ * reminders and the SMS / WhatsApp channels. Their canonical criteria join the use case's, so "a WhatsApp reminder
+ * 24 hours before each appointment" is mapped to the test that proves it instead of being judged outside the library.
+ * The fidelity wiring selects the same components with the same detection at assembly.
+ */
+export function requestedComponents(
+  prompt: string,
+  spec: Pick<BuildSpec, "recipe" | "app_name">,
+  componentsDir: string,
+): string[] {
+  if (spec.recipe === "out_of_scope") return [];
+  const patterns = messagingPatterns(prompt, spec.recipe, spec.app_name);
+  if (patterns.length === 0) return [];
+  const catalog = catalogEntries(componentsDir);
+  // A component fits when it is declared for the recipe or a recipe it extends (as the fidelity wiring checks).
+  const chain = recipeChain(join(componentsDir, "..", "recipes"), spec.recipe).map((m) => m.id);
+  return [
+    ...new Set(
+      patterns.flatMap((p) => {
+        const c = catalog.find((x) =>
+          PATTERN_CAPABILITIES[p.id].some((cap) => x.provides.includes(cap)),
+        );
+        const fits =
+          (c?.useCases ?? []).length === 0 || c?.useCases?.some((r) => chain.includes(r));
+        return c && fits ? [c.id] : [];
+      }),
+    ),
+  ];
 }
 
 export async function runBuild(

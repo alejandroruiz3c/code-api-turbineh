@@ -1,0 +1,80 @@
+schema: turbineh.component/v0.1
+id: domain.reminders.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.reminders.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Appointment reminders for the booking domain: each confirmed appointment gets a reminder a set number of real hours before it starts (24 by default, daylight saving included) by email, SMS (messaging.sms.twilio) or WhatsApp (messaging.whatsapp.meta), run by the scheduled-jobs cron route on every call; once per appointment, channel and start time (unique key claimed before sending), never for cancelled appointments, again for a moved one, never for one booked after its reminder time; the local time in the business's time zone in every text; SMS and WhatsApp only to people who ticked the box on the booking form and have not replied STOP; failures retried on later calls with backoff, interrupted attempts marked unknown; a staff page with each reminder's status."
+  does_not: "Does not send other kinds of notifications (marketing, follow-ups after the visit), several reminders per appointment, or reminders for apps without the booking domain"
+  use_cases: [bookings, ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Hours, channels and the WhatsApp template come from the request as data",
+      "Idempotent by construction: any number of runner calls sends one reminder per appointment and channel",
+    ]
+  cons: ["Needs a scheduler to call the cron route (Vercel Cron, GitHub Actions, any cron); precision is its interval"]
+  alternatives: [jobs.scheduled.turbineh]
+contract:
+  inputs:
+    [
+      "src/reminders/params.json (hoursBefore, channels, whatsappTemplate, maxAttempts)",
+      "GET|POST /api/cron/run[?task=booking-reminders] with x-cron-secret: CRON_SECRET (jobs.scheduled.turbineh)",
+      "booking form: smsReminders / whatsappReminders boxes (consent) and the phone number",
+    ]
+  outputs:
+    [
+      "booking_reminders rows: one per appointment, channel and start time (sending → sent | logged | skipped | retrying | failed | unknown | cancelled)",
+      "{ sent, skipped, failed } per runner call; /dashboard/appointments/reminders for staff",
+    ]
+  errors:
+    [
+      "the app refuses to start when params name a channel whose messaging component is missing",
+      "a ticked SMS/WhatsApp box without a reachable mobile number refuses the booking with a message (nothing booked)",
+    ]
+  limits: ["100 appointments and 100 retries per runner call; attempt lease 3 minutes; backoff 1 min–1 h"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code when a booking request asks for reminders (compiler pattern \"reminders\"); requires domain.bookings.turbineh and jobs.scheduled.turbineh. files/: src/reminders/{config,schedule,service}.ts + params.json + channels/, src/db/component-booking-reminders.ts, /dashboard/appointments/reminders, unit + E2E tests. files-with/: the booking form's consent boxes (domain.bookings.turbineh), the cron task (jobs.scheduled.turbineh), the SMS and WhatsApp channels with their E2E suites (messaging.sms.twilio, messaging.whatsapp.meta)."
+  config: [CRON_SECRET]
+  migrations: true
+params:
+  file: src/reminders/params.json
+  schema: params.schema.json
+  entities: [Reminder, AppointmentReminder, BookingReminder, ReminderLog, Notification, NotificationLog]
+quality:
+  tests:
+    {
+      command: "unit (due time across DST, booked-after rule, texts with the local time, backoff, params) + E2E (email reminder once with the local time, cancelled appointment not reminded, staff page; SMS: consent box, Twilio request, signed delivery update, STOP, no consent, retry and dropped retry; WhatsApp: template with parameters, verification, signed statuses, STOP); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: runner behind CRON_SECRET (jobs.scheduled), staff page behind ADMIN_EMAILS, consent recorded only from the person's own ticked box, phone numbers validated before consent is stored, queries through Drizzle (one parameterised SQL update)."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "bookings + reminders by email, SMS and WhatsApp pass the full verification gate with the reminder E2E suites"
+    origin: tested
+    ref: "verify:recipe bookings+domain.reminders.turbineh+messaging.sms.twilio+messaging.whatsapp.meta (ADR-0070)"
+relations:
+  requires: [domain.bookings.turbineh, jobs.scheduled.turbineh]
+  provides: [domain.reminders]
+  conflicts: []
+  tested_with: [recipe.bookings]

@@ -34,14 +34,18 @@ config:
   - { name: "src/jobs/params.json", default: "overdue reminders 07:00 daily, digest 08:00 weekdays, UTC", description: "Jobs from the request: id, kind, cron, timeZone, what (validated at start-up)" }
   - { name: CRON_SECRET, description: "Shared secret of /api/cron/run (≥32 chars); without it the route answers 503" }
 interfaces:
-  - { name: "Cron route", signature: "GET|POST /api/cron/run[?job=<id>] — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { ran, skipped, failed }", where: src/app/api/cron/run/route.ts }
+  - { name: "Cron route", signature: "GET|POST /api/cron/run[?job=<id>|?task=<id>] — x-cron-secret or Authorization: Bearer <CRON_SECRET> → { ran, skipped, failed, tasks }", where: src/app/api/cron/run/route.ts }
   - { name: runScheduled, signature: "runScheduled({ jobId?, now? }, jobs?) → RunReport — claims (job, latest occurrence), sends the digest, records the run", where: src/jobs/runner.ts }
   - { name: DIGESTS, signature: "Record<kind, (job, now) => Promise<{ to, subject, text }[]>>", where: src/jobs/digests.ts }
+  - { name: TASKS, signature: "Task[] — { id, run(now) → { sent, skipped, failed } }, run on every call (no cron of their own; idempotent by their own records)", where: src/jobs/tasks.ts }
   - { name: "Cron", signature: "parseCron(expr); matches(cron, at, timeZone); lastOccurrence(expr, timeZone, now, lookbackDays = 8)", where: src/jobs/cron.ts }
 extension_points:
   - what: "Add a scheduled job (weekly report, reminder before a booking…)"
     where: "src/jobs/params.json, src/jobs/digests.ts"
     how: "Add a job with kind \"custom\" (or a new kind) and return its emails from DIGESTS; the runner handles the schedule, idempotence and logging."
+  - what: "Hand the route work that falls due between calls (another component's task)"
+    where: "src/jobs/tasks.ts"
+    how: "A component replaces this file through files-with/jobs.scheduled.turbineh/ (domain.reminders.turbineh adds its booking-reminders task); each task must be idempotent by its own records."
   - what: "Change when a job runs or its time zone"
     where: "src/jobs/params.json"
     how: "Edit cron (five fields) and timeZone (IANA); validated at start-up."
@@ -53,7 +57,7 @@ compatibility:
   framework: "next ^16 route handlers, drizzle-orm with PostgreSQL, zod 4"
   recipes: [projects, internal-tool, client-portal, tracker, saas-crud]
   requires: []
-  works_with: [domain.workflow.turbineh, email.transactional.turbineh, jobs.queue.turbineh]
+  works_with: [domain.workflow.turbineh, email.transactional.turbineh, jobs.queue.turbineh, domain.reminders.turbineh]
   notes: "Without domain.workflow.turbineh the built-in digests have no data (custom jobs only)."
 security:
   - "The route requires CRON_SECRET (≥32 characters) in a header, compared in constant time; disabled without it"
@@ -68,7 +72,7 @@ guarantees:
 limits:
   - "Needs an external scheduler; only the latest missed occurrence of a job runs"
   - "Workflow records have a creator, not an assignee: overdue emails go to whoever created the record"
-  - "Email only (no SMS or push)"
+  - "Its own digests are email only; SMS and WhatsApp come from components that hand it tasks (domain.reminders.turbineh)"
 example: |
   // src/jobs/params.json
   { "jobs": [{ "id": "overdue-reminders", "kind": "overdue-digest", "cron": "0 7 * * *", "timeZone": "Europe/Madrid",
