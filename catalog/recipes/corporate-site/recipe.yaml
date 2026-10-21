@@ -5,10 +5,13 @@ providedEntities:
   [Post, Article, BlogPost, News, NewsItem, Page, Message, ContactMessage, Inquiry, Contact, Service, Faq, Setting, SiteSetting]
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # Implemented by the template itself (native, no extra dependencies).
-providedCapabilities: [content.blog, content.rss, seo.sitemap, seo.structured-data, ui.navigation, ui.accordion, ui.markdown]
+providedCapabilities: [seo.sitemap, seo.structured-data, ui.navigation, ui.accordion]
+# The blog (Markdown posts with frontmatter, drafts, authors, tags, search, reading time, RSS, sitemap, JSON-LD) is the
+# component content.blog.turbineh: code installs it in every corporate site (its pages use the site's header and footer).
+requiredComponents:
+  content.blog: content.blog.turbineh
 nav:
   - { label: Website texts, href: /dashboard/site }
-  - { label: Blog posts, href: /dashboard/posts }
   - { label: Messages, href: /dashboard/messages }
 
 # Agent guide inputs (AGENTS.md / turbineh.json): where to extend this recipe.
@@ -20,6 +23,9 @@ guide:
     - what: "Add a public page"
       where: "src/app/<page>/page.tsx, src/components/site-shell.tsx (menu), src/app/sitemap.ts"
       how: "Wrap it in SiteShell and list it in the sitemap."
+    - what: "Show posts elsewhere or change the blog"
+      where: "src/app/page.tsx, src/app/sitemap.ts, src/app/llms.txt/route.ts"
+      how: "The blog is the component content.blog.turbineh (docs/components/content.blog.turbineh.md): read posts with listPublished() from src/blog/posts.ts (published only); its frame is src/blog/shell.tsx."
     - what: "Change where contact messages go"
       where: "src/app/contact/actions.ts, ADMIN_EMAILS"
       how: "Messages are stored and emailed to every staff email."

@@ -1,0 +1,147 @@
+# Canonical acceptance criteria (ADR-0063) of the blog (content.blog.turbineh): one per function, each linked to the
+# test of tests/e2e/blog.spec.ts that proves it. The blog's nouns, absorbed by every criterion below:
+- vocabulary: >-
+    blog blogs post posts article articles entry entries story stories insight insights piece pieces content site
+    website public publication publications research topic topics reader readers user users people homepage home
+
+- id: blog.write-publish
+  criterion: "The admin writes a post in Markdown, saves it as a draft that stays private (not on the blog), then publishes it"
+  advertises: "editor"
+  says: ["writ|creat|submit|add|compos|draft|publish|edit|markdown|frontmatter|front matter", "post|article|blog|entr|stor|insight|draft|publish"]
+  terms: >-
+    admin admins administrator author authors editor editors staff owner write writes written writing create creates
+    created new submit submits submitted add adds compose composes edit edits editor markdown frontmatter front
+    matter text body title save saves saved draft drafts private hidden unpublished stays stay not visible until
+    then publish publishes published publishing appear appears appearing live public feed later
+  actors: [admin, administrator, author, editor, owner, staff, writer]
+  tests:
+    - "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it"
+
+- id: blog.frontmatter
+  criterion: "The admin writes a post in Markdown with frontmatter (title, author, tags, excerpt)"
+  advertises: "Markdown posts with frontmatter"
+  says: ["frontmatter|front matter|yaml header|metadata header"]
+  terms: >-
+    admin author editor staff write writes markdown frontmatter front matter yaml header metadata title author tags
+    tag excerpt summary fields fill fills set sets post
+  actors: [admin, administrator, author, editor, owner, staff, writer]
+  tests:
+    - "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it"
+
+- id: blog.list
+  criterion: "A visitor sees the published posts newest first, paginated, with author, date, reading time and tags"
+  advertises: "paginated list"
+  says: ["\\blist|feed|newest|latest|recent|chronolog|sort|order|paginat|index|archive|all (the )?(posts|articles)"]
+  terms: >-
+    visitor visitors reader readers see sees view views browse browses list lists listing feed index archive
+    published newest latest recent most first sorted sort sorts order ordered chronological date dates paginated
+    pagination page pages older newer each author authors reading time tags tag excerpt summary summaries shown show
+    shows display displays displayed card cards main
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor sees the published posts newest first, paginated, each with its author, date, reading time and tags"
+
+- id: blog.read-post
+  criterion: "A visitor reads a post with its author, date, reading time and tags"
+  advertises: "post page with reading time"
+  says: ["read|open|view|full|detail|single|reading time|min(ute)?s? read|how long"]
+  terms: >-
+    visitor visitors reader readers read reads reading open opens view views full single detail details page click
+    clicks its author date reading time minute minutes min how long takes take estimated tags tag text body
+    rendered markdown shows show displays display
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata"
+
+- id: blog.seo
+  criterion: "A post page has Article JSON-LD and OpenGraph metadata"
+  advertises: "structured data"
+  says: ["\\bseo\\b|json-?ld|structured data|schema\\.org|open ?graph|\\bog\\b|meta(data| tags?)|social preview|search engine"]
+  terms: >-
+    seo search engine engines json ld structured data schema org article opengraph open graph og metadata meta
+    tags preview previews page post each has have optimized optimised
+  actors: [visitor]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata"
+
+- id: blog.tags
+  criterion: "A visitor opens a tag and sees only the posts with that tag"
+  advertises: "tags"
+  says: ["\\btag|categor|topic|label", "only|filter|with that|containing|matching|by|click|open"]
+  terms: >-
+    visitor visitors reader readers read reads reading viewing open opens click clicks tag tags tagged category
+    categories topic topics label labels filter filters filtered see sees list only posts containing with that
+    matching page shows show
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor opens a tag and sees only the posts with that tag"
+
+- id: blog.authors
+  criterion: "A visitor opens an author page with the author's bio and only that author's posts"
+  advertises: "author pages"
+  says: ["author|writer|contributor|byline", "page|profile|bio|posts by|their posts|only|list"]
+  terms: >-
+    visitor visitors reader readers open opens click clicks author authors writer writers contributor
+    contributors byline page pages profile profiles bio bios biography their his her only list posts publication
+    history see sees shows show
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor opens an author page with the author's bio and only that author's posts"
+
+- id: blog.search
+  criterion: "A visitor searches posts by keyword and sees only the matching posts"
+  advertises: "search"
+  says: ["search|keyword|query|find|look ?up"]
+  terms: >-
+    visitor visitors reader readers search searches searching searched bar box keyword keywords query queries term
+    terms enter enters type types find finds look up only matching match matches relevant results result see sees
+    show shows feed list update updates updated
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › a visitor searches posts by keyword and sees only the matching posts"
+
+- id: blog.rss
+  criterion: "The RSS feed lists the published posts newest first"
+  advertises: "RSS"
+  says: ["\\brss\\b|atom|feed reader|syndicat|subscribe (to|via) (the )?feed"]
+  terms: >-
+    rss feed feeds atom syndication syndicate subscribe reader readers lists list published newest first latest
+    recent posts items escaped xml
+  actors: [visitor, reader]
+  tests:
+    - "tests/e2e/blog.spec.ts › the RSS feed lists the published posts newest first with escaped titles, author and tags"
+
+- id: blog.sitemap
+  criterion: "The blog sitemap lists the published posts, their tag pages and author pages"
+  advertises: "sitemap"
+  says: ["sitemap|site map|index(ed|ing) by search"]
+  terms: >-
+    sitemap sitemaps site map xml lists list published posts tag tags author authors pages page search engines
+    indexed indexing google
+  actors: [visitor]
+  tests:
+    - "tests/e2e/blog.spec.ts › the blog sitemap lists the published posts, their tag pages and author pages"
+
+- id: blog.unpublish
+  criterion: "The admin unpublishes and deletes posts: they disappear from the blog, the RSS feed and the sitemap"
+  advertises: "drafts and published states"
+  says: ["unpublish|delete|remov|take down|withdraw|hide|archiv"]
+  terms: >-
+    admin administrator author editor staff owner unpublish unpublishes unpublished delete deletes deleted remove
+    removes removed take down withdraw hide hides archive disappear disappears gone no longer visible blog rss feed
+    sitemap public
+  actors: [admin, administrator, author, editor, owner, staff]
+  tests:
+    - "tests/e2e/blog.spec.ts › the admin unpublishes and deletes posts: they disappear from the blog, the RSS feed and the sitemap"
+
+- id: blog.staff-only
+  criterion: "People who are not staff cannot open the blog editor"
+  advertises: "editor"
+  says: ["staff|admin|author|editor|sign[ -]?in|log[ -]?in|only", "cannot|can't|\\bnot\\b|only|restrict|protect|deny|denied"]
+  terms: >-
+    people person visitors visitor readers reader users who not non staff admin admins administrators authors
+    editor editors only can cannot open access edit write manage protected restricted sign in signed log logged
+    denied redirect redirected
+  actors: [visitor, reader, guest, anonymous, user]
+  tests:
+    - "tests/e2e/blog.spec.ts › people who are not staff cannot open the blog editor"

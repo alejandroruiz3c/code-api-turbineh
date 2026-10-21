@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Small, safe Markdown renderer for blog posts: headings (#, ##, ###), paragraphs, bullet and numbered lists,
+ * Small, safe Markdown renderer for blog posts (component content.blog.turbineh): headings (#, ##, ###), paragraphs, bullet and numbered lists,
  * **bold**, *italic*, `code` and [links](https://…). It produces React elements only — raw HTML is shown as text,
  * and links are limited to http(s), mailto and site-relative paths.
  */

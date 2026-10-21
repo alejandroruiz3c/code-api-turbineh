@@ -1,0 +1,25 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it"
+  covers: ["draft|unpublished|private", "post|article|blog"]
+- test: "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it"
+  covers: ["frontmatter|front matter|markdown"]
+- test: "tests/e2e/blog.spec.ts › a visitor sees the published posts newest first, paginated, each with its author, date, reading time and tags"
+  covers: ["paginat|newest|latest|most recent|sorted|chronolog"]
+- test: "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata"
+  covers: ["reading time|min(ute)?s? read|how long"]
+- test: "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata"
+  covers: ["json-?ld|structured data|open ?graph|schema\\.org"]
+- test: "tests/e2e/blog.spec.ts › a visitor opens a tag and sees only the posts with that tag"
+  covers: ["\\btag|categor|topic", "post|article"]
+- test: "tests/e2e/blog.spec.ts › a visitor opens an author page with the author's bio and only that author's posts"
+  covers: ["author|writer", "page|profile|bio"]
+- test: "tests/e2e/blog.spec.ts › a visitor searches posts by keyword and sees only the matching posts"
+  covers: ["search|keyword", "post|article|blog|feed"]
+- test: "tests/e2e/blog.spec.ts › the RSS feed lists the published posts newest first with escaped titles, author and tags"
+  covers: ["\\brss\\b|atom feed"]
+- test: "tests/e2e/blog.spec.ts › the blog sitemap lists the published posts, their tag pages and author pages"
+  covers: ["sitemap"]
+- test: "tests/e2e/blog.spec.ts › the admin unpublishes and deletes posts: they disappear from the blog, the RSS feed and the sitemap"
+  covers: ["unpublish|delete|remov", "post|article"]
+- test: "tests/unit/blog.test.ts › renders Markdown without executing HTML and only allows safe link targets"
+  covers: ["markdown|html|xss|sanitiz", "safe|escap|sanitiz|without"]

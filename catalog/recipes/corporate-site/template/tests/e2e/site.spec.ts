@@ -50,14 +50,13 @@ test.describe.serial("corporate site", () => {
     page,
     request,
   }) => {
-    await page.goto("/dashboard/posts");
+    await page.goto("/dashboard/blog/edit");
     await page.getByLabel("Title").fill("Our first article");
-    await page.getByLabel("Summary").fill("What we learned in our first year.");
-    await page.getByLabel(/Text \(Markdown/).fill("# Hello\n\nThis is **our** first article.");
-    await page.getByLabel("Published").check();
-    await page.getByRole("button", { name: "Create post" }).click();
+    await page.getByLabel("Summary (optional)").fill("What we learned in our first year.");
+    await page.getByLabel(/^Text \(Markdown/).fill("# Hello\n\nThis is **our** first article.");
+    await page.getByRole("button", { name: "Publish" }).click();
     // Wait for the server action to finish (it redirects back to the list) before leaving the page.
-    await expect(page.getByRole("cell", { name: "Our first article" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Our first article" }).first()).toBeVisible();
     await page.goto("/blog");
     await page.getByRole("link", { name: "Our first article" }).click();
     await expect(page.getByRole("heading", { name: "Our first article", level: 1 })).toBeVisible();
