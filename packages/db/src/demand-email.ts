@@ -146,12 +146,17 @@ const COLUMNS: Record<Kind, { sent: string; attempts: string }> = {
 };
 
 /** Atomically marks the build's demand row as being sent (or returns null when it was already sent/claimed). */
-async function claim(db: Db, buildId: string, kind: Kind): Promise<ClaimedRow | null> {
+async function claim(
+  db: Db,
+  buildId: string,
+  kind: Kind,
+  anyAge = false,
+): Promise<ClaimedRow | null> {
   const c = COLUMNS[kind];
   const res = await db.query<ClaimedRow>(
     `UPDATE use_case_demand d SET ${c.sent} = now(), ${c.attempts} = d.${c.attempts} + 1
      WHERE d.build_id = $1 AND d.${c.sent} IS NULL AND d.${c.attempts} < $2
-       AND d.created_at > now() - interval '${CONFIRM_WINDOW}'${
+       AND (${anyAge ? "true" : "false"} OR d.created_at > now() - interval '${CONFIRM_WINDOW}')${
          kind === "confirmation"
            ? `
        AND coalesce(d.email, (SELECT p.email FROM priority_notifications p WHERE p.owner_id = d.owner_id)) IS NOT NULL`
@@ -182,11 +187,16 @@ export async function sendDemandEmails(
   mailer: Mailer | null,
   buildId: string,
   log?: Logger,
+  /**
+   * ADR-0074: the person just asked to be notified on this flow ("Notify me when it's covered"), so the confirmation
+   * is sent even when the request is older than the confirmation window.
+   */
+  opts: { anyAge?: boolean } = {},
 ): Promise<DemandEmailResult> {
   const result: DemandEmailResult = { confirmation: "skipped", ownerAlert: "skipped" };
   if (!mailer) return result;
   try {
-    const row = await claim(db, buildId, "confirmation");
+    const row = await claim(db, buildId, "confirmation", opts.anyAge === true);
     if (row) {
       if (!isEmailAddress(row.email)) {
         // Not a usable address: nothing was sent, and there is nothing to retry.

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ContactBanner } from "@/components/contact-email";
 import { Logo } from "@/components/logo";
 import { ProductNav } from "@/components/product-nav";
 import "./globals.css";
@@ -42,6 +43,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </Link>
           <ProductNav />
         </header>
+        {/* ADR-0074: asks a workspace without a contact email for one, once per visit. */}
+        <ContactBanner />
         <div id="main">{children}</div>
         <footer className="mx-auto mt-24 flex max-w-6xl flex-wrap justify-between gap-2 border-t border-line px-6 py-8 text-xs text-muted">
           <p>TurbineH · Secured software flows · open-source library (Apache-2.0)</p>

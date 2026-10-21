@@ -26,9 +26,9 @@ dashboards, client portals, CRUD SaaS, landing pages). Before writing one of the
 - Later: \`turbineh left --json\` (what is left), \`turbineh verify --json\` (checks with file:line and fix).
   Before handing over: \`turbineh verify --full --json\` (the gate's security and policy checks, here).
 - Exit: 0 green · 3 ask the user, then \`--approve\` · 4 timeout → \`turbineh resume <id> --json\` · 5 failed · 6 gate
-  not green · 7 local conflict (message names the files).
+  not green · 7 local conflict (message names the files). Own picks: \`--components a,b\`.
 - Uncovered use case: exit 5 \`use_case_not_covered\` + \`explanation\`, or exit 3 \`components_only_offer\` + \`offer\` —
-  show it; \`--approve\` only if the user wants it; never rephrase around it. Own picks: \`--components a,b\`.
+  show it; \`--approve\` if they want it; never rephrase around it; \`turbineh notify <id> <email>\` emails them when covered.
 ${END}
 `;
 
@@ -61,7 +61,8 @@ does not cover is never built. If verified components serve part of it, the buil
 \`outOfScope\`; show it to the user with \`error.explanation\` (what is not covered and why, the priority notice) and
 continue with \`turbineh resume <id> --approve --json\` only if they want those components. With nothing to offer it
 fails with \`error.code: "use_case_not_covered"\` and \`error.explanation\` (exit 5): tell the user the library doesn't
-cover it yet and that they will be notified with priority — do not rephrase the spec to get around it. A partially
+cover it yet and that they will be notified with priority (if they give you their email for it, run
+\`turbineh notify <id> <email>\`) — do not rephrase the spec to get around it. A partially
 covered spec stops with exit 3: the plan's \`scope.removed\` lists what is out of scope; continue with \`--approve\`
 only if the user wants the covered part. To use specific verified components, find them with
 \`turbineh search "<need>"\` and pass \`--components id1,id2\`.

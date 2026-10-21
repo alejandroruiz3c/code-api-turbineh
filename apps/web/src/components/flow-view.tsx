@@ -500,6 +500,7 @@ function WhatHappened({
           <div className="mt-3">
             <NotCovered
               explanation={p.explanation}
+              flowId={id}
               action={
                 p.explanation.offer && result.prompt ? (
                   <button

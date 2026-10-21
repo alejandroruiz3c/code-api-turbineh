@@ -22,6 +22,7 @@ import {
 import { z } from "zod";
 import { clientIpHash } from "@/server/client-ip";
 import { db } from "@/server/db";
+import { contactEmailOf, EmailField } from "@/server/contact";
 import { confirmDemandLater } from "@/server/demand-email";
 import { env } from "@/server/env";
 import { catalog, productProblem, requireCaller, resultOf } from "@/server/product";
@@ -80,6 +81,11 @@ const Body = z.object({
    * `use_case_not_covered`.
    */
   components: z.array(z.string().max(120)).max(20).optional(),
+  /**
+   * ADR-0074: where to tell the person when an uncovered request becomes available (priority-list confirmation, ADR-0056).
+   * Default: the signed-in account's email, else the workspace's (given at the access page).
+   */
+  notify_email: EmailField.optional(),
 });
 
 /**
@@ -189,6 +195,7 @@ export async function POST(req: Request): Promise<Response> {
   });
   const idempotencyKey =
     req.headers.get("idempotency-key")?.slice(0, 200) ?? parsed.data.idempotency_key;
+  const contactEmail = await contactEmailOf(caller, parsed.data.notify_email);
   const { id, created } = await enqueueBuild(db, {
     prompt: need,
     ownerId: caller.ownerId,
@@ -207,8 +214,8 @@ export async function POST(req: Request): Promise<Response> {
       },
       ...(environment.repo ? { repo: environment.repo } : {}),
       ...(parsed.data.generate ? { autoGenerate: true } : {}),
-      // ADR-0052: an uncovered request is recorded as demand; signed-in people get the priority notice by email.
-      ...(caller.kind === "session" ? { contact_email: caller.email } : {}),
+      // ADR-0052/0074: an uncovered request is recorded as demand; the person gets the priority notice by email.
+      ...(contactEmail ? { contact_email: contactEmail } : {}),
       // ADR-0061: web, CLI, MCP or API, for the owner report.
       channel: requestChannel(req.headers),
     },

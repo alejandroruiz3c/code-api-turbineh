@@ -1,4 +1,5 @@
 import type pg from "pg";
+import { isPrivateOwner } from "./contacts.js";
 
 /**
  * Demand for use cases the library does not cover yet (ADR-0052). The worker records every refused (or partially
@@ -15,9 +16,10 @@ export interface DemandInput {
 }
 
 export async function recordDemand(db: pg.Pool, d: DemandInput): Promise<void> {
+  // ADR-0074: without a contact email on the flow, the workspace's own (only private workspaces have one).
   await db.query(
     `INSERT INTO use_case_demand (build_id, owner_id, email, request, status, use_case, missing)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+     VALUES ($1, $2, coalesce($3, (SELECT w.email FROM workspace_contacts w WHERE w.owner_id = $2)), $4, $5, $6, $7::jsonb)
      ON CONFLICT (build_id) WHERE build_id IS NOT NULL DO NOTHING`,
     [
       d.buildId,
@@ -30,13 +32,16 @@ export async function recordDemand(db: pg.Pool, d: DemandInput): Promise<void> {
     ],
   );
   if (!d.ownerId) return;
+  // A shared workspace (several people behind one name) never gets an email on its subscription: it would be used as
+  // the fallback address for everyone else's requests there.
   await db.query(
-    `INSERT INTO priority_notifications (owner_id, email) VALUES ($1, $2)
+    `INSERT INTO priority_notifications (owner_id, email)
+     VALUES ($1, coalesce($2, (SELECT w.email FROM workspace_contacts w WHERE w.owner_id = $1)))
      ON CONFLICT (owner_id) DO UPDATE SET
        email = coalesce(EXCLUDED.email, priority_notifications.email),
        last_request_at = now(),
        requests = priority_notifications.requests + 1`,
-    [d.ownerId, d.email],
+    [d.ownerId, isPrivateOwner(d.ownerId) ? d.email : null],
   );
 }
 

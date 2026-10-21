@@ -55,6 +55,8 @@ export function FlowWizard({
     action: string;
     notCovered?: string[];
     explanation?: NotCoveredExplanation;
+    /** The refused flow (ADR-0074: "Notify me when it's covered"). */
+    id?: string;
   } | null>(null);
   const github = useGithub();
   const params = useSearchParams();
@@ -211,7 +213,7 @@ export function FlowWizard({
           <div role="alert" className="rounded-lg border border-bad/60 p-4 text-sm">
             {error.explanation ? (
               // ADR-0062: what is not covered and why, the priority notice and what we can do now.
-              <NotCovered explanation={error.explanation} />
+              <NotCovered explanation={error.explanation} flowId={error.id} />
             ) : (
               <p className="text-bad">{error.message}</p>
             )}

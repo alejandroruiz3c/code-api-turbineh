@@ -424,6 +424,37 @@ export const explicitComponents = (flag: unknown): { components?: string[] } => 
   return ids.length ? { components: ids } : {};
 };
 
+/** Same rule as the server: one @, a dot in the domain, no spaces or quotes. */
+const EMAIL_RE = /^[^\s@<>,;"']+@[^\s@<>,;"']+\.[^\s@<>,;"']+$/;
+
+/**
+ * `--notify-email <address>` or TURBINEH_NOTIFY_EMAIL (ADR-0074): where TurbineH tells you when an uncovered request
+ * becomes available (sent as `notify_email`). Without it, the workspace's or account's email is used, if any.
+ */
+export const notifyEmail = (
+  flag: unknown,
+  envValue = process.env.TURBINEH_NOTIFY_EMAIL,
+): { notify_email?: string } => {
+  const raw = typeof flag === "string" ? flag : envValue;
+  if (raw === undefined || raw.trim() === "") {
+    if (flag === true)
+      fail(
+        "usage",
+        "--notify-email needs an address.",
+        "Run it with `--notify-email you@example.com`.",
+      );
+    return {};
+  }
+  const email = raw.trim();
+  if (email.length > 254 || !EMAIL_RE.test(email))
+    fail(
+      "usage",
+      `Not a valid email address: ${typeof flag === "string" ? "--notify-email" : "TURBINEH_NOTIFY_EMAIL"}.`,
+      "Use an address like you@example.com.",
+    );
+  return { notify_email: email };
+};
+
 export async function plan(c: Ctx): Promise<CommandResult> {
   const need = c.args.join(" ").trim();
   if (!need)
@@ -447,6 +478,7 @@ export async function plan(c: Ctx): Promise<CommandResult> {
           : {},
       preferences: project.preferences,
       ...explicitComponents(c.flags.components),
+      ...notifyEmail(c.flags["notify-email"]),
     },
   });
   project.lastPlan = created.id;
@@ -968,6 +1000,44 @@ export function estimateLines(e: Plan["estimate"]): string[] {
       ? `  (benchmark average: fewer than ${c.minSamples} finished runs of this recipe yet)`
       : "  (benchmark average, not calibrated on finished runs)",
   ];
+}
+
+/**
+ * `turbineh notify [id] <email>` (ADR-0074): for a request the library does not cover yet, tells TurbineH where to
+ * email you when it is covered (POST /v1/builds/{id}/notify); the priority-list confirmation is sent once. Default id:
+ * the last flow of this project.
+ */
+export async function notify(c: Ctx): Promise<CommandResult> {
+  const [first, second] = c.args;
+  const email = second ?? first;
+  const project = readProject(c.cwd);
+  const id = second ? first : project?.lastPlan;
+  if (!email)
+    fail(
+      "usage",
+      "No email address given.",
+      "Run `turbineh notify <flow-id> you@example.com` (the id from `turbineh status`).",
+    );
+  if (!id)
+    fail(
+      "usage",
+      "No flow id given and no last flow in this folder.",
+      "Run `turbineh notify <flow-id> you@example.com` (the id from `turbineh status`).",
+    );
+  const body = notifyEmail(email, undefined);
+  const r = await api<{ confirmation?: string }>(
+    `/v1/builds/${encodeURIComponent(id as string)}/notify`,
+    { method: "POST", body: { email: body.notify_email }, workspace: project?.workspace },
+  );
+  return {
+    ok: true,
+    command: "notify",
+    data: { id, ...r },
+    lines: [
+      `${green("✔")} You're on the priority list for this request: TurbineH will email you when it's covered.`,
+      ...(r.confirmation === "scheduled" ? [dim("  A confirmation email is on its way.")] : []),
+    ],
+  };
 }
 
 /**

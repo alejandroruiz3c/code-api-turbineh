@@ -60,6 +60,13 @@ const spec = {
                     description:
                       "ADR-0062: the use case is not covered but verified components serve part of it — build that components-only package (explicit choice; the use case itself is never built). Without it such a request fails with use_case_not_covered and `problem.explanation.offer`.",
                   },
+                  notify_email: {
+                    type: "string",
+                    format: "email",
+                    maxLength: 254,
+                    description:
+                      "ADR-0074: where to tell the person when an uncovered request becomes available (one priority-list confirmation email, then the notice). Default: the signed-in account's email, else the workspace's (PUT /v1/contact). Only TurbineH staff see it.",
+                  },
                   options: { type: "object" },
                 },
               },
@@ -96,6 +103,90 @@ const spec = {
           { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],
         responses: { "200": { description: "Build" }, "404": { description: "Not found" } },
+      },
+    },
+    "/v1/builds/{id}/notify": {
+      get: {
+        summary:
+          "For a refused flow (use_case_not_covered): whether an email is on file for the priority notice (never the address)",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": { description: "{ demand, email_on_file, confirmed, purpose }" },
+          "404": { description: "Not found (or not yours)" },
+        },
+      },
+      post: {
+        summary:
+          "Notify me when it's covered (ADR-0074): add an email to a refused flow; the priority-list confirmation is emailed once",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email"],
+                properties: { email: { type: "string", format: "email", maxLength: 254 } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description:
+              '{ demand: true, email_on_file: true, confirmation: "scheduled" | "already_sent" | "email_disabled" }',
+          },
+          "404": { description: "Not found (or not yours)" },
+          "409": { description: "not_uncovered: the flow was not refused by the scope gate" },
+          "422": { description: "Invalid email address" },
+          "429": { description: "rate_limited: at most 5 email changes per flow" },
+        },
+      },
+    },
+    "/v1/contact": {
+      get: {
+        summary:
+          "This workspace's contact email (ADR-0074), masked (a•••@example.com); never the address of anyone else",
+        responses: {
+          "200": {
+            description:
+              "{ email_on_file, email (masked) | null, source, shared_workspace, purpose }",
+          },
+        },
+      },
+      put: {
+        summary:
+          "Set this workspace's contact email: used as notify_email for its plans and builds, and on its earlier refused requests without one",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email"],
+                properties: { email: { type: "string", format: "email", maxLength: 254 } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "{ email_on_file: true, email (masked), saved }" },
+          "403": {
+            description:
+              "shared_workspace: a guessable x-turbineh-workspace (or none) cannot hold an email — send a random UUID or notify_email per request",
+          },
+          "409": { description: "account_email: signed-in accounts use their account email" },
+          "422": { description: "Invalid email address" },
+          "429": { description: "rate_limited: at most 10 changes a day" },
+        },
+      },
+      delete: {
+        summary: "Forget this workspace's contact email",
+        responses: { "204": { description: "Done" } },
       },
     },
     "/v1/builds/{id}/events": {
@@ -206,7 +297,7 @@ const spec = {
       post: {
         summary: "Plan a need against your stack (nothing is generated)",
         description:
-          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate?, components? }. Scope gate (ADR-0052): only use cases the library covers are planned. An uncovered use case is never built (the demand is recorded for a priority notice). When verified components serve part of it (ADR-0062), the answer is a components-only offer: a plan with `scope.status: "components_only"`, `scope.explanation` (what is not covered and why, the priority notice, what we can do now) and `offer` (each component with the requirements it serves, `outOfScope`, how to approve); its first `needsApproval` entry is the explicit choice and `POST /v1/plans/{id}/generate {"approve": true}` builds exactly those components. With nothing to offer it answers 422 `use_case_not_covered` with `notCovered`, `explanation` and the flow `id`; a partially covered one returns a plan whose `scope.removed` lists what is out of scope and whose first `needsApproval` entry is the explicit choice to build only the covered part. `components: ["id", …]` (verified ids from /v1/components) plans exactly those components. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace (a random UUID; anything else is a 400 `invalid_workspace`) keeps projects apart with Bearer auth; a browser session has one workspace (its cookie) and ignores the header. Cookie-authenticated writes must send Content-Type: application/json (415 otherwise). Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
+          'Body: { need (up to 20,000 characters: a full specification is accepted), environment: { repo | files | stack }, preferences?, generate?, components?, notify_email? }. Scope gate (ADR-0052): only use cases the library covers are planned. An uncovered use case is never built (the demand is recorded for a priority notice). When verified components serve part of it (ADR-0062), the answer is a components-only offer: a plan with `scope.status: "components_only"`, `scope.explanation` (what is not covered and why, the priority notice, what we can do now) and `offer` (each component with the requirements it serves, `outOfScope`, how to approve); its first `needsApproval` entry is the explicit choice and `POST /v1/plans/{id}/generate {"approve": true}` builds exactly those components. With nothing to offer it answers 422 `use_case_not_covered` with `notCovered`, `explanation` and the flow `id`; the person is emailed when it is covered at `notify_email` (ADR-0074; default: the account\'s or workspace\'s email, see /v1/contact), or later with POST /v1/builds/{id}/notify; a partially covered one returns a plan whose `scope.removed` lists what is out of scope and whose first `needsApproval` entry is the explicit choice to build only the covered part. `components: ["id", …]` (verified ids from /v1/components) plans exactly those components. `generate: true` continues into generation as soon as the plan needs no decision from a person. The plan carries `criteria`: each compiled acceptance criterion as covered (a shipped test will prove it) or open. Header x-turbineh-workspace (a random UUID; anything else is a 400 `invalid_workspace`) keeps projects apart with Bearer auth; a browser session has one workspace (its cookie) and ignores the header. Cookie-authenticated writes must send Content-Type: application/json (415 otherwise). Answers the Plan when ready within ~50 s (`?wait=0` returns at once with state "planning").',
         responses: {
           "200": { description: "Plan" },
           "202": { description: "{ id, state: planning, status_url }" },

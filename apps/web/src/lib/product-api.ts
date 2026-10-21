@@ -69,7 +69,13 @@ export interface RepoIntegration {
 
 export type ApiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; missing: boolean; status: number; error: ProductError | null };
+  | {
+      ok: false;
+      missing: boolean;
+      status: number;
+      /** `id`: the refused flow, when the API names it (POST /v1/plans 422). */
+      error: (ProductError & { id?: string }) | null;
+    };
 
 async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   let res: Response;
@@ -92,7 +98,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
   }
   if (res.ok) return { ok: true, data: (await res.json()) as T };
   const body = (await res.json().catch(() => null)) as
-    (Partial<ProductError> & { title?: string; detail?: string }) | null;
+    (Partial<ProductError> & { title?: string; detail?: string; id?: unknown }) | null;
   return {
     ok: false,
     missing: res.status === 404 || res.status === 405,
@@ -107,6 +113,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
           ...(Array.isArray(body.notCovered) ? { notCovered: body.notCovered } : {}),
           // ADR-0062: why each requirement is not covered, the priority notice and what we can do now.
           ...(body.explanation ? { explanation: body.explanation } : {}),
+          // The refused flow's id (POST /v1/plans 422), for "Notify me when it's covered" (ADR-0074).
+          ...(typeof body.id === "string" ? { id: body.id } : {}),
         }
       : null,
   };

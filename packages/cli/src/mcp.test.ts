@@ -24,10 +24,21 @@ let server: Server;
 let env: Record<string, string>;
 let cwd: string;
 let client: Client;
+/** Bodies POSTed to /v1/builds/{id}/notify by the notify tool. */
+const notified: { url: string; body: unknown }[] = [];
 
 beforeAll(async () => {
   server = createServer((req, res) => {
     res.setHeader("Content-Type", "application/json");
+    if (req.method === "POST" && /^\/v1\/builds\/[^/]+\/notify$/.test(req.url ?? "")) {
+      let data = "";
+      req.on("data", (c: Buffer) => (data += c.toString()));
+      req.on("end", () => {
+        notified.push({ url: req.url ?? "", body: JSON.parse(data) as unknown });
+        res.end(JSON.stringify({ demand: true, email_on_file: true, confirmation: "scheduled" }));
+      });
+      return;
+    }
     if (req.url?.startsWith("/v1/capabilities"))
       res.end(
         JSON.stringify({
@@ -102,7 +113,18 @@ describe("turbineh mcp", () => {
   it("lists the agent tools with input schemas", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["ai_token", "apply", "build", "left", "plan", "resume", "search", "status", "verify"].sort(),
+      [
+        "ai_token",
+        "apply",
+        "build",
+        "left",
+        "notify",
+        "plan",
+        "resume",
+        "search",
+        "status",
+        "verify",
+      ].sort(),
     );
     expect(tools.find((t) => t.name === "build")?.inputSchema.properties).toHaveProperty("spec");
     expect(tools.find((t) => t.name === "verify")?.inputSchema.properties).toHaveProperty("full");
@@ -119,6 +141,26 @@ describe("turbineh mcp", () => {
     const l = await client.callTool({ name: "left", arguments: {} });
     expect(l.structuredContent).toEqual(await cli("left"));
   }, 60_000);
+
+  it("notify (ADR-0074): posts the user's email for a refused flow; build and plan take notifyEmail", async () => {
+    const id = "00000000-0000-4000-8000-000000000009";
+    const r = await client.callTool({
+      name: "notify",
+      arguments: { id, email: "Person@Example.com" },
+    });
+    expect(r.isError).toBe(false);
+    expect(r.structuredContent).toMatchObject({ ok: true, command: "notify", data: { id } });
+    expect(notified.at(-1)).toEqual({
+      url: `/v1/builds/${id}/notify`,
+      body: { email: "Person@Example.com" },
+    });
+    const bad = await client.callTool({ name: "notify", arguments: { id, email: "not-an-email" } });
+    expect(bad.isError).toBe(true);
+    expect(bad.structuredContent).toMatchObject({ ok: false, error: { code: "usage" } });
+    const { tools } = await client.listTools();
+    for (const t of ["build", "plan"])
+      expect(tools.find((x) => x.name === t)?.inputSchema.properties).toHaveProperty("notifyEmail");
+  });
 
   it("reports failures as tool errors with the same actionable error", async () => {
     const r = await client.callTool({ name: "status", arguments: { id: "nope" } });
