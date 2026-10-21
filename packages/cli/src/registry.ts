@@ -6,6 +6,7 @@ import {
   inspect,
   left,
   login,
+  notify,
   plan,
   revert,
   search,
@@ -33,6 +34,7 @@ export const COMMANDS: Record<string, (c: Ctx) => Promise<CommandResult>> = {
   connect,
   disconnect,
   "ai-token": aiToken,
+  notify,
 };
 
 /** Runs one command; failures become the same result object (and exit code) the CLI prints with --json. */

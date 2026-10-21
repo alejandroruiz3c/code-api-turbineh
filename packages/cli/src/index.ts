@@ -9,11 +9,14 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
 
   turbineh build "<spec>" | @spec.md  spec → verified code written and committed here (empty folder: whole app;
                                     project: capability in its own folder) + summary of what is left
-         [--approve] [--timeout <min>] [--components id,id] [--json]
+         [--approve] [--timeout <min>] [--components id,id] [--notify-email <address>] [--json]
                                     only covered use cases are built: an uncovered one is refused with why
                                     (use_case_not_covered, exit 5) or, when verified components serve part of
                                     it, offered as a components-only package (components_only_offer, exit 3;
                                     --approve builds only those components); --components builds exactly these
+                                    --notify-email (or TURBINEH_NOTIFY_EMAIL): where to tell you when an
+                                    uncovered request is covered (default: your workspace's email)
+  turbineh notify [id] <email>      a refused request: email me when it's covered (priority list)
   turbineh resume [id]              keep waiting for a build that timed out or was interrupted, then write it
   turbineh status [id]              flows, states, pending build and integrations
   turbineh ai-token <build-id>      issue the app's AI token (TURBINEH_AI_TOKEN), shown once
@@ -28,7 +31,7 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
   turbineh mcp                      MCP server on stdio: claude mcp add turbineh -- turbineh mcp
   turbineh search "<need>"          capabilities and components that cover a need
   turbineh inspect <id>             what a capability includes, needs and was verified with
-  turbineh plan "<need>" [--components id,id]
+  turbineh plan "<need>" [--components id,id] [--notify-email <address>]
                                     plan only: components, files, deps, settings, criteria, cost
   turbineh apply [plan] [--approve] generate a plan, integrate it on a new branch (one commit)
   turbineh apply [plan] --pr [--repo owner/name] [--base branch]

@@ -86,6 +86,7 @@ export function PlanReview({
           <div className="mt-4">
             <NotCovered
               explanation={plan.scope.explanation}
+              flowId={plan.id}
               action={
                 <button
                   type="button"

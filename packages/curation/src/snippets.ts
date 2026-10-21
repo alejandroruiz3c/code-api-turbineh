@@ -208,7 +208,9 @@ export function expectedExample(
   if (s.kind === "typescript" && o.errors.length === 0) {
     const unchanged =
       current?.compiled &&
-      currentExample === s.code &&
+      // guide.yaml keeps the snippet as a YAML block, which drops its trailing newline: compare without it (as the
+      // --check comparison does), or the compile date would change every day and --check would fail.
+      (currentExample ?? "").replace(/\s+$/, "") === s.code.replace(/\s+$/, "") &&
       current.compiled.typescript === HARNESS.typescript &&
       JSON.stringify(current.compiled.against) === JSON.stringify(o.against);
     check.compiled = unchanged

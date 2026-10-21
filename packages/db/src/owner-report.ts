@@ -231,10 +231,11 @@ export async function accountIdentities(
     priority_email: string | null;
     demand_email: string | null;
     build_email: string | null;
+    workspace_email: string | null;
   }>(
     `SELECT o.owner_id, t.email AS trial_email, t.name AS trial_name,
        ${users ? "u.email" : "NULL::text"} AS user_email, ${users ? "u.name" : "NULL::text"} AS user_name,
-       g.login AS github_login, p.email AS priority_email,
+       g.login AS github_login, p.email AS priority_email, w.email AS workspace_email,
        (SELECT d.email FROM use_case_demand d WHERE d.owner_id = o.owner_id AND d.email IS NOT NULL
           ORDER BY d.created_at DESC LIMIT 1) AS demand_email,
        (SELECT b.options->>'contact_email' FROM builds b WHERE b.owner_id = o.owner_id AND b.options ? 'contact_email'
@@ -243,13 +244,16 @@ export async function accountIdentities(
      LEFT JOIN orchestration_trials t ON t.owner_id = o.owner_id
      ${users ? `LEFT JOIN "user" u ON 'user:' || u.id = o.owner_id` : ""}
      LEFT JOIN github_connections g ON g.owner_id = o.owner_id
-     LEFT JOIN priority_notifications p ON p.owner_id = o.owner_id`,
+     LEFT JOIN priority_notifications p ON p.owner_id = o.owner_id
+     LEFT JOIN workspace_contacts w ON w.owner_id = o.owner_id`,
     [[...new Set(ownerIds)]],
   );
   for (const r of res.rows) {
     const sources: [string | null, string][] = [
       [r.trial_email, "trial"],
       [r.user_email, "account"],
+      // ADR-0074: the email given at the access page (invitation workspaces).
+      [r.workspace_email, "workspace"],
       [r.priority_email, "priority_list"],
       [r.demand_email, "demand"],
       [r.build_email, "build_contact"],

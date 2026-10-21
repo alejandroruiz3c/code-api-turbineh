@@ -27,6 +27,19 @@ export function confirmDemandLater(row: Pick<BuildRow, "id" | "metrics">): void 
   });
 }
 
+/**
+ * ADR-0074: the person just gave an email for a refused flow ("Notify me when it's covered"): its priority-list
+ * confirmation is sent after the response, whatever the age of the request (still once per row).
+ */
+export function confirmDemandNow(buildId: string): "scheduled" | "email_disabled" {
+  const mailer = mailerFromEnv();
+  if (!mailer) return "email_disabled";
+  after(async () => {
+    await sendDemandEmails(db, mailer, buildId, log, { anyAge: true });
+  });
+  return "scheduled";
+}
+
 /** Flows already handled by this instance (bounded). */
 const handled = new Set<string>();
 function remember(id: string): void {

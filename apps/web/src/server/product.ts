@@ -1,4 +1,4 @@
-import { approvedCatalog, getBuild, type BuildRow } from "@turbineh/db";
+import { approvedCatalog, getBuild, isPrivateOwner, type BuildRow } from "@turbineh/db";
 import { catalogDocs, ERRORS, flowResult, productError, type CatalogEntry } from "@turbineh/engine";
 import type { FlowResult, ProductError } from "@turbineh/shared";
 import { getCaller, type Caller } from "./caller";
@@ -36,9 +36,7 @@ export const UUID = /^[0-9a-f-]{36}$/;
  * cookie and `turbineh init` create) may connect or use GitHub, never guessable names. Accounts and API keys are
  * per-owner already.
  */
-export const privateWorkspace = (ownerId: string): boolean =>
-  !ownerId.startsWith("invite:") ||
-  /^invite:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(ownerId);
+export const privateWorkspace = (ownerId: string): boolean => isPrivateOwner(ownerId);
 
 export function githubWorkspaceProblem(caller: Caller): Response | null {
   if (privateWorkspace(caller.ownerId)) return null;

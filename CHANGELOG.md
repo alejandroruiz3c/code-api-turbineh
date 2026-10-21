@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+
+- Contact email for invitation workspaces (ADR-0074): `/access` asks for an email (required, validated, with what it is
+  for) and stores it per workspace (`workspace_contacts`, migration 0017); workspaces that entered before are asked
+  once per visit by a non-blocking banner (`GET/PUT/DELETE /v1/contact`). New plans and builds carry it as their
+  contact email, so uncovered requests can be followed up. "Notify me when it's covered" on the not-covered screen
+  saves an email for a refused flow and sends the priority-list confirmation once (`POST /v1/builds/{id}/notify`).
+  API `notify_email` on `POST /v1/plans` and `/v1/builds`; CLI `--notify-email` and `turbineh notify [id] <email>`;
+  MCP `notifyEmail` and a `notify` tool. Shared workspaces never hold an email; only staff see addresses (owner
+  report source `workspace`, demand list).
+
 ### Fixed
 
 - Orchestrator audit v2 (ADR-0068, #131): generated agents get read-only `lookup_<entity>` tools and FAQ in their

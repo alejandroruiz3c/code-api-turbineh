@@ -6,7 +6,7 @@ import type { FlowResult, Plan } from "@turbineh/shared";
 import { adaptLocally } from "./adapt-local.js";
 import { cliCommand } from "./agent-docs.js";
 import { api, sleep } from "./api.js";
-import { explicitComponents, type Ctx } from "./commands.js";
+import { explicitComponents, notifyEmail, type Ctx } from "./commands.js";
 import {
   CliError,
   ensureProject,
@@ -146,6 +146,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
       preferences: project.preferences,
       generate: true,
       ...explicitComponents(c.flags.components),
+      ...notifyEmail(c.flags["notify-email"]),
     },
   }).catch((err: unknown) => {
     if (err instanceof CliError) throw new CliError(err.error, exitOf(err.error.code));

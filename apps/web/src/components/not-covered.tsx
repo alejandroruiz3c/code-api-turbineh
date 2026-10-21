@@ -1,19 +1,24 @@
 import type { NotCoveredExplanation } from "@turbineh/shared";
+import { NotifyWhenCovered } from "./contact-email";
 
 /** Prefix of the components-only choice in `needsApproval` (engine `COMPONENTS_ONLY_APPROVAL`; equality is tested). */
 export const COMPONENTS_ONLY_APPROVAL = "Build verified components only, ";
 
 /**
  * An uncovered request, explained (ADR-0062): what the library doesn't cover yet and why, the priority notice and
- * what TurbineH can do now — with the components-only offer when verified components serve part of it. Pure (no
- * hooks): the same on the plan screen, the wizard and a refused flow. The action (approve / build) is passed in.
+ * what TurbineH can do now — with the components-only offer when verified components serve part of it. No hooks of its
+ * own: the same on the plan screen, the wizard and a refused flow. The action (approve / build) is passed in; with the
+ * flow id, the "Notify me when it's covered" email field (ADR-0074) is shown when no email is on file.
  */
 export function NotCovered({
   explanation,
   action,
+  flowId,
 }: {
   explanation: NotCoveredExplanation;
   action?: React.ReactNode;
+  /** The refused flow: without an email on file, "Notify me when it's covered" asks for one (ADR-0074). */
+  flowId?: string | undefined;
 }) {
   const offer = explanation.offer;
   return (
@@ -41,6 +46,7 @@ export function NotCovered({
         </>
       ) : null}
       <p className="mt-3 text-sm text-ice-2">{explanation.priority}</p>
+      {flowId ? <NotifyWhenCovered flowId={flowId} /> : null}
       <p className="mt-3 text-sm text-ice-2">
         <span className="text-muted">What we can do now:</span> {explanation.canDoNow}
       </p>

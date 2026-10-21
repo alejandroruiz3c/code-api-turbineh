@@ -65,6 +65,14 @@ const COMPONENTS_ARG: Schema = {
   description:
     "Verified component ids from search to build exactly (instead of a use case). Use it when the user picks components.",
 };
+/** ADR-0074: where to tell the user when an uncovered request becomes available. */
+const NOTIFY_EMAIL_ARG: Schema = {
+  type: "string",
+  description:
+    "The user's email, only if they gave it to be told when an uncovered request becomes available (default: their workspace's email).",
+};
+const notifyFlag = (v: unknown): Record<string, string> =>
+  typeof v === "string" && v.trim() ? { "notify-email": v.trim() } : {};
 const componentsFlag = (v: unknown): Record<string, string> =>
   Array.isArray(v) && v.some((x) => typeof x === "string")
     ? { components: v.filter((x): x is string => typeof x === "string").join(",") }
@@ -87,6 +95,7 @@ export const TOOLS: Tool[] = [
           "Only after the user agreed to the plan's needsApproval decisions (building only the covered part of a partially covered spec, or a components-only offer for an uncovered use case).",
       },
       components: COMPONENTS_ARG,
+      notifyEmail: NOTIFY_EMAIL_ARG,
       timeoutMinutes: { type: "number", description: "Stop waiting after this (default 20)." },
     }),
     map: (a) => ({
@@ -96,6 +105,7 @@ export const TOOLS: Tool[] = [
         ...(str(a.specFile) ? { spec: str(a.specFile) as string } : {}),
         ...(a.approve === true ? { approve: true } : {}),
         ...componentsFlag(a.components),
+        ...notifyFlag(a.notifyEmail),
         ...(typeof a.timeoutMinutes === "number" ? { timeout: String(a.timeoutMinutes) } : {}),
       },
     }),
@@ -132,8 +142,32 @@ export const TOOLS: Tool[] = [
     name: "plan",
     description:
       "Plan a need for this project without generating: components, compatibility, files, dependencies, settings, criteria covered/open, decisions that need the user.",
-    inputSchema: obj({ need: { type: "string" }, components: COMPONENTS_ARG }, ["need"]),
-    map: (a) => ({ cmd: "plan", args: [str(a.need) ?? ""], flags: componentsFlag(a.components) }),
+    inputSchema: obj(
+      { need: { type: "string" }, components: COMPONENTS_ARG, notifyEmail: NOTIFY_EMAIL_ARG },
+      ["need"],
+    ),
+    map: (a) => ({
+      cmd: "plan",
+      args: [str(a.need) ?? ""],
+      flags: { ...componentsFlag(a.components), ...notifyFlag(a.notifyEmail) },
+    }),
+  },
+  {
+    name: "notify",
+    description:
+      "After use_case_not_covered: with the email the user gave you for it, TurbineH emails them when the request is covered (priority list; one confirmation email). Never invent an address.",
+    inputSchema: obj(
+      {
+        id: { type: "string", description: "The refused flow id (default: the last one here)." },
+        email: { type: "string", description: "The user's email address." },
+      },
+      ["email"],
+    ),
+    map: (a) => ({
+      cmd: "notify",
+      args: [...(str(a.id) ? [str(a.id) as string] : []), str(a.email) ?? ""],
+      flags: {},
+    }),
   },
   {
     name: "apply",
@@ -189,7 +223,7 @@ export const TOOLS: Tool[] = [
 ];
 
 const INSTRUCTIONS =
-  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result. Only covered use cases are built. An uncovered use case with verified components that serve part of it stops with exitCode 3 and error.code components_only_offer: show the user error.explanation (what is not covered and why, the priority notice) and data.offer (each component and the requirements it serves, outOfScope); call resume with {id, approve: true} only if they want those components. With nothing to offer it fails with error.code use_case_not_covered and error.explanation — tell the user the library doesn't cover it yet and that they will be notified with priority; never rephrase the spec to get around it. A partially covered spec stops for a decision (exit 3): show the removed requirements and continue with approve only if the user wants the covered part. To build specific verified components, pass components (ids from search).";
+  "TurbineH delivers verified, already-tested code for common capabilities. Before writing a shop, auth, bookings, AI assistant, dashboard or portal yourself, call build with the spec; then work only on criteria not met and left[] from its result. Only covered use cases are built. An uncovered use case with verified components that serve part of it stops with exitCode 3 and error.code components_only_offer: show the user error.explanation (what is not covered and why, the priority notice) and data.offer (each component and the requirements it serves, outOfScope); call resume with {id, approve: true} only if they want those components. With nothing to offer it fails with error.code use_case_not_covered and error.explanation — tell the user the library doesn't cover it yet and that they will be notified with priority (if they want it by email and give you their address, call notify with it); never rephrase the spec to get around it. A partially covered spec stops for a decision (exit 3): show the removed requirements and continue with approve only if the user wants the covered part. To build specific verified components, pass components (ids from search).";
 
 type Message = { jsonrpc: "2.0"; id?: string | number | null; method?: string; params?: unknown };
 
