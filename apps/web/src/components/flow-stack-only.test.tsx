@@ -2,7 +2,8 @@ import { buildPlan, detectStack, explainFailure, USE_CASES } from "@turbineh/eng
 import type { EnvironmentInput } from "@turbineh/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { environmentFor, stackNote } from "../lib/flow-environment";
+import { SUPPORTED_STACK as SHARED_STACK } from "@turbineh/shared";
+import { environmentFor, stackNote, SUPPORTED_STACK } from "../lib/flow-environment";
 import { currentRun, finalFinish } from "../lib/flow-events";
 import { PlanReview } from "./plan-review";
 
@@ -128,5 +129,11 @@ describe("live trace of a plan → generation flow (production 2026-10-13, flow 
     const p = explainFailure("worker lost the build twice", { id: "0bfd9dff", fromPlan: true });
     expect(p.title).toBe("The build was interrupted on our side");
     expect(p.next).toEqual({ label: "Generate again", kind: "generate_again" });
+  });
+});
+
+describe("supported stack (ADR-0069)", () => {
+  it("the wizard says the same stack as the plan's stack note", () => {
+    expect(SUPPORTED_STACK).toBe(SHARED_STACK);
   });
 });
