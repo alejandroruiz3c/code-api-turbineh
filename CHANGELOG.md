@@ -17,6 +17,18 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Scope-gate recall (ADR-0069): requests the library covers are no longer refused at "0 % functional coverage".
+  General requirements (runs, verified, sample data, good practices, look and feel, persistence, another stack) are
+  listed in the plan with how each is handled and never measured as functions; the stack asked for is never a refusal
+  (built on TypeScript + Next.js + PostgreSQL + Drizzle, said in the plan). AI agents get canonical criteria with tests
+  for help-centre answers, hand-over to a person (team emailed, "Needs a person" list, honest "emailed"), generated
+  lookups and "every AI call through the orchestrator"; projects get archive/restore and tested edit/delete of
+  projects and tasks; canonical matching ignores storage phrases, condition negations and people the actor picks, and
+  finds two-function pairs; the gate sees the request's domain components. A blog about AI is no longer refused as AI
+  generation. Questions about the product ("what can you do?", "¿qué puedo hacer contigo?") get a help answer on the
+  API, CLI, MCP and web, with no flow, failed build or demand row. CI guard: every example prompt we show must pass the
+  gate as covered. `catalog:snippets --check` no longer fails on a trailing newline.
+
 - Orchestrator audit v2 (ADR-0068, #131): generated agents get read-only `lookup_<entity>` tools and FAQ in their
   knowledge base; escalation emails the team (honest fallback); workspace header validated, cookie CSRF guard, one
   problem format, AI token by API/CLI/MCP, CLI/MCP error and exit-code fixes, minimal public /health; deterministic

@@ -141,7 +141,7 @@ const ENDPOINTS: [method: string, path: string, what: string][] = [
   [
     "POST",
     "/v1/plans",
-    "Plan a need against your stack; generate: true continues on its own; components: [ids] for explicit components. Uncovered use case: a components-only offer (plan with scope.status components_only and offer; approve with generate) or, with nothing to offer, 422 use_case_not_covered with explanation. notify_email: where to tell the person when it is covered (default: the workspace's email)",
+    "Plan a need against your stack; generate: true continues on its own; components: [ids] for explicit components. Uncovered use case: a components-only offer (plan with scope.status components_only and offer; approve with generate) or, with nothing to offer, 422 use_case_not_covered with explanation. notify_email: where to tell the person when it is covered (default: the workspace's email) A question about TurbineH ('what can you do?') answers kind: 'help' with the use cases and example requests; nothing is planned.",
   ],
   ["GET", "/v1/plans/{id}", "State and result: what works, what needs configuration, checks"],
   ["POST", "/v1/plans/{id}/generate", 'Generate and verify; { "approve": true } after a decision'],

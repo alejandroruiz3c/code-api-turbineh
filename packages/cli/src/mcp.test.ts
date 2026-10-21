@@ -162,6 +162,13 @@ describe("turbineh mcp", () => {
       expect(tools.find((x) => x.name === t)?.inputSchema.properties).toHaveProperty("notifyEmail");
   });
 
+  it("answers a product question with help, not an error (ADR-0069)", async () => {
+    const r = await client.callTool({ name: "build", arguments: { spec: "what can you do?" } });
+    expect(r.isError).toBe(false);
+    expect(r.structuredContent).toMatchObject({ ok: true, state: "help", data: { kind: "help" } });
+    expect(r.structuredContent).toEqual(await cli("build", "what can you do?"));
+  }, 60_000);
+
   it("reports failures as tool errors with the same actionable error", async () => {
     const r = await client.callTool({ name: "status", arguments: { id: "nope" } });
     expect(r.isError).toBe(true);

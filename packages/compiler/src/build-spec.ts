@@ -251,6 +251,11 @@ export const buildSpecSchema = z
     criteria_asked: z.record(z.string(), z.array(z.string())).optional(),
     // The request's subject words (its own nouns, capability and platform words left out), set by code (ADR-0063).
     request_words: z.array(z.string()).optional(),
+    // Requirements that are not functions (runs, sample data, look, persistence, stack), set by code (ADR-0069): listed
+    // in the plan with how each is handled, never counted as functional requirements.
+    general_requirements: z
+      .array(z.object({ requirement: z.string(), kind: z.string(), how: z.string() }))
+      .optional(),
     // Public-site copy (optional part; recipes fall back to deterministic copy when it is null).
     site: sitePart.nullable().optional(),
     // Visual identity stated in the prompt (explicit colours and type), extracted by code; applied as theme tokens.

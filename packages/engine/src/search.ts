@@ -114,7 +114,10 @@ export function summarizeUseCase(
       ...u.capabilities,
       ...(u.id === "ai-agents" ? ["ai.orchestrator"] : []),
     ]),
-    example: `A runnable ${u.name.toLowerCase()} app with sample data${u.sections.length ? ` (${u.sections.join(", ")})` : ""}, verified in the TurbineH sandbox.`,
+    // A request for exactly what the use case advertises (ADR-0069): every function of it has a canonical criterion and
+    // a test, and the scope gate covers it (CI: apps/worker/src/example-prompts.test.ts). Never "sample data": the
+    // apps start empty.
+    example: u.description.replace(/\s*\(ADR-\d+\)\s*$/, ""),
   };
 }
 

@@ -7,7 +7,7 @@ import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
 import { byUrgency, isOverdue, isStatus, STATUS_LABEL } from "@/server/board";
 
-/** Tasks assigned to the signed-in user across projects. */
+/** Tasks assigned to the signed-in user across projects (archived tasks and projects left out). */
 export default async function MyTasks() {
   const ctx = await requireMember();
   const rows = await db
@@ -26,6 +26,8 @@ export default async function MyTasks() {
         eq(tasks.organizationId, ctx.organizationId),
         eq(tasks.assigneeId, ctx.userId),
         ne(tasks.status, "done"),
+        eq(tasks.archived, 0),
+        eq(projects.archived, 0),
       ),
     );
   rows.sort(byUrgency);

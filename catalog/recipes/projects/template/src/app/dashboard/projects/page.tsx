@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
 import { projects, tasks } from "@/db/schema";
 import { requireMember } from "@/server/authz";
-import { createProject } from "./actions";
+import { splitArchived } from "@/server/board";
+import { createProject, setProjectArchived } from "./actions";
 
-/** Projects of the workspace: list and create. */
+/** Projects of the workspace: list and create; archived projects are listed apart and can be restored. */
 export default async function Projects() {
   const ctx = await requireMember();
   const rows = await db
@@ -17,13 +18,18 @@ export default async function Projects() {
       id: projects.id,
       name: projects.name,
       description: projects.description,
+      archived: projects.archived,
       open: count(tasks.id),
     })
     .from(projects)
-    .leftJoin(tasks, and(eq(tasks.projectId, projects.id), eq(tasks.status, "todo")))
-    .where(and(eq(projects.organizationId, ctx.organizationId), eq(projects.archived, 0)))
+    .leftJoin(
+      tasks,
+      and(eq(tasks.projectId, projects.id), eq(tasks.status, "todo"), eq(tasks.archived, 0)),
+    )
+    .where(eq(projects.organizationId, ctx.organizationId))
     .groupBy(projects.id)
     .orderBy(desc(projects.createdAt));
+  const { active, archived } = splitArchived(rows);
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Projects</h1>
@@ -40,8 +46,8 @@ export default async function Projects() {
           <Button type="submit">Create project</Button>
         </form>
       </Card>
-      <ul className="grid gap-4 md:grid-cols-3">
-        {rows.map((p) => (
+      <ul className="grid gap-4 md:grid-cols-3" aria-label="Projects">
+        {active.map((p) => (
           <li key={p.id} className="rounded-lg border border-line bg-panel p-5">
             <Link
               href={`/dashboard/projects/${p.id}`}
@@ -54,6 +60,37 @@ export default async function Projects() {
           </li>
         ))}
       </ul>
+      {archived.length > 0 ? (
+        <section aria-labelledby="archived-projects" className="flex flex-col gap-3">
+          <h2 id="archived-projects" className="text-lg font-semibold">
+            Archived projects
+          </h2>
+          <ul className="flex flex-col gap-2" aria-label="Archived projects">
+            {archived.map((p) => (
+              <li
+                key={p.id}
+                data-archived-project={p.name}
+                className="flex items-center justify-between rounded-md border border-line p-3"
+              >
+                <Link href={`/dashboard/projects/${p.id}`} className="hover:underline">
+                  {p.name}
+                </Link>
+                <form action={setProjectArchived}>
+                  <input type="hidden" name="id" value={p.id} />
+                  <input type="hidden" name="action" value="restore" />
+                  <button
+                    type="submit"
+                    className="text-sm underline"
+                    aria-label={`Restore ${p.name}`}
+                  >
+                    Restore
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { auth } from "@/lib/auth";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-import { isPriority, isStatus } from "@/server/board";
+import { archiveFlag, isPriority, isStatus } from "@/server/board";
 
 const updateSchema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -25,7 +25,7 @@ const updateSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 });
 
-/** Task actions: update (status, assignee, priority, due date), delete and comment. */
+/** Task actions: update (status, assignee, priority, due date), archive/restore, delete and comment. */
 export async function updateTask(formData: FormData): Promise<void> {
   await requireMember();
   const id = z.uuid().parse(formData.get("id"));
@@ -40,6 +40,18 @@ export async function updateTask(formData: FormData): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(tasks.id, task.id));
+  revalidatePath(`/dashboard/projects/${task.projectId}`);
+  revalidatePath(`/dashboard/tasks/${task.id}`);
+  revalidatePath("/dashboard/my-tasks");
+}
+
+/** Archive a task (it leaves the board and My tasks) or restore it to its column. */
+export async function setTaskArchived(formData: FormData): Promise<void> {
+  await requireMember();
+  const { task } = await editableTask(z.uuid().parse(formData.get("id")));
+  const archived = archiveFlag(formData.get("action"));
+  if (archived === null) throw new UserFacingError("Unknown action.");
+  await db.update(tasks).set({ archived, updatedAt: new Date() }).where(eq(tasks.id, task.id));
   revalidatePath(`/dashboard/projects/${task.projectId}`);
   revalidatePath(`/dashboard/tasks/${task.id}`);
   revalidatePath("/dashboard/my-tasks");

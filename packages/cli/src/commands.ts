@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readZip } from "@turbineh/engine";
+import { isProductQuestion, readZip } from "@turbineh/engine";
 import { ellipsize, type CapabilitySummary, type FlowResult, type Plan } from "@turbineh/shared";
 import { api, sleep } from "./api.js";
 import { applyPullRequest } from "./github.js";
@@ -22,6 +22,7 @@ import {
   dim,
   explanationLines,
   green,
+  helpResult,
   red,
   STATE_LABEL,
   yellow,
@@ -356,6 +357,14 @@ export function planLines(p: Plan): string[] {
           ...p.scope.removed.map((r) => `  ${yellow("✗")} ${r.requirement} ${dim(`— ${r.why}`)}`),
         ]
       : []),
+    // ADR-0069: requirements that are not functions, with how each is handled.
+    ...(p.general?.length
+      ? [
+          "",
+          bold("General requirements (not functions):"),
+          ...p.general.map((g) => `  - ${g.requirement}\n    ${dim(g.how)}`),
+        ]
+      : []),
     ...(p.left?.length
       ? [
           "",
@@ -463,10 +472,12 @@ export async function plan(c: Ctx): Promise<CommandResult> {
       "Describe what you need.",
       'Run `turbineh plan "AI booking agent for a physio clinic"`.',
     );
+  // ADR-0069: a question about TurbineH gets the help answer; nothing is planned or written here.
+  if (isProductQuestion(need)) return helpResult("plan");
   const project = ensureProject(c.cwd);
   writeProject(c.cwd, project);
   const files = localManifests(c.cwd);
-  const created = await api<{ id: string; stack: Plan["stack"] }>("/v1/plans", {
+  const created = await api<{ id: string; stack: Plan["stack"]; kind?: string }>("/v1/plans", {
     method: "POST",
     workspace: project.workspace,
     body: {
@@ -481,6 +492,7 @@ export async function plan(c: Ctx): Promise<CommandResult> {
       ...notifyEmail(c.flags["notify-email"]),
     },
   });
+  if (created.kind === "help") return helpResult("plan");
   project.lastPlan = created.id;
   writeProject(c.cwd, project);
   if (c.flags.wait === false) {

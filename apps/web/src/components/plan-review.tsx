@@ -129,6 +129,28 @@ export function PlanReview({
             </p>
           </section>
         ) : null}
+        {plan.general && plan.general.length > 0 ? (
+          // ADR-0069: what the request asks that is not a function (runs, sample data, look, persistence, stack).
+          <section
+            aria-label="General requirements"
+            data-testid="plan-general"
+            className="mt-4 rounded-lg border border-line p-4"
+          >
+            <p className="text-sm font-semibold text-cream">General requirements</p>
+            <p className="mt-1 text-xs text-muted">
+              Not functions of the app, so not counted as requirements met or missing. How each is
+              handled:
+            </p>
+            <ul className="mt-2 flex flex-col gap-2 text-sm text-ice-2">
+              {plan.general.map((g) => (
+                <li key={g.requirement} data-general={g.kind}>
+                  <span className="text-cream">{g.requirement}</span>
+                  <span className="block text-xs text-muted">{g.how}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Estimate value={estimate.seconds} label="Time to the package" />
           <Estimate value={estimate.tokens} label="Model tokens (intent, glue, fixes)" />

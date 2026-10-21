@@ -9,6 +9,7 @@ import {
   NOT_COVERED_MESSAGE,
   notCoveredReason,
   planScope,
+  asksForAi,
   scopeGate,
   uncoveredByCode,
   type GateComponent,
@@ -410,5 +411,47 @@ describe("pass with warnings in the badge (ADR-0065)", () => {
       "Technically verified · checks 11/11 (1 with warnings) · functional 2/5",
     );
     expect(checksAndRequirements(r).checks).toEqual({ passed: 11, total: 11, warnings: 1 });
+  });
+});
+
+// ADR-0069: "a blog for sharing AI research insights" is a blog ABOUT AI — publishing content about AI uses no model.
+describe("AI as the subject of content is not AI generation", () => {
+  it.each([
+    "a sleek blog for sharing ai research insights",
+    "A newsletter about AI for small business owners",
+    "un blog sobre IA y ética para estudiantes",
+    "A course website on machine learning with lessons and quizzes",
+    "a community site with the latest AI news and events",
+  ])("topic: %s", (text) => {
+    expect(asksForAi(text)).toBe(false);
+    expect(uncoveredByCode(text, { catalog: CATALOG, aiIncluded: false })).toBeNull();
+  });
+
+  it.each([
+    "AI drafts each post from my notes",
+    "a blog with AI-generated summaries of every article",
+    "an AI research assistant that answers questions about papers",
+    "a news site where an AI summarises each article",
+    "the system uses AI to tag photos",
+    "a chatbot for our shop",
+    "the app drafts replies with AI for me to review",
+  ])("function: %s", (text) => {
+    expect(asksForAi(text)).toBe(true);
+    expect(uncoveredByCode(text, { catalog: CATALOG, aiIncluded: false })).toMatch(/AI generation/);
+  });
+
+  it("a blog about AI research is gated like any blog (no AI requirement added)", async () => {
+    const verdict = await scopeGate({
+      need: "a sleek blog for sharing ai research insights",
+      requirements: ["The admin publishes a post that appears on the blog, RSS and sitemap"],
+      useCase: { id: "corporate-site", description: "Corporate website with a blog" },
+      catalog: CATALOG,
+      provenByTests: new Set([
+        "The admin publishes a post that appears on the blog, RSS and sitemap",
+      ]),
+      aiIncluded: false,
+    });
+    expect(verdict.status).toBe("covered");
+    expect(verdict.notCovered).toEqual([]);
   });
 });

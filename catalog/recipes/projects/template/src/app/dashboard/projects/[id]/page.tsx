@@ -7,10 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db } from "@/db/client";
 import { projects, tasks } from "@/db/schema";
-import { requireMember } from "@/server/authz";
-import { isOverdue, isStatus, neighbour, PRIORITIES, STATUSES, STATUS_LABEL } from "@/server/board";
+import { can, requireMember } from "@/server/authz";
+import {
+  isOverdue,
+  isStatus,
+  neighbour,
+  PRIORITIES,
+  splitArchived,
+  STATUSES,
+  STATUS_LABEL,
+} from "@/server/board";
 import { workspaceMembers } from "@/server/members";
-import { createTask, moveTask } from "../actions";
+import { setTaskArchived } from "../../tasks/actions";
+import { createTask, deleteProject, moveTask, setProjectArchived, updateProject } from "../actions";
 
 const PRIORITY_STYLE: Record<string, string> = {
   low: "bg-subtle text-muted",
@@ -19,7 +28,7 @@ const PRIORITY_STYLE: Record<string, string> = {
   urgent: "bg-danger-soft text-danger",
 };
 
-/** One project's kanban board (drag tasks between columns). */
+/** One project's kanban board (move tasks between columns), its settings and its archived tasks. */
 export default async function Board({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireMember();
   const { id } = await params;
@@ -33,6 +42,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
     db.select().from(tasks).where(eq(tasks.projectId, id)).orderBy(asc(tasks.position)),
     workspaceMembers(),
   ]);
+  const { active, archived } = splitArchived(rows);
   const name = (uid: string | null) => members.find((m) => m.userId === uid)?.name ?? "Unassigned";
   return (
     <div className="flex flex-col gap-6">
@@ -41,8 +51,45 @@ export default async function Board({ params }: { params: Promise<{ id: string }
           ← Projects
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">{project.name}</h1>
+        {project.archived ? <p className="text-sm text-warning">Archived project</p> : null}
         {project.description ? <p className="text-muted">{project.description}</p> : null}
       </div>
+      <Card title="Project settings">
+        <form action={updateProject} className="flex flex-col gap-3 md:flex-row md:items-end">
+          <input type="hidden" name="id" value={project.id} />
+          <div className="flex-1">
+            <Label htmlFor="p-name">Project name</Label>
+            <Input id="p-name" name="name" defaultValue={project.name} required maxLength={120} />
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="p-desc">Project description</Label>
+            <Input
+              id="p-desc"
+              name="description"
+              defaultValue={project.description}
+              maxLength={2000}
+            />
+          </div>
+          <Button type="submit">Save project</Button>
+        </form>
+        <div className="mt-4 flex flex-wrap gap-4 text-sm">
+          <form action={setProjectArchived}>
+            <input type="hidden" name="id" value={project.id} />
+            <input type="hidden" name="action" value={project.archived ? "restore" : "archive"} />
+            <button type="submit" className="underline">
+              {project.archived ? "Restore project" : "Archive project"}
+            </button>
+          </form>
+          {can(ctx.role, "delete") ? (
+            <form action={deleteProject}>
+              <input type="hidden" name="id" value={project.id} />
+              <button type="submit" className="text-danger underline">
+                Delete project and its tasks
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </Card>
       <Card title="New task">
         <form action={createTask} className="grid gap-3 md:grid-cols-5 md:items-end">
           <input type="hidden" name="projectId" value={project.id} />
@@ -92,7 +139,7 @@ export default async function Board({ params }: { params: Promise<{ id: string }
       </Card>
       <div className="grid gap-4 md:grid-cols-4" role="list" aria-label="Board">
         {STATUSES.map((status) => {
-          const column = rows.filter((t) => t.status === status);
+          const column = active.filter((t) => t.status === status);
           return (
             <section
               key={status}
@@ -171,6 +218,37 @@ export default async function Board({ params }: { params: Promise<{ id: string }
           );
         })}
       </div>
+      {archived.length > 0 ? (
+        <section aria-labelledby="archived-tasks" className="flex flex-col gap-2">
+          <h2 id="archived-tasks" className="text-lg font-semibold">
+            Archived tasks
+          </h2>
+          <ul className="flex flex-col gap-2" aria-label="Archived tasks">
+            {archived.map((t) => (
+              <li
+                key={t.id}
+                data-archived-task={t.title}
+                className="flex items-center justify-between rounded-md border border-line p-3"
+              >
+                <Link href={`/dashboard/tasks/${t.id}`} className="hover:underline">
+                  {t.title}
+                </Link>
+                <form action={setTaskArchived}>
+                  <input type="hidden" name="id" value={t.id} />
+                  <input type="hidden" name="action" value="restore" />
+                  <button
+                    type="submit"
+                    className="text-sm underline"
+                    aria-label={`Restore ${t.title}`}
+                  >
+                    Restore
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

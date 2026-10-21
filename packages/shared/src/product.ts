@@ -237,10 +237,27 @@ export interface Plan {
    */
   scope?: PlanScope;
   /**
+   * Requirements of the request that are not functions of the app (ADR-0069): that it runs, sample data, good
+   * practices, how it looks, that data persists, or a stack other than TurbineH's. Each says how it is handled; none
+   * counts as a functional requirement (met or not covered).
+   */
+  general?: PlanGeneralRequirement[];
+  /**
    * The delivery manifest (ADR-0064): the single source of truth this plan was rendered from — every decision with
    * what justifies it, the criteria, the settings (required / optional) and what is not included.
    */
   delivery?: DeliveryManifest;
+}
+
+/** The only stack new apps are built on (every recipe template): the wizard, the plan and the stack note say it. */
+export const SUPPORTED_STACK = "TypeScript + Next.js + PostgreSQL + Drizzle";
+
+/** A requirement that is not a function, and how TurbineH handles it (ADR-0069). */
+export interface PlanGeneralRequirement {
+  requirement: string;
+  /** runnable | verified | sample-data | good-practices | look-and-feel | persistence | stack */
+  kind: string;
+  how: string;
 }
 
 /** One requirement of the request and whether the library covers it (ADR-0052). */

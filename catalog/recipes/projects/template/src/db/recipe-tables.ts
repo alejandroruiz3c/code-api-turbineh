@@ -8,6 +8,7 @@ export const projects = pgTable(
     organizationId: varchar("organization_id", { length: 64 }).notNull(),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description").notNull().default(""),
+    /** 1 = archived: hidden from the project list, listed under "Archived projects" (restorable). */
     archived: integer("archived").notNull().default(0),
     createdBy: varchar("created_by", { length: 64 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -31,6 +32,8 @@ export const tasks = pgTable(
     assigneeId: varchar("assignee_id", { length: 64 }),
     dueDate: date("due_date"),
     position: integer("position").notNull().default(0),
+    /** 1 = archived: hidden from the board and My tasks, listed under "Archived tasks" (restorable). */
+    archived: integer("archived").notNull().default(0),
     createdBy: varchar("created_by", { length: 64 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 // turbineh:module knowledge-base
 import { chunkText } from "@/server/chunking";
@@ -67,5 +69,29 @@ describe("recipe ai-agents", () => {
       "ops@shop.test",
     ]);
     expect(teamEmails(""), "not configured: no email, the criterion stays open").toEqual([]);
+  });
+
+  it("every AI call goes through the TurbineH orchestrator and its AI Safety Pack: no app module calls a model directly", () => {
+    const files = (readdirSync("src", { recursive: true }) as string[])
+      .map((f) => join("src", f))
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !f.startsWith(join("src", "lib", "ai")));
+    const direct =
+      /from ["'](openai|@anthropic-ai\/sdk|@google\/generative-ai|ai|@ai-sdk\/[\w-]+)["']|\/chat\/completions|\/v1\/(orchestrate|agent|embeddings)\b|api\.openai\.com/;
+    const offenders = files.filter((f) => direct.test(readFileSync(f, "utf8")));
+    expect(offenders, "app modules that call a model without the orchestrator").toEqual([]);
+    const usesAi = files.filter((f) =>
+      /from "@\/lib\/ai\/(orchestrator|agent)"/.test(readFileSync(f, "utf8")),
+    );
+    expect(usesAi.length, "the assistants and processes use the orchestrator").toBeGreaterThan(0);
+    const orchestrator = readFileSync(join("src", "lib", "ai", "orchestrator.ts"), "utf8");
+    const body = orchestrator.slice(orchestrator.indexOf("export async function orchestrate"));
+    expect(
+      body.indexOf("guardInput(req.input"),
+      "the AI Safety Pack checks the request",
+    ).toBeGreaterThan(0);
+    expect(
+      body.indexOf("guardInput(req.input") < body.indexOf('post("/orchestrate"'),
+      "the AI Safety Pack checks the request before the model is called",
+    ).toBe(true);
   });
 });

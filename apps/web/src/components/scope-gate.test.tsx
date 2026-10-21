@@ -59,6 +59,42 @@ describe("plan screen · partially covered request (ADR-0052)", () => {
   });
 });
 
+describe("plan screen · general requirements (ADR-0069)", () => {
+  it("lists what is not a function with how it is handled, apart from the requirements", () => {
+    const plan = buildPlan({
+      id: "p2",
+      need: "A to-do app with projects in Bootstrap and SQLite, with a neon look",
+      slug: "todo",
+      stack: detectStack({ stack: { language: "TypeScript", framework: "Next.js" } }),
+      useCase: USE_CASES.find((u) => u.id === "projects") ?? null,
+      components: [],
+      gaps: [],
+      decisions: [],
+      dependencies: [],
+    });
+    plan.general = [
+      {
+        requirement: "Given the app is loaded, then the UI shows a neon aesthetic",
+        kind: "look-and-feel",
+        how: "The look follows the brand you set (colours, fonts, logo).",
+      },
+      {
+        requirement: "Stack asked: Bootstrap, SQLite",
+        kind: "stack",
+        how: "You get a complete Next.js app; your data is persisted for real in PostgreSQL, a database, instead of SQLite.",
+      },
+    ];
+    const html = renderToStaticMarkup(
+      <PlanReview plan={plan} approved={{}} onApprove={() => {}} onAction={() => {}} />,
+    );
+    const t = text(html);
+    expect(html).toContain('data-testid="plan-general"');
+    expect(t).toContain("General requirements");
+    expect(t).toContain("instead of SQLite");
+    expect(t).not.toMatch(/What is left after generation[\s\S]*neon/);
+  });
+});
+
 describe("state badge · checks and requirements apart (F18)", () => {
   const row = {
     id: "b",

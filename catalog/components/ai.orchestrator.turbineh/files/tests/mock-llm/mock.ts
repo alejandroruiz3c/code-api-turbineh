@@ -228,24 +228,44 @@ export function agentStep(
   };
 }
 
-/** One orchestrated request, scripted like /chat/completions (JSON_SCHEMA → minimal valid instance). */
-export function orchestrateRequest(body: { input?: unknown; schema?: unknown }): unknown {
+/**
+ * One orchestrated request, scripted like /chat/completions (JSON_SCHEMA → minimal valid instance). Among the tools the
+ * request offers, the first script rule whose pattern matches the input chooses the tool (as TurbineH's engine would);
+ * a read-only `lookup_<entity>` tool is chosen when the input carries a reference ("A-1001", "#4521").
+ */
+export function orchestrateRequest(
+  body: { input?: unknown; schema?: unknown; tools?: unknown },
+  scripts: MockScript[] = [],
+): unknown {
   const system = body.schema ? `JSON_SCHEMA: ${JSON.stringify(body.schema)}` : "";
+  const input = String(body.input ?? "");
   const out = chatCompletion(
     {
       model: "mock",
       messages: [
         ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: String(body.input ?? "") },
+        { role: "user", content: input },
       ],
     },
     [],
   ) as { choices: { message: { content: string } }[] };
+  const offered = (Array.isArray(body.tools) ? body.tools : [])
+    .map((t) => (t as { name?: unknown }).name)
+    .filter((n): n is string => typeof n === "string");
+  let tool: string | null = null;
+  for (const rule of scripts.flatMap((s) => s.rules)) {
+    if (tool || !offered.includes(rule.tool)) continue;
+    rule.when.lastIndex = 0;
+    const m = rule.when.exec(input);
+    if (m && rule.args(input, m)) tool = rule.tool;
+  }
+  if (!tool && /#?\b[A-Za-z]{0,6}-?\d[\w-]*\b/.test(input))
+    tool = offered.find((n) => n.startsWith("lookup_")) ?? null;
   return {
     text: out.choices[0]?.message.content ?? "",
     route: "mock",
     model: "mock",
-    tool: null,
+    tool,
     flags: [],
     usage: { calls: 1, inputTokens: 10, outputTokens: 5 },
     decision: "none",
@@ -294,7 +314,7 @@ export function startMockLlm(
         });
       }
       if (path.endsWith("/v1/agent")) return send(200, agentStep(body, scripts));
-      if (path.endsWith("/v1/orchestrate")) return send(200, orchestrateRequest(body));
+      if (path.endsWith("/v1/orchestrate")) return send(200, orchestrateRequest(body, scripts));
       return send(404, { error: { message: "not found" } });
     });
   });

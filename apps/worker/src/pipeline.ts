@@ -29,6 +29,7 @@ import {
   compileIntent,
   detectDomains,
   extractPalette,
+  separateGeneral,
   separateNonFunctional,
   type BuildSpec,
   type CompileResult,
@@ -243,7 +244,12 @@ export function planCriteria(
 export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = ""): number {
   if (spec.recipe === "out_of_scope") return 0;
   if (prompt) spec.request_words = requestWords(prompt);
-  const canon = canonicalForPlan({ recipesDir, recipe: spec.recipe, entities: spec.entities });
+  const canon = canonicalForPlan({
+    recipesDir,
+    recipe: spec.recipe,
+    entities: spec.entities,
+    components: gateDomains(spec, prompt),
+  });
   const c = canonicalize(
     spec.acceptance_criteria,
     canon,
@@ -257,6 +263,30 @@ export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = "
   spec.acceptance_criteria = c.criteria;
   if (Object.keys(c.asked).length > 0) spec.criteria_asked = c.asked;
   return Object.keys(c.links).length;
+}
+
+/**
+ * Domain components the request selects (ADR-0033), known before the scope gate: their canonical criteria count for
+ * the gate and the canonical wording (ADR-0069) — "an AI booking agent… books 45-minute appointments" is the bookings
+ * domain's public booking, proved by its tests.
+ */
+export const gateDomains = (spec: BuildSpec, prompt: string): string[] =>
+  spec.recipe === "out_of_scope"
+    ? []
+    : detectDomains(prompt, spec.recipe, spec.app_name).map((d) => d.component);
+
+/**
+ * Separates the request's general requirements (ADR-0069). A request that names the use case and only general
+ * qualities ("a runnable AI agents app with sample data, verified in the sandbox") asks for the use case as the catalogue
+ * advertises it: its criteria become the use case's own canonical criteria, each proved by its linked test.
+ */
+export function withGeneral(spec: BuildSpec, prompt: string, recipesDir: string): BuildSpec {
+  const out = separateGeneral(spec, prompt).spec;
+  if (out.acceptance_criteria.length > 0 || out.recipe === "out_of_scope") return out;
+  const own = canonicalForPlan({ recipesDir, recipe: out.recipe })
+    .filter((c) => c.from === out.recipe && !c.entity)
+    .map((c) => c.criterion);
+  return { ...out, acceptance_criteria: own.length ? own : spec.acceptance_criteria };
 }
 
 export async function runBuild(
@@ -347,7 +377,11 @@ export async function runBuild(
   }
   // Non-functional requirements are capabilities, never entities (ADR-0037 §D3): also for specs stored before the rule.
   const separated = separateNonFunctional(compiled.spec);
-  const spec = separated.spec;
+  // General requirements (ADR-0069): runs, sample data, good practices, look, persistence, stack are listed with how
+  // each is handled, never measured as functions. Approved plans keep the stored spec (separated when planned).
+  const spec = options.spec
+    ? separated.spec
+    : withGeneral(separated.spec, prompt, join(deps.repoRoot, "catalog/recipes"));
   const nonFunctional = [...(compiled.nonFunctional ?? []), ...separated.requirements];
   if (nonFunctional.length > 0) {
     await deps.emit(buildId, "compiling", "non-functional", {
@@ -398,7 +432,7 @@ export async function runBuild(
                     spec.acceptance_criteria,
                     join(deps.repoRoot, "catalog/recipes"),
                     spec.recipe,
-                    [],
+                    gateDomains(spec, prompt),
                     {
                       entities: spec.entities,
                       roles: spec.roles,
@@ -801,6 +835,7 @@ export async function runBuild(
       },
     );
     plan.left = [...(plan.left ?? []), ...openCriteriaLeft(plan.criteria)];
+    if (spec.general_requirements?.length) plan.general = spec.general_requirements;
     plan.estimate = calibrateEstimate(
       plan.estimate,
       (await deps.estimateHistory?.(recipeId).catch(() => [])) ?? [],

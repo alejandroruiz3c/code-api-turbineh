@@ -1,4 +1,15 @@
+import { existsSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+
+/** Emails the app recorded (no provider in tests: src/lib/email.ts writes them to EMAIL_OUTBOX_FILE). */
+function outbox(): { to: string; subject: string }[] {
+  const file = process.env.EMAIL_OUTBOX_FILE ?? "";
+  if (!file || !existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as { to: string; subject: string });
+}
 
 // Runs against the deterministic AI simulator of the verification sandbox (services/ai-mock): every model and
 // decider call still goes through the orchestrator and the AI Safety Pack.
@@ -61,6 +72,60 @@ test.describe.serial("AI assistants", () => {
     // Our message (Next.js also renders an empty route announcer with role="alert").
     await expect(page.locator('p[role="alert"]')).toContainText("can't be processed");
     await expect(page.locator('article[data-role="user"]')).toHaveCount(1);
+  });
+
+  // turbineh:module knowledge-base
+  test("the assistant answers a customer question from a help-centre FAQ article in the knowledge base and cites that article", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/knowledge");
+    await page.getByLabel("Title").fill("Shipping FAQ");
+    await page
+      .getByLabel("Text", { exact: true })
+      .fill("Q: When will my order ship? A: Orders ship within two business days of payment.");
+    await page.getByRole("button", { name: "Add document" }).click();
+    await expect(page.locator('[data-document="Shipping FAQ"]')).toBeVisible();
+    await page.goto("/dashboard/agents");
+    await page.getByRole("link", { name: "Support bot" }).click();
+    await page.getByLabel("Message").fill("When will my order ship?");
+    await page.getByRole("button", { name: "Send" }).click();
+    const answer = page.locator('article[data-role="assistant"]').last();
+    await expect(answer, "the customer's question is answered").toContainText(
+      "When will my order ship?",
+    );
+    await expect(answer, "the answer cites the help-centre article").toContainText("Shipping FAQ");
+  });
+  // turbineh:end-module knowledge-base
+
+  test("when the assistant hands a conversation to a person, the team is emailed, the conversation is listed for the team as needing a person and the user is told a person will follow up", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/agents");
+    await page.getByRole("link", { name: "Support bot" }).click();
+    await page.getByLabel("Message").fill("I need to talk to a person about a damaged parcel");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(
+      page.locator('article[data-role="tool"]').last(),
+      "the user is told a person will follow up",
+    ).toContainText("will follow up");
+    await expect(page.getByText("A person will follow up on this conversation.")).toBeVisible();
+    // No email provider in tests: src/lib/email.ts records the email in EMAIL_OUTBOX_FILE (the team: ADMIN_EMAILS).
+    const team = (process.env.ADMIN_EMAILS ?? "").split(",").filter(Boolean);
+    await expect
+      .poll(
+        () =>
+          outbox().filter(
+            (m) => team.includes(m.to) && m.subject.startsWith("Escalation from the assistant"),
+          ).length,
+        { message: "the team is emailed" },
+      )
+      .toBeGreaterThan(0);
+    await page.goto("/dashboard/agents");
+    await expect(
+      page.locator("[data-escalation]").first(),
+      "the conversation is listed for the team as needing a person",
+    ).toBeVisible();
+    await expect(page.getByRole("list", { name: "Needs a person" })).toContainText("Support bot");
   });
 
   // turbineh:module batch-processes

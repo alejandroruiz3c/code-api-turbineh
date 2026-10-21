@@ -1,10 +1,10 @@
+import { SUPPORTED_STACK } from "@turbineh/shared";
 import type { EnvironmentInput } from "@turbineh/shared";
 
 /** "app" = a new, complete app in a declared stack (the default, ADR-0050); "repo" / "upload" = an existing project. */
 export type EnvMode = "app" | "repo" | "upload";
 
-/** The only stack new apps are built on (every recipe template). */
-export const SUPPORTED_STACK = "TypeScript + Next.js + PostgreSQL + Drizzle";
+export { SUPPORTED_STACK };
 
 /** What a new app in the chosen stack gives, before planning (the plan repeats it with one-click choices). */
 export function stackNote(language: string, framework: string): string {

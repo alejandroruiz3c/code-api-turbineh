@@ -1,5 +1,7 @@
 # Canonical acceptance criteria (ADR-0063): one per function the projects use case advertises, each linked to the test
 # that proves it. Format and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The domain's nouns, absorbed by every criterion below (what the functions act on, never what they do).
+- vocabulary: dashboard workspace team project projects task tasks todo todos to-do board
 - id: projects.kanban
   criterion: "The owner moves a task on the Kanban board from To do to In progress and the new status is persisted"
   advertises: "kanban boards"
@@ -21,6 +23,7 @@
   terms: >-
     assign assigns assigned assignee assignees responsible team member members teammate project projects task
     tasks card cards issue issues create creates created add adds new
+    enter enters entered input inputs type name title entry item items saved stored store persist persisted appears
   actors: [owner, member, admin]
   tests:
     - "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
@@ -76,3 +79,83 @@
   tests:
     - "tests/e2e/projects.spec.ts › a task assigned to the owner shows in My tasks, and the owner adds a comment that is visible on that task"
     - "tests/unit/board.test.ts › orders my tasks by due date, then priority"
+
+# Create, edit, archive (with restore) and delete of projects and tasks (ADR-0069). Stack words a request may add
+# ("in the SQLite database", "in a JSON file") are handled by the compiler's stack note, never absorbed here.
+- id: projects.project-create
+  criterion: "The owner creates a project"
+  advertises: "task management"
+  says: ["(creat|add|new|start|set ?up)\\w*(?: an?| the| new| their| one)* projects?\\b(?! *(?:and|with) )"]
+  terms: >-
+    create creates created add adds added new start starts set setup project projects name named entry entries
+    container group groups grouped organise organize organises organizes saved stored store persist persisted list
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner creates a project and a task assigned to them with a priority and a due date; a task past its due date is flagged overdue"
+
+- id: projects.task-edit
+  criterion: "The owner edits a task's title and the change is saved"
+  advertises: "editing"
+  says: ["edit|modif|updat|chang|renam", "task|todo|to-do|item"]
+  terms: >-
+    edit edits edited editable modify modifies modified update updates updated change changes changed rename
+    renames title name text details content information field fields save saves saved persist persists persisted
+    stored task tasks todo item items
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner edits a task's title and the change is saved"
+
+- id: projects.task-delete
+  criterion: "The owner deletes a task and it is no longer on the board"
+  advertises: "deleting"
+  says: ["delet|remov|erase|discard", "task|todo|to-do|item"]
+  terms: >-
+    delete deletes deleted remove removes removed erase discard permanently gone longer board list task tasks
+    todo item items reload
+  actors: [owner, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner deletes a task and it is no longer on the board"
+
+- id: projects.task-archive
+  criterion: "The owner archives a task: it leaves the board and shows under Archived tasks, and restoring it brings it back"
+  advertises: "archiving"
+  says: ["archiv", "task|todo|to-do|item"]
+  terms: >-
+    archive archives archived archiving restore restores restored unarchive hide hides hidden leave leaves moved
+    move state section board list main view task tasks todo item items back without deleted deleting kept
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner archives a task: it leaves the board and shows under Archived tasks, and restoring it brings it back"
+
+- id: projects.project-edit
+  criterion: "The owner renames a project and the new name is shown"
+  advertises: "editing"
+  says: ["edit|modif|updat|chang|renam", "project"]
+  terms: >-
+    edit edits edited editable modify modifies update updates updated updateable updatable change changes rename
+    renames renamed name description details project projects saved stored persist persisted new
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner renames a project and the new name is shown"
+
+- id: projects.project-archive
+  criterion: "The owner archives a project: it leaves the project list and shows under Archived projects, and restoring it brings it back"
+  advertises: "archiving"
+  says: ["archiv", "project"]
+  terms: >-
+    archive archives archived archiving restore restores restored unarchive hide hides hidden leave leaves moved
+    move state section list main view project projects entire whole back
+  actors: [owner, member, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner archives a project: it leaves the project list and shows under Archived projects, and restoring it brings it back"
+
+- id: projects.project-delete
+  criterion: "The owner deletes a project and its tasks are removed"
+  advertises: "deleting"
+  says: ["delet|remov|erase|discard", "project"]
+  terms: >-
+    delete deletes deleted remove removes removed erase discard permanently gone project projects its associated
+    contained all task tasks list
+  actors: [owner, admin]
+  tests:
+    - "tests/e2e/projects.spec.ts › the owner deletes a project and its tasks are removed"

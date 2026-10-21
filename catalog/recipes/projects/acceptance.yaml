@@ -9,3 +9,15 @@
   covers: ["overdue|due date|deadline|late"]
 - test: "tests/unit/board.test.ts › orders my tasks by due date, then priority"
   covers: ["priorit|sort|order(ed)? by"]
+- test: "tests/e2e/projects.spec.ts › the owner edits a task's title and the change is saved"
+  covers: ["task|todo|item", "edit|modif|renam|(updat|chang)\\w* (the |its )?(task'?s? )?(title|name|text|details|content)"]
+- test: "tests/e2e/projects.spec.ts › the owner archives a task: it leaves the board and shows under Archived tasks, and restoring it brings it back"
+  covers: ["task|todo|item", "archiv"]
+- test: "tests/e2e/projects.spec.ts › the owner deletes a task and it is no longer on the board"
+  covers: ["task|todo|item", "delet|remov"]
+- test: "tests/e2e/projects.spec.ts › the owner renames a project and the new name is shown"
+  covers: ["project", "edit|modif|renam|(updat|chang)\\w* (the |its )?(project'?s? )?(title|name|description|details)"]
+- test: "tests/e2e/projects.spec.ts › the owner archives a project: it leaves the project list and shows under Archived projects, and restoring it brings it back"
+  covers: ["project", "archiv"]
+- test: "tests/e2e/projects.spec.ts › the owner deletes a project and its tasks are removed"
+  covers: ["project", "delet|remov"]

@@ -117,7 +117,43 @@ const NATIVE_OR_HARDWARE: readonly [label: string, re: RegExp][] = [
 ];
 
 const AI =
-  /\b(ai|a\.i\.|ia|llms?|gpt[\w-]*|language models?|machine learning|generative|gen ?ai|chat ?bots?|embeddings?|semantic search|rag|openai|inteligencia artificial)\b/i;
+  /\b(generative ai|gen ?ai|ai|a\.i\.|ia|llms?|gpt[\w-]*|language models?|machine learning|generative|chat ?bots?|embeddings?|semantic search|rag|openai|inteligencia artificial)\b/gi;
+
+/** Always an AI function, whatever surrounds them. */
+const AI_ALWAYS = /^(chat ?bots?|embeddings?|semantic search|rag|openai)$/i;
+/** "AI research", "AI news": AI is what the content is about (a blog, a newsletter, a course), not what the app does. */
+const AI_TOPIC_NEXT =
+  /^[\s-]*(research\w*|news|insights?|trends?|ethics|polic(y|ies)|industry|startups?|papers?|articles?|posts?|tutorials?|courses?|lessons?|events?|conferences?|meetups?|community|communities|jobs?|careers?|newsletters?|podcasts?|education|history|regulation|governance|topics?|enthusiasts?|researchers?|experts?|companies|art(work)?s?)\b/i;
+const AI_TOOL_AFTER_TOPIC =
+  /^[\s-]*(assistants?|agents?|bots?|copilots?|tools?|generators?|writers?|summari[sz]ers?|engines?|apps?)\b/i;
+/** "a blog about AI", "un curso sobre IA". */
+const AI_TOPIC_PREV =
+  /\b(about|on|covering|regarding|related to|sobre|acerca de|en torno a)\s+(the\s+|la\s+|el\s+)?((latest|recent|new|modern|practical|responsible)\s+)?$/i;
+/** "AI-powered", "AI assistant", "AI drafts", "an AI that answers": the app runs AI. */
+const AI_FUNCTION_NEXT =
+  /^[\s-]*(powered|driven|based|assisted|generated|generat\w*|assistants?|agents?|chat\w*|bots?|writ\w*|draft\w*|summar\w*|classif\w*|recommend\w*|suggest\w*|answer\w*|repl\w*|translat\w*|detect\w*|predict\w*|extract\w*|tag(s|ging)?|creat\w*|produc\w*|search|features?|models?|that|which|to|will|should|must|can)\b/i;
+
+/**
+ * Does the text ask for AI as a function of the app? A mention is a topic when it names what the content is about ("a
+ * blog for sharing AI research insights", "a newsletter about AI") — publishing content about AI uses no model. Precision
+ * first: any mention that is not clearly a topic counts as a function (the use case without AI is then refused).
+ */
+export function asksForAi(text: string): boolean {
+  for (const m of text.matchAll(AI)) {
+    const word = m[0];
+    if (AI_ALWAYS.test(word)) return true;
+    const at = m.index ?? 0;
+    const next = text.slice(at + word.length);
+    const prev = text.slice(0, at);
+    if (AI_FUNCTION_NEXT.test(next)) return true;
+    const topic = AI_TOPIC_NEXT.exec(next);
+    // "AI research assistant" is still an assistant: the topic noun must not name a tool the app runs.
+    if (topic && !AI_TOOL_AFTER_TOPIC.test(next.slice(topic[0].length))) continue;
+    if (!topic && AI_TOPIC_PREV.test(prev)) continue;
+    return true;
+  }
+  return false;
+}
 
 /** What a component verifiably does (manifest). Guide keywords only help the engine find candidates: a keyword never
  * makes a platform "connected" here. */
@@ -137,7 +173,7 @@ export function uncoveredByCode(
     return "Autonomous actions without a person's confirmation: not part of any verified use case";
   for (const [label, re] of NATIVE_OR_HARDWARE)
     if (re.test(text)) return `It needs ${label}: TurbineH builds web apps only`;
-  if (!ctx.aiIncluded && AI.test(text))
+  if (!ctx.aiIncluded && asksForAi(text))
     return "AI generation: this use case includes no AI and no verified AI component was chosen";
   return null;
 }
