@@ -1,0 +1,95 @@
+schema: turbineh.guide/v0.1
+component: email.inbox.imapflow
+title: Read one IMAP mailbox read-only and incrementally (Gmail, Microsoft 365, any IMAP server)
+summary: >-
+  Reads the app's mailbox over IMAP with imapflow and parses each message with mailparser, for apps that process
+  incoming mail (triage, extraction, digests). Credentials come only from environment variables: an app password, or an
+  OAuth 2.0 access token sent with SASL XOAUTH2 (Gmail, Microsoft 365). TLS is required for a remote server; a plain
+  connection is refused unless the server runs on the same machine. The mailbox is opened with EXAMINE and bodies are
+  fetched with BODY.PEEK[], so nothing is marked as read, moved or deleted — there is no write path in the code. Each
+  synchronisation reads only the UIDs after the last one stored (the `n:*` rule that always returns the highest UID is
+  handled) and saves the messages and the new position in one transaction; a new UIDVALIDITY starts the mailbox again.
+  The first synchronisation imports only the latest MAIL_IMAP_MAX_PER_SYNC messages. Stored per message: sender,
+  recipients, subject, dates, plain text (bounded) and attachment names, types and sizes — never attachment contents.
+keywords:
+  [imap, mailbox, inbox, read email, email sync, gmail, outlook, microsoft 365, app password, oauth, xoauth2, imapflow,
+   mailparser, incremental sync, uid, read-only, email ingestion]
+synonyms:
+  mailbox: [inbox, email account, mail account]
+  synchronise: [sync, fetch new mail, poll the inbox, read new emails]
+  app password: [application password, IMAP password]
+use_cases:
+  - "An assistant that triages the owner's incoming email (with ai.mail-triage.turbineh)"
+  - "Importing invoices or requests that arrive by email into the app"
+use_when:
+  - "The request reads a person's or a team's mailbox (\"access my mail\", \"every email I receive\")"
+  - "Mail must be read safely and repeatedly without changing anything in the mailbox"
+avoid_when:
+  - "Sending email (use email.transactional.turbineh)"
+  - "Several mailboxes per user with an OAuth consent flow in the app (not covered: tokens come from the environment)"
+  - "Reading attachment contents (only their names are kept; use files.pdf-text.unpdf on a file you trust)"
+tradeoffs:
+  - { choice: "Read-only (EXAMINE + BODY.PEEK)", gain: "The mailbox is never changed: safe to run every few minutes, safe if the app has a bug", cost: "Read state, folders and labels stay as the person leaves them in their mail client" }
+  - { choice: "First run imports only the latest messages", gain: "A 10-year mailbox is not downloaded and sent to a model", cost: "Older mail is not in the app" }
+  - { choice: "OAuth access token from the environment", gain: "No token storage or refresh logic in the app", cost: "The deployment must keep MAIL_IMAP_ACCESS_TOKEN fresh (or use an app password)" }
+config:
+  - { name: MAIL_IMAP_HOST, description: "IMAP server, e.g. imap.gmail.com, outlook.office365.com (unset = the mailbox is not read)" }
+  - { name: MAIL_IMAP_PORT, default: "993 (143 when MAIL_IMAP_SECURE=false)", description: "Port" }
+  - { name: MAIL_IMAP_SECURE, default: "true", description: "Direct TLS; false only for a server on 127.0.0.1/::1/localhost" }
+  - { name: MAIL_IMAP_USER, description: "Mailbox user (usually the email address)" }
+  - { name: MAIL_IMAP_PASSWORD, description: "App password (exactly one of password or access token)" }
+  - { name: MAIL_IMAP_ACCESS_TOKEN, description: "OAuth 2.0 access token with the provider's IMAP scope (XOAUTH2)" }
+  - { name: MAIL_IMAP_MAILBOX, default: "INBOX", description: "Folder to read" }
+  - { name: MAIL_IMAP_MAX_PER_SYNC, default: "50", description: "Messages read per synchronisation (1–500)" }
+interfaces:
+  - { name: syncMailbox, signature: "syncMailbox() → Promise<SyncReport { configured, fetched, stored, reset, lastUid }>", where: src/mail/inbox/store.ts }
+  - { name: syncInbox, signature: "syncInbox({ store: InboxStore, config?, fetch? }) → Promise<SyncReport>", where: src/mail/inbox/sync.ts }
+  - { name: fetchNewMessages, signature: "fetchNewMessages(config, { uidValidity, lastUid }) → Promise<{ uidValidity, reset, messages: InboxMessage[] }>", where: src/mail/inbox/imap.ts }
+  - { name: inboxConfig, signature: "inboxConfig(env?) → InboxConfig | null (throws InboxConfigError)", where: src/mail/inbox/config.ts }
+  - { name: "Tables", signature: "inbox_messages (unique mailbox, uid_validity, uid), inbox_positions", where: src/db/component-inbox.ts }
+extension_points:
+  - what: "Process each new message"
+    where: "src/mail/triage/service.ts (with ai.mail-triage.turbineh) or your own job"
+    how: "Run syncMailbox() from a scheduled job, then read inbox_messages rows you have not processed (left join on your own table)."
+  - what: "Keep messages elsewhere"
+    where: "src/mail/inbox/sync.ts"
+    how: "Implement InboxStore (position + atomic save) and call syncInbox({ store })."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 server code, drizzle-orm with PostgreSQL, zod 4; imapflow 2.2.6 and mailparser 3.9.31 from the ai-agents template lockfile"
+  recipes: [ai-agents]
+  works_with: [ai.mail-triage.turbineh, jobs.scheduled.turbineh]
+security:
+  - "Credentials only from environment variables; never stored, logged or echoed (imapflow logging off)"
+  - "TLS with certificate verification for remote servers; plain IMAP refused unless the server is local"
+  - "No write command in the code path: EXAMINE and BODY.PEEK only"
+  - "Attachment contents are untrusted and discarded; at most 1 MB is read per message"
+guarantees:
+  - { claim: "Read-only: nothing marked as read, moved or deleted", test: "tests/unit/mail-inbox.test.ts › reads the mailbox read-only: EXAMINE and BODY.PEEK only, nothing is marked as read, moved or deleted" }
+  - { claim: "Incremental by UID", test: "tests/unit/mail-inbox.test.ts › synchronises incrementally by UID: a second run reads only the messages that arrived after the first" }
+  - { claim: "UIDVALIDITY change restarts; first run imports only the latest messages", test: "tests/unit/mail-inbox.test.ts › starts again when the server changes UIDVALIDITY, and a first run imports only the latest messages" }
+  - { claim: "App password or OAuth 2.0 (XOAUTH2); wrong credentials refused", test: "tests/unit/mail-inbox.test.ts › signs in with an app password or with an OAuth 2.0 access token (XOAUTH2); wrong credentials are refused" }
+  - { claim: "Parsed with mailparser, no attachment contents kept", test: "tests/unit/mail-inbox.test.ts › parses each message with mailparser: sender, subject, date, text and attachment names (contents are never kept)" }
+  - { claim: "Environment-only configuration, TLS rule", test: "tests/unit/mail-inbox.test.ts › is configured only by environment variables: TLS is required for a remote server, exactly one credential" }
+limits:
+  - "Proven against a local IMAP server implementing the RFC 3501 responses the client uses, not against live Gmail or Microsoft 365 accounts"
+  - "One mailbox and one folder per app; OAuth tokens are not refreshed by the app"
+  - "Gmail and Microsoft 365 require IMAP to be enabled and an app password or OAuth app registration by the mailbox owner"
+example: |-
+  // Server code in the app (a scheduled job or a server action): read what arrived since the last run, read-only.
+  import { InboxConfigError } from "@/mail/inbox/config";
+  import { syncMailbox } from "@/mail/inbox/store";
+
+  export async function readNewMail(): Promise<string> {
+    try {
+      const r = await syncMailbox();
+      if (!r.configured) return "Mailbox not configured (MAIL_IMAP_*).";
+      return `${r.stored} new email(s); last UID ${r.lastUid}${r.reset ? " (mailbox read from the start)" : ""}.`;
+    } catch (err) {
+      if (err instanceof InboxConfigError) return err.message;
+      throw err;
+    }
+  }
+example_check:
+  kind: app
+  from: snippet.ts

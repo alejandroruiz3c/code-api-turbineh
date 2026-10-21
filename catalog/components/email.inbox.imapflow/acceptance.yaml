@@ -1,0 +1,7 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/unit/mail-inbox.test.ts › reads the mailbox read-only: EXAMINE and BODY.PEEK only, nothing is marked as read, moved or deleted"
+  covers: ["read-only|read only|without (chang|modif|delet)"]
+- test: "tests/unit/mail-inbox.test.ts › synchronises incrementally by UID: a second run reads only the messages that arrived after the first"
+  covers: ["incremental|new (e-?mail|message)s? (since|after)|sync"]
+- test: "tests/unit/mail-inbox.test.ts › signs in with an app password or with an OAuth 2.0 access token (XOAUTH2); wrong credentials are refused"
+  covers: ["oauth|app password|imap (password|credential)"]

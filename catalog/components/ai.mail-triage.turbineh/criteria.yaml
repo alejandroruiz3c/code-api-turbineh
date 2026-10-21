@@ -1,0 +1,106 @@
+# Canonical acceptance criteria (ADR-0063, ADR-0072) of the mailbox triage: one per function its catalogue text
+# advertises, each linked to the tests that prove it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+- vocabulary: >-
+    email emails e-mail mail mails message messages inbox mailbox received receive receives new incoming each every
+    agent agents assistant ai processed process processes processing system app user owner person personal my
+    sender subject
+
+- id: mail-triage.classify-priority
+  criterion: "Every new email is classified through the orchestrator with a category and a priority, and the inbox lists the emails most urgent first"
+  advertises: "a category from a closed list, a priority"
+  says: ["e-?mail|mail|inbox|message", "classif|categor|priorit|triag|sort|order|rank|label|urgent|important"]
+  terms: >-
+    classify classifies classified classification categorise categorize categorises categorizes categorised
+    categorized category categories priority priorities prioritise prioritize prioritised prioritized level levels
+    assign assigns assigned order ordered orders sort sorted rank ranked list lists listed label labelled labeled
+    urgent high normal low important importance first top triage triaged orchestrator read reads
+  actors: [owner, user, admin, member]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › reads the mailbox read-only and classifies every new email with a category and a priority, most urgent first"
+    - "tests/unit/mail-triage.test.ts › classifies each email through the orchestrator with a category and a priority validated against the schema; an answer outside it is refused"
+
+- id: mail-triage.daily-digest
+  criterion: "A daily digest of the emails that need attention, most urgent first, is emailed on schedule"
+  advertises: "a daily digest"
+  says: ["digest|daily|summary|update|every (morning|day)|report|briefing", "e-?mail|mail|inbox|message|important|priorit|attention|urgent"]
+  terms: >-
+    daily day every morning digest digests summary summaries update updates report briefing schedule scheduled
+    sent send sends emailed receive receives received contain contains containing only most highest high urgent
+    important importance attention attend need needs priority priorities first list lists generated generate
+    set top
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › the daily digest is emailed on schedule with the emails that need attention, most urgent first"
+    - "tests/unit/mail-triage.test.ts › the daily digest lists only emails not handled of at least the configured priority, most urgent first"
+
+- id: mail-triage.finance-extract
+  criterion: "Invoices and payments in the mail are recorded in the finance ledger as income, expense or investment with amount, currency, date and issuer"
+  advertises: "invoices, receipts and payments are extracted"
+  says: ["invoice|payment|receipt|bill|financ|transaction|amount|income|expense|investment|inversion", "extract|record|regist|enter|add|append|ledger|captur|log|stor|save|identif|pars|row|spreadsheet|excel|detect"]
+  terms: >-
+    invoice invoices payment payments receipt receipts bill bills financial finance finances data information
+    info extract extracts extracted extraction record records recorded register registers enter enters entered
+    add adds added append appends appended row rows entry entries ledger capture captures stored saved identify
+    identified identifies detect detected amount amounts currency date dates issuer type kind relevant income
+    incomes expense expenses investment investments inversion inversions designated new
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › records invoices and payments in the finance ledger as income, expense or investment with amount, currency, date and issuer, with totals per type"
+    - "tests/unit/mail-triage.test.ts › extracts invoices and payments with amount, currency, date, issuer and type; code refuses a non-positive amount, an unknown currency or an impossible date"
+
+- id: mail-triage.excel-export
+  criterion: "The finance ledger is exported to an Excel workbook with every entry and the totals of income, expenses and investments"
+  advertises: "an Excel export"
+  says: ["excel|xlsx|spreadsheet|workbook|sheet"]
+  terms: >-
+    excel xlsx spreadsheet spreadsheets workbook sheet sheets file export exports exported download downloads open
+    opens opened view views see sees updated update row rows entry entries total totals income incomes expense
+    expenses investment investments inversion inversions categorized categorised accurately reflected reflect
+    reflects shown finance finances financial personal ledger every
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › exports the finance ledger to an Excel workbook with every entry and the totals per type"
+    - "tests/unit/mail-triage.test.ts › totals income, expenses and investments per currency in cents and exports them to an Excel workbook with entries and totals"
+
+- id: mail-triage.finance-totals
+  criterion: "The finances page shows income, expenses and investments with totals per type"
+  advertises: "totals per type and currency"
+  says: ["income|expense|investment|inversion|financ|total|balance", "total|show|view|see|page|dashboard|categor|reflect|track|summar"]
+  terms: >-
+    finances finance financial personal income incomes expense expenses investment investments inversion
+    inversions total totals per type types currency balance show shows shown view views see sees page dashboard
+    track tracks overview
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › records invoices and payments in the finance ledger as income, expense or investment with amount, currency, date and issuer, with totals per type"
+
+- id: mail-triage.injection-as-data
+  criterion: "An email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed"
+  advertises: "the email passed as data with injection attempts neutralised and flagged"
+  says: ["inject|instruction|manipulat|malicious|phish|suspicious|jailbreak"]
+  terms: >-
+    injection injections instruction instructions manipulate manipulation malicious phishing suspicious
+    jailbreak data flagged flag flags neutralised neutralized never obeyed obey follow follows ignored safety
+    safe treated
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › an email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed"
+    - "tests/unit/mail-triage.test.ts › an email carrying instructions is passed as data: the AI Safety Pack flag is kept and the answer is still validated"
+
+- id: mail-triage.correct-type
+  criterion: "A person corrects the type of a ledger entry"
+  advertises: "correct a ledger type"
+  says: ["correct|change|edit|fix|reclassif|override", "type|kind|categor|entry|ledger|income|expense|investment"]
+  terms: correct corrects corrected change changes changed edit edits fix fixes reclassify override type kind entry entries ledger
+  actors: [owner, user, admin]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › a person corrects the type of a ledger entry"
+
+- id: mail-triage.owner-only
+  criterion: "Only the mailbox owner sees the mail, the finances and the export"
+  advertises: "Owner-only pages"
+  says: ["only|private|owner|protect|secur|access|restrict", "mail|inbox|financ|export|ledger|see|view"]
+  terms: only owner owners private protected secure access restricted see sees view views export finances ledger other others people nobody else
+  actors: [owner, user, admin, visitor]
+  tests:
+    - "tests/e2e/mail-triage.spec.ts › only the mailbox owner (ADMIN_EMAILS) sees the mail, the finances and the export"

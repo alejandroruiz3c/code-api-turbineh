@@ -1,0 +1,119 @@
+schema: turbineh.guide/v0.1
+component: ai.recommendations.turbineh
+title: Conversational recommendations over the client's own verified catalogue (preferences, matching, facts, comparison, viewings)
+summary: >-
+  A public assistant that helps people choose from the business's own catalogue — new-build homes, cars, courses —
+  through plain conversation. It records what each person wants (budget, preferred location and needs such as
+  bedrooms; validated and stored per conversation, visible to staff), recommends only records staff verified, from
+  the database, that fit every stated preference (filtering and ranking are deterministic code: within budget, the
+  place contained in the record's location, numeric minimums and exact options; cheapest first), answers questions
+  with a record's verified facts, and compares two to four records side by side in the chat and on a public comparison
+  page. The model only chooses which tool to call: every record and fact it can repeat comes from a tool, and an
+  unknown or unverified reference is refused. With domain.bookings.turbineh it also books a viewing of a record on a
+  real free time, as an irreversible action the person confirms first. Staff add, edit and verify records behind an
+  ADMIN_EMAILS allow-list.
+keywords:
+  [recommendation, recommendations, recommend, product recommendation, property search, real estate assistant,
+   new-build homes, home finder, buyer preferences, budget, location, bedrooms, matching, shortlist, compare, side by
+   side comparison, viewing, property viewing, listings, catalogue, verified listings, sales assistant, lead
+   capture]
+synonyms:
+  record: [listing, property, home, item, product, car, course, unit]
+  preferences: [budget, price range, location, area, town, needs, requirements, criteria, bedrooms]
+  compare: [side by side, versus, comparison table]
+  viewing: [visit, tour, showing, viewing appointment]
+use_cases:
+  - "Real-estate assistant for a developer or agency: buyers state budget, area and bedrooms, get verified homes, compare them and book a viewing"
+  - "Any catalogue a person chooses from by budget, place and a few attributes (cars, courses, rentals)"
+use_when:
+  - "The business owns the catalogue and must never show anything it has not checked"
+  - "People choose by a budget, a place and a few numeric or listed attributes"
+avoid_when:
+  - "Free-text semantic search over thousands of documents (use the ai-agents knowledge base)"
+  - "Listings imported from external portals or feeds (not included: staff enter or import them into the table)"
+  - "Personalised ranking learnt from behaviour (rules here are explicit and deterministic)"
+tradeoffs:
+  - { choice: "Deterministic filters and order (price ascending, then reference)", gain: "Same answer every time; nothing outside the stated preferences is shown", cost: "No 'close enough' results: a home just over budget is not offered" }
+  - { choice: "Only records staff mark as verified", gain: "The assistant never repeats unchecked facts", cost: "Someone must verify each record before people see it" }
+  - { choice: "Preferences stored per conversation", gain: "Staff see what people look for; the person can add details over several messages", cost: "No account: a new conversation starts from scratch" }
+config:
+  - { name: ADMIN_EMAILS, default: "", description: "Comma-separated staff emails allowed to manage and verify the catalogue and see preferences and viewings (deny by default)" }
+  - { name: "src/recommendations/params.json", default: "from the request", description: "item {singular, plural}, customer {singular, plural}, currency (ISO 4217), fields [{key, label, type integer|number|text|enum, options?, match min|max|equals}], maxResults" }
+interfaces:
+  - { name: rankItems, signature: "rankItems(items, { budgetMax, location, needs }, cfg, limit?) → CatalogItem[] — verified, active, fitting every preference; price ascending then reference", where: src/recommendations/search.ts }
+  - { name: unmet, signature: "unmet(item, preferences, cfg) → string[] — why a record does not fit (empty = it fits)", where: src/recommendations/search.ts }
+  - { name: compareRows, signature: "compareRows(items, cfg) → { head, rows: [{ label, values[] }] } (also compareText, compareLink)", where: src/recommendations/search.ts }
+  - { name: preferencesSchema, signature: "preferencesSchema(cfg) → zod schema of { budgetMax?, location?, needs? } (unknown needs refused)", where: src/recommendations/search.ts }
+  - { name: recommend, signature: "recommend(preferences, limit?) → CatalogItem[] from the database", where: src/recommendations/store.ts }
+  - { name: publishedByReference, signature: "publishedByReference(refs) → { items, unknown } — verified, active records only", where: src/recommendations/store.ts }
+  - { name: toolkit, signature: "save_preferences, recommend_items, item_details, compare_items (+ book_viewing* with domain.bookings.turbineh; * = confirmation)", where: src/recommendations/toolkit.ts }
+  - { name: "Staff pages", signature: "/dashboard/catalog (list, add, mark verified), /dashboard/catalog/[id] (edit), /dashboard/catalog/leads (preferences and viewings)", where: src/app/dashboard/catalog/page.tsx }
+  - { name: "Public page", signature: "/compare?refs=A,B[,C,D] — side-by-side table of verified records", where: src/app/compare/page.tsx }
+extension_points:
+  - what: "Add an attribute people can ask for (garden, parking, energy rating)"
+    where: "src/recommendations/params.json"
+    how: "Add { key, label, type, options?, match } to fields; it is validated at start-up, shown on the staff form, accepted by save_preferences and compared side by side. No migration: values live in recommendation_items.attributes."
+  - what: "Change how results are ordered"
+    where: "src/recommendations/search.ts (rankItems)"
+    how: "Keep it deterministic (a total order ending in reference); the unit test pins the order."
+  - what: "Import records in bulk"
+    where: "src/recommendations/store.ts"
+    how: "Insert into recommendation_items with verified=false; staff verify them on /dashboard/catalog before people see them."
+  - what: "Another assistant capability (e.g. save a favourite)"
+    where: "src/recommendations/toolkit.ts"
+    how: "Add a function to store.ts, then a defineTool() calling it; irreversible: true + prepare() if it sends or books something. Add a rule in tests/mock-llm/scripts/recommendations.ts and an E2E case."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [ai-agents]
+  requires: [ai.orchestrator.turbineh]
+  works_with: [domain.bookings.turbineh]
+  notes: "Viewings (book_viewing, recommendation_viewings and their E2E) are installed only next to domain.bookings.turbineh (files-with/); without it the assistant recommends, describes and compares, and books nothing."
+security:
+  - "Staff pages and actions require a signed-in member on ADMIN_EMAILS (deny by default)"
+  - "People only ever see verified, active records; unknown and unverified references are refused"
+  - "Tool arguments and staff input are validated with zod (unknown preference keys refused); queries through Drizzle only"
+  - "A viewing is an irreversible tool: prepare re-checks the record and the time with the booking rules, and nothing is booked without the person's explicit yes"
+guarantees:
+  - { claim: "Preferences are identified, recorded per conversation and shown to staff", test: "tests/e2e/recommendation-assistant.spec.ts › a buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them, and staff see them" }
+  - { claim: "Only verified records that fit every preference are recommended", test: "tests/e2e/recommendation-assistant.spec.ts › recommends only verified records from the catalogue that match the budget, the location and the needs: over-budget, unverified, other-location and too-small ones never appear" }
+  - { claim: "Deterministic filtering and ordering", test: "tests/unit/recommendations.test.ts › recommends only verified, active records that fit the budget, the location and every need, cheapest first, deterministically" }
+  - { claim: "Questions answered with a record's verified facts", test: "tests/e2e/recommendation-assistant.spec.ts › answers a question about a record with its verified facts" }
+  - { claim: "Side-by-side comparison in the chat and on the comparison page", test: "tests/e2e/recommendation-assistant.spec.ts › compares two records side by side in the chat and on the comparison page, with the same facts" }
+  - { claim: "Unknown or unverified references are refused", test: "tests/e2e/recommendation-assistant.spec.ts › never invents a record: an unknown or unverified reference is refused" }
+  - { claim: "Invalid preferences are refused", test: "tests/unit/recommendations.test.ts › records only valid preferences: budget, location and needs of the configured fields" }
+  - { claim: "Staff create and verify records; only verified ones are published", test: "tests/e2e/recommendations-catalog.spec.ts › staff add records to the catalogue and mark them verified; only verified records are published" }
+  - { claim: "Only staff manage the catalogue", test: "tests/e2e/recommendations-catalog.spec.ts › people who are not staff cannot manage the catalogue" }
+  - { claim: "With bookings: a viewing is booked on a real free time after confirmation, linked to its record", test: "tests/e2e/recommendation-viewing.spec.ts › books a viewing of a recommended record only on a real free time and after the person confirms; it is a booking with its confirmation email and staff see which record it is for" }
+limits:
+  - "One catalogue per app; one currency; up to 12 attributes; up to 20 results per answer; 2–4 records per comparison"
+  - "Location matches when the preferred place is contained in the record's location (accent- and case-insensitive); no maps or distances"
+  - "No portal or feed import, no mortgage or legal advice, no learnt ranking; viewings only with domain.bookings.turbineh"
+  - "Proven against the scripted mock model (tests/mock-llm): answer quality of a real model is not measured here"
+example: |-
+  // Server code in the app (e.g. a staff action): the same deterministic matching the assistant uses.
+  import { recommendationConfig as cfg } from "@/recommendations/config";
+  import { formatMoney } from "@/recommendations/search";
+  import { recommend } from "@/recommendations/store";
+
+  export async function shortlist(budgetMax: number, location: string) {
+    const found = await recommend({ budgetMax, location, needs: {} }); // verified, active, within budget, in that place
+    return found.map((i) => `${i.reference}: ${i.title} — ${formatMoney(i.price, cfg.currency)}`);
+  }
+
+  export const example = () => shortlist(320_000, "Valencia");
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/recommendations/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "item { singular, plural }", default: "property", description: "What the catalogue holds, in the request's words" }
+    - { name: "customer { singular, plural }", default: "customer", description: "Who talks to the assistant (buyer, tenant, student)" }
+    - { name: "currency", default: "EUR", description: "ISO 4217 currency of prices and budgets" }
+    - { name: "fields[] { key, label, type, options?, match }", default: "properties: bedrooms, bathrooms, area (at least)", description: "Attributes besides price and location; match min (at least), max (at most) or equals" }
+    - { name: "maxResults", default: "5", description: "Records per recommendation" }
+  example: |
+    { "item": { "singular": "property", "plural": "properties" }, "customer": { "singular": "buyer", "plural": "buyers" },
+      "currency": "EUR", "fields": [{ "key": "bedrooms", "label": "Bedrooms", "type": "integer", "match": "min" }], "maxResults": 5 }

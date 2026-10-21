@@ -7,7 +7,8 @@ import type { MockScript } from "../mock";
  */
 const DATE = /\b(\d{4}-\d{2}-\d{2})\b/;
 const TIME = /\b(\d{2}:\d{2})\b/;
-const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
+// An address, or the placeholder the AI Safety Pack shows the model instead of it ("[email-1]", ADR-0072).
+const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\[email-\d+\]/;
 const REF = /\b([A-Z0-9]{8})\b/;
 
 const pick = (re: RegExp, text: string) => {

@@ -12,7 +12,18 @@ import {
 } from "./models";
 import { recordUsage } from "./orchestrator";
 import { contextBlock } from "./plan";
-import { AiSafetyError, audit, checkLimits, guardInput, scanOutput, type AiCaller } from "./safety";
+import {
+  AiSafetyError,
+  audit,
+  checkLimits,
+  guardConfig,
+  guardInput,
+  pseudonymize,
+  restorePseudonyms,
+  scanOutput,
+  type AiCaller,
+  type Pseudonyms,
+} from "./safety";
 
 /**
  * runAgent — client of the TurbineH tool-calling runtime (component ai.orchestrator.turbineh, ADR-0033). Every AI
@@ -96,6 +107,11 @@ export interface PendingAction {
 export interface AgentState {
   messages: AgentChatMessage[];
   pending: PendingAction | null;
+  /**
+   * The person's own emails and phone numbers behind the placeholders the model saw ("[email-1]"), so tools receive the
+   * real values while personal data never reaches the model (AI_REDACT_PII, ADR-0072). Server-side only.
+   */
+  pseudonyms?: Pseudonyms;
 }
 
 export interface RunAgentRequest extends AiCaller {
@@ -387,7 +403,13 @@ export async function runAgent(
 
   try {
     // 1 · Safety before any model runs.
-    const input = guardInput(req.input, "request");
+    // Privacy by default: the person's own emails and phone numbers reach the model as placeholders only.
+    const own =
+      guardConfig().AI_REDACT_PII === "true"
+        ? pseudonymize(req.input, state.pseudonyms)
+        : { text: req.input, vault: state.pseudonyms ?? {} };
+    if (Object.keys(own.vault).length > 0) state.pseudonyms = own.vault;
+    const input = guardInput(own.text, "request");
     flags.push(...input.flags);
     await io.limits(req);
 
@@ -477,7 +499,7 @@ export async function runAgent(
         } else {
           let raw: unknown;
           try {
-            raw = JSON.parse(call.function.arguments || "{}");
+            raw = JSON.parse(restorePseudonyms(call.function.arguments || "{}", state.pseudonyms));
           } catch {
             raw = undefined;
           }

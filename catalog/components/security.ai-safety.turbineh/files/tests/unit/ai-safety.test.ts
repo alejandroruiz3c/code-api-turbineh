@@ -5,7 +5,9 @@ import {
   guardInput,
   looksLikeInjection,
   needsConfirmation,
+  pseudonymize,
   redactPii,
+  restorePseudonyms,
   scanOutput,
 } from "@/lib/ai/guard";
 
@@ -33,6 +35,21 @@ describe("AI Safety Pack", () => {
       "Write to [email] or call [phone]",
     );
     expect(redactPii("Card 4242 4242 4242 4242")).toBe("Card [card]");
+    // Dates and times are never phone numbers (a booking "2026-10-26 09:00" reaches the model intact).
+    expect(
+      redactPii("Book 2026-10-26 09:00 or 26.10.2026 9:45, from 2026-10-26 - 2026-10-28"),
+    ).toBe("Book 2026-10-26 09:00 or 26.10.2026 9:45, from 2026-10-26 - 2026-10-28");
+    expect(redactPii("On 2026-10-26 call 600 123 456")).toBe("On 2026-10-26 call [phone]");
+    expect(redactPii("- 09:00 with Therapist 1\n- 2026-11-05 09:45 with Therapist 2")).toBe(
+      "- 09:00 with Therapist 1\n- 2026-11-05 09:45 with Therapist 2",
+    );
+    // A person's own contact data in a message to an agent: numbered placeholders for the model, values kept by the app.
+    const p = pseudonymize("Book for ana@example.com, +34 600 123 456; copy to ANA@example.com");
+    expect(p.text).toBe("Book for [email-1], [phone-1]; copy to [email-1]");
+    expect(
+      restorePseudonyms('{"email":"[email-1]","phone":"[phone-1]","x":"[email-9]"}', p.vault),
+    ).toBe('{"email":"ana@example.com","phone":"+34 600 123 456","x":"[email-9]"}');
+    expect(pseudonymize("and bob@example.org", p.vault).text).toBe("and [email-2]");
     // Built at runtime: a key-shaped literal would (rightly) be flagged by gitleaks.
     const fakeKey = ["sk", "live", "0123456789abcdefABCD"].join("_");
     const out = scanOutput(`Use key ${fakeKey} to pay`);

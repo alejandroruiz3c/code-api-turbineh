@@ -35,6 +35,20 @@ export interface MockScript {
     string,
     (result: Record<string, unknown>, args: Record<string, unknown>) => string
   >;
+  /**
+   * Structured outputs (orchestrate() with a schema): the value this script's "model" returns for a task, or null when
+   * the script does not handle it. Without one, the minimal valid instance of the schema is returned.
+   */
+  structured?: (req: { task: string; input: string; context: string }) => unknown;
+}
+
+/** The first script that answers a structured task (orchestrate with a schema), or undefined. */
+function scripted(scripts: MockScript[], task: string, input: string, context: string): unknown {
+  for (const script of scripts) {
+    const value = script.structured?.({ task, input, context });
+    if (value !== null && value !== undefined) return value;
+  }
+  return undefined;
 }
 
 const textOf = (m: MockMessage | undefined) =>
@@ -166,6 +180,10 @@ export function chatCompletion(
     .join("\n");
   const schema = /JSON_SCHEMA:\s*(\{[\s\S]*\})\s*$/m.exec(system);
   if (schema?.[1]) {
+    const task = /^Task: (.*)$/m.exec(system)?.[1] ?? "";
+    const input = textOf([...messages].reverse().find((m) => m.role === "user"));
+    const value = scripted(scripts, task, input, system);
+    if (value !== undefined) return text(JSON.stringify(value));
     try {
       return text(JSON.stringify(sample(JSON.parse(schema[1]) as JsonSchema)));
     } catch {
@@ -229,15 +247,25 @@ export function agentStep(
 }
 
 /**
- * One orchestrated request, scripted like /chat/completions (JSON_SCHEMA → minimal valid instance). Among the tools the
- * request offers, the first script rule whose pattern matches the input chooses the tool (as TurbineH's engine would);
- * a read-only `lookup_<entity>` tool is chosen when the input carries a reference ("A-1001", "#4521").
+ * One orchestrated request, scripted like /chat/completions: a script's `structured` answer for the task (it may read
+ * the request's documents, e.g. an email being triaged), else the minimal valid instance of the schema (JSON_SCHEMA).
+ * Among the tools the request offers, the first script rule whose pattern matches the input chooses the tool (as
+ * TurbineH's engine would); a read-only `lookup_<entity>` tool is chosen when the input carries a reference
+ * ("A-1001", "#4521").
  */
 export function orchestrateRequest(
-  body: { input?: unknown; schema?: unknown; tools?: unknown },
+  body: { task?: unknown; input?: unknown; schema?: unknown; tools?: unknown; context?: unknown },
   scripts: MockScript[] = [],
 ): unknown {
-  const system = body.schema ? `JSON_SCHEMA: ${JSON.stringify(body.schema)}` : "";
+  const context = (Array.isArray(body.context) ? body.context : [])
+    .map(
+      (d: { title?: unknown; text?: unknown }) =>
+        `${String(d.title ?? "")}\n${String(d.text ?? "")}`,
+    )
+    .join("\n\n");
+  const system = body.schema
+    ? `Task: ${String(body.task ?? "")}\n${context ? `Context:\n${context}\n` : ""}JSON_SCHEMA: ${JSON.stringify(body.schema)}`
+    : "";
   const input = String(body.input ?? "");
   const out = chatCompletion(
     {
@@ -247,7 +275,7 @@ export function orchestrateRequest(
         { role: "user", content: input },
       ],
     },
-    [],
+    scripts,
   ) as { choices: { message: { content: string } }[] };
   const offered = (Array.isArray(body.tools) ? body.tools : [])
     .map((t) => (t as { name?: unknown }).name)

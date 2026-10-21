@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/mail-triage.spec.ts › reads the mailbox read-only and classifies every new email with a category and a priority, most urgent first"
+  covers: ["e-?mail|mail|inbox", "classif|categor|priorit|triag|urgent"]
+- test: "tests/e2e/mail-triage.spec.ts › the daily digest is emailed on schedule with the emails that need attention, most urgent first"
+  covers: ["digest|daily (update|summary|e-?mail)|every morning"]
+- test: "tests/e2e/mail-triage.spec.ts › records invoices and payments in the finance ledger as income, expense or investment with amount, currency, date and issuer, with totals per type"
+  covers: ["invoice|payment|receipt|bill", "record|extract|ledger|regist|spreadsheet|excel"]
+- test: "tests/e2e/mail-triage.spec.ts › exports the finance ledger to an Excel workbook with every entry and the totals per type"
+  covers: ["excel|xlsx|spreadsheet|workbook"]
+- test: "tests/e2e/mail-triage.spec.ts › an email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed"
+  covers: ["inject|instruction|phish|malicious"]
+- test: "tests/e2e/mail-triage.spec.ts › only the mailbox owner (ADMIN_EMAILS) sees the mail, the finances and the export"
+  covers: ["only|private|owner", "mail|inbox|financ"]

@@ -1,0 +1,114 @@
+schema: turbineh.guide/v0.1
+component: ai.mail-triage.turbineh
+title: Mailbox triage agent — classify and prioritise every email, daily digest, invoices and payments to a finance ledger with Excel export
+summary: >-
+  Every new email of the mailbox (read read-only by email.inbox.imapflow) goes once through the TurbineH orchestrator
+  with its AI Safety Pack: the task is written by the app, the email is passed as a document (data, never
+  instructions — injection attempts are neutralised and flagged), and the answer must validate against a schema: a
+  category from a closed list (from the request, defaults otherwise), a priority (urgent, high, normal, low), a reason
+  and, for invoices, receipts and payments, the amount, currency, date, issuer and whether it is income, an expense or
+  an investment. Code checks those fields again (positive amount, real ISO 4217 currency, real date) before an entry
+  reaches the finance ledger. The owner sees the inbox most urgent first (filters, "Mark handled"), the finances page
+  with totals per type and currency computed in cents, corrects a type when the model got it wrong, and downloads the
+  ledger as an Excel workbook (Entries and Totals sheets). Scheduled jobs (jobs.scheduled.turbineh) read and triage new
+  mail every few minutes and email a daily digest of what needs attention. Owner-only: verified ADMIN_EMAILS.
+keywords:
+  [email triage, inbox triage, classify emails, prioritise emails, email priority, daily email digest,
+   invoices from email, payments from email, personal finance from email, income expenses investments, finance
+   ledger]
+synonyms:
+  triage: [classify, categorise, sort by priority, prioritise]
+  digest: [daily update, daily summary, morning briefing]
+  ledger: [finance spreadsheet, Excel file, personal finances]
+use_cases:
+  - "A person's assistant that classifies every email, orders it by priority and sends a daily digest of what to answer"
+  - "Invoices, receipts and payments found in the mail recorded as income, expenses and investments, exported to Excel"
+use_when:
+  - "The request reads a mailbox and classifies, prioritises or summarises its emails"
+  - "Invoices or payments that arrive by email must end in a spreadsheet of income, expenses and investments"
+avoid_when:
+  - "Replying to, sending, moving or deleting emails automatically (not covered: the agent only reads and records)"
+  - "Bank or accounting integrations (QuickBooks, Xero…) or paying invoices (not covered)"
+  - "Reading invoice PDFs: only the email text and attachment names reach the model"
+tradeoffs:
+  - { choice: "Email as a document, task written by the app", gain: "An email cannot instruct the agent; attempts are flagged for the owner", cost: "The model does not see attachment contents" }
+  - { choice: "Closed category list and schema-validated output", gain: "Every stored answer is one the app understands", cost: "New categories need a params change" }
+  - { choice: "Totals by code in cents, per currency", gain: "Exact sums, never mixing currencies", cost: "No currency conversion" }
+config:
+  - { name: "src/mail/triage/params.json", default: "8 categories, finance on (income, expense, investment, EUR), digest 07:00 UTC for urgent+high, 15 max, sync every 15 min", description: "From the request (detector in packages/compiler/src/domains-mail.ts)" }
+  - { name: MAIL_DIGEST_TO, description: "Digest recipients (comma-separated); empty = ADMIN_EMAILS" }
+  - { name: "src/jobs/params.json", description: "mail-sync (every few minutes) and mail-digest (daily) jobs, run by /api/cron/run with CRON_SECRET" }
+interfaces:
+  - { name: syncAndTriage, signature: "syncAndTriage() → { sync: SyncReport, triage: { done, failed } }", where: src/mail/triage/service.ts }
+  - { name: triagePending, signature: "triagePending(limit = 20, orchestrate?, now?) → { done, failed }", where: src/mail/triage/service.ts }
+  - { name: triageEmail, signature: "triageEmail(email, cfg, orchestrate, now?) → TriageResult { category, priority, reason, flags, finance, financeRefused }", where: src/mail/triage/triage.ts }
+  - { name: "Inbox and ledger", signature: "triagedInbox({ category?, priority? }), setHandled(id, handled), ledger(), setEntryKind(id, kind, by), dailyDigest(now?)", where: src/mail/triage/service.ts }
+  - { name: "Ledger maths and Excel", signature: "ledgerTotals(entries) → LedgerTotal[]; ledgerWorkbook(entries, title?) → Promise<Buffer>", where: src/mail/triage/ledger.ts }
+  - { name: "Pages", signature: "/dashboard/mail, /dashboard/finance, GET /dashboard/finance/export (.xlsx)", where: src/app/dashboard/mail/page.tsx }
+extension_points:
+  - what: "Change the categories or the digest"
+    where: "src/mail/triage/params.json"
+    how: "Edit categories (closed list, validated), digest.at / timeZone / minPriority / max; keep src/jobs/params.json's mail-digest cron in line."
+  - what: "Record more fields from invoices"
+    where: "src/mail/triage/schema.ts, src/db/component-mail-triage.ts"
+    how: "Add the field to the finance schema (validated by the orchestrator), check it in financeFrom, store it in finance_entries and add a column in ledger.ts."
+  - what: "Act on urgent emails"
+    where: "src/jobs/digests.ts"
+    how: "Return extra DigestMessage entries for urgent rows of triagedInbox(); never reply to senders automatically."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 pages, route handlers and server actions; drizzle-orm with PostgreSQL; zod 4; exceljs 4.4.0 from the ai-agents template lockfile"
+  recipes: [ai-agents]
+  requires: [email.inbox.imapflow, jobs.scheduled.turbineh, ai.orchestrator.turbineh]
+security:
+  - "Every model call through orchestrate(): AI Safety Pack input checks, document neutralisation, output scan, usage and audit"
+  - "The email is data in the request's context, never its instruction; injection attempts are flagged on the inbox row"
+  - "Pages and actions behind verified ADMIN_EMAILS; the Excel export answers 404 to anyone else"
+  - "Finance fields re-checked by code before they are stored; one ledger entry per email (unique)"
+guarantees:
+  - { claim: "Classified with a category and a priority, inbox most urgent first", test: "tests/e2e/mail-triage.spec.ts › reads the mailbox read-only and classifies every new email with a category and a priority, most urgent first" }
+  - { claim: "Schema-validated classification through the orchestrator", test: "tests/unit/mail-triage.test.ts › classifies each email through the orchestrator with a category and a priority validated against the schema; an answer outside it is refused" }
+  - { claim: "Email treated as data; injection flagged, never obeyed", test: "tests/e2e/mail-triage.spec.ts › an email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed" }
+  - { claim: "Invoices and payments recorded as income, expense or investment, totals per type", test: "tests/e2e/mail-triage.spec.ts › records invoices and payments in the finance ledger as income, expense or investment with amount, currency, date and issuer, with totals per type" }
+  - { claim: "Code checks of amount, currency and date", test: "tests/unit/mail-triage.test.ts › extracts invoices and payments with amount, currency, date, issuer and type; code refuses a non-positive amount, an unknown currency or an impossible date" }
+  - { claim: "Excel export with entries and totals", test: "tests/e2e/mail-triage.spec.ts › exports the finance ledger to an Excel workbook with every entry and the totals per type" }
+  - { claim: "Totals in cents per currency; workbook read back", test: "tests/unit/mail-triage.test.ts › totals income, expenses and investments per currency in cents and exports them to an Excel workbook with entries and totals" }
+  - { claim: "Daily digest emailed on schedule, most urgent first", test: "tests/e2e/mail-triage.spec.ts › the daily digest is emailed on schedule with the emails that need attention, most urgent first" }
+  - { claim: "Priority order", test: "tests/unit/mail-triage.test.ts › orders the inbox by priority: not handled first, urgent first, newest first" }
+  - { claim: "A person corrects a ledger type", test: "tests/e2e/mail-triage.spec.ts › a person corrects the type of a ledger entry" }
+  - { claim: "Owner-only", test: "tests/e2e/mail-triage.spec.ts › only the mailbox owner (ADMIN_EMAILS) sees the mail, the finances and the export" }
+limits:
+  - "Classification quality depends on the model behind the orchestrator; E2E tests use a scripted model, so they prove the flow, validation, storage and outputs, not the model's judgement"
+  - "20 emails triaged per run (the AI Safety Pack's per-minute limit applies); failed calls are retried up to 3 times"
+  - "No currency conversion; no reading of attachment contents; one mailbox per app"
+example: |-
+  // Server code in the app (a server action or a scheduled job): read new mail, triage it through the orchestrator,
+  // then use the stored triage — the inbox in priority order, the ledger totals and its Excel workbook.
+  import { ledgerTotals, ledgerWorkbook } from "@/mail/triage/ledger";
+  import { ledger, syncAndTriage, triagedInbox } from "@/mail/triage/service";
+
+  export async function morningReview(): Promise<{ urgent: string[]; totals: string; xlsx: Buffer }> {
+    await syncAndTriage();
+    const inbox = await triagedInbox({ priority: "urgent" });
+    const entries = await ledger();
+    const totals = ledgerTotals(entries)
+      .map(
+        (t) =>
+          `${t.currency}: income ${t.income}, expenses ${t.expense}, investments ${t.investment}`,
+      )
+      .join("; ");
+    return { urgent: inbox.map((m) => m.subject), totals, xlsx: await ledgerWorkbook(entries) };
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/mail/triage/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "categories[]", description: "Closed list of categories (validated)" }
+    - { name: "finance", description: "enabled, kinds (income, expense, investment), defaultCurrency" }
+    - { name: "digest", description: "enabled, at (HH:MM), timeZone (IANA), minPriority, max" }
+    - { name: "syncEveryMinutes", default: "15", description: "Interval of the mail-sync job" }
+  example: |
+    { "categories": ["action", "finance", "work", "personal", "newsletter", "promotion", "notification", "other"], "finance": { "enabled": true, "kinds": ["income", "expense", "investment"], "defaultCurrency": "EUR" }, "digest": { "enabled": true, "at": "07:00", "timeZone": "Europe/Madrid", "minPriority": "high", "max": 15 }, "syncEveryMinutes": 15 }

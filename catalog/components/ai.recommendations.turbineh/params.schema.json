@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ai.recommendations.turbineh params (src/recommendations/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["item", "customer", "currency", "fields", "maxResults"],
+  "$defs": {
+    "noun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["singular", "plural"],
+      "properties": {
+        "singular": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "plural": { "type": "string", "minLength": 1, "maxLength": 40 }
+      }
+    }
+  },
+  "properties": {
+    "item": {
+      "$ref": "#/$defs/noun",
+      "description": "What the catalogue holds, in the request's words: property/properties, car/cars, course/courses."
+    },
+    "customer": {
+      "$ref": "#/$defs/noun",
+      "description": "Who talks to the assistant: buyer/buyers, customer/customers, student/students."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "ISO 4217 currency of the prices and of the budget."
+    },
+    "fields": {
+      "type": "array",
+      "maxItems": 12,
+      "description": "Attributes of each catalogue record a person can ask for (bedrooms, area, type…). Price and location are built in.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "type", "match"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,30}$" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "type": { "enum": ["integer", "number", "text", "enum"] },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 20,
+            "items": { "type": "string", "minLength": 1, "maxLength": 40 }
+          },
+          "match": {
+            "enum": ["min", "max", "equals"],
+            "description": "min: the record has at least what the person needs (bedrooms); max: at most (distance); equals: the same value (type)."
+          }
+        }
+      }
+    },
+    "maxResults": { "type": "integer", "minimum": 1, "maximum": 20 }
+  }
+}

@@ -231,6 +231,221 @@
       "details": "https://software.turbineh.com/v1/capabilities/ai.language-detection.franc-min"
     },
     {
+      "id": "ai.mail-triage.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "ai",
+      "package": "pkg:generic/turbineh/ai.mail-triage.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "ai.mail-triage"
+      ],
+      "does": "Mailbox triage for AI apps: every new email of the mailbox (email.inbox.imapflow) is classified through the TurbineH orchestrator with its AI Safety Pack — a category from a closed list, a priority (urgent, high, normal, low) and a reason, as structured output validated against a schema, the email passed as data with injection attempts neutralised and flagged — and the inbox is shown most urgent first with filters and a handled mark; invoices, receipts and payments are extracted (amount, currency, date, issuer, income / expense / investment), checked again by code and recorded in a personal finance ledger with totals per type and currency and an Excel export (exceljs: entries and totals sheets); a daily digest of the emails that need attention is emailed on schedule (jobs.scheduled.turbineh). Owner-only pages (ADMIN_EMAILS).",
+      "doesNot": "Does not reply to, send, move or delete emails, pay invoices, connect to banks or accounting software, or read attachment contents (only their names); one mailbox per app",
+      "title": "Mailbox triage agent — classify and prioritise every email, daily digest, invoices and payments to a finance ledger with Excel export",
+      "summary": "Every new email of the mailbox (read read-only by email.inbox.imapflow) goes once through the TurbineH orchestrator with its AI Safety Pack: the task is written by the app, the email is passed as a document (data, never instructions — injection attempts are neutralised and flagged), and the answer must validate against a schema: a category from a closed list (from the request, defaults otherwise), a priority (urgent, high, normal, low), a reason and, for invoices, receipts and payments, the amount, currency, date, issuer and whether it is income, an expense or an investment. Code checks those fields again (positive amount, real ISO 4217 currency, real date) before an entry reaches the finance ledger. The owner sees the inbox most urgent first (filters, \"Mark handled\"), the finances page with totals per type and currency computed in cents, corrects a type when the model got it wrong, and downloads the ledger as an Excel workbook (Entries and Totals sheets). Scheduled jobs (jobs.scheduled.turbineh) read and triage new mail every few minutes and email a daily digest of what needs attention. Owner-only: verified ADMIN_EMAILS.",
+      "useCases": [
+        "A person's assistant that classifies every email, orders it by priority and sends a daily digest of what to answer",
+        "Invoices, receipts and payments found in the mail recorded as income, expenses and investments, exported to Excel"
+      ],
+      "useWhen": [
+        "The request reads a mailbox and classifies, prioritises or summarises its emails",
+        "Invoices or payments that arrive by email must end in a spreadsheet of income, expenses and investments"
+      ],
+      "avoidWhen": [
+        "Replying to, sending, moving or deleting emails automatically (not covered: the agent only reads and records)",
+        "Bank or accounting integrations (QuickBooks, Xero…) or paying invoices (not covered)",
+        "Reading invoice PDFs: only the email text and attachment names reach the model"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Email as a document, task written by the app",
+          "gain": "An email cannot instruct the agent; attempts are flagged for the owner",
+          "cost": "The model does not see attachment contents"
+        },
+        {
+          "choice": "Closed category list and schema-validated output",
+          "gain": "Every stored answer is one the app understands",
+          "cost": "New categories need a params change"
+        },
+        {
+          "choice": "Totals by code in cents, per currency",
+          "gain": "Exact sums, never mixing currencies",
+          "cost": "No currency conversion"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/mail/triage/params.json",
+          "default": "8 categories, finance on (income, expense, investment, EUR), digest 07:00 UTC for urgent+high, 15 max, sync every 15 min",
+          "description": "From the request (detector in packages/compiler/src/domains-mail.ts)"
+        },
+        {
+          "name": "MAIL_DIGEST_TO",
+          "description": "Digest recipients (comma-separated); empty = ADMIN_EMAILS"
+        },
+        {
+          "name": "src/jobs/params.json",
+          "description": "mail-sync (every few minutes) and mail-digest (daily) jobs, run by /api/cron/run with CRON_SECRET"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "syncAndTriage",
+          "signature": "syncAndTriage() → { sync: SyncReport, triage: { done, failed } }",
+          "where": "src/mail/triage/service.ts"
+        },
+        {
+          "name": "triagePending",
+          "signature": "triagePending(limit = 20, orchestrate?, now?) → { done, failed }",
+          "where": "src/mail/triage/service.ts"
+        },
+        {
+          "name": "triageEmail",
+          "signature": "triageEmail(email, cfg, orchestrate, now?) → TriageResult { category, priority, reason, flags, finance, financeRefused }",
+          "where": "src/mail/triage/triage.ts"
+        },
+        {
+          "name": "Inbox and ledger",
+          "signature": "triagedInbox({ category?, priority? }), setHandled(id, handled), ledger(), setEntryKind(id, kind, by), dailyDigest(now?)",
+          "where": "src/mail/triage/service.ts"
+        },
+        {
+          "name": "Ledger maths and Excel",
+          "signature": "ledgerTotals(entries) → LedgerTotal[]; ledgerWorkbook(entries, title?) → Promise<Buffer>",
+          "where": "src/mail/triage/ledger.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/mail, /dashboard/finance, GET /dashboard/finance/export (.xlsx)",
+          "where": "src/app/dashboard/mail/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Change the categories or the digest",
+          "where": "src/mail/triage/params.json",
+          "how": "Edit categories (closed list, validated), digest.at / timeZone / minPriority / max; keep src/jobs/params.json's mail-digest cron in line."
+        },
+        {
+          "what": "Record more fields from invoices",
+          "where": "src/mail/triage/schema.ts, src/db/component-mail-triage.ts",
+          "how": "Add the field to the finance schema (validated by the orchestrator), check it in financeFrom, store it in finance_entries and add a column in ledger.ts."
+        },
+        {
+          "what": "Act on urgent emails",
+          "where": "src/jobs/digests.ts",
+          "how": "Return extra DigestMessage entries for urgent rows of triagedInbox(); never reply to senders automatically."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 pages, route handlers and server actions; drizzle-orm with PostgreSQL; zod 4; exceljs 4.4.0 from the ai-agents template lockfile",
+        "recipes": [
+          "ai-agents"
+        ],
+        "requires": [
+          "email.inbox.imapflow",
+          "jobs.scheduled.turbineh",
+          "ai.orchestrator.turbineh"
+        ]
+      },
+      "security": [
+        "Every model call through orchestrate(): AI Safety Pack input checks, document neutralisation, output scan, usage and audit",
+        "The email is data in the request's context, never its instruction; injection attempts are flagged on the inbox row",
+        "Pages and actions behind verified ADMIN_EMAILS; the Excel export answers 404 to anyone else",
+        "Finance fields re-checked by code before they are stored; one ledger entry per email (unique)"
+      ],
+      "guarantees": [
+        {
+          "claim": "Classified with a category and a priority, inbox most urgent first",
+          "test": "tests/e2e/mail-triage.spec.ts › reads the mailbox read-only and classifies every new email with a category and a priority, most urgent first"
+        },
+        {
+          "claim": "Schema-validated classification through the orchestrator",
+          "test": "tests/unit/mail-triage.test.ts › classifies each email through the orchestrator with a category and a priority validated against the schema; an answer outside it is refused"
+        },
+        {
+          "claim": "Email treated as data; injection flagged, never obeyed",
+          "test": "tests/e2e/mail-triage.spec.ts › an email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed"
+        },
+        {
+          "claim": "Invoices and payments recorded as income, expense or investment, totals per type",
+          "test": "tests/e2e/mail-triage.spec.ts › records invoices and payments in the finance ledger as income, expense or investment with amount, currency, date and issuer, with totals per type"
+        },
+        {
+          "claim": "Code checks of amount, currency and date",
+          "test": "tests/unit/mail-triage.test.ts › extracts invoices and payments with amount, currency, date, issuer and type; code refuses a non-positive amount, an unknown currency or an impossible date"
+        },
+        {
+          "claim": "Excel export with entries and totals",
+          "test": "tests/e2e/mail-triage.spec.ts › exports the finance ledger to an Excel workbook with every entry and the totals per type"
+        },
+        {
+          "claim": "Totals in cents per currency; workbook read back",
+          "test": "tests/unit/mail-triage.test.ts › totals income, expenses and investments per currency in cents and exports them to an Excel workbook with entries and totals"
+        },
+        {
+          "claim": "Daily digest emailed on schedule, most urgent first",
+          "test": "tests/e2e/mail-triage.spec.ts › the daily digest is emailed on schedule with the emails that need attention, most urgent first"
+        },
+        {
+          "claim": "Priority order",
+          "test": "tests/unit/mail-triage.test.ts › orders the inbox by priority: not handled first, urgent first, newest first"
+        },
+        {
+          "claim": "A person corrects a ledger type",
+          "test": "tests/e2e/mail-triage.spec.ts › a person corrects the type of a ledger entry"
+        },
+        {
+          "claim": "Owner-only",
+          "test": "tests/e2e/mail-triage.spec.ts › only the mailbox owner (ADMIN_EMAILS) sees the mail, the finances and the export"
+        }
+      ],
+      "limits": [
+        "Classification quality depends on the model behind the orchestrator; E2E tests use a scripted model, so they prove the flow, validation, storage and outputs, not the model's judgement",
+        "20 emails triaged per run (the AI Safety Pack's per-minute limit applies); failed calls are retried up to 3 times",
+        "No currency conversion; no reading of attachment contents; one mailbox per app"
+      ],
+      "example": "// Server code in the app (a server action or a scheduled job): read new mail, triage it through the orchestrator,\n// then use the stored triage — the inbox in priority order, the ledger totals and its Excel workbook.\nimport { ledgerTotals, ledgerWorkbook } from \"@/mail/triage/ledger\";\nimport { ledger, syncAndTriage, triagedInbox } from \"@/mail/triage/service\";\n\nexport async function morningReview(): Promise<{ urgent: string[]; totals: string; xlsx: Buffer }> {\n  await syncAndTriage();\n  const inbox = await triagedInbox({ priority: \"urgent\" });\n  const entries = await ledger();\n  const totals = ledgerTotals(entries)\n    .map(\n      (t) =>\n        `${t.currency}: income ${t.income}, expenses ${t.expense}, investments ${t.investment}`,\n    )\n    .join(\"; \");\n  return { urgent: inbox.map((m) => m.subject), totals, xlsx: await ledgerWorkbook(entries) };\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "email triage",
+        "inbox triage",
+        "classify emails",
+        "prioritise emails",
+        "email priority",
+        "daily email digest",
+        "invoices from email",
+        "payments from email",
+        "personal finance from email",
+        "income expenses investments",
+        "finance ledger"
+      ],
+      "synonyms": {
+        "triage": [
+          "classify",
+          "categorise",
+          "sort by priority",
+          "prioritise"
+        ],
+        "digest": [
+          "daily update",
+          "daily summary",
+          "morning briefing"
+        ],
+        "ledger": [
+          "finance spreadsheet",
+          "Excel file",
+          "personal finances"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/ai.mail-triage.turbineh"
+    },
+    {
       "id": "ai.mcp-server.modelcontextprotocol-sdk",
       "version": "0.1.0",
       "status": "approved",
@@ -860,6 +1075,265 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/ai.prompt-templates.mustache"
+    },
+    {
+      "id": "ai.recommendations.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "ai",
+      "package": "pkg:generic/turbineh/ai.recommendations.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "ai.recommendations"
+      ],
+      "does": "Conversational recommendations over the client's own catalogue (homes, cars, courses…): the assistant records each person's budget, preferred location and needs (validated, stored per conversation, visible to staff), recommends only verified records from the database that fit them (deterministic filtering and ranking by code, never invented), answers questions with a record's verified facts, compares 2–4 records side by side (in the chat and on a public comparison page) and, with domain.bookings.turbineh, books a viewing of a record on a real free time after the person confirms. Staff manage and verify the catalogue behind an ADMIN_EMAILS allow-list.",
+      "doesNot": "Does not scrape or import listings from portals, give mortgage, legal or investment advice, or rank by machine learning; without domain.bookings.turbineh it books no viewings",
+      "title": "Conversational recommendations over the client's own verified catalogue (preferences, matching, facts, comparison, viewings)",
+      "summary": "A public assistant that helps people choose from the business's own catalogue — new-build homes, cars, courses — through plain conversation. It records what each person wants (budget, preferred location and needs such as bedrooms; validated and stored per conversation, visible to staff), recommends only records staff verified, from the database, that fit every stated preference (filtering and ranking are deterministic code: within budget, the place contained in the record's location, numeric minimums and exact options; cheapest first), answers questions with a record's verified facts, and compares two to four records side by side in the chat and on a public comparison page. The model only chooses which tool to call: every record and fact it can repeat comes from a tool, and an unknown or unverified reference is refused. With domain.bookings.turbineh it also books a viewing of a record on a real free time, as an irreversible action the person confirms first. Staff add, edit and verify records behind an ADMIN_EMAILS allow-list.",
+      "useCases": [
+        "Real-estate assistant for a developer or agency: buyers state budget, area and bedrooms, get verified homes, compare them and book a viewing",
+        "Any catalogue a person chooses from by budget, place and a few attributes (cars, courses, rentals)"
+      ],
+      "useWhen": [
+        "The business owns the catalogue and must never show anything it has not checked",
+        "People choose by a budget, a place and a few numeric or listed attributes"
+      ],
+      "avoidWhen": [
+        "Free-text semantic search over thousands of documents (use the ai-agents knowledge base)",
+        "Listings imported from external portals or feeds (not included: staff enter or import them into the table)",
+        "Personalised ranking learnt from behaviour (rules here are explicit and deterministic)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Deterministic filters and order (price ascending, then reference)",
+          "gain": "Same answer every time; nothing outside the stated preferences is shown",
+          "cost": "No 'close enough' results: a home just over budget is not offered"
+        },
+        {
+          "choice": "Only records staff mark as verified",
+          "gain": "The assistant never repeats unchecked facts",
+          "cost": "Someone must verify each record before people see it"
+        },
+        {
+          "choice": "Preferences stored per conversation",
+          "gain": "Staff see what people look for; the person can add details over several messages",
+          "cost": "No account: a new conversation starts from scratch"
+        }
+      ],
+      "config": [
+        {
+          "name": "ADMIN_EMAILS",
+          "default": "",
+          "description": "Comma-separated staff emails allowed to manage and verify the catalogue and see preferences and viewings (deny by default)"
+        },
+        {
+          "name": "src/recommendations/params.json",
+          "default": "from the request",
+          "description": "item {singular, plural}, customer {singular, plural}, currency (ISO 4217), fields [{key, label, type integer|number|text|enum, options?, match min|max|equals}], maxResults"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "rankItems",
+          "signature": "rankItems(items, { budgetMax, location, needs }, cfg, limit?) → CatalogItem[] — verified, active, fitting every preference; price ascending then reference",
+          "where": "src/recommendations/search.ts"
+        },
+        {
+          "name": "unmet",
+          "signature": "unmet(item, preferences, cfg) → string[] — why a record does not fit (empty = it fits)",
+          "where": "src/recommendations/search.ts"
+        },
+        {
+          "name": "compareRows",
+          "signature": "compareRows(items, cfg) → { head, rows: [{ label, values[] }] } (also compareText, compareLink)",
+          "where": "src/recommendations/search.ts"
+        },
+        {
+          "name": "preferencesSchema",
+          "signature": "preferencesSchema(cfg) → zod schema of { budgetMax?, location?, needs? } (unknown needs refused)",
+          "where": "src/recommendations/search.ts"
+        },
+        {
+          "name": "recommend",
+          "signature": "recommend(preferences, limit?) → CatalogItem[] from the database",
+          "where": "src/recommendations/store.ts"
+        },
+        {
+          "name": "publishedByReference",
+          "signature": "publishedByReference(refs) → { items, unknown } — verified, active records only",
+          "where": "src/recommendations/store.ts"
+        },
+        {
+          "name": "toolkit",
+          "signature": "save_preferences, recommend_items, item_details, compare_items (+ book_viewing* with domain.bookings.turbineh; * = confirmation)",
+          "where": "src/recommendations/toolkit.ts"
+        },
+        {
+          "name": "Staff pages",
+          "signature": "/dashboard/catalog (list, add, mark verified), /dashboard/catalog/[id] (edit), /dashboard/catalog/leads (preferences and viewings)",
+          "where": "src/app/dashboard/catalog/page.tsx"
+        },
+        {
+          "name": "Public page",
+          "signature": "/compare?refs=A,B[,C,D] — side-by-side table of verified records",
+          "where": "src/app/compare/page.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add an attribute people can ask for (garden, parking, energy rating)",
+          "where": "src/recommendations/params.json",
+          "how": "Add { key, label, type, options?, match } to fields; it is validated at start-up, shown on the staff form, accepted by save_preferences and compared side by side. No migration: values live in recommendation_items.attributes."
+        },
+        {
+          "what": "Change how results are ordered",
+          "where": "src/recommendations/search.ts (rankItems)",
+          "how": "Keep it deterministic (a total order ending in reference); the unit test pins the order."
+        },
+        {
+          "what": "Import records in bulk",
+          "where": "src/recommendations/store.ts",
+          "how": "Insert into recommendation_items with verified=false; staff verify them on /dashboard/catalog before people see them."
+        },
+        {
+          "what": "Another assistant capability (e.g. save a favourite)",
+          "where": "src/recommendations/toolkit.ts",
+          "how": "Add a function to store.ts, then a defineTool() calling it; irreversible: true + prepare() if it sends or books something. Add a rule in tests/mock-llm/scripts/recommendations.ts and an E2E case."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "ai-agents"
+        ],
+        "requires": [
+          "ai.orchestrator.turbineh"
+        ],
+        "works_with": [
+          "domain.bookings.turbineh"
+        ],
+        "notes": "Viewings (book_viewing, recommendation_viewings and their E2E) are installed only next to domain.bookings.turbineh (files-with/); without it the assistant recommends, describes and compares, and books nothing."
+      },
+      "security": [
+        "Staff pages and actions require a signed-in member on ADMIN_EMAILS (deny by default)",
+        "People only ever see verified, active records; unknown and unverified references are refused",
+        "Tool arguments and staff input are validated with zod (unknown preference keys refused); queries through Drizzle only",
+        "A viewing is an irreversible tool: prepare re-checks the record and the time with the booking rules, and nothing is booked without the person's explicit yes"
+      ],
+      "guarantees": [
+        {
+          "claim": "Preferences are identified, recorded per conversation and shown to staff",
+          "test": "tests/e2e/recommendation-assistant.spec.ts › a buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them, and staff see them"
+        },
+        {
+          "claim": "Only verified records that fit every preference are recommended",
+          "test": "tests/e2e/recommendation-assistant.spec.ts › recommends only verified records from the catalogue that match the budget, the location and the needs: over-budget, unverified, other-location and too-small ones never appear"
+        },
+        {
+          "claim": "Deterministic filtering and ordering",
+          "test": "tests/unit/recommendations.test.ts › recommends only verified, active records that fit the budget, the location and every need, cheapest first, deterministically"
+        },
+        {
+          "claim": "Questions answered with a record's verified facts",
+          "test": "tests/e2e/recommendation-assistant.spec.ts › answers a question about a record with its verified facts"
+        },
+        {
+          "claim": "Side-by-side comparison in the chat and on the comparison page",
+          "test": "tests/e2e/recommendation-assistant.spec.ts › compares two records side by side in the chat and on the comparison page, with the same facts"
+        },
+        {
+          "claim": "Unknown or unverified references are refused",
+          "test": "tests/e2e/recommendation-assistant.spec.ts › never invents a record: an unknown or unverified reference is refused"
+        },
+        {
+          "claim": "Invalid preferences are refused",
+          "test": "tests/unit/recommendations.test.ts › records only valid preferences: budget, location and needs of the configured fields"
+        },
+        {
+          "claim": "Staff create and verify records; only verified ones are published",
+          "test": "tests/e2e/recommendations-catalog.spec.ts › staff add records to the catalogue and mark them verified; only verified records are published"
+        },
+        {
+          "claim": "Only staff manage the catalogue",
+          "test": "tests/e2e/recommendations-catalog.spec.ts › people who are not staff cannot manage the catalogue"
+        },
+        {
+          "claim": "With bookings: a viewing is booked on a real free time after confirmation, linked to its record",
+          "test": "tests/e2e/recommendation-viewing.spec.ts › books a viewing of a recommended record only on a real free time and after the person confirms; it is a booking with its confirmation email and staff see which record it is for"
+        }
+      ],
+      "limits": [
+        "One catalogue per app; one currency; up to 12 attributes; up to 20 results per answer; 2–4 records per comparison",
+        "Location matches when the preferred place is contained in the record's location (accent- and case-insensitive); no maps or distances",
+        "No portal or feed import, no mortgage or legal advice, no learnt ranking; viewings only with domain.bookings.turbineh",
+        "Proven against the scripted mock model (tests/mock-llm): answer quality of a real model is not measured here"
+      ],
+      "example": "// Server code in the app (e.g. a staff action): the same deterministic matching the assistant uses.\nimport { recommendationConfig as cfg } from \"@/recommendations/config\";\nimport { formatMoney } from \"@/recommendations/search\";\nimport { recommend } from \"@/recommendations/store\";\n\nexport async function shortlist(budgetMax: number, location: string) {\n  const found = await recommend({ budgetMax, location, needs: {} }); // verified, active, within budget, in that place\n  return found.map((i) => `${i.reference}: ${i.title} — ${formatMoney(i.price, cfg.currency)}`);\n}\n\nexport const example = () => shortlist(320_000, \"Valencia\");",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "recommendation",
+        "recommendations",
+        "recommend",
+        "product recommendation",
+        "property search",
+        "real estate assistant",
+        "new-build homes",
+        "home finder",
+        "buyer preferences",
+        "budget",
+        "location",
+        "bedrooms",
+        "matching",
+        "shortlist",
+        "compare",
+        "side by side comparison",
+        "viewing",
+        "property viewing",
+        "listings",
+        "catalogue",
+        "verified listings",
+        "sales assistant",
+        "lead capture"
+      ],
+      "synonyms": {
+        "record": [
+          "listing",
+          "property",
+          "home",
+          "item",
+          "product",
+          "car",
+          "course",
+          "unit"
+        ],
+        "preferences": [
+          "budget",
+          "price range",
+          "location",
+          "area",
+          "town",
+          "needs",
+          "requirements",
+          "criteria",
+          "bedrooms"
+        ],
+        "compare": [
+          "side by side",
+          "versus",
+          "comparison table"
+        ],
+        "viewing": [
+          "visit",
+          "tour",
+          "showing",
+          "viewing appointment"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/ai.recommendations.turbineh"
     },
     {
       "id": "ai.schema-validation.ajv",
@@ -9175,6 +9649,218 @@
         ]
       },
       "details": "https://software.turbineh.com/v1/capabilities/domain.workflow.turbineh"
+    },
+    {
+      "id": "email.inbox.imapflow",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "email",
+      "package": "pkg:generic/turbineh/email.inbox.imapflow@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "email.inbox"
+      ],
+      "does": "Reads one IMAP mailbox (Gmail, Microsoft 365, any IMAP server) for inbox-processing apps: credentials only from environment variables (app password, or an OAuth 2.0 access token over SASL XOAUTH2), TLS required for remote servers, read-only by construction (EXAMINE + BODY.PEEK: nothing is marked as read, moved or deleted), incremental synchronisation by UID with UIDVALIDITY handling (the position and the messages are saved in one transaction, each message unique per mailbox, UIDVALIDITY and UID), each message parsed with mailparser (sender, recipients, subject, dates, plain text, attachment names and sizes — attachment contents are never kept). Built on imapflow 2.2.6 and mailparser 3.9.31, pinned in the ai-agents template lockfile; contract-tested against a local IMAP server.",
+      "doesNot": "Does not send email (email.transactional), write to the mailbox, read several mailboxes, refresh OAuth tokens (the access token comes from the environment) or keep attachment contents",
+      "title": "Read one IMAP mailbox read-only and incrementally (Gmail, Microsoft 365, any IMAP server)",
+      "summary": "Reads the app's mailbox over IMAP with imapflow and parses each message with mailparser, for apps that process incoming mail (triage, extraction, digests). Credentials come only from environment variables: an app password, or an OAuth 2.0 access token sent with SASL XOAUTH2 (Gmail, Microsoft 365). TLS is required for a remote server; a plain connection is refused unless the server runs on the same machine. The mailbox is opened with EXAMINE and bodies are fetched with BODY.PEEK[], so nothing is marked as read, moved or deleted — there is no write path in the code. Each synchronisation reads only the UIDs after the last one stored (the `n:*` rule that always returns the highest UID is handled) and saves the messages and the new position in one transaction; a new UIDVALIDITY starts the mailbox again. The first synchronisation imports only the latest MAIL_IMAP_MAX_PER_SYNC messages. Stored per message: sender, recipients, subject, dates, plain text (bounded) and attachment names, types and sizes — never attachment contents.",
+      "useCases": [
+        "An assistant that triages the owner's incoming email (with ai.mail-triage.turbineh)",
+        "Importing invoices or requests that arrive by email into the app"
+      ],
+      "useWhen": [
+        "The request reads a person's or a team's mailbox (\"access my mail\", \"every email I receive\")",
+        "Mail must be read safely and repeatedly without changing anything in the mailbox"
+      ],
+      "avoidWhen": [
+        "Sending email (use email.transactional.turbineh)",
+        "Several mailboxes per user with an OAuth consent flow in the app (not covered: tokens come from the environment)",
+        "Reading attachment contents (only their names are kept; use files.pdf-text.unpdf on a file you trust)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Read-only (EXAMINE + BODY.PEEK)",
+          "gain": "The mailbox is never changed: safe to run every few minutes, safe if the app has a bug",
+          "cost": "Read state, folders and labels stay as the person leaves them in their mail client"
+        },
+        {
+          "choice": "First run imports only the latest messages",
+          "gain": "A 10-year mailbox is not downloaded and sent to a model",
+          "cost": "Older mail is not in the app"
+        },
+        {
+          "choice": "OAuth access token from the environment",
+          "gain": "No token storage or refresh logic in the app",
+          "cost": "The deployment must keep MAIL_IMAP_ACCESS_TOKEN fresh (or use an app password)"
+        }
+      ],
+      "config": [
+        {
+          "name": "MAIL_IMAP_HOST",
+          "description": "IMAP server, e.g. imap.gmail.com, outlook.office365.com (unset = the mailbox is not read)"
+        },
+        {
+          "name": "MAIL_IMAP_PORT",
+          "default": "993 (143 when MAIL_IMAP_SECURE=false)",
+          "description": "Port"
+        },
+        {
+          "name": "MAIL_IMAP_SECURE",
+          "default": "true",
+          "description": "Direct TLS; false only for a server on 127.0.0.1/::1/localhost"
+        },
+        {
+          "name": "MAIL_IMAP_USER",
+          "description": "Mailbox user (usually the email address)"
+        },
+        {
+          "name": "MAIL_IMAP_PASSWORD",
+          "description": "App password (exactly one of password or access token)"
+        },
+        {
+          "name": "MAIL_IMAP_ACCESS_TOKEN",
+          "description": "OAuth 2.0 access token with the provider's IMAP scope (XOAUTH2)"
+        },
+        {
+          "name": "MAIL_IMAP_MAILBOX",
+          "default": "INBOX",
+          "description": "Folder to read"
+        },
+        {
+          "name": "MAIL_IMAP_MAX_PER_SYNC",
+          "default": "50",
+          "description": "Messages read per synchronisation (1–500)"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "syncMailbox",
+          "signature": "syncMailbox() → Promise<SyncReport { configured, fetched, stored, reset, lastUid }>",
+          "where": "src/mail/inbox/store.ts"
+        },
+        {
+          "name": "syncInbox",
+          "signature": "syncInbox({ store: InboxStore, config?, fetch? }) → Promise<SyncReport>",
+          "where": "src/mail/inbox/sync.ts"
+        },
+        {
+          "name": "fetchNewMessages",
+          "signature": "fetchNewMessages(config, { uidValidity, lastUid }) → Promise<{ uidValidity, reset, messages: InboxMessage[] }>",
+          "where": "src/mail/inbox/imap.ts"
+        },
+        {
+          "name": "inboxConfig",
+          "signature": "inboxConfig(env?) → InboxConfig | null (throws InboxConfigError)",
+          "where": "src/mail/inbox/config.ts"
+        },
+        {
+          "name": "Tables",
+          "signature": "inbox_messages (unique mailbox, uid_validity, uid), inbox_positions",
+          "where": "src/db/component-inbox.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Process each new message",
+          "where": "src/mail/triage/service.ts (with ai.mail-triage.turbineh) or your own job",
+          "how": "Run syncMailbox() from a scheduled job, then read inbox_messages rows you have not processed (left join on your own table)."
+        },
+        {
+          "what": "Keep messages elsewhere",
+          "where": "src/mail/inbox/sync.ts",
+          "how": "Implement InboxStore (position + atomic save) and call syncInbox({ store })."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 server code, drizzle-orm with PostgreSQL, zod 4; imapflow 2.2.6 and mailparser 3.9.31 from the ai-agents template lockfile",
+        "recipes": [
+          "ai-agents"
+        ],
+        "works_with": [
+          "ai.mail-triage.turbineh",
+          "jobs.scheduled.turbineh"
+        ]
+      },
+      "security": [
+        "Credentials only from environment variables; never stored, logged or echoed (imapflow logging off)",
+        "TLS with certificate verification for remote servers; plain IMAP refused unless the server is local",
+        "No write command in the code path: EXAMINE and BODY.PEEK only",
+        "Attachment contents are untrusted and discarded; at most 1 MB is read per message"
+      ],
+      "guarantees": [
+        {
+          "claim": "Read-only: nothing marked as read, moved or deleted",
+          "test": "tests/unit/mail-inbox.test.ts › reads the mailbox read-only: EXAMINE and BODY.PEEK only, nothing is marked as read, moved or deleted"
+        },
+        {
+          "claim": "Incremental by UID",
+          "test": "tests/unit/mail-inbox.test.ts › synchronises incrementally by UID: a second run reads only the messages that arrived after the first"
+        },
+        {
+          "claim": "UIDVALIDITY change restarts; first run imports only the latest messages",
+          "test": "tests/unit/mail-inbox.test.ts › starts again when the server changes UIDVALIDITY, and a first run imports only the latest messages"
+        },
+        {
+          "claim": "App password or OAuth 2.0 (XOAUTH2); wrong credentials refused",
+          "test": "tests/unit/mail-inbox.test.ts › signs in with an app password or with an OAuth 2.0 access token (XOAUTH2); wrong credentials are refused"
+        },
+        {
+          "claim": "Parsed with mailparser, no attachment contents kept",
+          "test": "tests/unit/mail-inbox.test.ts › parses each message with mailparser: sender, subject, date, text and attachment names (contents are never kept)"
+        },
+        {
+          "claim": "Environment-only configuration, TLS rule",
+          "test": "tests/unit/mail-inbox.test.ts › is configured only by environment variables: TLS is required for a remote server, exactly one credential"
+        }
+      ],
+      "limits": [
+        "Proven against a local IMAP server implementing the RFC 3501 responses the client uses, not against live Gmail or Microsoft 365 accounts",
+        "One mailbox and one folder per app; OAuth tokens are not refreshed by the app",
+        "Gmail and Microsoft 365 require IMAP to be enabled and an app password or OAuth app registration by the mailbox owner"
+      ],
+      "example": "// Server code in the app (a scheduled job or a server action): read what arrived since the last run, read-only.\nimport { InboxConfigError } from \"@/mail/inbox/config\";\nimport { syncMailbox } from \"@/mail/inbox/store\";\n\nexport async function readNewMail(): Promise<string> {\n  try {\n    const r = await syncMailbox();\n    if (!r.configured) return \"Mailbox not configured (MAIL_IMAP_*).\";\n    return `${r.stored} new email(s); last UID ${r.lastUid}${r.reset ? \" (mailbox read from the start)\" : \"\"}.`;\n  } catch (err) {\n    if (err instanceof InboxConfigError) return err.message;\n    throw err;\n  }\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "imap",
+        "mailbox",
+        "inbox",
+        "read email",
+        "email sync",
+        "gmail",
+        "outlook",
+        "microsoft 365",
+        "app password",
+        "oauth",
+        "xoauth2",
+        "imapflow",
+        "mailparser",
+        "incremental sync",
+        "uid",
+        "read-only",
+        "email ingestion"
+      ],
+      "synonyms": {
+        "mailbox": [
+          "inbox",
+          "email account",
+          "mail account"
+        ],
+        "synchronise": [
+          "sync",
+          "fetch new mail",
+          "poll the inbox",
+          "read new emails"
+        ],
+        "app password": [
+          "application password",
+          "IMAP password"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/email.inbox.imapflow"
     },
     {
       "id": "email.parsing.mailparser",

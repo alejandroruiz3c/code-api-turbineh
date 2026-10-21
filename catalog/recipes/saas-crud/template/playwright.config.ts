@@ -120,6 +120,16 @@ if (process.env.WHATSAPP_API_BASE?.startsWith("http://127.0.0.1")) {
   process.env.WHATSAPP_VERIFY_TOKEN ||= secret();
   process.env.WHATSAPP_MOCK_WEBHOOK_URL = `${origin}/api/messaging/whatsapp/webhook`;
 }
+// Mailbox (email.inbox.imapflow): the IMAP mock runs next to its control port; the app signs in with a throwaway
+// password over a local plain connection (allowed only for 127.0.0.1).
+if (process.env.MAIL_IMAP_MOCK?.startsWith("http://127.0.0.1")) {
+  process.env.MAIL_IMAP_HOST = "127.0.0.1";
+  process.env.MAIL_IMAP_PORT = String(Number(new URL(process.env.MAIL_IMAP_MOCK).port) + 1000);
+  process.env.MAIL_IMAP_SECURE = "false";
+  process.env.MAIL_IMAP_USER = "inbox-e2e@example.com";
+  process.env.MAIL_IMAP_PASSWORD = secret();
+  delete process.env.MAIL_IMAP_ACCESS_TOKEN;
+}
 // Several people sign up from one address within seconds: raise better-auth's 3-per-10 s sign-in/sign-up limit for
 // the run instead of waiting for its window (src/lib/auth.ts).
 process.env.AUTH_RATE_LIMIT_MAX ||= "1000";

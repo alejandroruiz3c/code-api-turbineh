@@ -1,0 +1,17 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/recommendation-assistant.spec.ts › a buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them, and staff see them"
+  covers: ["budget|location|needs|bedroom|preference", "record|captur|identif|store|sav|remember|collect"]
+- test: "tests/e2e/recommendation-assistant.spec.ts › recommends only verified records from the catalogue that match the budget, the location and the needs: over-budget, unverified, other-location and too-small ones never appear"
+  covers: ["recommend|suggest|match", "budget|location|needs|verified|preference"]
+- test: "tests/e2e/recommendation-assistant.spec.ts › answers a question about a record with its verified facts"
+  covers: ["answer|question", "detail|fact|about|regarding"]
+- test: "tests/e2e/recommendation-assistant.spec.ts › compares two records side by side in the chat and on the comparison page, with the same facts"
+  covers: ["compar|side[- ]by[- ]side"]
+- test: "tests/e2e/recommendation-assistant.spec.ts › never invents a record: an unknown or unverified reference is refused"
+  covers: ["invent|made[- ]up|hallucinat|only (real|verified)"]
+- test: "tests/e2e/recommendations-catalog.spec.ts › staff add records to the catalogue and mark them verified; only verified records are published"
+  covers: ["staff|admin|agent", "add|manage|verif|listing|catalog"]
+- test: "tests/e2e/recommendations-catalog.spec.ts › people who are not staff cannot manage the catalogue"
+  covers: ["only staff|not staff|staff only|admin only"]
+- test: "tests/e2e/recommendation-viewing.spec.ts › books a viewing of a recommended record only on a real free time and after the person confirms; it is a booking with its confirmation email and staff see which record it is for"
+  covers: ["viewing|visit|tour|showing", "book|schedul|arrang|facilitat"]

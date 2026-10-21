@@ -149,10 +149,27 @@
     books booked booking bookings appointment appointments reservation session sessions slot slots free real
     available availability confirm confirms confirmed confirmation date time staff member team email emails
     sent triggers natural language through via
-  actors: [customer, client, patient, visitor, guest, staff]
+    query queries queried search searches identify identifies verify verifies verified still check checks
+    checked before proceed proceeding valid details provided entry entries record recorded database stored
+    request requests requested create creates created new
+  actors: [customer, client, patient, visitor, guest, staff, user]
   tests:
     - "tests/e2e/booking-assistant.spec.ts › a customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email (logged) and staff see the booking"
     - "tests/e2e/booking-assistant.spec.ts › never books an invented time"
+
+- id: bookings.assistant-taken
+  criterion: "A customer asks the assistant for a time already taken: it says the time is not available and suggests the free times of that day"
+  advertises: "toolkit for runAgent"
+  when: ai
+  says: ["assistant|chat|agent|bot|ai\\b|conversation", "taken|occupied|already|not available|unavailable|conflict|clash|double"]
+  terms: >-
+    assistant chat chatbot bot agent ai conversation ask asks asked request requests requested time times slot
+    slots session sessions appointment appointments booking bookings book taken occupied already booked unavailable
+    available availability not free inform informs informed tell tells say says said suggest suggests suggested
+    suggestion propose proposes offer offers alternative alternatives next other same day date nothing instead
+  actors: [customer, client, patient, visitor, guest, user]
+  tests:
+    - "tests/e2e/booking-assistant.spec.ts › a customer asks the assistant for a time already taken: it says the time is not available and suggests the free times of that day; nothing is booked"
 
 - id: bookings.assistant-reschedule
   criterion: "A customer requests to reschedule: the assistant moves an existing booking to a new free slot after the customer confirms"

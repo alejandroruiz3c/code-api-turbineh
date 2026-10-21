@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: ai.recommendations.turbineh
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:generic/turbineh/ai.recommendations.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Conversational recommendations over the client's own catalogue (homes, cars, courses…): the assistant records each person's budget, preferred location and needs (validated, stored per conversation, visible to staff), recommends only verified records from the database that fit them (deterministic filtering and ranking by code, never invented), answers questions with a record's verified facts, compares 2–4 records side by side (in the chat and on a public comparison page) and, with domain.bookings.turbineh, books a viewing of a record on a real free time after the person confirms. Staff manage and verify the catalogue behind an ADMIN_EMAILS allow-list."
+  does_not: "Does not scrape or import listings from portals, give mortgage, legal or investment advice, or rank by machine learning; without domain.bookings.turbineh it books no viewings"
+  use_cases: [ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "The model chooses tools; matching, ranking and facts are code over the database",
+      "Item words, currency and attributes come from the request as data (params.json)",
+    ]
+  cons: ["Exact filters (budget, location contains, numeric minimums): no fuzzy or semantic ranking"]
+  alternatives: [data.fuzzy-search.fuse, data.search-index.minisearch]
+contract:
+  inputs:
+    [
+      "src/recommendations/params.json (item, customer, currency, fields[{key,label,type,options?,match}], maxResults), validated at start-up",
+      "toolkit tools: save_preferences({budgetMax?, location?, needs?}), recommend_items({}), item_details({reference}), compare_items({references[2–4]}), book_viewing({reference, date, time, name, email}) with bookings",
+    ]
+  outputs:
+    [
+      "recommendation_items (staff catalogue), recommendation_profiles (preferences per conversation), recommendation_viewings (with bookings); /compare?refs=A,B; /dashboard/catalog, /dashboard/catalog/leads",
+    ]
+  errors: ["ToolError (safe to show): unknown or unpublished reference; bookings PolicyError for a time that is not free; zod refusals for invalid preferences"]
+  limits: ["maxResults per answer (default 5, at most 20); 2–4 records per comparison; 12 attributes"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code when an ai-agents request recommends catalogue records by budget, location or needs (compiler domain detector). files/: src/recommendations/{config,params.json,search,store,viewing}.ts, src/db/component-recommendations.ts, src/app/dashboard/catalog/** (staff), src/app/compare/page.tsx (public), unit and staff E2E tests. files-ai/: src/recommendations/toolkit.ts (public toolkit), tests/mock-llm/scripts/recommendations.ts, tests/e2e/recommendation-assistant.spec.ts. files-with/domain.bookings.turbineh/: the book_viewing tool (replaces src/recommendations/viewing.ts), src/db/component-recommendation-viewings.ts and its E2E. The assembler writes params.json from the request."
+  config: [ADMIN_EMAILS]
+  migrations: true
+params:
+  file: src/recommendations/params.json
+  schema: params.schema.json
+  entities: [Listing, CatalogItem, Recommendation, Preference, BuyerProfile, Comparison, Viewing]
+quality:
+  tests:
+    {
+      command: "unit tests (params, preference validation, filtering and ranking, comparison) + E2E through the public assistant against the scripted mock model (preferences recorded and shown to staff, only verified matching records recommended, facts, side-by-side comparison, invented references refused, viewing booked after confirmation with bookings) + staff catalogue E2E; full gate via verify:recipe ai-agents+ai.recommendations.turbineh",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: staff pages and actions behind ADMIN_EMAILS (deny by default); tool arguments and staff input validated with zod; queries through Drizzle only; people only ever see verified, active records; viewings are irreversible tools that wait for the person's confirmation and re-check the slot with the booking rules."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "ai-agents + ai.recommendations.turbineh (+ domain.bookings.turbineh for viewings) passes the full verification gate with the recommendation E2E suites"
+    origin: tested
+    ref: "verify:recipe ai-agents+ai.recommendations.turbineh (DOMAIN_PROBES, ADR-0072)"
+relations:
+  requires: [ai.orchestrator.turbineh]
+  provides: [ai.recommendations]
+  conflicts: []
+  tested_with: [recipe.ai-agents, domain.bookings.turbineh]

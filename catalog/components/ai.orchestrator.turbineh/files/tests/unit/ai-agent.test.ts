@@ -72,6 +72,38 @@ const tools = [
 const base = { organizationId: "o", userId: "u", purpose: "test", instructions: "Help.", tools };
 
 describe("runAgent (tool-calling runtime, TurbineH client)", () => {
+  it("personal data never reaches the model, yet a tool gets the person's real email and phone (placeholders, ADR-0072)", async () => {
+    const got: unknown[] = [];
+    const contact = defineTool({
+      name: "contact",
+      description: "store a contact",
+      parameters: z.object({ email: z.email(), phone: z.string().min(9) }),
+      execute: async (a) => {
+        got.push(a);
+        return { saved: true };
+      },
+    });
+    const fake = io([
+      { toolCalls: [call("contact", { email: "[email-1]", phone: "[phone-1]" })] },
+      { text: "Saved." },
+    ]);
+    const r = await runAgent(
+      {
+        ...base,
+        tools: [contact],
+        input: "Book 2026-11-02 09:00 for Ana, ana@example.com, phone +34 600 123 456",
+      },
+      fake,
+    );
+    expect(r.status).toBe("answered");
+    const sent = JSON.stringify(fake.seen);
+    expect(sent).not.toContain("ana@example.com");
+    expect(sent).not.toContain("600 123 456");
+    expect(sent, "dates are not personal data").toContain("2026-11-02 09:00");
+    expect(sent).toContain("[email-1]");
+    expect(got).toEqual([{ email: "ana@example.com", phone: "+34 600 123 456" }]);
+  });
+
   it("runs read tools, then answers", async () => {
     const fake = io([
       { toolCalls: [call("check", { day: "2026-11-02" })] },

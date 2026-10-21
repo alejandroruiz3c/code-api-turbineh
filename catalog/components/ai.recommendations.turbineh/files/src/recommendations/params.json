@@ -1,0 +1,11 @@
+{
+  "item": { "singular": "property", "plural": "properties" },
+  "customer": { "singular": "buyer", "plural": "buyers" },
+  "currency": "EUR",
+  "fields": [
+    { "key": "bedrooms", "label": "Bedrooms", "type": "integer", "match": "min" },
+    { "key": "bathrooms", "label": "Bathrooms", "type": "integer", "match": "min" },
+    { "key": "area", "label": "Area (m²)", "type": "number", "match": "min" }
+  ],
+  "maxResults": 5
+}
