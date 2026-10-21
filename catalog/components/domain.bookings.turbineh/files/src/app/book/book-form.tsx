@@ -9,12 +9,15 @@ export function BookForm({
   slots,
   askPhone,
   noticeHours,
+  payNote = null,
 }: {
   service: string;
   day: string;
   slots: { time: string; resource: string }[];
   askPhone: boolean;
   noticeHours: number;
+  /** Payment step of this service (src/bookings/payment.ts), shown before booking; null = none. */
+  payNote?: string | null;
 }) {
   const [state, action, pending] = useActionState<BookState, FormData>(bookSlot, null);
   if (state?.ok) {
@@ -110,6 +113,11 @@ export function BookForm({
       <p className="text-xs text-muted">
         You can cancel with the link in your confirmation email up to {noticeHours} hours before.
       </p>
+      {payNote ? (
+        <p className="text-sm" data-testid="pay-note">
+          {payNote}
+        </p>
+      ) : null}
       <div>
         <button
           type="submit"

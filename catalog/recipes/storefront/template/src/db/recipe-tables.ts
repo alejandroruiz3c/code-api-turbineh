@@ -28,6 +28,8 @@ export const products = pgTable(
     imageMime: varchar("image_mime", { length: 40 }),
     /** External image (https URL set by the admin); shown instead of the uploaded image when present. */
     imageUrl: varchar("image_url", { length: 2048 }),
+    /** Uploaded image stored in Vercel Blob (when BLOB_READ_WRITE_TOKEN is set): its public URL; `image` stays null. */
+    imageBlobUrl: varchar("image_blob_url", { length: 2048 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

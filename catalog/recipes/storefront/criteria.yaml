@@ -13,6 +13,7 @@
     details view views see sees click clicks open opens price prices description name category categories
     collection collections public online
     available availability photo photos image images
+    associated associate
   actors: [shopper, customer, visitor, guest, buyer, client]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper clicks a product in the list and lands on that product's detail page with its price"
@@ -39,6 +40,7 @@
     view views each
     available availability all
     resolution high
+    associated associate
   actors: [admin, owner, staff, manager, shopper, customer, visitor]
   tests:
     - "tests/e2e/shop.spec.ts › the admin creates a product with an image"
@@ -52,9 +54,22 @@
     variant variants option options size sizes colour colours color colors sku skus own each price prices stock
     stocks inventory product products add adds create creates choose chooses select selects pick
     availability available display displays displaying view views
-  actors: [admin, owner, staff, manager, shopper, customer]
+  actors: [admin, owner, staff, manager, shopper, customer, buyer]
   tests:
     - "tests/e2e/shop.spec.ts › the admin adds options with their own SKU, price and stock"
+
+- id: storefront.variant-sold-out
+  criterion: "A sold-out size cannot be added to the cart: its option is disabled and the server refuses it"
+  advertises: "product variants"
+  says: ["variant|option|\\bsizes?\\b|colou?rs?|\\bsku\\b", "out[- ]of[- ]stock|sold[- ]out|no stock|zero|unavailable|disabl|prevent|refus|cannot|can't|not (be )?(added|add|able)|reach"]
+  terms: >-
+    sold out stock stocks zero level levels reaches reach unavailable available availability disabled disable
+    prevent prevents prevented refuse refuses refused cannot add adds added adding attempt attempts try tries
+    button cart variant variants option options size sizes colour colours color colors sku page product products
+    choose chooses chosen select selects selected
+  actors: [shopper, customer, visitor, guest, buyer, client, user]
+  tests:
+    - "tests/e2e/shop.spec.ts › a sold-out size cannot be added to the cart: its option is disabled and the server refuses it"
 
 - id: storefront.cart
   criterion: "A shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
@@ -64,6 +79,7 @@
     cart carts basket bag add adds added remove removes product products item items quantity quantities change
     changes update updates subtotal total totals price prices one more update
     calculate calculates calculated select selected selects
+    based correctly correct stored store stores session sessions persist persists navigate navigates
   actors: [shopper, customer, visitor, guest, buyer, client]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper adds a product to the cart at its price with quantity one; changing the quantity updates the subtotal"
@@ -77,6 +93,7 @@
     fixed amount minimum order usage limit limits expiry expire expires expired apply applies applied checkout
     once used up create creates admin shopper customer total
     date dates price prices reduce reduces reduced enter enters entered valid
+    value values qualifying qualify reduced reduce specified
   actors: [admin, owner, staff, manager, shopper, customer, buyer]
   tests:
     - "tests/e2e/shop.spec.ts › uses a discount code: applied on the server, counted once on payment, then used up"
@@ -91,6 +108,8 @@
     discount discounts coupon coupons promo voucher vouchers code codes expired expiry expire invalid inactive used
     usage limit minimum order reject rejects rejected refuse refuses refused accept accepted apply applies applied
     no discount enter enters entered
+    requirement requirements below cannot date dates past current no longer total totals reached reaches cart amount
+    amounts
   actors: [shopper, customer, buyer, admin, owner]
   tests:
     - "tests/unit/shop.test.ts › refuses inactive, expired, used-up and below-minimum codes"
@@ -102,6 +121,7 @@
   terms: >-
     currency currencies usd eur gbp dollar dollars euro euros pound pounds second several multiple fixed price
     prices per each shipping order orders pay pays checkout sell sells choose chooses select
+    configured configure set displayed display specific
   actors: [admin, owner, staff, shopper, customer, buyer]
   tests:
     - "tests/e2e/shop.spec.ts › pays in a second currency: fixed prices, shipping in that currency, order in USD"
@@ -115,7 +135,8 @@
     shipping ship ships delivery deliver option options rate rates cost costs fee fees country countries
     currency currencies free threshold set sets add adds admin cart checkout order
     destination summary calculate calculated based selected
-  actors: [admin, owner, staff, manager, shopper, customer]
+    defined define method methods destination destinations valid only shown show
+  actors: [admin, owner, staff, manager, shopper, customer, buyer]
   tests:
     - "tests/e2e/shop.spec.ts › the admin sets shipping by country and a tax rate"
     - "tests/unit/shop.test.ts › applies shipping by country with an optional free threshold"
@@ -127,7 +148,7 @@
   terms: >-
     tax taxes vat rate rates country countries inclusive exclusive included include added set sets admin
     cart checkout order total totals compute computes calculated
-  actors: [admin, owner, staff, manager, shopper, customer]
+  actors: [admin, owner, staff, manager, shopper, customer, buyer]
   tests:
     - "tests/e2e/shop.spec.ts › the admin sets shipping by country and a tax rate"
     - "tests/unit/shop.test.ts › picks the country's tax rate, else the default"
@@ -139,10 +160,24 @@
   terms: >-
     stripe tax taxes automatic automatically compute computes computed calculate calculated checkout order
     amount amounts
-  actors: [admin, owner, shopper, customer]
+    enabled enable address addresses enters enter correct rate rates apply applies
+  actors: [admin, owner, shopper, customer, buyer]
   tests:
     - "tests/unit/shop.test.ts › lets Stripe Tax compute tax: automatic_tax, tax behaviour on every amount, no manual tax line"
     - "tests/unit/shop.test.ts › records Stripe Tax amounts only from a well-formed signed event in the order's currency"
+
+- id: storefront.card-payment
+  criterion: "A shopper pays by card on the Stripe Checkout page and then sees the paid order's confirmation"
+  advertises: "Stripe Checkout payments"
+  says: ["card|stripe|checkout|\\bpay(s|ment|ments|ing)?\\b", "confirm|success|receipt|thank|processed|complete"]
+  terms: >-
+    card cards credit debit details number enter enters entered submit submits submitted valid pay pays paid payment
+    payments processed process stripe checkout page hosted flow confirmation confirm confirmed confirms shown show
+    shows see sees success successful receipt summary thank order orders complete completes completed purchase
+    secure securely online session server lines prices price amount amounts
+  actors: [shopper, customer, visitor, guest, buyer, client, user]
+  tests:
+    - "tests/e2e/shop.spec.ts › a shopper pays by card on the Stripe Checkout page: the session carries the server's lines and prices, and after payment the shopper sees the paid order's confirmation"
 
 - id: storefront.checkout
   criterion: "A shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid"
@@ -153,6 +188,7 @@
     amounts server computed total totals webhook webhooks signed confirm confirmed confirmation email cart
     secure online
     transaction send sends sent email confirmation
+    session sessions correct item items added
   actors: [shopper, customer, visitor, guest, buyer, client]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
@@ -168,6 +204,7 @@
     confirmation email after
     sale sales sold sku skus level levels decremented decrement reduce reduces reduced
     place placed
+    record records created create creates new database successful complete completes
   actors: [shopper, customer, buyer, admin, owner]
   tests:
     - "tests/e2e/shop.spec.ts › a shopper pays with Stripe Checkout at server-computed amounts; the signed webhook marks the order paid, decrements each product's stock and logs the confirmation email"
@@ -181,6 +218,7 @@
     order orders list lists all see sees view views payment status statuses paid admin area panel dashboard
     owner manage manages track tracks completed
     sign signs log logs login logged
+    placed place customer customers details detail items item purchased bought email emails
   actors: [admin, owner, staff, manager]
   tests:
     - "tests/e2e/shop.spec.ts › the owner accesses the admin area and sees the list of all orders with their payment status"
@@ -207,6 +245,7 @@
     stock stocks inventory level levels quantity update updates change changes edit edits set sets adjust
     adjusts manage manages admin owner staff product products public catalog catalogue reflect reflects shown
     available availability
+    sku skus immediately sign signs log logs login logged changed
   actors: [admin, owner, staff, manager]
   tests:
     - "tests/e2e/shop.spec.ts › the owner (admin) updates a product's stock level and the public catalogue reflects it at once"

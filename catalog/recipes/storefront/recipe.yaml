@@ -6,8 +6,10 @@ providedEntities:
 defaultCapabilities: [email.transactional, ops.rate-limit, data.pagination]
 # Implemented by the template itself (native): no SDK, signature verification and money in integer cents.
 # ops.idempotency: the signed webhook changes only pending orders and Stripe calls carry an Idempotency-Key.
+# storage.objects: uploaded product images go to Vercel Blob with the official SDK (@vercel/blob, this template's own
+# package.json) when BLOB_READ_WRITE_TOKEN is set, else to PostgreSQL (src/server/images.ts) — no glue to write.
 providedCapabilities:
-  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection, ops.idempotency]
+  [commerce.cart, payments.checkout, security.webhook-signature, data.money, seo.sitemap, seo.structured-data, files.upload, files.type-detection, ops.idempotency, storage.objects]
 nav:
   - { label: Products, href: /dashboard/products }
   - { label: Shipping & taxes, href: /dashboard/shipping }
@@ -20,6 +22,9 @@ guide:
     - what: "Add a product field"
       where: "src/db/recipe-tables.ts (products), src/app/dashboard/products/actions.ts + page.tsx, src/app/shop/[slug]/page.tsx"
       how: "Add the column, the Zod field in saveProduct, the admin input and where shoppers see it; then `pnpm db:generate`."
+    - what: "Change where uploaded product images are stored"
+      where: "src/server/images.ts, src/app/dashboard/products/actions.ts (readImage), src/lib/shop.ts (productImageSrc)"
+      how: "With BLOB_READ_WRITE_TOKEN images go to Vercel Blob (public URL in products.image_blob_url, replaced ones deleted); without it the bytes stay in PostgreSQL and /shop/images/<id> serves them. Unit: tests/unit/image-storage.test.ts."
     - what: "Change how stock is shown or managed"
       where: "src/app/shop/[slug]/page.tsx (data-testid=stock), src/app/dashboard/products/page.tsx, src/app/api/stripe/webhook/route.ts"
       how: "Shoppers see the units left on the product page; the admin edits stock in Products; payment decrements it. E2E: tests/e2e/shop.spec.ts › the admin updates a product's stock…"

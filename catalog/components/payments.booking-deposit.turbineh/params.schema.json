@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "payments.booking-deposit.turbineh params (src/payments/booking-deposit.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "percent", "amount", "currency", "holdMinutes"],
+  "properties": {
+    "mode": {
+      "enum": ["deposit", "full"],
+      "description": "deposit: part of the price (fixed amount, else percent); full: the service's whole price."
+    },
+    "percent": {
+      "type": ["number", "null"],
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Deposit as a percent of the service price, used when no fixed amount is set."
+    },
+    "amount": {
+      "type": ["number", "null"],
+      "minimum": 0.5,
+      "maximum": 100000,
+      "description": "Fixed deposit per booking in major units (capped at the service price); in full mode, the price of services without one."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[a-z]{3}$",
+      "description": "ISO currency (lowercase) of the amount and of services without a currency."
+    },
+    "holdMinutes": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 1440,
+      "description": "Stripe Checkout session lifetime; the time stays held this long (plus 5 minutes) while the customer pays."
+    }
+  }
+}

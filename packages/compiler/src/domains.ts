@@ -498,7 +498,121 @@ export function detectDomains(prompt: string, recipe: string, appName?: string):
         ],
         assumptions: b.assumptions,
       });
+      // Card payment at booking time (payments.booking-deposit.turbineh): the public booking page only, so the
+      // bookings recipe only (an AI assistant's bookings are not charged; ai-agents requests stay as they are).
+      const pay = recipe === "bookings" ? extractBookingPayment(prompt, b.params) : null;
+      if (pay) {
+        out.push({
+          id: "booking-payment",
+          capability: "payments.booking-deposit",
+          component: "payments.booking-deposit.turbineh",
+          recipes: ["bookings"],
+          paramsFile: "src/payments/booking-deposit.json",
+          params: pay.params as unknown as Record<string, unknown>,
+          providedEntities: ["Payment", "BookingPayment", "Deposit", "Prepayment", "Charge"],
+          assumptions: pay.assumptions,
+        });
+      }
     }
   }
   return out;
+}
+
+// ─── Payment at booking time ────────────────────────────────────────────────────────────────────────────────
+
+export interface BookingPaymentParams {
+  mode: "deposit" | "full";
+  percent: number | null;
+  amount: number | null;
+  currency: string;
+  holdMinutes: number;
+}
+
+/** A sentence that asks customers to pay online/by card when they book (not "pay at the salon", not a refusal). */
+const PAY_WORD =
+  /\b(deposit|down[- ]payment|prepa(y|id|yment)|pay(s|ing|ment|ments)?|charged?|card|stripe|checkout|upfront)\b/i;
+const BOOKING_TIME =
+  /\b(at (the )?(time of )?booking|when (they |customers |clients |patients |people |users )?book|to (confirm|secure|hold) (the |a |their )?(booking|appointment|reservation|slot)|before (the )?(booking|appointment) is confirmed|on booking|while booking|booking time|to book|upfront|in advance|online|by card|card payment|deposit|prepa)/i;
+const NOT_ONLINE =
+  /\b(pay(s|ing|ment)? (at|in) (the )?(salon|clinic|studio|shop|store|venue|desk|reception|visit|appointment|person)|in[- ]person payment|cash only|no (online )?payments?|without (online )?payment|payments? (are |is )?not (needed|required|taken))\b/i;
+
+/**
+ * Payment at booking time from the request (deterministic): a deposit ("a 10 € deposit", "20% deposit") or the full
+ * price ("pay when booking", "card payment at booking time"). Null when the request does not ask for it.
+ */
+export function extractBookingPayment(
+  prompt: string,
+  booking: Pick<BookingParams, "services">,
+): { params: BookingPaymentParams; assumptions: string[] } | null {
+  const text = prompt.replace(/\s+/g, " ");
+  const said = text
+    .split(/(?<=[.;!?])\s+|\n/)
+    .filter(
+      (s) =>
+        PAY_WORD.test(s) &&
+        BOOKING_TIME.test(s) &&
+        /\b(book|appointment|reserv|slot|session|visit)/i.test(s),
+    );
+  if (said.length === 0 || said.every((s) => NOT_ONLINE.test(s))) return null;
+  const sentence = said.filter((s) => !NOT_ONLINE.test(s)).join(" ");
+  const assumptions: string[] = [];
+  const priced = booking.services.find((s) => s.price !== null && s.currency !== null);
+  const currencyCode = (c: string | null | undefined) => (c ?? "").toLowerCase();
+  const isDeposit = /\b(deposit|down[- ]payment|advance payment|part of the price|señal)\b/i.test(
+    sentence,
+  );
+  const percent = /(\d{1,3})\s*%/.exec(sentence);
+  const money = parseMoney(sentence);
+  let params: BookingPaymentParams;
+  if (isDeposit) {
+    if (money)
+      params = {
+        mode: "deposit",
+        percent: null,
+        amount: money.price,
+        currency: currencyCode(money.currency),
+        holdMinutes: 30,
+      };
+    else if (percent && Number(percent[1]) >= 1 && Number(percent[1]) <= 100)
+      params = {
+        mode: "deposit",
+        percent: Number(percent[1]),
+        amount: null,
+        currency: currencyCode(priced?.currency) || "eur",
+        holdMinutes: 30,
+      };
+    else {
+      params = {
+        mode: "deposit",
+        percent: 20,
+        amount: null,
+        currency: currencyCode(priced?.currency) || "eur",
+        holdMinutes: 30,
+      };
+      assumptions.push("Deposit amount not stated: 20% of the service price.");
+    }
+  } else {
+    params = {
+      mode: "full",
+      percent: null,
+      amount: null,
+      currency: currencyCode(priced?.currency) || "eur",
+      holdMinutes: 30,
+    };
+  }
+  // Something must be payable: without prices a percent or the full price charges nothing.
+  if (params.amount === null && !booking.services.some((s) => s.price !== null && s.price > 0)) {
+    params = {
+      ...params,
+      mode: "deposit",
+      percent: null,
+      amount: 10,
+      currency: params.currency || "eur",
+    };
+    assumptions.push(
+      `Prices not stated: a deposit of 10 ${params.currency.toUpperCase()} per booking (set it in src/payments/booking-deposit.json).`,
+    );
+  }
+  assumptions.push("Payment time not stated: the time is held 30 minutes while the customer pays.");
+  return { params, assumptions };
 }

@@ -42,6 +42,7 @@ export default async function Shop({ searchParams }: { searchParams: SearchParam
         priceCents: products.priceCents,
         imageMime: products.imageMime,
         imageUrl: products.imageUrl,
+        imageBlobUrl: products.imageBlobUrl,
       })
       .from(products)
       .where(where)

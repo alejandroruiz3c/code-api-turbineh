@@ -43,7 +43,10 @@ export const bookingAppointments = pgTable(
     cancelTokenHash: varchar("cancel_token_hash", { length: 64 }),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    /** "confirmed" | "cancelled" | "pending_payment" (held while the customer pays) | "expired" (payment not made). */
     status: varchar("status", { length: 16 }).notNull().default("confirmed"),
+    /** While "pending_payment": the time stays held until then (src/bookings/payment.ts sets the payment step). */
+    holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
     /** "assistant" | "staff" */
     createdVia: varchar("created_via", { length: 16 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

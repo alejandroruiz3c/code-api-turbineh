@@ -34,6 +34,15 @@ const settings = z.object({
     .startsWith("whsec_")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /**
+   * Vercel Blob read-write token (vercel_blob_rw_…): uploaded product images go to Vercel Blob. Empty = images are
+   * stored in PostgreSQL and served by /shop/images/<id> (local development, the sandbox, hosts without Blob).
+   */
+  BLOB_READ_WRITE_TOKEN: z
+    .string()
+    .startsWith("vercel_blob_rw_")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Stripe API address (the real one by default; the verification sandbox points it to Stripe's simulator). */
   STRIPE_API_BASE: z.url().default("https://api.stripe.com"),
   /** ISO currency for all prices (lowercase, e.g. eur). */

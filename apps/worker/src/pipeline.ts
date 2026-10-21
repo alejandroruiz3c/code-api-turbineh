@@ -270,10 +270,13 @@ export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = "
  * the gate and the canonical wording (ADR-0069) — "an AI booking agent… books 45-minute appointments" is the bookings
  * domain's public booking, proved by its tests.
  */
-export const gateDomains = (spec: BuildSpec, prompt: string): string[] =>
-  spec.recipe === "out_of_scope"
+export const gateDomains = (
+  spec: Pick<BuildSpec, "recipe" | "app_name">,
+  prompt: string,
+): string[] =>
+  !prompt || spec.recipe === "out_of_scope"
     ? []
-    : detectDomains(prompt, spec.recipe, spec.app_name).map((d) => d.component);
+    : [...new Set(detectDomains(prompt, spec.recipe, spec.app_name).map((d) => d.component))];
 
 /**
  * Separates the request's general requirements (ADR-0069). A request that names the use case and only general

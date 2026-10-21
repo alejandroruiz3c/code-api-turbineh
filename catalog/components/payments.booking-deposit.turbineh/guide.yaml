@@ -1,0 +1,90 @@
+schema: turbineh.guide/v0.1
+component: payments.booking-deposit.turbineh
+title: Card payment at booking time (deposit or full price) with Stripe Checkout for the public booking page
+summary: >-
+  Adds a payment step to domain.bookings.turbineh's public booking page. A booking of a service with an amount due is
+  created "pending payment": its time is held (no one else is offered it) while the customer pays a deposit (fixed
+  amount or percent of the price) or the full price on Stripe Checkout, cards only, with the amount computed on the
+  server. Stripe's signed webhook is the only way to confirm it; then the usual confirmation email with the cancel
+  link is sent, once. An expired or abandoned payment frees the time; a payment that arrives for a time no longer held
+  is refunded instead of double-booking.
+keywords:
+  [booking deposit, pay when booking, prepayment, card payment, stripe checkout, deposit, upfront payment, no-show protection, held booking, payment hold]
+synonyms:
+  deposit: [booking deposit, down payment, deposit to confirm, no-show deposit]
+  pay when booking: [pay to book, pay online when booking, prepaid appointment, card at booking time, booking payment, prepayment]
+use_cases:
+  - A salon or clinic asks for a deposit by card to confirm online bookings.
+  - A studio charges the full class price when the class is booked.
+use_when:
+  - The request asks that customers pay (a deposit or the price) by card when they book on the public page.
+avoid_when:
+  - Workspace plans or recurring billing — use payments.subscriptions.turbineh
+  - Paying for products with a cart — use the storefront recipe
+tradeoffs:
+  - { choice: "Stripe Checkout (hosted page)", gain: "No card data in the app, SCA handled by Stripe", cost: "The customer leaves the site to pay" }
+  - { choice: "Hold the time while paying", gain: "No one else can take a time someone is paying for", cost: "An abandoned payment holds the time until the session expires (at least 30 minutes)" }
+config:
+  - { name: STRIPE_SECRET_KEY, description: "Stripe secret key (sk_test_… first). Without it, bookings that need a payment are refused with a message and their time is freed." }
+  - { name: STRIPE_WEBHOOK_SECRET, description: "Signing secret of the endpoint /api/bookings/payments/webhook (events checkout.session.completed and checkout.session.expired)." }
+interfaces:
+  - { name: amountDue, signature: "amountDue(service: PricedService, cfg: DepositConfig): { cents: number; currency: string; kind: \"deposit\" | \"full\" } | null", where: "src/payments/deposit.ts" }
+  - { name: checkoutForm, signature: "checkoutForm(r: CheckoutRequest): URLSearchParams", where: "src/payments/deposit.ts" }
+  - { name: verifyStripeSignature, signature: "verifyStripeSignature(raw: string, header: string | null, secret: string, now?: number, toleranceSeconds?: number): boolean", where: "src/payments/deposit.ts" }
+  - { name: dueFor, signature: "dueFor(service: string): { cents: number; currency: string; kind: \"deposit\" | \"full\" } | null", where: "src/payments/service.ts" }
+  - { name: startDepositCheckout, signature: "startDepositCheckout(b: HeldBooking, now?: Date): Promise<string>", where: "src/payments/service.ts" }
+  - { name: handleStripeEvent, signature: "handleStripeEvent(raw: string, signature: string | null): Promise<WebhookOutcome>", where: "src/payments/service.ts" }
+  - { name: paymentNote, signature: "paymentNote(service: string): string | null", where: "src/bookings/payment.ts" }
+extension_points:
+  - { what: "Change the deposit or charge the full price", where: "src/payments/booking-deposit.json", how: "mode deposit|full, amount (fixed) or percent, currency, holdMinutes; amountDue applies them (unit-tested)." }
+  - { what: "Another payment provider", where: "src/bookings/payment.ts", how: "Keep the three exports (paymentNote, paymentHoldMinutes, startPayment) and confirm held bookings with confirmHeldAppointment from your provider's signed webhook." }
+  - { what: "What happens after payment", where: "src/payments/service.ts (handleStripeEvent)", how: "The only writer of payment state; add receipts or staff alerts there." }
+compatibility:
+  package: "native (no npm dependency)"
+  runtime: node@>=20
+  stack: "Next.js App Router, Drizzle, the bookings recipe with domain.bookings.turbineh"
+security:
+  - "Stripe-Signature verified (HMAC-SHA256, constant time, 5-minute tolerance); unsigned events confirm nothing."
+  - "Amounts only from the server's params; an event for a different amount or currency is ignored."
+  - "Redirects only to checkout.stripe.com; the return page needs the booking reference and its Checkout session id."
+  - "Secrets only from the environment; test keys generated at runtime in E2E."
+guarantees:
+  - { claim: "Fixed deposit, never above the price", test: "tests/unit/booking-deposit.test.ts › charges a fixed deposit per booking, never more than the service price" }
+  - { claim: "Percent deposit rounded half up", test: "tests/unit/booking-deposit.test.ts › charges a percent of the price rounded half up to the cent, and nothing for unpriced services" }
+  - { claim: "Full price mode", test: "tests/unit/booking-deposit.test.ts › charges the full price in full mode (the fixed amount only for unpriced services)" }
+  - { claim: "Checkout session of exactly the server's amount, expiring with the hold", test: "tests/unit/booking-deposit.test.ts › asks for one card payment of exactly the server's amount, tied to the booking, expiring with the hold" }
+  - { claim: "Stripe signature checked", test: "tests/unit/booking-deposit.test.ts › accepts Stripe's signature and refuses forged, stale or missing ones" }
+  - { claim: "Pay by card when booking; held until the signed webhook confirms it", test: "tests/e2e/booking-payment.spec.ts › a customer pays the deposit by card on Stripe Checkout when booking: the time is held until the signed webhook confirms the booking and the confirmation email is sent" }
+  - { claim: "Expired payment frees the time", test: "tests/e2e/booking-payment.spec.ts › an unpaid booking frees its time when the payment expires: Stripe's expired event releases it and the time is offered again" }
+  - { claim: "Late payment refunded, never double-booked", test: "tests/e2e/booking-payment.spec.ts › a hold whose time ran out is released when someone else books that time, and a payment arriving afterwards is refunded instead of double-booking" }
+  - { claim: "Forged or different-amount events refused", test: "tests/e2e/booking-payment.spec.ts › the payment webhook refuses events without a valid Stripe signature and never confirms a different amount" }
+limits:
+  - "Only the public booking page pays; staff bookings and AI-assistant bookings are confirmed without payment."
+  - "One payment per booking; cancelling does not refund automatically (refund in Stripe's dashboard)."
+  - "If the app also has payments.subscriptions.turbineh, both webhooks share STRIPE_WEBHOOK_SECRET: use one Stripe endpoint per route with its own secret and set the one this route uses."
+  - "Proven against a Stripe API mock and a stand-in of the hosted page, not a live Stripe account."
+example: |-
+  // Server code in the app (e.g. a page or an email): what booking a service costs to secure, from the server's rules.
+  import { formatMoney } from "@/payments/deposit";
+  import { dueFor } from "@/payments/service";
+
+  export function depositLine(service: string): string {
+    const due = dueFor(service);
+    return due
+      ? `${formatMoney(due.cents, due.currency)} paid by card when booking`
+      : "Pay at the visit";
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/payments/booking-deposit.json
+  schema: params.schema.json
+  fields:
+    - { name: mode, default: "deposit", description: "deposit (part of the price) or full (the whole price)" }
+    - { name: percent, default: "null", description: "Deposit as a percent of the price when no fixed amount is set" }
+    - { name: amount, default: "10", description: "Fixed deposit per booking (major units), capped at the price" }
+    - { name: currency, default: "eur", description: "Currency of the amount and of services without one" }
+    - { name: holdMinutes, default: "30", description: "Checkout lifetime; the time is held this long plus 5 minutes" }
+  example: |
+    { "mode": "deposit", "percent": 20, "amount": null, "currency": "eur", "holdMinutes": 30 }

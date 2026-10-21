@@ -10,6 +10,7 @@ import { slugify } from "@/lib/text";
 import { UserFacingError } from "@/security/errors";
 import { requireAdmin } from "@/server/authz";
 import { enabledCurrencies } from "@/server/currency";
+import { deleteStoredImage, storeProductImage, type StoredImage } from "@/server/images";
 
 const base = z.object({
   name: z.string().trim().min(2).max(160),
@@ -20,14 +21,17 @@ const base = z.object({
   active: z.literal("on").optional(),
 });
 
-async function readImage(formData: FormData): Promise<{ image: Buffer; imageMime: string } | null> {
+/** The uploaded image, type detected from its bytes, stored in Vercel Blob or in the database (src/server/images.ts). */
+async function readImage(formData: FormData): Promise<StoredImage | null> {
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0) return null;
   if (file.size > IMAGE_MAX_BYTES) throw new UserFacingError("Images can be up to 2 MB.");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mime = imageType(bytes);
   if (!mime) throw new UserFacingError("Use a PNG, JPEG or WebP image.");
-  return { image: Buffer.from(bytes), imageMime: mime };
+  return storeProductImage(Buffer.from(bytes), mime).catch(() => {
+    throw new UserFacingError("The image could not be stored. Please try again.");
+  });
 }
 
 export async function saveProduct(formData: FormData): Promise<void> {
@@ -57,7 +61,16 @@ export async function saveProduct(formData: FormData): Promise<void> {
     ...(image ?? {}),
   };
   if (id) {
+    const [before] = image
+      ? await db
+          .select({ imageBlobUrl: products.imageBlobUrl })
+          .from(products)
+          .where(eq(products.id, id))
+      : [];
     await db.update(products).set(values).where(eq(products.id, id));
+    // A replaced image in Vercel Blob is deleted there too.
+    if (before?.imageBlobUrl && before.imageBlobUrl !== image?.imageBlobUrl)
+      await deleteStoredImage(before.imageBlobUrl);
   } else {
     let slug = slugify(parsed.data.name);
     if (

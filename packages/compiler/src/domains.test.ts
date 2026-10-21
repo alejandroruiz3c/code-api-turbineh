@@ -93,3 +93,56 @@ describe("domain detection (deterministic, ADR-0033)", () => {
     );
   });
 });
+
+describe("payment at booking time (payments.booking-deposit.turbineh, ADR-0071)", () => {
+  const pay = (prompt: string, recipe = "bookings") =>
+    detectDomains(prompt, recipe, "Test").find(
+      (d) => d.component === "payments.booking-deposit.turbineh",
+    );
+
+  it("selects a fixed deposit stated with its amount and currency", () => {
+    const d = pay("Booking site for a barber; clients pay a 15 € deposit to confirm the booking.");
+    expect(d?.params).toMatchObject({
+      mode: "deposit",
+      amount: 15,
+      percent: null,
+      currency: "eur",
+    });
+    expect(d?.recipes).toEqual(["bookings"]);
+  });
+
+  it("selects a percent deposit when services have prices", () => {
+    const d = pay(
+      "Online booking for a tattoo studio. Services: small tattoo 60 min (80 €), large tattoo 180 min (300 €). Customers pay a 25% deposit when they book.",
+    );
+    expect(d?.params).toMatchObject({
+      mode: "deposit",
+      percent: 25,
+      amount: null,
+      currency: "eur",
+    });
+  });
+
+  it("charges the full price for card payment at booking time, with a stated default when there are no prices", () => {
+    const priced = pay(
+      "Booking site for a spa. Services: massage 60 min (50 €). Online card payment at booking time.",
+    );
+    expect(priced?.params).toMatchObject({ mode: "full", amount: null });
+    const unpriced = pay("Booking site for a hair salon with online card payment at booking time.");
+    expect(unpriced?.params).toMatchObject({ mode: "deposit", amount: 10 });
+    expect(unpriced?.assumptions.join(" ")).toMatch(/Prices not stated/);
+  });
+
+  it("selects nothing for payment at the venue, no payment, or outside the bookings recipe", () => {
+    expect(pay("Yoga studio bookings. Payment at the studio, no online payments.")).toBeUndefined();
+    expect(
+      pay("Bookings for a nail bar; customers book online and get a confirmation email."),
+    ).toBeUndefined();
+    expect(
+      pay(
+        "An AI booking assistant for a clinic; patients pay a 10 € deposit when they book.",
+        "ai-agents",
+      ),
+    ).toBeUndefined();
+  });
+});

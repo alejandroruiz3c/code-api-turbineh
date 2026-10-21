@@ -12096,6 +12096,197 @@
       "details": "https://software.turbineh.com/v1/capabilities/ops.retry.p-retry"
     },
     {
+      "id": "payments.booking-deposit.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "payments",
+      "package": "pkg:generic/turbineh/payments.booking-deposit.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "payments.booking-deposit"
+      ],
+      "does": "Card payment at booking time for the public booking page of domain.bookings.turbineh: a deposit (fixed amount or percent of the service price) or the full price, charged with Stripe Checkout (hosted page, cards only, amount computed on the server). The booking is held (pending payment) and its time is not offered to anyone else until Stripe's signed webhook confirms it and the confirmation email with the cancel link is sent; an expired or abandoned payment frees the time, and a payment that arrives for a time no longer held is refunded instead of double-booking.",
+      "doesNot": "Does not charge staff bookings or bookings made through the AI assistant, store cards, take payments on site, handle no-show fees, partial refunds on cancellation, multiple currencies per service or payment methods other than cards",
+      "title": "Card payment at booking time (deposit or full price) with Stripe Checkout for the public booking page",
+      "summary": "Adds a payment step to domain.bookings.turbineh's public booking page. A booking of a service with an amount due is created \"pending payment\": its time is held (no one else is offered it) while the customer pays a deposit (fixed amount or percent of the price) or the full price on Stripe Checkout, cards only, with the amount computed on the server. Stripe's signed webhook is the only way to confirm it; then the usual confirmation email with the cancel link is sent, once. An expired or abandoned payment frees the time; a payment that arrives for a time no longer held is refunded instead of double-booking.",
+      "useCases": [
+        "A salon or clinic asks for a deposit by card to confirm online bookings.",
+        "A studio charges the full class price when the class is booked."
+      ],
+      "useWhen": [
+        "The request asks that customers pay (a deposit or the price) by card when they book on the public page."
+      ],
+      "avoidWhen": [
+        "Workspace plans or recurring billing — use payments.subscriptions.turbineh",
+        "Paying for products with a cart — use the storefront recipe"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Stripe Checkout (hosted page)",
+          "gain": "No card data in the app, SCA handled by Stripe",
+          "cost": "The customer leaves the site to pay"
+        },
+        {
+          "choice": "Hold the time while paying",
+          "gain": "No one else can take a time someone is paying for",
+          "cost": "An abandoned payment holds the time until the session expires (at least 30 minutes)"
+        }
+      ],
+      "config": [
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "description": "Stripe secret key (sk_test_… first). Without it, bookings that need a payment are refused with a message and their time is freed."
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "description": "Signing secret of the endpoint /api/bookings/payments/webhook (events checkout.session.completed and checkout.session.expired)."
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "amountDue",
+          "signature": "amountDue(service: PricedService, cfg: DepositConfig): { cents: number; currency: string; kind: \"deposit\" | \"full\" } | null",
+          "where": "src/payments/deposit.ts"
+        },
+        {
+          "name": "checkoutForm",
+          "signature": "checkoutForm(r: CheckoutRequest): URLSearchParams",
+          "where": "src/payments/deposit.ts"
+        },
+        {
+          "name": "verifyStripeSignature",
+          "signature": "verifyStripeSignature(raw: string, header: string | null, secret: string, now?: number, toleranceSeconds?: number): boolean",
+          "where": "src/payments/deposit.ts"
+        },
+        {
+          "name": "dueFor",
+          "signature": "dueFor(service: string): { cents: number; currency: string; kind: \"deposit\" | \"full\" } | null",
+          "where": "src/payments/service.ts"
+        },
+        {
+          "name": "startDepositCheckout",
+          "signature": "startDepositCheckout(b: HeldBooking, now?: Date): Promise<string>",
+          "where": "src/payments/service.ts"
+        },
+        {
+          "name": "handleStripeEvent",
+          "signature": "handleStripeEvent(raw: string, signature: string | null): Promise<WebhookOutcome>",
+          "where": "src/payments/service.ts"
+        },
+        {
+          "name": "paymentNote",
+          "signature": "paymentNote(service: string): string | null",
+          "where": "src/bookings/payment.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Change the deposit or charge the full price",
+          "where": "src/payments/booking-deposit.json",
+          "how": "mode deposit|full, amount (fixed) or percent, currency, holdMinutes; amountDue applies them (unit-tested)."
+        },
+        {
+          "what": "Another payment provider",
+          "where": "src/bookings/payment.ts",
+          "how": "Keep the three exports (paymentNote, paymentHoldMinutes, startPayment) and confirm held bookings with confirmHeldAppointment from your provider's signed webhook."
+        },
+        {
+          "what": "What happens after payment",
+          "where": "src/payments/service.ts (handleStripeEvent)",
+          "how": "The only writer of payment state; add receipts or staff alerts there."
+        }
+      ],
+      "compatibility": {
+        "package": "native (no npm dependency)",
+        "runtime": "node@>=20",
+        "stack": "Next.js App Router, Drizzle, the bookings recipe with domain.bookings.turbineh"
+      },
+      "security": [
+        "Stripe-Signature verified (HMAC-SHA256, constant time, 5-minute tolerance); unsigned events confirm nothing.",
+        "Amounts only from the server's params; an event for a different amount or currency is ignored.",
+        "Redirects only to checkout.stripe.com; the return page needs the booking reference and its Checkout session id.",
+        "Secrets only from the environment; test keys generated at runtime in E2E."
+      ],
+      "guarantees": [
+        {
+          "claim": "Fixed deposit, never above the price",
+          "test": "tests/unit/booking-deposit.test.ts › charges a fixed deposit per booking, never more than the service price"
+        },
+        {
+          "claim": "Percent deposit rounded half up",
+          "test": "tests/unit/booking-deposit.test.ts › charges a percent of the price rounded half up to the cent, and nothing for unpriced services"
+        },
+        {
+          "claim": "Full price mode",
+          "test": "tests/unit/booking-deposit.test.ts › charges the full price in full mode (the fixed amount only for unpriced services)"
+        },
+        {
+          "claim": "Checkout session of exactly the server's amount, expiring with the hold",
+          "test": "tests/unit/booking-deposit.test.ts › asks for one card payment of exactly the server's amount, tied to the booking, expiring with the hold"
+        },
+        {
+          "claim": "Stripe signature checked",
+          "test": "tests/unit/booking-deposit.test.ts › accepts Stripe's signature and refuses forged, stale or missing ones"
+        },
+        {
+          "claim": "Pay by card when booking; held until the signed webhook confirms it",
+          "test": "tests/e2e/booking-payment.spec.ts › a customer pays the deposit by card on Stripe Checkout when booking: the time is held until the signed webhook confirms the booking and the confirmation email is sent"
+        },
+        {
+          "claim": "Expired payment frees the time",
+          "test": "tests/e2e/booking-payment.spec.ts › an unpaid booking frees its time when the payment expires: Stripe's expired event releases it and the time is offered again"
+        },
+        {
+          "claim": "Late payment refunded, never double-booked",
+          "test": "tests/e2e/booking-payment.spec.ts › a hold whose time ran out is released when someone else books that time, and a payment arriving afterwards is refunded instead of double-booking"
+        },
+        {
+          "claim": "Forged or different-amount events refused",
+          "test": "tests/e2e/booking-payment.spec.ts › the payment webhook refuses events without a valid Stripe signature and never confirms a different amount"
+        }
+      ],
+      "limits": [
+        "Only the public booking page pays; staff bookings and AI-assistant bookings are confirmed without payment.",
+        "One payment per booking; cancelling does not refund automatically (refund in Stripe's dashboard).",
+        "If the app also has payments.subscriptions.turbineh, both webhooks share STRIPE_WEBHOOK_SECRET: use one Stripe endpoint per route with its own secret and set the one this route uses.",
+        "Proven against a Stripe API mock and a stand-in of the hosted page, not a live Stripe account."
+      ],
+      "example": "// Server code in the app (e.g. a page or an email): what booking a service costs to secure, from the server's rules.\nimport { formatMoney } from \"@/payments/deposit\";\nimport { dueFor } from \"@/payments/service\";\n\nexport function depositLine(service: string): string {\n  const due = dueFor(service);\n  return due\n    ? `${formatMoney(due.cents, due.currency)} paid by card when booking`\n    : \"Pay at the visit\";\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "booking deposit",
+        "pay when booking",
+        "prepayment",
+        "card payment",
+        "stripe checkout",
+        "deposit",
+        "upfront payment",
+        "no-show protection",
+        "held booking",
+        "payment hold"
+      ],
+      "synonyms": {
+        "deposit": [
+          "booking deposit",
+          "down payment",
+          "deposit to confirm",
+          "no-show deposit"
+        ],
+        "pay when booking": [
+          "pay to book",
+          "pay online when booking",
+          "prepaid appointment",
+          "card at booking time",
+          "booking payment",
+          "prepayment"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/payments.booking-deposit.turbineh"
+    },
+    {
       "id": "payments.checkout.stripe",
       "version": "0.1.0",
       "status": "approved",
@@ -14553,6 +14744,10 @@
         {
           "name": "install",
           "description": "pnpm add @vercel/blob@2.8.0 (exact version, added by TurbineH)"
+        },
+        {
+          "name": "BLOB_READ_WRITE_TOKEN",
+          "description": "Read-write token of the Vercel Blob store (vercel_blob_rw_…), set by Vercel when a store is connected; the SDK reads it from the environment. Without it put and del throw — keep a local fallback where the app must run without Vercel (the storefront recipe stores images in PostgreSQL then)."
         }
       ],
       "interfaces": [
@@ -14570,6 +14765,16 @@
           "name": "list",
           "signature": "import { list } from \"@vercel/blob\"",
           "where": "@vercel/blob"
+        },
+        {
+          "name": "storeObject",
+          "signature": "storeObject(pathname: string, body: StoredBody, contentType: string): Promise<PutBlobResult>",
+          "where": "src/integrations/storage-objects.ts (curated glue, copied verbatim)"
+        },
+        {
+          "name": "deleteObject",
+          "signature": "deleteObject(url: string): Promise<void>",
+          "where": "src/integrations/storage-objects.ts (curated glue, copied verbatim)"
         }
       ],
       "extensionPoints": [
@@ -14586,28 +14791,42 @@
       },
       "security": [
         "Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-11.",
-        "Effects: network no, filesystem no, database no.",
+        "Effects: network (the Vercel Blob API), no filesystem, no database.",
         "Client uploads allow secure direct transfer from browser to Vercel Blob."
       ],
       "guarantees": [
         {
           "claim": "exposes put, list and delete",
           "test": "contract.test.ts › exposes put, list and delete"
+        },
+        {
+          "claim": "put uploads the bytes with the bearer token and content type and returns the public URL",
+          "test": "contract.test.ts › put uploads the bytes with the bearer token and content type and returns the public URL"
+        },
+        {
+          "claim": "del sends the URLs to delete",
+          "test": "contract.test.ts › del sends the URLs to delete"
+        },
+        {
+          "claim": "a wrong token is refused and nothing is stored",
+          "test": "contract.test.ts › refuses a wrong token (the error surfaces, nothing is stored)"
         }
       ],
       "limits": [
-        "Server uploads are limited to 4.5 MB on Vercel-hosted websites."
+        "Server uploads are limited to 4.5 MB on Vercel-hosted websites.",
+        "Contract tests run against a local stand-in of the Blob API (VERCEL_BLOB_API_URL), not a live store.",
+        "The curated glue uploads public objects only (no private access, multipart or client uploads)."
       ],
-      "example": "import { put, del, list } from \"@vercel/blob\";\n\nconsole.log([put, del, list].every((f) => typeof f === \"function\")); // → true",
+      "example": "// Server code (route handler or server action). The SDK reads BLOB_READ_WRITE_TOKEN from the environment.\nimport { del, put } from \"@vercel/blob\";\n\nexport async function storeAvatar(userId: string, png: Buffer): Promise<string> {\n  const blob = await put(`avatars/${userId}.png`, png, {\n    access: \"public\",\n    contentType: \"image/png\",\n    addRandomSuffix: false,\n  });\n  return blob.url;\n}\n\nexport async function removeAvatar(url: string): Promise<void> {\n  await del(url);\n}",
       "exampleCheck": {
         "kind": "typescript",
-        "from": "contract.test.ts › exposes put, list and delete",
+        "from": "snippet.ts",
         "compiled": {
           "against": [
             "@vercel/blob@2.8.0"
           ],
           "typescript": "6.0.3",
-          "on": "2026-10-16"
+          "on": "2026-10-21"
         }
       },
       "keywords": [

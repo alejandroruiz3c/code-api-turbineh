@@ -1,6 +1,7 @@
 // Local mock of the Stripe API for the E2E tests (started by playwright.config.ts, which points STRIPE_API_BASE here):
 // the paid path runs fully offline. It answers the calls this app makes like Stripe does (Checkout Sessions, billing
-// portal sessions), accepts test keys only, and records what it received so tests can check the server's amounts.
+// portal sessions, refunds), accepts test keys only, and records what it received so tests can check the server's
+// amounts.
 // Hosted pages keep Stripe's real addresses; tests answer them with page.route() (no network).
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
@@ -9,6 +10,7 @@ import { URL, URLSearchParams } from "node:url";
 
 const port = Number(process.env.MOCK_PORT ?? 12100);
 const sessions = [];
+const refunds = [];
 
 createServer((req, res) => {
   let body = "";
@@ -23,6 +25,8 @@ createServer((req, res) => {
     // Test helper: what the app sent, latest first.
     if (req.method === "GET" && url.pathname === "/__sessions")
       return json(200, [...sessions].reverse());
+    if (req.method === "GET" && url.pathname === "/__refunds")
+      return json(200, [...refunds].reverse());
     if (req.method !== "POST")
       return json(404, { error: { message: `mock: ${req.method} ${url.pathname}` } });
     if (!/^Bearer sk_test_/.test(req.headers.authorization ?? "")) {
@@ -48,6 +52,19 @@ createServer((req, res) => {
         object: "billing_portal.session",
         url: `https://billing.stripe.com/p/session/${id}`,
       });
+    }
+    if (url.pathname === "/v1/refunds") {
+      if (!params.payment_intent && !params.charge)
+        return json(400, { error: { message: "Must provide either payment_intent or charge" } });
+      const refund = {
+        id: `re_test_${randomUUID().replaceAll("-", "")}`,
+        object: "refund",
+        payment_intent: params.payment_intent ?? null,
+        status: "succeeded",
+        params,
+      };
+      refunds.push(refund);
+      return json(200, refund);
     }
     json(404, { error: { message: `mock: POST ${url.pathname} is not implemented` } });
   });

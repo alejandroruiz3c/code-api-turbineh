@@ -337,8 +337,10 @@ export function productImageSrc(p: {
   id: string;
   imageUrl: string | null;
   imageMime: string | null;
+  imageBlobUrl?: string | null;
 }): string | null {
   if (p.imageUrl) return p.imageUrl;
+  if (p.imageBlobUrl) return p.imageBlobUrl;
   return p.imageMime ? `/shop/images/${p.id}` : null;
 }
 

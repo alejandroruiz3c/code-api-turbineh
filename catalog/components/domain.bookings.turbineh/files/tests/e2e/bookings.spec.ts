@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import pg from "pg";
+import { submitBooking } from "./booking-payment-step";
 import { signUpOrSignIn } from "./helpers";
 
 /**
@@ -68,7 +69,7 @@ async function bookFirst(page: Page, day: string, email: string, resource = "") 
   await page.getByLabel("Name").fill("Lucía Pérez");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Phone").fill("+34 600 000 000");
-  await page.getByRole("button", { name: "Book", exact: true }).click();
+  await submitBooking(page);
 }
 
 async function anonymous(browser: Browser): Promise<Page> {
