@@ -1,5 +1,10 @@
 # Canonical acceptance criteria (ADR-0063) of the ai-agents use case: one per function its catalogue text advertises,
 # each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The AI app's nouns (ADR-0069), absorbed by every criterion below: what the functions act on, never what they do.
+- vocabulary: >-
+    ai assistant assistants agent agents bot bots chatbot query queries conversation conversations interaction
+    orchestrator turbineh model models help centre center article articles support customer customers user users
+    faq faqs
 - id: ai-agents.assistant-instructions
   criterion: "Creates an assistant that answers from the knowledge base"
   advertises: "AI assistants with instructions"
@@ -18,6 +23,7 @@
   advertises: "allowed tools"
   says: ["tools?|actions?|escalat|function call|capabilit"]
   terms: >-
+    configure configures configured execute executes executed execution run runs specific
     tool tools action actions escalate escalation escalates function call calls capability capabilities allowed
     allow enable enabled only permitted irreversible confirm confirmation confirms asks ask first before email
     human person assistant assistants agent agents admin owner registry
@@ -41,8 +47,10 @@
 - id: ai-agents.chat-over-documents
   criterion: "An assistant answers from the knowledge base"
   advertises: "chat over a knowledge base"
-  says: ["chat|ask|answer|question|convers|respond|reply", "knowledge|document|docs|faq|source|polic|help|manual|base"]
+  says: ["chat|ask|answer|question|convers|respond|reply|retriev", "knowledge|document|docs|faq|source|polic|help|manual|base"]
   terms: >-
+    match matches matching
+    retrieve retrieves retrieved retrieval relevant article articles display displays shows return returns present
     chat chats ask asks asked answer answers answered question questions conversation conversations respond
     responds reply replies knowledge base document documents docs faq source sources cited cite cites citing
     policy policies help centre center manual from using based on grounded assistant agent bot customer
@@ -56,6 +64,8 @@
   advertises: "classify"
   says: ["classif|categori|label|tag|triag|route|sort"]
   terms: >-
+    classifications
+    job jobs
     classify classifies classified classification categorise categorize categorises categorizes category
     categories label labels labelled labeled tag tags triage triages route routes sort sorts record records
     item items ticket tickets support batch batches process processes processing bulk many each every automatic
@@ -69,6 +79,8 @@
   advertises: "extract"
   says: ["summar|extract|pars|pull out|key fields|structured"]
   terms: >-
+    summarization summarisation summarizations summarisations
+    job jobs
     summarise summarize summarises summarizes summary summaries extract extracts extraction parse parses pull
     out key field fields data structured output outputs record records item items ticket tickets batch
     batches process processes processing bulk each every ai validated stored
@@ -82,6 +94,8 @@
   advertises: "summarise"
   says: ["summar|digest|tl;?dr|short version"]
   terms: >-
+    summarization summarisation summarizations summarisations
+    job jobs
     summarise summarize summarises summarizes summary summaries digest short version record records item items
     ticket tickets batch batches process processes processing bulk each every ai stored output
   actors: [owner, admin, member, user]
@@ -122,3 +136,57 @@
   actors: [owner, admin, member, user, customer]
   tests:
     - "tests/unit/ai-agents.test.ts › escalating to a human emails the team on ADMIN_EMAILS"
+
+- id: ai-agents.help-centre
+  criterion: "An assistant answers a customer question from a help-centre FAQ article in the knowledge base and cites that article"
+  advertises: "knowledge base"
+  says: ["faq|help ?cent|help articles?|support articles?", "answer|ask|question|reply|respond|retriev|find"]
+  terms: >-
+    match matches matching
+    return returns present
+    faq faqs help centre center article articles answer answers answered ask asks question questions reply
+    replies respond responds retrieve retrieves relevant cite cites cited source sources knowledge base from using
+    based customer customers support assistant agent
+  actors: [customer, client, visitor, user, owner, admin, member]
+  tests:
+    - "tests/e2e/ai-agents.spec.ts › the assistant answers a customer question from a help-centre FAQ article in the knowledge base and cites that article"
+
+- id: ai-agents.escalate-human
+  criterion: "When the assistant hands a conversation to a person, the team is emailed, the conversation is listed for the team as needing a person and the user is told a person will follow up"
+  advertises: "escalate to a human"
+  says: ["escalat|hand(s|ed)? (it |the conversation )?(off|over|to a (person|human))|handoff|human|(a|real) person|someone from the team"]
+  terms: >-
+    escalate escalates escalated escalation option offer offers provide human humans person people team staff
+    follow up follows hand hands handoff off over conversation conversations email emails emailed notify notifies
+    notified listed list needing needs ticket tickets support case cases agent agents answer answered help
+    create creates created record recorded ask asks question questions find finds
+    unable outside scope capabilities beyond automatically
+  actors: [owner, admin, member, user, customer, client, visitor]
+  tests:
+    - "tests/e2e/ai-agents.spec.ts › when the assistant hands a conversation to a person, the team is emailed, the conversation is listed for the team as needing a person and the user is told a person will follow up"
+
+- id: ai-agents.lookup
+  criterion: "The assistant looks up a {entity} by its reference and tells the user its status, or that it was not found"
+  advertises: "allowed tools"
+  # Generated per looked-up entity (src/server/agent-tools.ts, ADR-0068): a read-only, tenant-scoped tool and its test.
+  generated: "looks up an? {entity} by its reference and tells the user its status, or that it was not found$"
+  generatedIn: tests/unit/agent-tools.test.ts
+  says: ["look(s|ing|ed)? ?((it|them) )?up|lookup|status of|track|check|find", "number|no\\.?|#|code|reference|\\bref\\b|\\bid\\b|identifier|tracking"]
+  terms: >-
+    look looks looking up lookup status state current track tracks tracking check checks find finds number
+    numbers code reference identifier id tell tells return returns reply replies relay relays inform informs
+    found not invalid unknown wrong missing exist exists shipping shipped processing delivered
+  actors: [customer, client, visitor, user, owner, admin, member]
+
+- id: ai-agents.orchestrated
+  criterion: "Every AI call goes through the TurbineH orchestrator and its AI Safety Pack: no app module calls a model directly"
+  advertises: "every AI call through the TurbineH orchestrator"
+  says: ["orchestrat|safety pack|every ai call|ai calls? (go|goes|are|is|must) (through|routed|validated|checked)"]
+  terms: >-
+    every ai call calls go goes going through turbineh orchestrator orchestrated orchestrates safety pack guard
+    guards check checks checked validate validates validated validation before model models execution executed
+    directly app module modules route routes routed sent request requests processed
+  actors: [owner, admin, member, user, customer, visitor]
+  tests:
+    - "tests/unit/ai-agents.test.ts › every AI call goes through the TurbineH orchestrator and its AI Safety Pack: no app module calls a model directly"
+    - "tests/unit/ai-agent.test.ts › refuses prompt injection before any model call"

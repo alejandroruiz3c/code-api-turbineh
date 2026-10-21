@@ -40,6 +40,16 @@ providedEntities:
     Export,
     ExportBatch,
     ImportBatch,
+    # Help-centre and escalation names a request may use (ADR-0069): the knowledge base and the escalated
+    # conversations already are these records, so no parallel CRUD table is generated for them.
+    KnowledgeBaseEntry,
+    KnowledgeEntry,
+    HelpCenterArticle,
+    HelpCentreArticle,
+    SupportArticle,
+    EscalationTicket,
+    HumanEscalation,
+    ChatInteraction,
   ]
 defaultCapabilities: [data.pagination, ops.rate-limit, ai.orchestrator, security.ai-safety]
 # Implemented by the template itself: batch AI processing runs through its own runner (POST /api/jobs/run with

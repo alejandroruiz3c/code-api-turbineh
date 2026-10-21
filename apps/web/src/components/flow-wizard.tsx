@@ -1,4 +1,5 @@
 "use client";
+import type { ProductHelp, ProductHelpResponse } from "@turbineh/engine";
 import type { EnvironmentInput, NotCoveredExplanation, Plan, PlanAction } from "@turbineh/shared";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -8,6 +9,7 @@ import { matchUseCases, USE_CASES, type UseCase } from "@/lib/use-cases";
 import { GithubConnect, RepoAnalysisView, RepoPicker, useGithub } from "./github-connect";
 import { COMPONENTS_ONLY_APPROVAL, NotCovered } from "./not-covered";
 import { PlanReview } from "./plan-review";
+import { ProductHelpPanel } from "./product-help";
 import { Panel } from "./ui";
 
 type Step = 1 | 2 | 3;
@@ -30,6 +32,12 @@ const NEEDS = [
   "A support assistant that answers from our help centre and escalates to a human",
 ];
 
+/** The API answers a question about TurbineH with `{ kind: "help" }` instead of a plan or a build (ADR-0069). */
+export const helpOf = (data: unknown): ProductHelp | null =>
+  data && typeof data === "object" && (data as Partial<ProductHelpResponse>).kind === "help"
+    ? ((data as ProductHelpResponse).help ?? null)
+    : null;
+
 export function FlowWizard({
   need: initialNeed,
   capability,
@@ -47,6 +55,8 @@ export function FlowWizard({
   const [framework, setFramework] = useState("Next.js");
   const [versions, setVersions] = useState("next 16, node 24, postgres 17");
   const [plan, setPlan] = useState<Plan | null>(null);
+  // ADR-0069: the need was a question about TurbineH; nothing was planned.
+  const [help, setHelp] = useState<ProductHelp | null>(null);
   const [engineMissing, setEngineMissing] = useState(false);
   const [approved, setApproved] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -112,8 +122,16 @@ export function FlowWizard({
     setBusy(true);
     setError(null);
     setApproved({});
+    setHelp(null);
     const r = await productApi.plan(need.trim(), env);
     setBusy(false);
+    const asked = r.ok ? helpOf(r.data) : null;
+    if (asked) {
+      setPlan(null);
+      setHelp(asked);
+      setStep(1);
+      return;
+    }
     if (r.ok) {
       setPlan(r.data);
       setEngineMissing(false);
@@ -145,6 +163,12 @@ export function FlowWizard({
           ? ` Stack: ${language}${framework ? ` / ${framework}` : ""} (${versions}).`
           : ` Existing project files: ${Object.keys(files).join(", ")}.`;
     const r = await productApi.startBuild(`${need.trim()}${envLine}`);
+    const asked = r.ok ? helpOf(r.data) : null;
+    if (asked) {
+      setBusy(false);
+      setHelp(asked);
+      return setStep(1);
+    }
     if (r.ok) return router.push(`/flows/${r.data.build_id}`);
     setBusy(false);
     setError(r.error ?? { message: "Generation could not start.", action: "Try again." });
@@ -227,6 +251,16 @@ export function FlowWizard({
             ) : null}
             <p className="mt-1 text-ice-2">→ {error.action}</p>
           </div>
+        ) : null}
+
+        {step === 1 && help ? (
+          <ProductHelpPanel
+            help={help}
+            onPick={(example) => {
+              setNeed(example);
+              setHelp(null);
+            }}
+          />
         ) : null}
 
         {step === 1 ? (

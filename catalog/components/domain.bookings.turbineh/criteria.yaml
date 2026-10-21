@@ -42,6 +42,7 @@
   advertises: "notice policy"
   says: ["cancel", "link|notice|\\d+ ?(h|hours?)|before|email|policy|advance"]
   terms: >-
+    open opens opened
     cancellation cancellations cancelled cancelling link email mail hour hours notice period policy advance
     prior least before window allowed allow late too refused refuse appointment reservation session visit
     self-service themselves own their start time
@@ -56,6 +57,7 @@
   advertises: "no double bookings"
   says: ["double|overlap|conflict|clash|same (time|slot)|twice|already (taken|booked|occupied)|occupied"]
   terms: >-
+    not offered offer offers
     double doubles overlapping overlap overlaps conflict conflicting clash clashes slot slots time times staff
     member team therapist professional resource same twice taken already booked booking bookings appointment
     appointments reservation reservations system prevent prevents avoid avoids ensure ensures allow allowed
@@ -86,6 +88,7 @@
   advertises: "time off"
   says: ["time off|days? off|block|holiday|absence|vacation|leave|unavailab"]
   terms: >-
+    add adds added create creates created
     time off block blocks blocked holiday holidays absence absences vacation leave unavailable unavailability
     slot slots offered offer no longer available customers booking bookings appointment appointments period
     day days hours mark marks
@@ -141,6 +144,7 @@
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "\\bbook|appointment|reserv|slot|session"]
   terms: >-
+    verify verifies verified still check checks checked identify identifies find finds query queries search searches
     assistant assistants chat chatbot bot agent ai conversation conversational message messages ask asks book
     books booked booking bookings appointment appointments reservation session sessions slot slots free real
     available availability confirm confirms confirmed confirmation date time staff member team email emails

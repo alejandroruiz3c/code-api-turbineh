@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
-import { isGapNotice, readZip } from "@turbineh/engine";
+import { isGapNotice, isProductQuestion, readZip } from "@turbineh/engine";
 import type { FlowResult, Plan } from "@turbineh/shared";
 import { adaptLocally } from "./adapt-local.js";
 import { cliCommand } from "./agent-docs.js";
@@ -22,6 +22,7 @@ import {
   dim,
   explanationLines,
   green,
+  helpResult,
   red,
   yellow,
   type CommandResult,
@@ -118,6 +119,9 @@ const exitOf = (code: string): number =>
 
 export async function build(c: Ctx): Promise<CommandResult> {
   if (typeof c.flags.resume === "string") return resume({ ...c, args: [c.flags.resume] });
+  // ADR-0069: "what can you do?" is a question, not a spec — help, and nothing written to this folder.
+  if (typeof c.flags.spec !== "string" && isProductQuestion(c.args.join(" ")))
+    return helpResult("build");
   const need = await readSpec(c);
   const target = targetOf(c.cwd);
   if (!target)
@@ -137,7 +141,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
   }
   const project = ensureProject(c.cwd);
   const files = target === "repo" ? localManifests(c.cwd) : {};
-  const created = await api<{ id: string }>("/v1/plans?wait=0", {
+  const created = await api<{ id: string; kind?: string }>("/v1/plans?wait=0", {
     method: "POST",
     workspace: project.workspace,
     body: {
@@ -152,6 +156,7 @@ export async function build(c: Ctx): Promise<CommandResult> {
     if (err instanceof CliError) throw new CliError(err.error, exitOf(err.error.code));
     throw err;
   });
+  if (created.kind === "help") return helpResult("build");
   project.lastPlan = created.id;
   project.pending = {
     id: created.id,

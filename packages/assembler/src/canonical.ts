@@ -45,6 +45,12 @@ export interface CanonicalCriterion {
    * placeholder and links to the generated test of that entity whose title matches this pattern.
    */
   generated?: string;
+  /**
+   * Where the generated test is (default: the entity's generated E2E spec, `tests/e2e/<entity>.spec.ts`), e.g.
+   * `tests/unit/agent-tools.test.ts` for the assistant's lookup tools (ADR-0069). `{entity}` in `generated` is the
+   * entity's label, so one file can hold the tests of several entities.
+   */
+  generatedIn?: string;
   /** Only under this condition of the app (`open-sign-up`: anyone may create an account). */
   when?: string;
   /**
@@ -76,6 +82,7 @@ interface RawCanonical {
   actors?: unknown;
   tests?: unknown;
   generated?: unknown;
+  generatedIn?: unknown;
   when?: unknown;
   same?: unknown;
 }
@@ -106,6 +113,7 @@ export function readCanonical(file: string, from: string): CanonicalCriterion[] 
       vocabulary,
       tests: Array.isArray(r.tests) ? r.tests.map(String) : [],
       ...(typeof r.generated === "string" ? { generated: r.generated } : {}),
+      ...(typeof r.generatedIn === "string" ? { generatedIn: r.generatedIn } : {}),
       ...(typeof r.when === "string" ? { when: r.when } : {}),
       ...(typeof r.same === "string" ? { same: r.same } : {}),
       from,
@@ -155,7 +163,7 @@ export function resolveCanonical(
   list: readonly CanonicalCriterion[],
   source: (file: string) => string | null,
   entities: readonly CanonicalEntity[] = [],
-  generatedTests?: (entity: string) => { file: string; titles: string[] } | null,
+  generatedTests?: (entity: string, file?: string) => { file: string; titles: string[] } | null,
   /** Conditions this app meets (`open-sign-up`); unknown at planning (null): conditional criteria are kept. */
   conditions: ReadonlySet<string> | null = null,
 ): ResolvedCanonical[] {
@@ -175,19 +183,24 @@ export function resolveCanonical(
     if (c.same || !c.criterion) return [];
     if (c.when && conditions && !conditions.has(c.when)) return [];
     if (!c.generated) return c.tests.length > 0 && c.tests.every(present) ? [c] : [];
-    const re = safeRegExp(c.generated);
-    if (!re) return [];
+    if (!safeRegExp(c.generated)) return [];
     return entities.flatMap((e) => {
       const entity = typeof e === "string" ? e : e.name;
       const fields = typeof e === "string" ? [] : (e.fields ?? []).map((f) => f.name);
       const n = entityNames(entity);
       const label = n.labelSingular.toLowerCase();
       const plural = n.labelPlural.toLowerCase();
+      const re = safeRegExp(
+        (c.generated as string)
+          .replaceAll("{entity}", escapeWord(label))
+          .replaceAll("{entities}", escapeWord(plural)),
+      );
+      if (!re) return [];
       const filled = c.criterion.replaceAll("{entity}", label).replaceAll("{entities}", plural);
       const criterion = filled.charAt(0).toUpperCase() + filled.slice(1);
       const id = `${c.id}:${entity}`;
       if (!generatedTests) return [{ ...c, id, criterion, entity, fields, tests: [] }];
-      const g = generatedTests(entity);
+      const g = generatedTests(entity, c.generatedIn);
       const title = g?.titles.find((t) => re.test(t));
       return g && title
         ? [{ ...c, id, criterion, entity, fields, tests: [`${g.file} › ${title}`] }]
@@ -271,8 +284,18 @@ function servesActors(
         p.means.some((m) => rolesIn(m).has(r))
       );
     });
-  return [...rolesIn(derived)].every((r) => serves.has(r) || viaAlias(r));
+  return [...rolesIn(chosenPeople(derived))].every((r) => serves.has(r) || viaAlias(r));
 }
+
+/**
+ * A person the actor picks ("picks a service and a team member", "calendar per staff member") is what the function acts
+ * on, not who acts (ADR-0069): such role words are not actors.
+ */
+const chosenPeople = (text: string): string =>
+  text.replace(
+    /\b(?:pick|picks|picking|picked|choose|chooses|choosing|chose|select|selects|selecting|selected|per|prefer|prefers)\s+(?:(?:a|an|the|any|one|their|his|her|a\s+specific|a\s+preferred)\s+)?(?:(?:[a-z]+)\s+){0,3}?(?:team|staff)\s+members?\b|\b(?:a|any)\s+(?:team|staff)\s+member\s+or\s+any\b/gi,
+    " ",
+  );
 
 /**
  * "Only" restricts who may act ("only staff see bookings": a refusal of everyone else) or what is shown ("a list of only
@@ -324,7 +347,16 @@ const NARRATIVE = salientStems(
     "personalised immediately where whose which include included includes organized organised access " +
     "accesses accessed address addresses non select selects selected choose chooses chosen render renders " +
     "rendered generate generates generated populated active apply applies applied tab summary between alongside " +
-    "button attached",
+    "button attached " +
+    // ADR-0069: how a requirement is told (it interacts, triggers, performs…), and where data lives once stored —
+    // never a function of its own.
+    "interact interacts interacted interacting interaction interactions encounter encounters encountered trigger " +
+    "triggers triggered perform performs performed performing detail details purpose purposes collection " +
+    "permanently persist persists persisted persistent persistently saved stored refresh refreshes refreshed reload " +
+    "reloads reloaded launch launches running state states input inputs field fields editable modification " +
+    "modifications element elements interface module modules entry entries container containers request requests " +
+    "requested wish wishes organize organise organizes organises open opens opened load loads loaded cover " +
+    "covers give gives",
 );
 
 const leftover = (
@@ -336,9 +368,31 @@ const leftover = (
   return [...salientStems(derived)].filter((s) => !have.has(s) && !NARRATIVE.has(s));
 };
 
+/**
+ * Where a request says its data lives ("saved in the SQLite database", "removed from the JSON file", "from the DOM"):
+ * TurbineH apps store it in PostgreSQL (the plan says so, ADR-0069), so the storage named is not part of the function.
+ */
+const STORAGE_PHRASE =
+  /\b(?:in|into|from|to|via|using|with|on|inside|within)\s+(?:the\s+|a\s+|an\s+|its\s+)?(?:local\s+)?(?:sqlite|mysql|mongo\s?db|postgres(?:ql)?|json|local\s?storage|session\s?storage|indexed\s?db|firebase|dom|bbdd|browser)(?:\s+(?:database|db|file|store|storage|tables?))?\b/gi;
+
+/**
+ * A negation inside a condition is not a refusal: "a question that cannot be answered", "when it can't find an answer"
+ * describe when a support function applies (hand it to a person), not something the app must refuse.
+ */
+const CONDITION_NEGATION =
+  /\b(?:that|which|if|when|given|questions?|quer(?:y|ies)|requests?|messages?)\s+(?:it\s+|they\s+|the\s+(?:[a-z]+\s+){0,2})?(?:cannot|can't|can not|could not|couldn't|is unable to|are unable to|does not|doesn't|fails? to)\s+(?:be\s+)?(?:answer|help|find|resolve|handle)\w*/gi;
+
 /** Phrasings that read like another function's words: "reserves a 30-minute block" is a slot, not a time-off block. */
 const normalize = (text: string): string =>
   text
+    .replace(STORAGE_PHRASE, " ")
+    .replace(/\b(?:sqlite|mysql|mongo\s?db|bbdd)\b/gi, " ")
+    .replace(CONDITION_NEGATION, (m) =>
+      m.replace(
+        /cannot|can't|can not|could not|couldn't|is unable to|are unable to|does not|doesn't|fails? to/i,
+        " ",
+      ),
+    )
     .replace(/\b(\d+[- ]?(?:min|mins|minutes?|hours?|h))\s+(?:time\s+)?block\b/gi, "$1 slot")
     // Quantities with their unit ("250g", "1 kg", "55-minute") are the request's facts, not functions.
     .replace(/\b\d+(?:[.,]\d+)?[- ]?(?:g|kg|mg|ml|l|cm|mm|oz|lb|gb|mb)\b/gi, " ");
@@ -402,18 +456,16 @@ export function mapToCanonical(
       return rivals.every((o) => at(c) <= at(o));
     });
   }
-  // Only together: the fewest functions (at most two) that absorb it, the closest first — never every candidate.
+  // Only together: the fewest functions (at most two) that absorb it, the closest pair first — never every candidate.
+  // Every pair is tried (a greedy pick of the closest one first can miss the pair that absorbs it: "classification,
+  // extraction or summarisation" is classify + extract-and-summarise, not summarise + classify).
   const ranked = [...cands].sort((a, b) => closeness(derived, b) - closeness(derived, a));
-  const chosen: ResolvedCanonical[] = [];
-  for (const c of ranked) {
-    const before = leftover(derived, chosen, absorbedAlso).length;
-    if (chosen.length > 0 && leftover(derived, [...chosen, c], absorbedAlso).length >= before)
-      continue;
-    chosen.push(c);
-    if (leftover(derived, chosen, absorbedAlso).length === 0) break;
-    if (chosen.length === 2) break;
-  }
-  return chosen.length > 0 && leftover(derived, chosen, absorbedAlso).length === 0 ? chosen : [];
+  for (let i = 0; i < ranked.length; i++)
+    for (let j = i + 1; j < ranked.length; j++) {
+      const pair = [ranked[i], ranked[j]] as ResolvedCanonical[];
+      if (leftover(derived, pair, absorbedAlso).length === 0) return pair;
+    }
+  return [];
 }
 
 export interface CanonicalizedCriteria {
@@ -706,8 +758,8 @@ export function linkCriteria(
     canonicalCriteria(input),
     source,
     input.entities,
-    (entity) => {
-      const file = `tests/e2e/${entityNames(entity).slug}.spec.ts`;
+    (entity, inFile) => {
+      const file = inFile ?? `tests/e2e/${entityNames(entity).slug}.spec.ts`;
       const src = source(file);
       return src === null ? null : { file, titles: testBlocks(src).map((b) => b.title) };
     },

@@ -41,3 +41,20 @@ export function byUrgency(
   const db = b.dueDate ?? "9999-12-31";
   return da.localeCompare(db) || rank(b.priority) - rank(a.priority);
 }
+
+/** Archive flag from a form ("archive" → 1, "restore" → 0); anything else is refused. */
+export function archiveFlag(action: unknown): 0 | 1 | null {
+  if (action === "archive") return 1;
+  if (action === "restore") return 0;
+  return null;
+}
+
+/** Splits rows into the active ones (board, lists) and the archived ones ("Archived" sections). */
+export function splitArchived<T extends { archived: number }>(
+  rows: readonly T[],
+): { active: T[]; archived: T[] } {
+  return {
+    active: rows.filter((r) => r.archived === 0),
+    archived: rows.filter((r) => r.archived !== 0),
+  };
+}

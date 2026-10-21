@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { proofVerdict } from "@turbineh/shared";
 import { sourceIn, splitTestRef, testBlocks } from "./acceptance.js";
+import { agentToolFiles } from "./agent-tools.js";
 import { generateEntity } from "./entities.js";
 import {
   advertisedFunctions,
@@ -946,5 +947,128 @@ describe("canonical criteria: staging bench r5 band B (ADR-0063)", () => {
       requestWords("law firm portal"),
     ).map((c) => c.id);
     expect(ids).not.toContain("client-portal.submit-request");
+  });
+});
+
+// ADR-0069: requests the library covers were refused at "0 % functional coverage" because their wording did not map.
+// Synthetic, paraphrased fixtures of those requests (support assistant over a help centre with escalation, the AI
+// agents use case in its own words, a to-do app with projects in another stack); precision negatives next to them.
+describe("recall of support, AI agents and to-do requests, precision kept (ADR-0069)", () => {
+  const order = {
+    name: "Order",
+    fields: [
+      { name: "orderNumber", type: "string" as const, required: true },
+      { name: "status", type: "string" as const, required: true },
+    ],
+  };
+  const ai = canonicalForPlan({ recipesDir, recipe: "ai-agents", entities: [order] });
+  const ids = (asked: string, canon = ai) => mapToCanonical(asked, canon).map((c) => c.id);
+
+  it.each([
+    [
+      "Given a visitor's question, the assistant retrieves and shows a matching article from the help center.",
+      ["ai-agents.help-centre", "ai-agents.chat-over-documents"],
+    ],
+    [
+      "Given a question the help center cannot answer, the bot offers to hand it to a human.",
+      ["ai-agents.escalate-human"],
+    ],
+    [
+      "When the visitor chooses to escalate, the system creates a support ticket and notifies a person from the team.",
+      ["ai-agents.escalate-human"],
+    ],
+    [
+      "Given a customer gives a valid order number, when the assistant looks it up, then it replies with the current status of that order.",
+      ["ai-agents.lookup:Order"],
+    ],
+    [
+      "Given an unknown order number, when the assistant looks it up, then it tells the customer the order was not found.",
+      ["ai-agents.lookup:Order"],
+    ],
+    ["Every AI request is routed through the TurbineH orchestrator.", ["ai-agents.orchestrated"]],
+  ])("maps %j", (asked, any) => {
+    const got = ids(asked);
+    expect(
+      got.some((id) => any.includes(id)),
+      `${asked} → ${got.join(", ")}`,
+    ).toBe(true);
+  });
+
+  it("a criterion that states three batch functions maps to the pair that absorbs it", () => {
+    expect(
+      ids(
+        "Given a batch of records, when the job runs, then the system performs the classification, extraction or summarization of every record.",
+      ).sort(),
+    ).toEqual(["ai-agents.batch-classify", "ai-agents.batch-extract-summarise"]);
+  });
+
+  it.each([
+    "Given a question the assistant cannot answer, it sends an SMS to the engineer on call.",
+    "The assistant routes each request through the orchestrator to a premium model the user picks.",
+    "A member cannot see the conversations handed to a person.",
+    "The assistant looks up an invoice by its number in the accounting system.",
+  ])("never claims %j", (asked) => {
+    const got = ids(asked);
+    expect(
+      got.filter((id) => /escalate-human|batch-classify|orchestrated|lookup/.test(id)),
+    ).toEqual([]);
+  });
+
+  it("links each generated lookup tool to its own generated test, which proves the canonical wording", () => {
+    const spec = {
+      summary: "Support agent for a shop",
+      acceptance_criteria: ["The assistant looks up order status by order number"],
+    };
+    const files = agentToolFiles(spec, [order] as never);
+    const test = files.find((f) => f.path === "tests/unit/agent-tools.test.ts")?.content ?? "";
+    const titles = testBlocks(test).map((b) => b.title);
+    const linked = resolveCanonical(
+      canonicalCriteria({ recipesDir, recipe: "ai-agents" }),
+      () => null,
+      [order],
+      (_, file) => (file === "tests/unit/agent-tools.test.ts" ? { file, titles } : null),
+    ).find((c) => c.id === "ai-agents.lookup:Order");
+    expect(linked?.tests).toHaveLength(1);
+    const { title } = splitTestRef(linked?.tests[0] as string);
+    const block = testBlocks(test).find((b) => b.title === title);
+    expect(proofVerdict(linked?.criterion as string, block as never).proven).toBe(true);
+  });
+
+  const projects = canonicalForPlan({ recipesDir, recipe: "projects" });
+  it.each([
+    [
+      "Given a task exists, when the user clicks delete, then the task is permanently removed from the SQLite database.",
+      "projects.task-delete",
+    ],
+    [
+      "Given an existing project, when the user edits its name, then the project name is updated in the JSON file.",
+      "projects.project-edit",
+    ],
+    [
+      "Given a project is active, when the user selects archive, then it is moved to the archived projects section.",
+      "projects.project-archive",
+    ],
+  ])("to-do with another stack: %j → %s", (asked, id) => {
+    expect(ids(asked, projects)).toContain(id);
+  });
+
+  it.each([
+    "Given a task, when the user shares it on WhatsApp, then the contact receives it.",
+    "Given a task, when the user exports it to Trello, then it appears on the Trello board.",
+  ])("to-do: never claims %j", (asked) => {
+    expect(ids(asked, projects)).toEqual([]);
+  });
+
+  it("a team member the customer picks is not an actor; a staff member booking on the public page is", () => {
+    const canon = bookings();
+    expect(
+      mapToCanonical(
+        "Given a customer on the public page picks a service and a team member, then the booking is created without an account.",
+        canon,
+      ).map((c) => c.id),
+    ).toContain("bookings.public-booking");
+    expect(
+      mapToCanonical("A staff member books a free time on the public page", canon).map((c) => c.id),
+    ).not.toContain("bookings.public-booking");
   });
 });

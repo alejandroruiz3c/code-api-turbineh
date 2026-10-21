@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byUrgency, isOverdue, neighbour } from "@/server/board";
+import { archiveFlag, byUrgency, isOverdue, neighbour, splitArchived } from "@/server/board";
 
 describe("board rules", () => {
   it("moves between neighbouring columns only", () => {
@@ -21,5 +21,18 @@ describe("board rules", () => {
       { dueDate: "2026-02-01", priority: "high" },
     ];
     expect([...list].sort(byUrgency).map((t) => t.priority)).toEqual(["high", "low", "urgent"]);
+  });
+
+  it("archives and restores only on an explicit action, and keeps archived rows apart", () => {
+    expect(archiveFlag("archive")).toBe(1);
+    expect(archiveFlag("restore")).toBe(0);
+    expect(archiveFlag("delete")).toBeNull();
+    expect(archiveFlag(null)).toBeNull();
+    const { active, archived } = splitArchived([
+      { id: "a", archived: 0 },
+      { id: "b", archived: 1 },
+    ]);
+    expect(active.map((r) => r.id)).toEqual(["a"]);
+    expect(archived.map((r) => r.id)).toEqual(["b"]);
   });
 });

@@ -14,6 +14,8 @@ import {
   ERRORS,
   github,
   GitHubError,
+  isProductQuestion,
+  productHelpResponse,
   MANIFEST_FILES,
   productError,
   projectDependencies,
@@ -98,6 +100,10 @@ export async function POST(req: Request): Promise<Response> {
   const json = await readJson(req);
   if (json === NOT_JSON)
     return productProblem(400, ERRORS.invalidRequest("The request body is not valid JSON."));
+  // ADR-0069: a question about TurbineH ("what can you do?") gets the help answer; no flow, no demand row.
+  const asked = json && typeof json === "object" ? (json as { need?: unknown }).need : undefined;
+  if (typeof asked === "string" && isProductQuestion(asked))
+    return Response.json(productHelpResponse());
   const parsed = Body.safeParse(json);
   if (!parsed.success)
     return productProblem(

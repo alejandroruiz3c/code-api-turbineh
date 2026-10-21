@@ -444,3 +444,35 @@ describe("spec input and agent instructions", () => {
     expect(md).not.toMatch(/`turbineh /);
   });
 });
+
+describe("questions about the product (ADR-0069)", () => {
+  it("build and plan answer a product question with help: exit 0, no request, nothing written here", async () => {
+    fakeApi();
+    for (const [cmd, q] of [
+      ["build", "¿Qué puedo hacer contigo?"],
+      ["build", "help"],
+      ["plan", "what can you do?"],
+    ] as const) {
+      const { exitCode, result } = await runCommand(cmd, ctx([q]));
+      expect(exitCode, `${cmd} ${q}`).toBe(0);
+      expect(result.ok).toBe(true);
+      expect(result.state).toBe("help");
+      const data = result.data as { kind: string; help: { useCases: { example: string }[] } };
+      expect(data.kind).toBe("help");
+      expect(data.help.useCases.length).toBeGreaterThan(5);
+      expect(result.lines?.join("\n")).toMatch(/e\.g\./);
+    }
+    expect(calls, "no plan or build requested").toEqual([]);
+    expect(existsSync(join(cwd, ".turbineh")), "no project file written").toBe(false);
+  });
+
+  it("follows the server when it answers help", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ kind: "help", help: {} }), { status: 200 })),
+    );
+    const { exitCode, result } = await runCommand("plan", ctx(["notes app for the team"]));
+    expect(exitCode).toBe(0);
+    expect(result.state).toBe("help");
+  });
+});

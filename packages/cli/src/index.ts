@@ -14,6 +14,8 @@ const HELP = `turbineh ${VERSION} — verified software capabilities for people 
                                     (use_case_not_covered, exit 5) or, when verified components serve part of
                                     it, offered as a components-only package (components_only_offer, exit 3;
                                     --approve builds only those components); --components builds exactly these
+                                    a question such as "what can you do?" prints the use cases with example
+                                    requests (state help, exit 0); nothing is planned or written
                                     --notify-email (or TURBINEH_NOTIFY_EMAIL): where to tell you when an
                                     uncovered request is covered (default: your workspace's email)
   turbineh notify [id] <email>      a refused request: email me when it's covered (priority list)

@@ -191,7 +191,7 @@ export const USE_CASES: UseCase[] = [
   {
     "id": "projects",
     "name": "Projects",
-    "description": "Project and task management for teams with kanban boards, assignees, priorities, due dates, comments and a personal task list",
+    "description": "Project and task management for teams with kanban boards, assignees, priorities, due dates, comments, a personal task list, editing and deleting projects and tasks, and archiving with restore",
     "extends": "saas-crud",
     "capabilities": [
       "data.pagination",

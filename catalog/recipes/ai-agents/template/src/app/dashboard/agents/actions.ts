@@ -179,13 +179,18 @@ export async function sendMessage(_prev: ChatState, formData: FormData): Promise
       const team = teamEmails();
       let emailed = false;
       try {
+        // "Emailed" only when every team address was really delivered (an email provider is configured); without one
+        // the email is logged and the user is told the team follows up in the app.
+        const sent: { delivered: boolean }[] = [];
         for (const to of team)
-          await sendEmail({
-            to,
-            subject: `Escalation from the assistant "${agent.name}"`,
-            text: `A user asked for a person to follow up.\n\nLast message:\n${text}\n\nOpen /dashboard/agents/${agent.id} to reply.`,
-          });
-        emailed = team.length > 0;
+          sent.push(
+            await sendEmail({
+              to,
+              subject: `Escalation from the assistant "${agent.name}"`,
+              text: `A user asked for a person to follow up.\n\nLast message:\n${text}\n\nOpen /dashboard/agents to see the conversations that need a person.`,
+            }),
+          );
+        emailed = sent.length > 0 && sent.every((r) => r.delivered);
       } catch {
         emailed = false;
       }

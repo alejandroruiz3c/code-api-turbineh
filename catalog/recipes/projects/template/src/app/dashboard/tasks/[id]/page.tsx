@@ -10,7 +10,7 @@ import { taskComments, tasks } from "@/db/schema";
 import { can, requireMember } from "@/server/authz";
 import { PRIORITIES, STATUSES, STATUS_LABEL } from "@/server/board";
 import { workspaceMembers } from "@/server/members";
-import { addComment, deleteTask, updateTask } from "../actions";
+import { addComment, deleteTask, setTaskArchived, updateTask } from "../actions";
 
 const field = "w-full rounded-md border border-field px-2 py-2 text-sm";
 
@@ -97,6 +97,14 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <div className="md:col-span-2">
             <Button type="submit">Save task</Button>
           </div>
+        </form>
+        {task.archived ? <p className="mt-4 text-sm text-warning">Archived task</p> : null}
+        <form action={setTaskArchived} className="mt-4">
+          <input type="hidden" name="id" value={task.id} />
+          <input type="hidden" name="action" value={task.archived ? "restore" : "archive"} />
+          <button type="submit" className="text-sm underline">
+            {task.archived ? "Restore task" : "Archive task"}
+          </button>
         </form>
         {can(ctx.role, "delete") ? (
           <form action={deleteTask} className="mt-4">

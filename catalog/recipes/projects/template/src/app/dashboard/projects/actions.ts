@@ -8,7 +8,7 @@ import { projects, tasks } from "@/db/schema";
 import { UserFacingError } from "@/security/errors";
 import { rateLimit } from "@/security/rate-limit";
 import { can, requireMember } from "@/server/authz";
-import { isPriority, isStatus, neighbour } from "@/server/board";
+import { archiveFlag, isPriority, isStatus, neighbour } from "@/server/board";
 
 const projectSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -31,6 +31,61 @@ export async function createProject(formData: FormData): Promise<void> {
     .returning({ id: projects.id });
   revalidatePath("/dashboard/projects");
   if (row) redirect(`/dashboard/projects/${row.id}`);
+}
+
+/** Load a project of the active workspace for a change; owners and admins (or its creator) may change it. */
+async function requireEditableProject(id: string) {
+  const ctx = await requireMember();
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, id), eq(projects.organizationId, ctx.organizationId)));
+  if (!project) throw new UserFacingError("Project not found.");
+  if (!can(ctx.role, "update") && project.createdBy !== ctx.userId)
+    throw new UserFacingError("You can only change your own projects.");
+  return { ctx, project };
+}
+
+/** Rename a project or change its description. */
+export async function updateProject(formData: FormData): Promise<void> {
+  await requireMember();
+  const { ctx, project } = await requireEditableProject(z.uuid().parse(formData.get("id")));
+  if (!(await rateLimit(`update:projects:${ctx.userId}`)))
+    throw new UserFacingError("Too many requests. Try again later.");
+  const input = projectSchema.parse({
+    name: formData.get("name"),
+    description: formData.get("description") ?? undefined,
+  });
+  await db
+    .update(projects)
+    .set({ name: input.name, description: input.description ?? "" })
+    .where(eq(projects.id, project.id));
+  revalidatePath("/dashboard/projects");
+  revalidatePath(`/dashboard/projects/${project.id}`);
+}
+
+/** Archive a project (it leaves the project list) or restore it. Its tasks are kept. */
+export async function setProjectArchived(formData: FormData): Promise<void> {
+  await requireMember();
+  const { project } = await requireEditableProject(z.uuid().parse(formData.get("id")));
+  const archived = archiveFlag(formData.get("action"));
+  if (archived === null) throw new UserFacingError("Unknown action.");
+  await db.update(projects).set({ archived }).where(eq(projects.id, project.id));
+  revalidatePath("/dashboard/projects");
+  revalidatePath(`/dashboard/projects/${project.id}`);
+  revalidatePath("/dashboard/my-tasks");
+}
+
+/** Delete a project with all its tasks and their comments (database cascade). Owners and admins only. */
+export async function deleteProject(formData: FormData): Promise<void> {
+  const ctx = await requireMember();
+  if (!can(ctx.role, "delete"))
+    throw new UserFacingError("Only owners and admins can delete projects.");
+  const { project } = await requireEditableProject(z.uuid().parse(formData.get("id")));
+  await db.delete(projects).where(eq(projects.id, project.id));
+  revalidatePath("/dashboard/projects");
+  revalidatePath("/dashboard/my-tasks");
+  redirect("/dashboard/projects");
 }
 
 const taskSchema = z.object({

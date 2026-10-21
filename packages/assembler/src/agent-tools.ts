@@ -94,9 +94,28 @@ export const GENERATED_READ_TOOLS: readonly ReadTool[] = [
 ${body},
 ] as unknown as readonly ReadTool[];
 `;
-  const first = tools[0];
-  if (!first) return [];
-  const firstTool = `lookup_${camel(first.n.pascal).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
+  // One test per tool, titled with its entity: the canonical criterion `ai-agents.lookup` (ADR-0069) links each looked-up
+  // entity to its own test.
+  const cases = tools
+    .map(({ n, key, status }) => {
+      const tool = `lookup_${camel(n.pascal).replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
+      const label = n.labelSingular.toLowerCase();
+      const k = camel(key.name);
+      return `  it("the assistant looks up a ${label} by its reference and tells the user its status, or that it was not found", async () => {
+    const { allowedTools } = await import("@/lib/ai/guard");
+    const { TOOL_REGISTRY, runReadTool } = await import("@/server/tools");
+    expect(allowedTools(TOOL_REGISTRY, ["${tool}"]).map((t) => t.name)).toEqual(["${tool}"]);
+    const ctx = { organizationId: "org-1", userId: "u-1" };
+    rows.length = 0;
+    expect(await runReadTool("${tool}", ctx, "Where is A-1001?"), "not found is relayed").toMatch(/not found|No /i);
+    rows.push({ ${k}: "A-1001"${status ? `, ${camel(status.name)}: "shipped"` : ""} });
+    const reply = await runReadTool("${tool}", ctx, "Where is A-1001?");
+    expect(reply, "the reference is looked up").toContain("A-1001");
+    expect(reply, "its status is told").toContain(${status ? `"shipped"` : `"on record"`});
+    expect(await runReadTool("${tool}", ctx, "where is it?")).toMatch(/more details/);
+  });`;
+    })
+    .join("\n\n");
   const test = `import { describe, expect, it, vi } from "vitest";
 
 const rows: Record<string, unknown>[] = [];
@@ -105,16 +124,7 @@ vi.mock("@/db/client", () => ({
 }));
 
 describe("agent tools (generated)", () => {
-  it("the assistant looks up a record by its number and relays not found", async () => {
-    const { allowedTools } = await import("@/lib/ai/guard");
-    const { TOOL_REGISTRY, runReadTool } = await import("@/server/tools");
-    expect(allowedTools(TOOL_REGISTRY, ["${firstTool}"]).map((t) => t.name)).toEqual(["${firstTool}"]);
-    const ctx = { organizationId: "org-1", userId: "u-1" };
-    expect(await runReadTool("${firstTool}", ctx, "Where is A-1001?")).toMatch(/not found|No /i);
-    rows.push({ ${camel(first.key.name)}: "A-1001"${first.status ? `, ${camel(first.status.name)}: "shipped"` : ""} });
-    expect(await runReadTool("${firstTool}", ctx, "Where is A-1001?")).toContain("A-1001");
-    expect(await runReadTool("${firstTool}", ctx, "where is it?")).toMatch(/more details/);
-  });
+${cases}
 });
 `;
   return [

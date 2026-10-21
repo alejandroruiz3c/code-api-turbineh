@@ -47,6 +47,7 @@
   advertises: "time series"
   says: ["chart|graph|time series|timeline|trend|breakdown|visuali|plot|line|bar"]
   terms: >-
+    week weeks month months several period periods
     chart charts graph graphs time series timeline trend trends breakdown breakdowns category categories
     visualise visualize visualisation visualization plot plots line bar daily day days over dashboard show
     shows display displays kpi kpis exact data owner

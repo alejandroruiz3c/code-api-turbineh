@@ -18,3 +18,4 @@ export * from "./github.js";
 export * from "./app-choice.js";
 export * from "./scope-gate.js";
 export * from "./component-offer.js";
+export * from "./product-question.js";

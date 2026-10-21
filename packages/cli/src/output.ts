@@ -1,5 +1,6 @@
 import { STATE_TEXT } from "@turbineh/shared";
 import type { NotCoveredExplanation, ProductError } from "@turbineh/shared";
+import { productHelpResponse, type ProductHelp } from "@turbineh/engine";
 
 /**
  * One result object per command. `--json` prints it as is (for Claude Code / Codex); the human view renders the same
@@ -85,4 +86,32 @@ export function explanationLines(e: NotCoveredExplanation): string[] {
         ]
       : []),
   ];
+}
+
+/** A question about TurbineH (ADR-0069): the same help as the API and the web; nothing is planned or built. */
+export function helpLines(h: ProductHelp): string[] {
+  return [
+    bold(h.title),
+    h.message,
+    "",
+    ...h.useCases.flatMap((u) => [
+      `${green("•")} ${bold(u.name)} ${dim(`(${u.id})`)}`,
+      `    ${dim("e.g.")} ${u.example}`,
+    ]),
+    "",
+    h.components,
+  ];
+}
+
+/** The informational result of a product question: ok, exit 0, `data` is the API's `{ kind: "help", help }`. */
+export function helpResult(command: string): CommandResult {
+  const data = productHelpResponse();
+  return {
+    ok: true,
+    command,
+    state: "help",
+    data,
+    lines: helpLines(data.help),
+    next: data.help.next,
+  };
 }

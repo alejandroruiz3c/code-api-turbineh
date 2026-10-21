@@ -328,3 +328,42 @@ describe("approving the offer", () => {
     expect((enqueued[1]?.options as Record<string, unknown>).components_only).toBeUndefined();
   });
 });
+
+describe("questions about the product (ADR-0069)", () => {
+  it("POST /v1/plans and /v1/builds answer a product question with help: nothing is queued or recorded", async () => {
+    nextRow = (id) => row(id, { status: "failed" });
+    for (const [res, label] of [
+      [await plans.POST(post("/v1/plans", { need: "¿Qué puedo hacer contigo?" })), "plans"],
+      [await builds.POST(post("/v1/builds", { prompt: "what can you do?" })), "builds"],
+      // Shorter than the 20-character minimum of a build prompt: still the help answer, not a 422.
+      [await builds.POST(post("/v1/builds", { prompt: "help" })), "builds (short)"],
+    ] as const) {
+      expect(res.status, label).toBe(200);
+      const body = (await res.json()) as {
+        kind: string;
+        help: { useCases: { id: string; example: string }[]; next: string };
+      };
+      expect(body.kind, label).toBe("help");
+      expect(
+        body.help.useCases.map((u) => u.id),
+        label,
+      ).toContain("projects");
+      expect(
+        body.help.useCases.every((u) => u.example.length > 20),
+        label,
+      ).toBe(true);
+    }
+    expect(enqueued, "no flow, no failed build, no demand row").toHaveLength(0);
+  });
+
+  it("a request that mentions help is still planned", async () => {
+    nextRow = (id) => row(id, { status: "done", metrics: { plan: basePlan(id) } });
+    const res = await plans.POST(
+      post("/v1/plans", {
+        need: "help desk app where customers open tickets and staff answer them",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(enqueued).toHaveLength(1);
+  });
+});

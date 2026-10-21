@@ -1,4 +1,5 @@
 import { buildsLastDay, buildsLastDayFromIp, costToday, enqueueBuild } from "@turbineh/db";
+import { isProductQuestion, productHelpResponse } from "@turbineh/engine";
 import { z } from "zod";
 import { getCaller } from "@/server/caller";
 import { requestChannel } from "@/server/channel";
@@ -60,12 +61,19 @@ const Body = z.object({
     .optional(),
 });
 
+const textField = (json: unknown, key: string): string => {
+  const v = json && typeof json === "object" ? (json as Record<string, unknown>)[key] : undefined;
+  return typeof v === "string" ? v : "";
+};
+
 /** POST /v1/builds — queue a build. Header `Idempotency-Key` makes retries safe. */
 export async function POST(req: Request): Promise<Response> {
   const caller = await getCaller();
   if (!caller) return problem(401, "Unauthorized", "No valid access token.");
   const json = await readJson(req);
   if (json === NOT_JSON) return problem(400, "Invalid JSON", "The request body is not valid JSON.");
+  // ADR-0069: a question about TurbineH ("what can you do?") gets the help answer; no build, no demand row.
+  if (isProductQuestion(textField(json, "prompt"))) return Response.json(productHelpResponse());
   const parsed = Body.safeParse(json);
   if (!parsed.success) return problem(422, "Invalid request", parsed.error.issues[0]?.message);
   const quota = caller.kind === "api-key" ? caller.dailyQuota : env.USER_DAILY_BUILDS;
