@@ -35,6 +35,10 @@ tradeoffs:
 config:
   - name: install
     description: pnpm add @vercel/blob@2.8.0 (exact version, added by TurbineH)
+  - name: BLOB_READ_WRITE_TOKEN
+    description: Read-write token of the Vercel Blob store (vercel_blob_rw_…), set by Vercel when a store is connected;
+      the SDK reads it from the environment. Without it put and del throw — keep a local fallback where the app must
+      run without Vercel (the storefront recipe stores images in PostgreSQL then).
 interfaces:
   - name: put
     signature: import { put } from "@vercel/blob"
@@ -45,6 +49,12 @@ interfaces:
   - name: list
     signature: import { list } from "@vercel/blob"
     where: "@vercel/blob"
+  - name: storeObject
+    signature: "storeObject(pathname: string, body: StoredBody, contentType: string): Promise<PutBlobResult>"
+    where: src/integrations/storage-objects.ts (curated glue, copied verbatim)
+  - name: deleteObject
+    signature: "deleteObject(url: string): Promise<void>"
+    where: src/integrations/storage-objects.ts (curated glue, copied verbatim)
 extension_points:
   - what: put, del, list
     where: "@vercel/blob"
@@ -55,25 +65,45 @@ compatibility:
   stack: Verified with Next.js (App Router), TypeScript strict, pnpm
 security:
   - Licence Apache-2.0; 0 known advisories (OSV) on 2026-10-11.
-  - "Effects: network no, filesystem no, database no."
+  - "Effects: network (the Vercel Blob API), no filesystem, no database."
   - Client uploads allow secure direct transfer from browser to Vercel Blob.
 guarantees:
   - claim: exposes put, list and delete
     test: contract.test.ts › exposes put, list and delete
+  - claim: put uploads the bytes with the bearer token and content type and returns the public URL
+    test: contract.test.ts › put uploads the bytes with the bearer token and content type and returns the public URL
+  - claim: del sends the URLs to delete
+    test: contract.test.ts › del sends the URLs to delete
+  - claim: a wrong token is refused and nothing is stored
+    test: contract.test.ts › refuses a wrong token (the error surfaces, nothing is stored)
 limits:
   - Server uploads are limited to 4.5 MB on Vercel-hosted websites.
+  - Contract tests run against a local stand-in of the Blob API (VERCEL_BLOB_API_URL), not a live store.
+  - The curated glue uploads public objects only (no private access, multipart or client uploads).
 example: |-
-  import { put, del, list } from "@vercel/blob";
+  // Server code (route handler or server action). The SDK reads BLOB_READ_WRITE_TOKEN from the environment.
+  import { del, put } from "@vercel/blob";
 
-  console.log([put, del, list].every((f) => typeof f === "function")); // → true
+  export async function storeAvatar(userId: string, png: Buffer): Promise<string> {
+    const blob = await put(`avatars/${userId}.png`, png, {
+      access: "public",
+      contentType: "image/png",
+      addRandomSuffix: false,
+    });
+    return blob.url;
+  }
+
+  export async function removeAvatar(url: string): Promise<void> {
+    await del(url);
+  }
 example_check:
   kind: typescript
-  from: contract.test.ts › exposes put, list and delete
+  from: snippet.ts
   compiled:
     against:
       - "@vercel/blob@2.8.0"
     typescript: 6.0.3
-    on: 2026-10-16
+    on: 2026-10-21
 generated:
   by: gemma-4-26b-a4b-it
   at: 2026-10-13

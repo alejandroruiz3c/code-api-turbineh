@@ -1,0 +1,81 @@
+schema: turbineh.component/v0.1
+id: payments.booking-deposit.turbineh
+version: 0.1.0
+status: approved
+category: payments
+source:
+  purl: pkg:generic/turbineh/payments.booking-deposit.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Card payment at booking time for the public booking page of domain.bookings.turbineh: a deposit (fixed amount or percent of the service price) or the full price, charged with Stripe Checkout (hosted page, cards only, amount computed on the server). The booking is held (pending payment) and its time is not offered to anyone else until Stripe's signed webhook confirms it and the confirmation email with the cancel link is sent; an expired or abandoned payment frees the time, and a payment that arrives for a time no longer held is refunded instead of double-booking."
+  does_not: "Does not charge staff bookings or bookings made through the AI assistant, store cards, take payments on site, handle no-show fees, partial refunds on cancellation, multiple currencies per service or payment methods other than cards"
+  use_cases: [bookings]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "No SDK and no card data in the app: Stripe's documented REST API and hosted page",
+      "Signed, idempotent webhook as the only writer; amount and currency checked against the server's quote",
+    ]
+  cons: ["Needs a Stripe account and a webhook endpoint (two settings)", "Stripe Checkout sessions last at least 30 minutes, so an abandoned payment holds the time that long"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/payments/booking-deposit.json (mode deposit|full, percent, amount, currency, holdMinutes)",
+      "The public booking form (domain.bookings.turbineh) through its payment step src/bookings/payment.ts",
+      "POST /api/bookings/payments/webhook (Stripe-Signature): checkout.session.completed, checkout.session.expired",
+    ]
+  outputs:
+    [
+      "booking_appointments.status pending_payment → confirmed | expired; booking_payments rows (session, kind, amount_cents, currency, open → paid | expired | refunded)",
+      "/book/paid: the confirmation (reference, amount received) once paid, or that the time was released",
+    ]
+  errors:
+    [
+      "Unsigned, forged or stale webhooks → 400; no STRIPE_WEBHOOK_SECRET → 503",
+      "An event whose amount or currency differs from the recorded quote confirms nothing",
+      "Without STRIPE_SECRET_KEY a booking that needs a payment is refused with a message and its time freed",
+    ]
+  limits:
+    [
+      "Hold = Checkout lifetime (30 min–24 h, holdMinutes) + 5 minutes",
+      "One payment per booking; moving a booking keeps its payment; cancelling does not refund (handle refunds in Stripe)",
+    ]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects: { network: true, fs: false, db: true, external_services: [stripe] }
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code with domain.bookings.turbineh when a bookings request asks for card payment at booking time (compiler domain detector), with params from the request. files/: src/payments/{deposit,config,stripe,service}.ts + booking-deposit.json, src/db/component-booking-payments.ts, the webhook route, /book/paid, unit + E2E tests and the Stripe API mock. files-with/domain.bookings.turbineh/: the bookings domain's payment step (src/bookings/payment.ts) and the booking E2E suite's submit step (tests/e2e/booking-payment-step.ts)."
+  config: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET]
+  migrations: true
+params:
+  file: src/payments/booking-deposit.json
+  schema: params.schema.json
+  entities: [Payment, BookingPayment, Deposit, Prepayment, Charge]
+quality:
+  tests:
+    {
+      command: "unit (amount rules, Checkout form, Stripe signature) + E2E on the bookings recipe against the Stripe API mock and a stand-in hosted page (pay → held → signed webhook → confirmed once; expired → released; late payment → refunded; forged or different-amount events refused); the bookings suite runs with the payment step",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: HMAC-SHA256 signature with constant-time compare and 5-minute tolerance, amounts only from server params, Stripe host checked before redirecting, the return page shows a booking only to the browser holding its Checkout session id, secrets only from the environment."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Pay at booking, hold, signed confirmation, expiry release and late-payment refund pass E2E in the full verification gate of the bookings recipe"
+    origin: tested
+    ref: "verify:recipe bookings+domain.bookings.turbineh+payments.booking-deposit.turbineh (ADR-0071)"
+relations:
+  requires: [domain.bookings.turbineh]
+  provides: [payments.booking-deposit]
+  conflicts: []
+  tested_with: [recipe.bookings]

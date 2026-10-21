@@ -12,6 +12,7 @@ export function ProductCard({
     priceCents: number | null;
     imageMime: string | null;
     imageUrl: string | null;
+    imageBlobUrl?: string | null;
   };
   currency: string;
 }) {

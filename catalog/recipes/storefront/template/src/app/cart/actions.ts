@@ -225,7 +225,8 @@ export async function checkout(_prev: CheckoutState, formData: FormData): Promis
     tax: q.tax ? { ...q.tax, cents: q.taxCents } : null,
     taxMode: q.taxMode,
     pricesIncludeTax: q.pricesIncludeTax,
-    successUrl: `${base}/checkout/success?order=${order.id}`,
+    // Stripe replaces {CHECKOUT_SESSION_ID}: the return page shows this order only to the browser that paid it.
+    successUrl: `${base}/checkout/success?order=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${base}/cart`,
   }).catch(() => null);
   if (!session || new URL(session.url).hostname !== "checkout.stripe.com") {

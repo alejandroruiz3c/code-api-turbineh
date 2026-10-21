@@ -99,6 +99,7 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "ui.hover-card": "preview cards on hover",
   "ui.color-picker": "a colour picker",
   "payments.subscriptions": "recurring subscription plans",
+  "payments.booking-deposit": "card payment when booking (deposit or full price)",
   "ai.orchestrator": "AI orchestration (planner, decider, open models)",
   "security.ai-safety": "AI safety checks, limits and audit",
   "ai.token-count": "counting or limiting text by tokens",

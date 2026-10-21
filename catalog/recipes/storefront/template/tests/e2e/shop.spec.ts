@@ -133,6 +133,33 @@ test.describe.serial("storefront", () => {
     }
   });
 
+  test("a sold-out size cannot be added to the cart: its option is disabled and the server refuses it", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/products");
+    await page.getByRole("link", { name: "Cotton Tee", exact: true }).click();
+    await page.getByLabel("Option name").fill("XL");
+    await page.getByLabel(/^SKU/).fill("TEE-XL");
+    await page.getByLabel(/^Option price/).fill("");
+    await page.getByLabel(/^Option stock/).fill("0");
+    await page.getByRole("button", { name: "Add option" }).click();
+    await expect(page.getByRole("cell", { name: "TEE-XL", exact: true })).toBeVisible();
+
+    await page.goto("/shop/cotton-tee");
+    const xl = page.getByLabel(/^XL —/);
+    await expect(page.getByText(/XL — .*\(sold out\)/)).toBeVisible();
+    await expect(xl, "the sold-out size cannot be chosen").toBeDisabled();
+    await expect(page.getByLabel(/^L —/)).toBeEnabled();
+    // Even if the page is tampered with, the server checks the option's own stock and adds nothing.
+    await xl.evaluate((el) => {
+      (el as HTMLInputElement).disabled = false;
+      (el as HTMLInputElement).checked = true;
+    });
+    await page.getByRole("button", { name: "Add to cart" }).click();
+    await page.goto("/cart");
+    await expect(page.getByText("Cotton Tee — XL")).toHaveCount(0);
+  });
+
   test("the admin creates a one-use discount code", async ({ page }) => {
     await page.goto("/dashboard/coupons");
     await page.getByLabel("Code", { exact: true }).fill("Save10");
@@ -454,6 +481,94 @@ test.describe.serial("storefront", () => {
       await other.close();
     });
 
+    test("a shopper pays by card on the Stripe Checkout page: the session carries the server's lines and prices, and after payment the shopper sees the paid order's confirmation", async ({
+      page,
+      request,
+    }) => {
+      await page.goto("/shop/linen-shirt");
+      await page.getByRole("button", { name: "Add to cart" }).click();
+      await page.getByLabel("Ship to").selectOption("ES");
+      await page.getByRole("button", { name: "Update shipping" }).click();
+      await expect(page.getByTestId("cart-total")).toContainText("54.80");
+
+      // Stripe's hosted page (offline stand-in): the card is typed there, never in this app. Paying sends Stripe's
+      // signed event to the webhook and returns the shopper to the success URL with the session id, as Stripe does.
+      const stripeApi = process.env.STRIPE_API_BASE ?? "";
+      const sessionOf = async (id: string) => {
+        const all = (await (await request.get(`${stripeApi}/__sessions`)).json()) as {
+          id: string;
+          client_reference_id: string;
+          params: Record<string, string>;
+        }[];
+        const s = all.find((x) => x.id === id);
+        if (!s) throw new Error(`no Stripe Checkout session ${id}`);
+        return s;
+      };
+      let cardTyped = "";
+      await page.route("https://checkout.stripe.com/**", async (route) => {
+        const url = new URL(route.request().url());
+        const id = /cs_test_[A-Za-z0-9]+/.exec(url.pathname)?.[0] ?? "";
+        if (route.request().method() === "GET") {
+          return route.fulfill({
+            contentType: "text/html",
+            body: `<form method="post" action="/c/pay/${id}/confirm"><label>Card number <input name="card" /></label><button>Pay</button></form>`,
+          });
+        }
+        cardTyped = new URLSearchParams(route.request().postData() ?? "").get("card") ?? "";
+        const s = await sessionOf(id);
+        const event = JSON.stringify({
+          type: "checkout.session.completed",
+          data: {
+            object: {
+              id,
+              client_reference_id: s.client_reference_id,
+              payment_status: "paid",
+              customer_details: { email: "card-buyer@example.com" },
+            },
+          },
+        });
+        const res = await request.post("/api/stripe/webhook", {
+          data: event,
+          headers: {
+            "content-type": "application/json",
+            "stripe-signature": stripeSignature(event),
+          },
+        });
+        expect(res.status()).toBe(200);
+        return route.fulfill({
+          status: 303,
+          headers: {
+            location: (s.params.success_url ?? "").replace("{CHECKOUT_SESSION_ID}", id),
+          },
+        });
+      });
+
+      await page.getByRole("button", { name: "Checkout" }).click();
+      await page.waitForURL(/checkout\.stripe\.com\/c\/pay\/cs_test_/);
+      const id = /cs_test_[A-Za-z0-9]+/.exec(page.url())?.[0] ?? "";
+      const session = await sessionOf(id);
+      // The session's lines and amounts are the server's (49.90 + 4.90 shipping, EUR), never the browser's.
+      expect(session.params["line_items[0][price_data][product_data][name]"]).toBe("Linen Shirt");
+      expect(session.params["line_items[0][price_data][unit_amount]"]).toBe("4990");
+      expect(session.params["line_items[0][quantity]"]).toBe("1");
+      expect(session.params["shipping_options[0][shipping_rate_data][fixed_amount][amount]"]).toBe(
+        "490",
+      );
+      expect(session.params["line_items[0][price_data][currency]"]).toBe("eur");
+
+      await page.getByLabel("Card number").fill("4242 4242 4242 4242");
+      await page.getByRole("button", { name: "Pay" }).click();
+      await page.waitForURL(/\/checkout\/success\?/);
+      expect(cardTyped, "the card was entered on Stripe's page").toBe("4242 4242 4242 4242");
+      await expect(page.getByRole("heading", { name: "Payment confirmed" })).toBeVisible();
+      await expect(page.getByTestId("order-status")).toHaveAttribute("data-status", "paid");
+      await expect(page.getByTestId("order-status")).toContainText("54.80");
+      // The same order id without its Stripe session id shows no order.
+      const order = session.client_reference_id;
+      await page.goto(`/checkout/success?order=${order}&session_id=cs_test_guess`);
+      await expect(page.getByTestId("order-status")).toHaveCount(0);
+    });
+
     test("pays in a second currency: fixed prices, shipping in that currency, order in USD", async ({
       page,
       browser,
@@ -518,5 +633,8 @@ test.describe.serial("storefront", () => {
     ).toBeVisible();
     await expect(page.locator('tr[data-status="pending"]').first()).toBeVisible();
     expect(await page.locator("tr[data-order-id]").count()).toBeGreaterThanOrEqual(3);
+    // Each order shows the customer's email and the items bought.
+    const bought = page.locator('tr[data-status="paid"]', { hasText: "buyer@example.com" }).first();
+    await expect(bought).toContainText("Linen Shirt");
   });
 });

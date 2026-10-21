@@ -43,3 +43,7 @@
   covers: ["variant|option|\\bsizes?\\b|colou?rs? (option|variant)|\\bsku\\b"]
 - test: "tests/e2e/shop.spec.ts › is ready for search and AI answer engines"
   covers: ["\\bseo\\b|search engine|sitemap|structured data|json-ld|answer engine|schema\\.org"]
+- test: "tests/e2e/shop.spec.ts › a sold-out size cannot be added to the cart: its option is disabled and the server refuses it"
+  covers: ["variant|option|\\bsizes?\\b|colou?rs?|\\bsku\\b", "out[- ]of[- ]stock|sold[- ]out|no stock|zero|unavailable|disabl"]
+- test: "tests/e2e/shop.spec.ts › a shopper pays by card on the Stripe Checkout page: the session carries the server's lines and prices, and after payment the shopper sees the paid order's confirmation"
+  covers: ["\\bcards?\\b|credit|debit", "pay|paid|payment|checkout|purchas"]

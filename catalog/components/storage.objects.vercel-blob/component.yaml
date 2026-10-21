@@ -33,20 +33,20 @@ contract:
 compat:
   runtime: node@>=20
 effects:
-  network: false
+  network: true
   fs: false
   db: false
-  external_services: []
+  external_services: [Vercel Blob]
 integration:
   strategy: dependency
   install: pnpm add @vercel/blob@2.8.0
-  config: []
+  config: [BLOB_READ_WRITE_TOKEN]
   migrations: false
 quality:
   tests:
-    command: contract.test.ts (vitest + tsc strict, sandbox --network none)
+    command: contract.test.ts (vitest + tsc strict, sandbox --network none) against a local stand-in of the Blob API; curated glue.ts type-checked
     passed: true
-    date: 2026-10-11
+    date: 2026-10-21
 security:
   scanned_at: 2026-10-11
   tools:
@@ -68,6 +68,9 @@ evidence:
   - claim: Contract tests pass and type-check (strict) in the sandbox without network
     origin: tested
     ref: bench/results/2026-10-11-certify-batch-4b.json
+  - claim: put/del request shapes and the curated glue (storeObject, deleteObject) pass in the sandbox without network
+    origin: tested
+    ref: "runContracts(storage.objects.vercel-blob) on 2026-10-21 (ADR-0071)"
 relations:
   requires: []
   provides:

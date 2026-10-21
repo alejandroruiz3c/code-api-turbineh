@@ -1,0 +1,7 @@
+{
+  "mode": "deposit",
+  "percent": null,
+  "amount": 10,
+  "currency": "eur",
+  "holdMinutes": 30
+}

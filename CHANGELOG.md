@@ -14,6 +14,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   API `notify_email` on `POST /v1/plans` and `/v1/builds`; CLI `--notify-email` and `turbineh notify [id] <email>`;
   MCP `notifyEmail` and a `notify` tool. Shared workspaces never hold an email; only staff see addresses (owner
   report source `workspace`, demand list).
+- Commerce and payments from real demand (ADR-0071). Card payment when booking: new component
+  `payments.booking-deposit.turbineh` (deposit — fixed or percent — or full price with Stripe Checkout, cards only,
+  amount computed on the server; the booking is held `pending_payment` until the signed webhook confirms it and sends
+  the confirmation email once; an expired payment frees the time; a payment for a time no longer held is refunded).
+  Selected by code with the bookings domain when a bookings request asks for it; the bookings domain gains a payment
+  step extension point (`src/bookings/payment.ts`) and payment holds. Storefront: canonical criteria for paying by card
+  on Stripe Checkout with the paid-order confirmation and for refusing a sold-out size, each with a new E2E test; the
+  success page shows the paid order to the browser that paid it; wider declared vocabularies for discounts,
+  currencies, shipping, Stripe Tax, orders and admin stock (all proven by existing tests).
 
 ### Fixed
 
@@ -29,6 +38,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   API, CLI, MCP and web, with no flow, failed build or demand row. CI guard: every example prompt we show must pass the
   gate as covered. `catalog:snippets --check` no longer fails on a trailing newline.
 
+- Uploaded product images in the storefront failed the gate when `storage.objects.vercel-blob` was selected (a
+  model-written glue module with `any` failed lint and typecheck, so the component was removed and the plan's promise
+  broken). The storefront now provides `storage.objects` itself: Vercel Blob through the official SDK when
+  `BLOB_READ_WRITE_TOKEN` is set, PostgreSQL otherwise (unit-tested against a Blob API stand-in); the component ships
+  curated, strictly typed glue and contract tests of `put`/`del` requests.
 - Orchestrator audit v2 (ADR-0068, #131): generated agents get read-only `lookup_<entity>` tools and FAQ in their
   knowledge base; escalation emails the team (honest fallback); workspace header validated, cookie CSRF guard, one
   problem format, AI token by API/CLI/MCP, CLI/MCP error and exit-code fixes, minimal public /health; deterministic

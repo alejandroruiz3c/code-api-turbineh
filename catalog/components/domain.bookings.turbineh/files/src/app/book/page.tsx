@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { bookingConfig as cfg, hoursText, priceLabel } from "@/bookings/config";
+import { paymentNote } from "@/bookings/payment";
 import { availability, listResources, PolicyError } from "@/bookings/service";
 import { addDays, isDay, localDay } from "@/bookings/time";
 import { BookForm } from "./book-form";
@@ -137,6 +138,7 @@ export default async function BookPage({ searchParams }: Props) {
           slots={slots}
           askPhone={cfg.askPhone}
           noticeHours={cfg.policy.cancelNoticeHours}
+          payNote={paymentNote(service.name)}
         />
       ) : null}
     </main>

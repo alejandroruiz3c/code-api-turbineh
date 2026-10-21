@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, desc, eq, gt, gte, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   bookingAppointments,
@@ -125,7 +125,17 @@ async function resolveService(name: string | undefined, email?: string): Promise
   return cfg.services[0] as Service;
 }
 
-/** Confirmed appointments and time off of these resources overlapping [from, to). */
+/** A time is taken by a confirmed appointment or by one held while its payment is made (until the hold ends). */
+const occupying = (now: Date) =>
+  or(
+    eq(bookingAppointments.status, "confirmed"),
+    and(
+      eq(bookingAppointments.status, "pending_payment"),
+      gt(bookingAppointments.holdExpiresAt, now),
+    ),
+  );
+
+/** Confirmed (or held) appointments and time off of these resources overlapping [from, to). */
 async function busyOf(resourceIds: string[], from: Date, to: Date, ignoreId?: string) {
   if (resourceIds.length === 0) return [];
   const [booked, off] = await Promise.all([
@@ -138,7 +148,7 @@ async function busyOf(resourceIds: string[], from: Date, to: Date, ignoreId?: st
       .from(bookingAppointments)
       .where(
         and(
-          eq(bookingAppointments.status, "confirmed"),
+          occupying(new Date()),
           inArray(bookingAppointments.resourceId, resourceIds),
           lt(bookingAppointments.startsAt, to),
           gt(bookingAppointments.endsAt, from),
@@ -292,16 +302,82 @@ export interface BookingRequest extends SlotChoice {
 export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const appUrl = () => env.BETTER_AUTH_URL.replace(/\/+$/, "");
 
-/** Creates a confirmed appointment and sends the confirmation (logged when no email provider is configured). */
-export async function createAppointment(req: BookingRequest, now = new Date()) {
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Holds whose payment time ran out: the time is freed (status "expired", cells unlocked). Idempotent. */
+async function releaseExpiredHolds(tx: Tx, now: Date): Promise<void> {
+  const expired = await tx
+    .update(bookingAppointments)
+    .set({ status: "expired", updatedAt: now })
+    .where(
+      and(
+        eq(bookingAppointments.status, "pending_payment"),
+        lte(bookingAppointments.holdExpiresAt, now),
+      ),
+    )
+    .returning({ id: bookingAppointments.id });
+  if (expired.length > 0)
+    await tx.delete(bookingSlotLocks).where(
+      inArray(
+        bookingSlotLocks.appointmentId,
+        expired.map((e) => e.id),
+      ),
+    );
+}
+
+/** The confirmation email (with a new single-use cancel link); recorded in booking_notifications. */
+async function sendConfirmation(
+  a: {
+    id: string;
+    reference: string;
+    customerName: string;
+    customerEmail: string;
+    startsAt: Date;
+  },
+  resource: string,
+  service: Service,
+  cancelToken: string,
+): Promise<"log" | "resend"> {
+  const cancelLink = `${appUrl()}/book/cancel/${cancelToken}`;
+  const price = priceLabel(service);
+  return notify(
+    a.id,
+    "confirmation",
+    a.customerEmail,
+    `${cfg.business}: your booking ${a.reference} is confirmed`,
+    [
+      `Hello ${a.customerName},`,
+      `Your ${service.name} (${service.minutes} min) with ${resource} is confirmed for ${when(a.startsAt)}.`,
+      price ? `Price: ${price}.` : "",
+      `Booking reference: ${a.reference}.`,
+      `You can cancel it up to ${cfg.policy.cancelNoticeHours} hours before with this link: ${cancelLink}`,
+      `To change it, use this reference and your email.`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    cancelLink,
+  );
+}
+
+/**
+ * Creates a confirmed appointment and sends the confirmation (logged when no email provider is configured).
+ * With `holdMinutes` (a payment step, src/bookings/payment.ts) the appointment is created "pending_payment": its time
+ * is held — nobody else can book it — until confirmHeldAppointment (payment received) or the hold ends; no email yet.
+ */
+export async function createAppointment(
+  req: BookingRequest,
+  now = new Date(),
+  opts: { holdMinutes?: number } = {},
+) {
   const email = normEmail(req.email);
   const slot = await checkSlot({ ...req, email }, now);
   const reference = newReference();
   const cancelToken = randomBytes(24).toString("base64url");
-  const cancelLink = `${appUrl()}/book/cancel/${cancelToken}`;
+  const held = opts.holdMinutes ? new Date(now.getTime() + opts.holdMinutes * 60_000) : null;
   let id: string;
   try {
     id = await db.transaction(async (tx) => {
+      await releaseExpiredHolds(tx, now);
       const [row] = await tx
         .insert(bookingAppointments)
         .values({
@@ -313,10 +389,11 @@ export async function createAppointment(req: BookingRequest, now = new Date()) {
           customerName: req.name.trim().slice(0, 120),
           customerEmail: email,
           customerPhone: req.phone?.trim().slice(0, 40) || null,
-          cancelTokenHash: hashToken(cancelToken),
+          cancelTokenHash: held ? null : hashToken(cancelToken),
           startsAt: slot.start,
           endsAt: slot.end,
           createdVia: req.via,
+          ...(held ? { status: "pending_payment", holdExpiresAt: held } : {}),
         })
         .returning({ id: bookingAppointments.id });
       if (!row) throw new Error("appointment not created");
@@ -329,24 +406,22 @@ export async function createAppointment(req: BookingRequest, now = new Date()) {
     throw err;
   }
   const price = priceLabel(slot.service);
-  const transport = await notify(
-    id,
-    "confirmation",
-    email,
-    `${cfg.business}: your booking ${reference} is confirmed`,
-    [
-      `Hello ${req.name.trim()},`,
-      `Your ${slot.service.name} (${slot.service.minutes} min) with ${slot.resource.name} is confirmed for ${when(slot.start)}.`,
-      price ? `Price: ${price}.` : "",
-      `Booking reference: ${reference}.`,
-      `You can cancel it up to ${cfg.policy.cancelNoticeHours} hours before with this link: ${cancelLink}`,
-      `To change it, use this reference and your email.`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    cancelLink,
-  );
+  const transport = held
+    ? null
+    : await sendConfirmation(
+        {
+          id,
+          reference,
+          customerName: req.name.trim(),
+          customerEmail: email,
+          startsAt: slot.start,
+        },
+        slot.resource.name,
+        slot.service,
+        cancelToken,
+      );
   return {
+    id,
     reference,
     when: when(slot.start),
     day: localDay(slot.start, cfg.timeZone),
@@ -355,8 +430,58 @@ export async function createAppointment(req: BookingRequest, now = new Date()) {
     service: slot.service.name,
     price,
     email,
+    name: req.name.trim(),
     emailTransport: transport,
+    status: held ? ("pending_payment" as const) : ("confirmed" as const),
+    holdExpiresAt: held,
   };
+}
+
+/**
+ * The payment of a held appointment arrived (called by the payment step's signed webhook): the appointment becomes
+ * confirmed and the confirmation email with a cancel link is sent, once. Returns false when it was not held anymore.
+ */
+export async function confirmHeldAppointment(id: string, now = new Date()): Promise<boolean> {
+  const cancelToken = randomBytes(24).toString("base64url");
+  const [a] = await db
+    .update(bookingAppointments)
+    .set({
+      status: "confirmed",
+      holdExpiresAt: null,
+      cancelTokenHash: hashToken(cancelToken),
+      updatedAt: now,
+    })
+    .where(and(eq(bookingAppointments.id, id), eq(bookingAppointments.status, "pending_payment")))
+    .returning();
+  if (!a) return false;
+  const [r] = await db
+    .select({ name: bookingResources.name })
+    .from(bookingResources)
+    .where(eq(bookingResources.id, a.resourceId));
+  const service =
+    cfg.services.find((s) => s.name === a.service) ??
+    ({
+      name: a.service,
+      minutes: Math.round((a.endsAt.getTime() - a.startsAt.getTime()) / 60_000),
+      price: a.price === null ? null : Number(a.price),
+      currency: a.currency,
+    } as Service);
+  await sendConfirmation(a, r?.name ?? "", service, cancelToken);
+  return true;
+}
+
+/** A held appointment whose payment was not made (expired or abandoned): its time is freed at once. */
+export async function releaseHeldAppointment(id: string, now = new Date()): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [a] = await tx
+      .update(bookingAppointments)
+      .set({ status: "expired", holdExpiresAt: null, updatedAt: now })
+      .where(and(eq(bookingAppointments.id, id), eq(bookingAppointments.status, "pending_payment")))
+      .returning({ id: bookingAppointments.id });
+    if (!a) return false;
+    await tx.delete(bookingSlotLocks).where(eq(bookingSlotLocks.appointmentId, id));
+    return true;
+  });
 }
 
 /** An active appointment by reference + email (both required: references alone are not enough). */

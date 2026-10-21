@@ -1,0 +1,46 @@
+# Canonical acceptance criteria (ADR-0063) of payment at booking time, each linked to the test that proves it. Format
+# and matching rules: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The nouns of paying for a booking, absorbed by every criterion below.
+- vocabulary: >-
+    booking bookings appointment appointments reservation reservations session sessions visit visits slot slots time
+    times date dates day days service services treatment treatments customer customers client clients patient
+    patients user users online website page app system select selects selected choose chooses
+    salon clinic studio
+
+- id: payments.booking-deposit.pay-to-book
+  criterion: "A customer pays by card on Stripe Checkout when booking: the time is held until the signed webhook confirms the booking and the confirmation email is sent"
+  advertises: "card payment at booking time"
+  says: ["\\bpa(y|id|ys|ying|yment|yments)\\b|deposit|\\bcards?\\b|stripe|checkout|prepa|upfront|charge", "\\bbook|appointment|reserv|slot|session|visit"]
+  terms: >-
+    pay pays paid paying payment payments deposit deposits card cards credit debit valid details number stripe
+    checkout process complete completes completed completing card online upfront advance prepay prepaid charge
+    charged amount price full part secure securely held hold holds reserved webhook signed confirm confirms
+    confirmed confirmation email sent send created create creates database record stored successful success
+    successfully book books booked making make made at when time moment before receive receives
+  actors: [customer, client, patient, visitor, guest, user]
+  tests:
+    - "tests/e2e/booking-payment.spec.ts › a customer pays the deposit by card on Stripe Checkout when booking: the time is held until the signed webhook confirms the booking and the confirmation email is sent"
+
+- id: payments.booking-deposit.expiry-release
+  criterion: "An unpaid booking frees its time when the payment expires, and a payment arriving afterwards is refunded instead of double-booking"
+  advertises: "card payment at booking time"
+  says: ["\\bpa(y|id|ys|ying|yment|yments)\\b|deposit|checkout|unpaid", "expir|abandon|releas|free|time ?out|refund|not (paid|completed)|fail"]
+  terms: >-
+    unpaid pay paid payment payments deposit expire expires expired expiry abandon abandoned release released
+    releases free frees freed available again offered refund refunded refunds late arrives afterwards double
+    double-booking not completed fails failed timeout cancel cancelled automatically hold held
+  actors: [customer, client, patient, visitor, guest, user]
+  tests:
+    - "tests/e2e/booking-payment.spec.ts › an unpaid booking frees its time when the payment expires: Stripe's expired event releases it and the time is offered again"
+    - "tests/e2e/booking-payment.spec.ts › a hold whose time ran out is released when someone else books that time, and a payment arriving afterwards is refunded instead of double-booking"
+
+- id: payments.booking-deposit.signed-webhook
+  criterion: "The payment webhook refuses events without a valid Stripe signature and never confirms a different amount"
+  advertises: "card payment at booking time"
+  says: ["webhook|signature|signed|forg|amount", "pay|stripe|checkout|deposit|confirm"]
+  terms: >-
+    webhook webhooks signature signatures signed forged forge invalid valid refuse refuses refused reject rejects
+    rejected verify verified verifies stripe amount amounts different tamper tampered confirm confirms payment
+  actors: [customer, client, admin, owner, staff]
+  tests:
+    - "tests/e2e/booking-payment.spec.ts › the payment webhook refuses events without a valid Stripe signature and never confirms a different amount"

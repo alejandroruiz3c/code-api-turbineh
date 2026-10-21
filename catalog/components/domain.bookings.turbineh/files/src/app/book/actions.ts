@@ -1,7 +1,9 @@
 "use server";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { bookingConfig as cfg } from "@/bookings/config";
-import { createAppointment, PolicyError } from "@/bookings/service";
+import { paymentHoldMinutes, startPayment } from "@/bookings/payment";
+import { createAppointment, PolicyError, releaseHeldAppointment } from "@/bookings/service";
 import { publicAction } from "@/server/authz";
 
 /** Public booking (domain.bookings.turbineh): anyone books a real free slot; rate-limited and validated first. */
@@ -46,25 +48,50 @@ export const bookSlot = publicAction(
   },
   async (input): Promise<BookState> => {
     const [time, resource] = input.slot.split("|") as [string, string];
+    // A payment step (src/bookings/payment.ts) holds the time and sends the customer to the payment page.
+    const holdMinutes = paymentHoldMinutes(input.service);
+    let b: Awaited<ReturnType<typeof createAppointment>>;
     try {
-      const b = await createAppointment({
-        day: input.day,
-        time,
-        resource,
-        service: input.service,
-        name: input.name,
-        email: input.email,
-        phone: input.phone || null,
-        via: "public",
-      });
+      b = await createAppointment(
+        {
+          day: input.day,
+          time,
+          resource,
+          service: input.service,
+          name: input.name,
+          email: input.email,
+          phone: input.phone || null,
+          via: "public",
+        },
+        new Date(),
+        holdMinutes ? { holdMinutes } : {},
+      );
+    } catch (err) {
+      if (err instanceof PolicyError) return { ok: false, message: err.message };
+      throw err;
+    }
+    if (b.status !== "pending_payment")
       return {
         ok: true,
         reference: b.reference,
         message: `Booked! ${b.service} with ${b.resource} on ${b.when}. Reference ${b.reference}. We sent the confirmation and a cancel link to ${b.email}.`,
       };
+    let payUrl: string;
+    try {
+      payUrl = await startPayment(b);
     } catch (err) {
-      if (err instanceof PolicyError) return { ok: false, message: err.message };
-      throw err;
+      // The payment page could not be opened: the time is freed at once.
+      await releaseHeldAppointment(b.id);
+      return {
+        ok: false,
+        message:
+          err instanceof PolicyError
+            ? err.message
+            : "The payment page could not be opened. Please try again.",
+      };
     }
+    // The payment step's hosted page (its host is checked by startPayment).
+    // nosemgrep: turbineh.open-redirect
+    redirect(payUrl);
   },
 );

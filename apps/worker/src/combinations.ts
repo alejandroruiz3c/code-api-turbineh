@@ -27,6 +27,11 @@ export const DOMAIN_PROBES: Record<string, string> = {
     "manage the bookings. The assistant's language model is reached through an OpenAI-compatible endpoint configured by " +
     "environment variables; tests must use a local mock of that endpoint (no internet in tests). Protect it against " +
     "prompt injection and abuse (input limits, rate limits).",
+  "payments.booking-deposit.turbineh":
+    'Build an online booking site for "Studio Lumen", a hair salon with two stylists. Services: cut 30 min (25 €), ' +
+    "colour 90 min (70 €). Opening hours Monday–Saturday 10:00–19:00, Europe/Madrid. Customers pick a service, a " +
+    "stylist (or any) and a free time, and pay a 10 € deposit by card to confirm the booking; a booking that is not " +
+    "paid in time is released. They receive a confirmation email with a cancel link. Staff sign in to see the calendar.",
 };
 
 /** The social publishing request of the social.* combination (ADR-0067). */

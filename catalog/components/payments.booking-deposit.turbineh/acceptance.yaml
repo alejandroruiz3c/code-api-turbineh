@@ -1,0 +1,9 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/booking-payment.spec.ts › a customer pays the deposit by card on Stripe Checkout when booking: the time is held until the signed webhook confirms the booking and the confirmation email is sent"
+  covers: ["\\bpa(y|id|ys|ying|yment)\\b|deposit|\\bcards?\\b|stripe|checkout|prepa", "\\bbook|appointment|reserv|slot"]
+- test: "tests/e2e/booking-payment.spec.ts › an unpaid booking frees its time when the payment expires: Stripe's expired event releases it and the time is offered again"
+  covers: ["\\bpa(y|id|yment)|deposit|checkout|unpaid", "expir|abandon|releas|time ?out|not (paid|completed)"]
+- test: "tests/e2e/booking-payment.spec.ts › a hold whose time ran out is released when someone else books that time, and a payment arriving afterwards is refunded instead of double-booking"
+  covers: ["refund"]
+- test: "tests/e2e/booking-payment.spec.ts › the payment webhook refuses events without a valid Stripe signature and never confirms a different amount"
+  covers: ["webhook", "sign|verif|forg|invalid|reject|authentic"]
