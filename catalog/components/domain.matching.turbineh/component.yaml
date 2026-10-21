@@ -1,0 +1,75 @@
+schema: turbineh.component/v0.1
+id: domain.matching.turbineh
+version: 0.1.0
+status: approved
+category: domain
+source:
+  purl: pkg:generic/turbineh/domain.matching.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Deterministic matching of records (opportunities, tenders, grants, leads — the word comes from the request) against each organization's profile in a multi-tenant SaaS: a configurable organization profile (sectors, business activities, geographic coverage, interest keywords) edited by roles that may configure; records with title, description, sector, activity, region, deadline, source link and status, added and edited by members who may, listed with text search and sector, region, status and deadline filters; a detail page with the full description, the source link and why it matches; a matches dashboard ordered by a fixed-rule score (each profile term found adds its dimension's weight; whole-word, case- and accent-insensitive; open records not past their deadline) with the reasons of every match; per-organization feedback (relevant, not relevant, interested) where not relevant hides a record from the matches; a session-authenticated JSON API (records, one record, matches); strict isolation: every read and write is scoped to the caller's active organization and another organization's ids answer 404."
+  does_not: "Does not use AI or semantic similarity, fetch or scrape records from external sources, send alert emails or notifications, keep saved searches, or relate records to other organizations; no region hierarchy (Spain does not include Madrid unless written)"
+  use_cases: [saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Deterministic and explainable: same profile and records, same matches, same order, every reason shown",
+      "No dependency beyond the recipe's stack",
+    ]
+  cons: ["Term matching only: synonyms and related concepts must be written in the profile", "Scores up to 2,000 open records per request"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/matching/params.json (entity.singular/plural, weights.sectors/activities/regions/keywords, minScore)",
+      "getProfile(actor); saveProfile(actor, { sectors, activities, regions, keywords }); listRecords(actor, filters, page); getRecord(actor, id); createRecord(actor, input); updateRecord(actor, id, input); setFeedback(actor, { recordId, verdict }); matchesFor(actor)",
+      "GET /api/matching/opportunities?q=&sector=&region=&status=&before=&page=; GET /api/matching/opportunities/{id}; GET /api/matching/matches (session cookie)",
+    ]
+  outputs:
+    [
+      "matching_profiles, matching_records, matching_feedback rows (one organization each); matches { record, score, reasons[{ dimension, term, points }] }",
+    ]
+  errors: ["UserFacingError (safe to show): role may not configure / create / update, not found; Zod errors for invalid input; API 401 without a member session, 404 for ids outside the active organization"]
+  limits: ["50 terms per profile dimension, 80 characters each; 2,000 open records scored per request; page size from the request"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/matching/{config,params.json,score,rules,policy,service,api-auth}.ts, src/db/component-matching.ts, src/components/matching/forms.tsx, src/app/dashboard/matching/** (matches, profile, records, record detail, actions), src/app/api/matching/** (JSON API), tests/unit/matching*.test.ts, tests/e2e/matching.spec.ts. The assembler writes params.json from the request."
+  config: []
+  migrations: true
+params:
+  file: src/matching/params.json
+  schema: params.schema.json
+  entities: [Opportunity, Tender, Grant, Lead, OrganizationProfile, Organization, Profile, Interest, Match, MatchResult, OpportunityMatch, SavedMatch, OpportunityFeedback]
+quality:
+  tests:
+    {
+      command: "unit (whole-word, accent- and case-insensitive terms, multi-word keywords, weights and reasons, minimum score, stable order, live records only, hidden records, input validation, role policy) + E2E (profile, records with search and filters, detail with source and why, matches best first with reasons, feedback hides not relevant, API scoped and 401 without session, another organization gets 404 on pages and API); full gate via verify:recipe saas-crud --with domain.matching.turbineh",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: every query filters by the caller's active organization (ids outside it are 404, never 403); roles checked in the service (configure / create / update / read); API routes re-check session, membership and role without redirects and answer no-store; source links limited to http(s) and opened with rel=noopener noreferrer nofollow; LIKE wildcards escaped; queries through Drizzle only."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "saas-crud + domain.matching passes the full verification gate with the matching E2E suite"
+    origin: tested
+    ref: "verify:recipe saas-crud --with domain.matching.turbineh"
+relations:
+  requires: []
+  provides: [domain.matching]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

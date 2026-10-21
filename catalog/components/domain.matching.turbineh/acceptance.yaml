@@ -1,0 +1,15 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/matching.spec.ts › the organization saves its profile with sectors, business activities, geographic coverage and interest keywords"
+  covers: ["profile", "sector|activit|geograph|region|countr|interest|keyword"]
+- test: "tests/e2e/matching.spec.ts › the owner adds opportunities and finds them by text search and by sector, region, status and deadline filters"
+  covers: ["search|filter", "sector|region|territor|status|deadline|text|keyword"]
+- test: "tests/e2e/matching.spec.ts › the detail page shows the full description, the source link and why it matches the organization's profile"
+  covers: ["detail|page|view", "description|source|link|url"]
+- test: "tests/e2e/matching.spec.ts › the dashboard shows the opportunities that match the organization's interests, best first, with why each one matches"
+  covers: ["match|relevan|fit|recommend", "interest|profile|sector|activit|region|keyword"]
+- test: "tests/e2e/matching.spec.ts › a member marks an opportunity not relevant and it leaves the matches; interested is recorded"
+  covers: ["feedback|relevant|irrelevant|interested|not interested"]
+- test: "tests/e2e/matching.spec.ts › a user cannot access data belonging to another organization: its record ids answer 404 on pages and in every API request, and lists never show them"
+  covers: ["organi[sz]ation|tenant|workspace|company", "isolat|another|other|different|cannot|never|only"]
+- test: "tests/unit/matching.test.ts › orders matches by score, then nearest deadline (none last), then id — the same every time"
+  covers: ["order|sort|rank|best first|priorit", "match|score|relevan"]

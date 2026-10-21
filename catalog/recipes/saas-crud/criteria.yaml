@@ -12,7 +12,8 @@
   terms: >-
     sign signs signed in out log logs logged login logout password passwords email credential credentials account
     accounts authenticate authentication session sessions access back again return returning resume resumes
-    workspace dashboard their own existing registered
+    workspace dashboard their own existing registered valid enter enters redirect redirected personal page screen
+    click clicks end ends ended terminate terminates terminated sent land lands
   actors: [owner, admin, member, manager, staff, employee, customer, client]
   tests:
     - "tests/e2e/auth.spec.ts › a returning user signs out, signs in again and resumes their workspace"
@@ -152,3 +153,28 @@
     account accounts isolated isolation separate separated private own their only other another never see sees
     access data records multi multi-tenant users user
   actors: [owner, member]
+
+- id: saas-crud.switch-organization
+  criterion: "A user who belongs to several organizations switches between them and sees only the selected organization's workspace"
+  advertises: "workspaces"
+  says: ["switch|chang|select|choos|toggl|move between|jump", "organi[sz]ation|workspace|tenant|company|companies|team|account"]
+  terms: >-
+    switch switches switching switcher change changes select selects selected selector choose chooses toggle
+    between several multiple many more than one belong belongs member organization organizations organisation
+    organisations workspace workspaces tenant tenants company companies team teams account accounts menu
+    dropdown profile picker active current only data sees see view create creates another new owner move moves
+  actors: [owner, admin, member, user, administrator]
+  tests:
+    - "tests/e2e/organizations.spec.ts › a user who belongs to several organizations switches between them from the organization selector and sees only the selected organization's workspace"
+
+- id: saas-crud.account-profile
+  criterion: "The user views their profile on the account page and updates their display name"
+  advertises: "sign-in"
+  says: ["profile|account (page|details|settings|information|info)|my account|personal (details|information|info)|display name", "view|see|show|navigat|open|updat|edit|chang|display", "^(?!.*\\b(updat|chang|edit|modif)\\w*\\b[^.]{0,40}\\be-?mail)"]
+  terms: >-
+    profile profiles account page details settings information info personal view views see sees show shows
+    navigate navigates open opens section display name names update updates edit edits change changes their own
+    organizations role roles logged signed in user menu
+  actors: [owner, admin, member, user, client, customer]
+  tests:
+    - "tests/e2e/organizations.spec.ts › the user views their profile on the account page (name, email, organizations with their role) and updates their display name"

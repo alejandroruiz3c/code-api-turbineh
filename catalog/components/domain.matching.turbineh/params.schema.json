@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "domain.matching.turbineh params (src/matching/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entity", "weights", "minScore"],
+  "$defs": {
+    "weight": { "type": "integer", "minimum": 0, "maximum": 10 }
+  },
+  "properties": {
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["singular", "plural"],
+      "description": "The app's word for the records that are matched (opportunity, tender, grant, lead…).",
+      "properties": {
+        "singular": { "type": "string", "minLength": 1, "maxLength": 40, "default": "opportunity" },
+        "plural": { "type": "string", "minLength": 1, "maxLength": 40, "default": "opportunities" }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sectors", "activities", "regions", "keywords"],
+      "description": "Points each profile term adds when it is found in a record (0 turns a dimension off).",
+      "properties": {
+        "sectors": { "$ref": "#/$defs/weight", "default": 3 },
+        "activities": { "$ref": "#/$defs/weight", "default": 2 },
+        "regions": { "$ref": "#/$defs/weight", "default": 2 },
+        "keywords": { "$ref": "#/$defs/weight", "default": 1 }
+      }
+    },
+    "minScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 1,
+      "description": "Minimum score a live record needs to be shown as a match (a score of 0 is never a match)."
+    }
+  }
+}

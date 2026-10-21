@@ -1,0 +1,78 @@
+# Canonical acceptance criteria (ADR-0063) of the matching component: one per function its catalogue text advertises,
+# each linked to the test that proves it. The records' word comes from params (aliases.yaml: opportunity → tender…).
+- vocabulary: >-
+    opportunity opportunities record records tender tenders grant grants lead leads call calls organization
+    organizations organisation organisations company companies business businesses platform app
+
+- id: matching.profile
+  criterion: "The organization saves its profile with sectors, business activities, geographic coverage and interest keywords"
+  advertises: "organization profile"
+  says: ["profile|sector|activit|geograph|coverage|interest", "sector|activit|geograph|region|countr|territor|coverage|interest|keyword"]
+  terms: >-
+    profile profiles configurable configure configures set sets define defines save saves saved edit edits update
+    updates sector sectors industry industries business activity activities service services geographic geographical
+    coverage region regions country countries territory territories area areas interest interests keyword keywords
+    topic topics including contain containing its their own store stores stored cover covers covered
+  actors: [owner, admin, administrator, organization, member, user]
+  tests:
+    - "tests/e2e/matching.spec.ts › the organization saves its profile with sectors, business activities, geographic coverage and interest keywords"
+
+- id: matching.records
+  criterion: "The owner adds opportunities and finds them by text search and by sector, region, status and deadline filters"
+  advertises: "records with search and filters"
+  says: ["search|filter|find|add|creat|list", "sector|region|territor|status|deadline|text|keyword|opportunit"]
+  terms: >-
+    add adds added create creates new list lists listing listings searchable search searches find finds filter
+    filters filterable filtered text keyword sector sectors region regions territory
+    territories status statuses deadline deadlines date before open closed by and
+  actors: [owner, admin, administrator, editor, member, user]
+  tests:
+    - "tests/e2e/matching.spec.ts › the owner adds opportunities and finds them by text search and by sector, region, status and deadline filters"
+
+- id: matching.detail
+  criterion: "The detail page shows the full description, the source link and why it matches the organization's profile"
+  advertises: "detail page"
+  says: ["detail|page|view|open", "description|source|link|url"]
+  terms: >-
+    detail details individual single page pages view views open opens display displays show shows full
+    description descriptions source sources link links url why match matches reason reasons
+  actors: [owner, admin, member, user, editor, viewer]
+  tests:
+    - "tests/e2e/matching.spec.ts › the detail page shows the full description, the source link and why it matches the organization's profile"
+
+- id: matching.matches
+  criterion: "The dashboard shows the opportunities that match the organization's interests, best first, with why each one matches"
+  advertises: "deterministic matching"
+  says: ["match|relevan|fit|suit|recommend", "interest|profile|sector|activit|region|keyword|dashboard"]
+  terms: >-
+    dashboard displays display shows show list match matches matching matched relevant relevance fit fits suit
+    suits interest interests profile best first ranked rank ranking order ordered sorted score scores why reason
+    reasons explanation each one their its
+  actors: [owner, admin, member, user, editor, viewer]
+  tests:
+    - "tests/e2e/matching.spec.ts › the dashboard shows the opportunities that match the organization's interests, best first, with why each one matches"
+    - "tests/unit/matching.test.ts › orders matches by score, then nearest deadline (none last), then id — the same every time"
+
+- id: matching.feedback
+  criterion: "A member marks an opportunity not relevant and it leaves the matches; interested is recorded"
+  advertises: "feedback"
+  says: ["feedback|relevant|irrelevant|interested|important|not interested"]
+  terms: >-
+    feedback mark marks marked click clicks give gives submit submits relevant irrelevant not interested
+    interest leaves hidden hide hides matches recorded saved button buttons
+  actors: [member, user, owner, admin, editor, viewer]
+  tests:
+    - "tests/e2e/matching.spec.ts › a member marks an opportunity not relevant and it leaves the matches; interested is recorded"
+
+- id: matching.isolation
+  criterion: "A user cannot access data belonging to another organization: its record ids answer 404 on pages and in every API request, and lists never show them"
+  advertises: "strict organization isolation"
+  says: ["organi[sz]ation|tenant|workspace|company", "isolat|another|other|different|cannot|never|only|strict"]
+  terms: >-
+    user users member members cannot access accesses data belonging belong belongs another other different
+    organization organizations organisation tenant tenants workspace workspaces id ids identifier api request
+    requests every any page pages list lists never show shows strict strictly isolation isolated separate leak
+    leaks multi-tenant 404 not found nobody no one read reads through via
+  actors: [user, member, owner, admin]
+  tests:
+    - "tests/e2e/matching.spec.ts › a user cannot access data belonging to another organization: its record ids answer 404 on pages and in every API request, and lists never show them"
