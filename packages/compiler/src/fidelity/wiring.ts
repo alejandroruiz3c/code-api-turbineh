@@ -351,6 +351,18 @@ export const PATTERN_GUIDE: Record<PatternId, { where: string[]; how: string }> 
     where: ["src/social/"],
     how: "Engagement metrics need the social.metrics component (documented read endpoints, null when not reported).",
   },
+  blog: {
+    where: ["src/blog/", "src/app/blog/"],
+    how: "A blog needs the content.blog component (Markdown posts with frontmatter, authors, tags, drafts, RSS, sitemap, JSON-LD).",
+  },
+  "screen-recording": {
+    where: ["src/recordings/", "src/app/dashboard/recordings/"],
+    how: "Screen and camera recording needs the media.screen-recording component (getDisplayMedia + getUserMedia, canvas layouts, MediaRecorder, private storage, share links).",
+  },
+  matching: {
+    where: ["src/matching/"],
+    how: "Matching records against an organization profile needs the domain.matching component (deterministic scoring with reasons, organization-scoped).",
+  },
 };
 
 const approved = (c: ComponentCard) => c.status === "approved";

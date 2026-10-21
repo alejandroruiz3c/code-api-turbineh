@@ -3,6 +3,7 @@ import { extractBookingParams } from "../domains.js";
 import type { Constraints } from "./constraints.js";
 import type { EntityModel } from "./entity-kinds.js";
 import type { PermissionMatrix } from "./permissions.js";
+import { detectBlog, detectMatching, detectScreenRecording } from "./use-case-patterns.js";
 import {
   listItems,
   mentions,
@@ -33,7 +34,10 @@ export type PatternId =
   | "bookings"
   | "social.connections"
   | "social.publish"
-  | "social.metrics";
+  | "social.metrics"
+  | "blog"
+  | "screen-recording"
+  | "matching";
 
 /** Capabilities that implement each pattern, in order of preference (the component's `relations.provides`). */
 export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
@@ -50,6 +54,9 @@ export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
   "social.connections": ["social.oauth"],
   "social.publish": ["social.publish"],
   "social.metrics": ["social.metrics"],
+  blog: ["content.blog"],
+  "screen-recording": ["media.screen-recording"],
+  matching: ["domain.matching"],
 };
 
 export interface PatternMatch {
@@ -73,6 +80,9 @@ export interface PatternInput {
   /** Entities the recipe implements (possible subjects: Task, Project…). */
   knownEntities?: readonly string[];
 }
+
+const ROLE_ASSIGNMENT =
+  /\brole[- ]based access( control)?\b|\brbac\b|\bassign\w*\b[^.;]{0,60}\broles?\b|\broles?\b[^.;]{0,40}\b(assign\w*|grant\w*)\b/i;
 
 const JOB_STOPWORDS = new Set(
   "a an and are as at be by each every for from in is it of on or the their them then to was were with daily weekly nightly morning evening night hour week day".split(
@@ -197,7 +207,10 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
 
   // Membership access: per-record scopes ("only their own company", "projects they belong to") or invitations.
   const scoped = perm.roles.filter((r) => r.scope.kind !== "all");
-  if (scoped.length > 0 || perm.invitations.enabled) {
+  // Roles people assign to each other ("role-based access control", "assign admin, editor or viewer roles") are
+  // managed members with roles too (ADR-0073): the owner assigns and changes them.
+  const assignsRoles = ROLE_ASSIGNMENT.test(text);
+  if (scoped.length > 0 || perm.invitations.enabled || assignsRoles) {
     const memberships = input.entities.filter((e) => e.shape === "membership");
     const scope = scoped[0]?.scope ?? { kind: "all" as const, of: "workspace" };
     const scopeEntity = entityNamed(scope.of, names);
@@ -216,6 +229,7 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
       evidence: [
         ...said(/\binvit\w*/i),
         ...said(/\bonly(?: ever)? sees?\b|\bsees? only\b|\bbelong to\b/i),
+        ...said(ROLE_ASSIGNMENT),
       ],
       assumptions:
         scopeEntity || scope.of === "workspace" || !scope.of
@@ -511,6 +525,12 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
     }
   }
   out.push(...detectSocial(text, all));
+  // Use cases added from real demand (ADR-0073): blog, screen + camera recording, matching against a profile.
+  out.push(
+    ...detectBlog(all, c),
+    ...detectScreenRecording(text, all),
+    ...detectMatching(text, all),
+  );
   return out;
 }
 
@@ -620,6 +640,11 @@ export function criterionTouches(criterion: string, p: PatternMatch): boolean {
       /\bconnect|\blinked ?in|\bfacebook|\binstagram|\btwitter|\bsocial|\boauth/i,
     "social.publish": /\bpublish|\bpost|\bschedul|\bapprov|\bretr|\bcalendar|\bformat|\blength/i,
     "social.metrics": /\bmetric|\bengagement|\blikes|\bimpression|\banalytics/i,
+    blog: /\bblog|\bpost|\barticle|\brss|\bfeed|\btag|\bauthor|\bdraft|\breading time/i,
+    "screen-recording":
+      /\brecord|\bscreen|\bcamera|\bwebcam|\blayout|\b4k|\bresolution|\bvideo|\bshare/i,
+    matching:
+      /\bmatch|\binterest|\bprofile|\bsector|\bregion|\bterritor|\bkeyword|\brelevan|\bopportunit/i,
   };
   return words[p.id].test(criterion);
 }

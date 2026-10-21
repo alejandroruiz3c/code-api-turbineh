@@ -45,6 +45,11 @@ export async function gateRequest(input: {
   componentIds?: readonly string[];
   /** Components the person chose explicitly: exactly those are delivered (covered by definition). */
   explicit?: readonly string[];
+  /**
+   * Domain components the request selects by code (ADR-0073). For a request no product family matched they are the
+   * use case: verified components built on the closest template, every requirement still gated.
+   */
+  domainComponents?: readonly string[];
 }): Promise<ScopeVerdict> {
   // The whole approved catalogue with its guide keywords and aliases: the engine selects what is relevant per
   // requirement (it never sees a truncated list).
@@ -79,7 +84,7 @@ export async function gateRequest(input: {
       : null
     : recipe !== "out_of_scope"
       ? { id: recipe, description: RECIPE_DESCRIPTIONS[recipe] }
-      : null;
+      : domainUseCase(catalog, input.domainComponents ?? []);
   const aiIncluded = components
     ? components.some((c) => c.id.startsWith("ai.orchestrator"))
     : recipe === "ai-agents";
@@ -94,6 +99,20 @@ export async function gateRequest(input: {
     },
     input.decider,
   );
+}
+
+/** The use case of a request no family matched, when code selected verified domain components for it (ADR-0073). */
+function domainUseCase(
+  catalog: readonly GateComponent[],
+  ids: readonly string[],
+): { id: string; description: string } | null {
+  const chosen = catalog.filter((c) => ids.includes(c.id));
+  return chosen.length > 0
+    ? {
+        id: "components",
+        description: `Verified components: ${chosen.map((c) => `${c.id} (${c.does})`).join("; ")}`,
+      }
+    : null;
 }
 
 /** The covered part only (explicit choice, ADR-0052): uncovered requirements removed, explicit name. */

@@ -646,6 +646,15 @@ function catalogSource(recipesDir: string, recipe: string, components: readonly 
   };
 }
 
+/** Entities a native component implements (component.yaml `params.entities`). */
+function componentEntities(componentsDir: string, id: string): string[] {
+  const file = join(componentsDir, id, "component.yaml");
+  if (!existsSync(file)) return [];
+  const doc = parse(readFileSync(file, "utf8")) as { params?: { entities?: unknown } } | null;
+  const list = doc?.params?.entities;
+  return Array.isArray(list) ? list.filter((e): e is string => typeof e === "string") : [];
+}
+
 /**
  * Canonical criteria a plan can use (ADR-0063): the recipe chain's and its components' (required ones plus
  * `components`) whose tests the package will ship, and the generated CRUD functions of the request's entities (their
@@ -663,11 +672,14 @@ export function canonicalForPlan(input: {
       ...(input.components ?? []),
     ]),
   ];
-  // Entities the recipe already implements (Booking in a bookings app) get no generated CRUD screens.
+  // Entities the recipe or a selected component already implements (Booking in a bookings app, Opportunity with
+  // domain.matching) get no generated CRUD screens (ADR-0073: the component's own functions are measured instead).
+  const componentsDir = join(input.recipesDir, "..", "components");
   const provided = new Set(
-    recipeChain(input.recipesDir, input.recipe).flatMap((m) =>
-      (m.providedEntities ?? []).map((e) => e.toLowerCase()),
-    ),
+    [
+      ...recipeChain(input.recipesDir, input.recipe).flatMap((m) => m.providedEntities ?? []),
+      ...components.flatMap((id) => componentEntities(componentsDir, id)),
+    ].map((e) => e.toLowerCase()),
   );
   const nameOf = (e: CanonicalEntity) => (typeof e === "string" ? e : e.name);
   return resolveCanonical(

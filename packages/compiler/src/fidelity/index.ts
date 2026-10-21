@@ -21,6 +21,7 @@ export * from "./entity-kinds.js";
 export * from "./field-policy.js";
 export * from "./permissions.js";
 export * from "./patterns.js";
+export * from "./use-case-patterns.js";
 export * from "./wiring.js";
 
 /** Spec fidelity (ADR-0042): what the request says, modelled by code, for the assembler and the agent guide. */

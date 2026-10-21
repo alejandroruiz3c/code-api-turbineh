@@ -147,6 +147,9 @@ export const CAPABILITIES = [
   "social.oauth",
   "social.publish",
   "social.metrics",
+  // Workstream E (ADR-0073): blog, screen + camera recording, deterministic matching against an organization profile
+  "media.screen-recording",
+  "domain.matching",
 ] as const;
 
 const item = (t: number, x: number) =>

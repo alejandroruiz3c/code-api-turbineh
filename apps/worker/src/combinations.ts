@@ -42,6 +42,21 @@ export const SOCIAL_PUBLISHER_PROMPT =
   "failure, and every publication is logged; a content calendar and a dashboard with likes, comments and shares of " +
   "published posts.";
 
+/** Synthetic requests of the use cases added from real demand (ADR-0073), paraphrased — never customers' words. */
+export const BLOG_PROMPT =
+  'Build "Field Notes", a calm landing page with a waitlist and a blog where our team publishes long-form articles ' +
+  "about robotics research: authors with a short bio, tags, a reading time on each post, drafts until published, " +
+  "an RSS feed and good SEO.";
+export const RECORDER_PROMPT =
+  'Build "Clipcast", a tool like Loom: record the screen and the webcam in 4K when the camera allows it, choose a ' +
+  "layout (camera bubble in a corner, side by side, screen only, camera only), save each video privately to a " +
+  "library and share it with a link.";
+export const MATCHING_PROMPT =
+  'Build "Bidscope", a multi-tenant B2B platform that monitors public tenders. Each organization signs up, invites ' +
+  "teammates as admin, editor or viewer, and configures its profile: business activities, sectors, regions and " +
+  "keywords of interest. A user may belong to several organizations and switches between them. The dashboard lists " +
+  "the tenders relevant to the organization's profile, best first, with why each one matches.";
+
 export interface Combination {
   /** "ai-agents" or "ai-agents+domain.bookings.turbineh". */
   name: string;
@@ -475,6 +490,44 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
         maxAttempts: 5,
       },
       "social.metrics.turbineh": { refreshHours: 6, windowDays: 30 },
+    },
+  },
+  {
+    // Blog on a landing page (ADR-0073): posts with authors, tags, reading time, drafts, RSS, sitemap and JSON-LD.
+    recipe: "landing-waitlist",
+    with: ["content.blog.turbineh"],
+    prompt: BLOG_PROMPT,
+    params: {
+      "content.blog.turbineh": { postsPerPage: 10, wordsPerMinute: 200, feedItems: 20 },
+    },
+  },
+  {
+    // Screen + camera recorder (ADR-0073): up to 4K asked, layouts on a canvas, private storage, share links.
+    recipe: "saas-crud",
+    with: ["storage.private-uploads.turbineh", "media.screen-recording.turbineh"],
+    prompt: RECORDER_PROMPT,
+    params: {
+      "media.screen-recording.turbineh": {
+        maxResolution: "2160p",
+        frameRate: 30,
+        layouts: ["bubble", "side-by-side", "screen-only", "camera-only"],
+        maxMinutes: 30,
+        maxBytes: 524_288_000,
+        shareLinks: true,
+      },
+    },
+  },
+  {
+    // B2B opportunity monitoring (ADR-0073): roles, organization switcher, profile, deterministic matches.
+    recipe: "saas-crud",
+    with: ["domain.membership-access.turbineh", "domain.matching.turbineh"],
+    prompt: MATCHING_PROMPT,
+    params: {
+      "domain.matching.turbineh": {
+        entity: { singular: "tender", plural: "tenders" },
+        weights: { sectors: 3, activities: 2, regions: 2, keywords: 1 },
+        minScore: 1,
+      },
     },
   },
 ];

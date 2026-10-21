@@ -460,6 +460,41 @@ describe("canonical criteria · corporate-site (ADR-0063)", () => {
   });
 });
 
+// content.blog.turbineh, required by corporate-site: the blog's functions as a corporate site installs them.
+describe("canonical criteria · blog on the corporate site (content.blog.turbineh)", () => {
+  const site = () =>
+    resolveCanonical(
+      canonicalCriteria({ recipesDir, recipe: "corporate-site" }),
+      sourceIn(
+        join(recipesDir, "corporate-site", "template"),
+        join(recipesDir, "saas-crud", "template"),
+        join(componentsDir, "content.blog.turbineh", "files"),
+      ),
+    );
+  const about = requestWords("A minimalist blog to share research notes", "Research Notes");
+  it.each([
+    ["Visitors see the latest research posts newest first", "blog.list"],
+    [
+      "Given a user is on the homepage, when they view the feed, then they see a list of research posts sorted by most recent",
+      "blog.list",
+    ],
+    ["A reader clicks a tag and sees only the posts with that tag", "blog.tags"],
+    ["An author saves a draft that is not public until published", "blog.write-publish"],
+    ["Readers can search posts by keyword", "blog.search"],
+    ["Each post shows how long it takes to read", "blog.read-post"],
+    ["Each author has a profile page with their bio and their articles", "blog.authors"],
+  ])("maps %j to %s", (asked, id) => {
+    expect(mapToCanonical(asked, site(), [], about).map((c) => c.id)).toEqual([id]);
+  });
+  it.each([
+    "When a reader clicks the copy citation button, the citation is copied to the clipboard",
+    "Readers can comment on posts",
+    "Subscribers receive a newsletter email for each new post",
+  ])("keeps %j out", (asked) => {
+    expect(mapToCanonical(asked, site(), [], about)).toEqual([]);
+  });
+});
+
 describe("canonical criteria · client-portal (ADR-0063)", () => {
   it.each([
     ["A client can submit a request with a title and description", "client-portal.submit-request"],
@@ -530,6 +565,9 @@ describe("domain components' canonical criteria prove their own wording (ADR-006
     "social.publish.turbineh",
     "social.connections.turbineh",
     "social.metrics.turbineh",
+    "content.blog.turbineh",
+    "domain.matching.turbineh",
+    "media.screen-recording.turbineh",
   ])("%s", (id) => {
     const list = canonicalCriteria({ recipesDir, recipe: "saas-crud", components: [id] }).filter(
       (c) => c.from === id && !c.when,
@@ -1070,5 +1108,93 @@ describe("recall of support, AI agents and to-do requests, precision kept (ADR-0
     expect(
       mapToCanonical("A staff member books a free time on the public page", canon).map((c) => c.id),
     ).not.toContain("bookings.public-booking");
+  });
+});
+
+// Workstream E (B2B SaaS, client portal): synthetic paraphrases of production requests (never the customers' words).
+describe("canonical criteria · B2B organizations, roles and matching (workstream E)", () => {
+  const b2b = () =>
+    resolveCanonical(
+      canonicalCriteria({
+        recipesDir,
+        recipe: "saas-crud",
+        components: ["domain.membership-access.turbineh", "domain.matching.turbineh"],
+      }),
+      sourceIn(
+        join(recipesDir, "saas-crud", "template"),
+        join(componentsDir, "domain.membership-access.turbineh", "files"),
+        join(componentsDir, "domain.matching.turbineh", "files"),
+      ),
+    );
+  const roles = ["admin", "editor", "viewer"];
+  it.each([
+    [
+      "Members can move between the several companies they belong to with a menu selector",
+      "saas-crud.switch-organization",
+    ],
+    ["An admin gives people of the company the Editor or Viewer role", "membership.change-role"],
+    [
+      "A company stores its industry sectors, regions it covers and topics of interest in its profile",
+      "matching.profile",
+    ],
+    [
+      "Members list tenders and filter them by sector, region, status and deadline",
+      "matching.records",
+    ],
+    [
+      "The dashboard ranks the tenders that fit the company's interests, best first, showing why each one matches",
+      "matching.matches",
+    ],
+    ["Members mark a tender as irrelevant or interested to give feedback", "matching.feedback"],
+    ["Nobody can read another company's records through any API request", "matching.isolation"],
+  ])("maps %j to %s", (asked, id) => {
+    expect(mapToCanonical(asked, b2b(), roles).map((c) => c.id)).toEqual([id]);
+  });
+  it.each([
+    "Members get an email alert when a new tender matches their interests",
+    "Members save a search with its filters and reuse it later",
+    "The platform tracks daily active users for usage analytics",
+    "The detail page lists the other companies related to the tender",
+    "Members filter tenders by category",
+  ])("keeps %j out", (asked) => {
+    expect(mapToCanonical(asked, b2b(), roles)).toEqual([]);
+  });
+});
+
+describe("canonical criteria · client portal account functions (workstream E)", () => {
+  const portal = () =>
+    resolveCanonical(
+      canonicalCriteria({ recipesDir, recipe: "client-portal" }),
+      sourceIn(
+        join(recipesDir, "client-portal", "template"),
+        join(recipesDir, "saas-crud", "template"),
+      ),
+    );
+  it.each([
+    [
+      "On the sign-in page a client enters valid credentials and lands on their personal dashboard",
+      "saas-crud.sign-in",
+    ],
+    [
+      "A signed-in client clicks Logout: the session ends and the login screen is shown",
+      "saas-crud.sign-in",
+    ],
+    [
+      "A signed-in client opens the profile section and sees their account details",
+      "saas-crud.account-profile",
+    ],
+    [
+      "A client viewing a document clicks Download and the file is saved to their device",
+      "client-portal.file-uploads",
+    ],
+  ])("maps %j to %s", (asked, id) => {
+    expect(mapToCanonical(asked, portal()).map((c) => c.id)).toEqual([id]);
+  });
+  it.each([
+    "A client updates their email address from the settings and it is saved to their profile",
+    "A client opens Support and a contact form is shown",
+    "A client opens Notifications and sees the list of recent alerts",
+  ])("keeps %j out", (asked) => {
+    expect(mapToCanonical(asked, portal())).toEqual([]);
   });
 });

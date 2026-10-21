@@ -124,10 +124,11 @@ export const USE_CASES: UseCase[] = [
       "ops.rate-limit",
       "data.pagination"
     ],
-    "requiredComponents": [],
+    "requiredComponents": [
+      "content.blog.turbineh"
+    ],
     "sections": [
       "Website texts",
-      "Blog posts",
       "Messages"
     ],
     "keywords": [
