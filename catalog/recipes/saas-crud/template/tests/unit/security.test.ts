@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { securityHeaders } from "@/security/headers";
+import { permissionsPolicy, securityHeaders } from "@/security/headers";
+import { MEDIA_CAPTURE_SELF } from "@/security/permissions-sources";
 import { memoryStore, rateLimit } from "@/security/rate-limit";
 
 describe("security headers", () => {
@@ -19,6 +20,19 @@ describe("security headers", () => {
       .split("; ")
       .find((d) => d.startsWith("img-src"));
     expect(img).toMatch(/^img-src 'self' data: blob:( https:)?$/);
+  });
+});
+
+describe("permissions policy", () => {
+  it("denies camera, microphone and screen capture by default; a recording component allows them to this origin only", () => {
+    expect(permissionsPolicy(false)).toBe(
+      "camera=(), microphone=(), display-capture=(), geolocation=()",
+    );
+    expect(permissionsPolicy(true)).toBe(
+      "camera=(self), microphone=(self), display-capture=(self), geolocation=()",
+    );
+    const sent = securityHeaders().find((h) => h.key === "Permissions-Policy")?.value;
+    expect(sent).toBe(permissionsPolicy(MEDIA_CAPTURE_SELF));
   });
 });
 

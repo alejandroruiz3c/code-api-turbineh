@@ -1,0 +1,119 @@
+schema: turbineh.guide/v0.1
+component: media.screen-recording.turbineh
+title: Screen and camera recording (Loom-style video messages) with layouts, up to 4K, private storage, a player and share links
+summary: >-
+  A recorder page asks the browser for the screen (getDisplayMedia) and the camera and microphone (getUserMedia) at up
+  to the app's maximum resolution — 720p, 1080p, 1440p or 4K (3840×2160) — with `ideal` constraints only, so a device
+  that cannot deliver the asked resolution still records instead of failing. It then shows what each device really
+  delivers ("asked 3840×2160 · screen delivers 3840×2160 · camera delivers 1280×720") and records at the highest
+  resolution the sources deliver, never upscaled beyond it. The chosen layout is drawn on a canvas and can be switched
+  while recording: camera bubble in any corner over the screen, side by side, screen only, camera only. The canvas
+  stream and the microphone are recorded with MediaRecorder — MP4 when the browser records it, otherwise WebM with VP9
+  or VP8 and Opus — and uploaded to the workspace's private storage (storage.private-uploads.turbineh: a directory
+  outside public/ or a private S3-compatible bucket). The upload is limited in size while it is read and recognised by
+  content. Recordings appear in a video library with their title, duration, recorded resolution, layout and date; the
+  player is served with HTTP Range so seeking works; a share link with a 256-bit token (only its SHA-256 stored) lets
+  anyone watch without an account until it is revoked.
+keywords:
+  [screen recording, screen recorder, record screen, webcam recording, camera recording, video message, loom, loom
+   alternative, screencast, 4k recording, picture in picture, camera bubble, side by side, layouts, mediarecorder,
+   getdisplaymedia, getusermedia, share video link, video library, video player]
+synonyms:
+  recording: [video, screencast, clip, video message, capture]
+  camera: [webcam, face cam, cam]
+  layout: [arrangement, composition, picture-in-picture, bubble]
+  share link: [public link, shareable link, watch link]
+use_cases:
+  - "A team records short screen + camera walkthroughs and shares them with a link, like Loom"
+  - "Support or sales staff record a 4K screen demo with their face in a corner bubble and send the link to a customer"
+use_when:
+  - "The request records the screen, the camera, or both, in the browser, with layouts, and keeps or shares the videos"
+  - "Videos must stay private to the workspace unless someone shares a revocable link"
+avoid_when:
+  - "Editing, trimming or cutting recordings, adding comments, reactions, transcripts, captions or AI summaries (not covered)"
+  - "Live streaming, video calls or recording system audio (not covered)"
+  - "A promise that every recording is 4K: the recording is at most what the screen and camera deliver"
+  - "Native desktop or mobile recorder apps (TurbineH builds web apps only)"
+tradeoffs:
+  - { choice: "`ideal` constraints, never `exact`/`min`", gain: "Recording always starts; the person sees what the device really gives", cost: "4K is asked for, not guaranteed" }
+  - { choice: "Compose on a canvas in the browser", gain: "Layouts switch live while recording, one file, no server video processing", cost: "The canvas costs CPU at high resolutions; the frame rate may drop on slow machines" }
+  - { choice: "Upload through the app (route handler) into the private storage driver", gain: "Same private storage, limits and access checks as other files; works on any host", cost: "The video is held in server memory while uploaded and served (bounded by maxBytes); no direct-to-bucket upload" }
+  - { choice: "Codec chosen by the browser (MP4 preferred, WebM fallback)", gain: "No transcoding server", cost: "Some players cannot play WebM (older Safari); WebM files from MediaRecorder carry no duration header (the duration is stored separately)" }
+config:
+  - { name: "src/recordings/params.json", default: "1080p, 30 fps, all four layouts, 30 minutes, 500 MB, share links on", description: "Highest resolution asked (2160p for 4K requests), frame rate, layouts offered, longest recording, largest upload, sharing (from the request)" }
+  - { name: "UPLOADS_DIR / STORAGE_DRIVER / S3_*", description: "Where videos are stored (storage.private-uploads.turbineh); use a private S3-compatible bucket on serverless hosts" }
+interfaces:
+  - { name: "Upload route", signature: "POST /api/recordings?title&durationMs&width&height&requestedWidth&requestedHeight&frameRate&layout (body: video bytes) → 201 { id } | 413 | 422 | 429", where: src/app/api/recordings/route.ts }
+  - { name: "Media routes", signature: "GET /dashboard/recordings/<id>/media (member) and GET /v/<token>/media (share link) → 200 | 206 with Content-Range | 416 | 404", where: "src/app/dashboard/recordings/[id]/media/route.ts, src/app/v/[token]/media/route.ts" }
+  - { name: "Recording service", signature: "saveRecording(ctx, bytes, meta), listRecordings(ctx), getRecording(ctx, id), renameRecording, deleteRecording, shareRecording(ctx, id) → token, revokeShare, recordingByToken(token)", where: src/recordings/service.ts }
+  - { name: "Layout math", signature: "placeSources(layout, canvas, screen, camera, corner) → { screen, camera, cameraShape }; outputSize(resolution, layout, delivered); videoConstraints(resolution, frameRate); deliveredLabel(resolution, delivered)", where: src/recordings/layout.ts }
+  - { name: "Format and media helpers", signature: "pickMimeType(isTypeSupported); videoContainer(bytes); parseRange(header, size); readLimited(body, max); newShareToken(); hashToken(token)", where: "src/recordings/mime.ts, src/recordings/media.ts" }
+extension_points:
+  - what: "Add a layout (e.g. camera on the left)"
+    where: "src/recordings/config.ts (LAYOUT_KEYS, LAYOUT_LABELS), src/recordings/layout.ts (placeSources), params.schema.json"
+    how: "Add the key and its placement, unit-test the rectangles in tests/unit/recordings.test.ts, and list it in params.json."
+  - what: "Store videos in a bucket"
+    where: ".env (STORAGE_DRIVER=s3, S3_BUCKET, S3_BASE_URL, keys)"
+    how: "The private storage driver of storage.private-uploads.turbineh is used as is; keep the bucket private."
+  - what: "Let only some roles record"
+    where: "src/server/role-policy.ts (create), src/recordings/service.ts"
+    how: "saveRecording checks can(role, \"create\"); rename, share and delete need the author or can(role, \"update\"/\"delete\")."
+compatibility:
+  runtime: "node >= 20; browsers with getDisplayMedia, getUserMedia, canvas.captureStream and MediaRecorder (Chromium, Firefox, Safari 14.1+ desktop; screen capture is not available on mobile browsers)"
+  framework: "next ^16 route handlers, server actions and a client component, drizzle-orm with PostgreSQL, zod 4"
+  recipes: [saas-crud]
+  requires: [storage.private-uploads.turbineh]
+  works_with: [domain.audit-log.turbineh, domain.membership-access.turbineh]
+  notes: "Ships src/security/permissions-sources.ts, which makes the Security Pack's Permissions-Policy allow camera, microphone and display-capture to this origin only (\"(self)\"); without this component they stay denied. No CSP change: the live preview is the canvas itself and videos are served from the app's own origin."
+security:
+  - "Camera, microphone and screen capture are allowed to this origin only (Permissions-Policy (self)); the browser still asks the person each time"
+  - "Uploads need a signed-in member, are rate-limited (20 per minute per person), refused above maxBytes while they are read, and accepted only when the content is WebM or MP4"
+  - "Every read is scoped to the workspace; another workspace's id is a 404; storage keys are generated by the app"
+  - "Share links carry 256 random bits; only their SHA-256 is stored; revoking or re-sharing invalidates the old link; shared pages are not indexed; shared media requests are rate-limited per address"
+  - "Videos are served inline with X-Content-Type-Options: nosniff and Cache-Control: private, no-store"
+guarantees:
+  - { claim: "Screen and camera are recorded, uploaded to private storage and listed in the library", test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library" }
+  - { claim: "Layouts switch while recording and rearrange the feeds", test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library" }
+  - { claim: "Bubble in each corner, side by side, single-source layouts", test: "tests/unit/recordings.test.ts › camera bubble in each of the four corners over the full screen" }
+  - { claim: "Asks up to 4K and records at what the device delivers", test: "tests/e2e/recordings.spec.ts › asks for up to 4K and records at the highest resolution the device delivers (camera at 3840x2160 when it supports it)" }
+  - { claim: "Only ideal constraints (no OverconstrainedError)", test: "tests/unit/recordings.test.ts › asks with ideal constraints only (never exact or min), so a device that cannot deliver 4K still records" }
+  - { claim: "Never upscaled beyond what the devices deliver", test: "tests/unit/recordings.test.ts › records at the asked resolution when the devices deliver it, and never upscales beyond what they deliver" }
+  - { claim: "MP4 when supported, else WebM", test: "tests/unit/recordings.test.ts › picks MP4 when the browser records it, else WebM with VP9 or VP8 and Opus" }
+  - { claim: "Seekable player with HTTP Range", test: "tests/e2e/recordings.spec.ts › the recording plays in the player and seeks with byte ranges (206 Partial Content)" }
+  - { claim: "Share link without an account; revocable", test: "tests/e2e/recordings.spec.ts › a viewer opens a shared link without an account and watches the video; a revoked link no longer works" }
+  - { claim: "Workspace isolation", test: "tests/e2e/recordings.spec.ts › a person in another workspace never sees or plays this workspace's recordings" }
+  - { claim: "Non-video uploads refused by content", test: "tests/e2e/recordings.spec.ts › an upload that is not a WebM or MP4 video is refused, and nothing is stored" }
+  - { claim: "Oversized uploads refused while read", test: "tests/unit/recordings.test.ts › an upload larger than the limit is refused while it is read: reading stops at the limit" }
+limits:
+  - "4K is asked for, never guaranteed: the recording is at most what the screen and camera deliver (many webcams top out at 1080p); a 4K canvas needs a fast machine and the frame rate may drop"
+  - "Proved on Chromium's fake devices in the verification gate (fake camera and screen deliver the asked resolution, up to 3840×2160); Firefox and Safari use the same standard APIs but are not in the gate"
+  - "Videos are held in server memory while uploaded and while served (one object read per request, Range sliced in memory): keep maxBytes in line with the server's memory; large teams should move to direct-to-bucket uploads"
+  - "Recording stops at maxMinutes; no pause/resume, trimming, editing, comments, transcripts or system audio"
+  - "WebM files written by MediaRecorder have no duration in their header: players show the duration once loaded; the library shows the duration measured while recording"
+  - "Screen capture is not available in mobile browsers (desktop browsers only)"
+example: |-
+  // Server code in the app (e.g. a page or a server action): the workspace's recordings with what was really recorded,
+  // and a share link for the latest one.
+  import { listRecordings, shareRecording, type Member } from "@/recordings/service";
+
+  export async function shareLatestRecording(ctx: Member): Promise<string | null> {
+    const [latest] = await listRecordings(ctx);
+    if (!latest) return null;
+    const token = await shareRecording(ctx, latest.id);
+    return `/v/${token} (${latest.title}, recorded at ${latest.width}×${latest.height})`;
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/recordings/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "maxResolution", default: "1080p", description: "720p, 1080p, 1440p or 2160p (4K): the highest resolution asked of the devices" }
+    - { name: "frameRate", default: "30", description: "24, 30 or 60 frames per second" }
+    - { name: "layouts[]", default: "all four", description: "bubble, side-by-side, screen-only, camera-only (the first is the default)" }
+    - { name: "maxMinutes", default: "30", description: "Longest recording (1–120)" }
+    - { name: "maxBytes", default: "524288000", description: "Largest upload in bytes (1 MB–2 GB)" }
+    - { name: "shareLinks", default: "true", description: "Share links watchable without an account" }
+  example: |
+    { "maxResolution": "2160p", "frameRate": 30, "layouts": ["bubble", "side-by-side", "screen-only", "camera-only"], "maxMinutes": 30, "maxBytes": 524288000, "shareLinks": true }
