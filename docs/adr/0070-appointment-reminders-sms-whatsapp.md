@@ -27,8 +27,8 @@ reminder consent boxes replace both through `files-with/domain.bookings.turbineh
 `src/reminders/channels/` replaced by `files-with/messaging.*` when the messaging component is in the app; the app
 refuses to start if params name a channel whose component is missing.
 
-`libphonenumber-js@1.13.14` (MIT, published 2026-09-24, the version the catalogue approved) is pinned in the saas-crud
-and ai-agents templates (lockfiles refreshed with `--lockfile-only --ignore-scripts`): native components cannot add
+`libphonenumber-js@1.13.14` (MIT, published 2026-09-24, the version the catalogue approved) is pinned in the saas-crud,
+ai-agents and storefront templates (lockfiles refreshed with `--lockfile-only --ignore-scripts`): native components cannot add
 dependencies to a frozen lockfile. New catalogue category `messaging`.
 
 ### 2 · Proof
@@ -70,10 +70,11 @@ US SMS needs A2P 10DLC registration — the customer's steps, listed in the guid
 
 ## Consequences
 
-- Offline replay of the three production requests (stored compiled specs, code only): "with reminders" goes from
-  refused to covered with the email reminder proven; the WhatsApp reminder request from partial to covered with the
-  reminder proven; the SMS + card payment + native app request from refused to partial (card payment judged by the
-  decision engine until ADR-0071's canonical criterion lands; the native app stays out).
+- Offline replay of the three production requests (stored compiled specs, code only, against main with ADR-0069 and
+  ADR-0071): "with reminders" goes from refused (0 % functional coverage) to covered with the email reminder proven;
+  the WhatsApp reminder request from partial (WhatsApp removed) to covered with the reminder proven; the SMS + card
+  payment + native app request stays partial with only the native app out, and its SMS reminder is now proven by a
+  test instead of left to the decision engine (which refused it in production).
 - Every app gets libphonenumber-js in its lockfile (unused unless a messaging component ships).
 - Limits: outbound notifications only (no conversations, MMS, media templates or marketing); one reminder per
   appointment and channel; precision is the scheduler's interval; mocks, not live services.

@@ -25,7 +25,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   (`src/bookings/extensions.ts`, `form-extras.tsx`) used for the reminder consent boxes. Canonical criteria for email,
   SMS and WhatsApp reminders; the plan and the scope gate see the reminder and messaging components a request asks
   for; SMS/WhatsApp notifications are covered (conversations and bots on them are not); components-only offers for
-  SMS and WhatsApp. `libphonenumber-js@1.13.14` is pinned in the saas-crud and ai-agents templates; new catalogue
+  SMS and WhatsApp. `libphonenumber-js@1.13.14` is pinned in the saas-crud, ai-agents and storefront templates; new catalogue
   category `messaging`.
 
 - Contact email for invitation workspaces (ADR-0074): `/access` asks for an email (required, validated, with what it is
