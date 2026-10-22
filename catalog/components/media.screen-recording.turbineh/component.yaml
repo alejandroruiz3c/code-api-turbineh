@@ -1,0 +1,85 @@
+schema: turbineh.component/v0.1
+id: media.screen-recording.turbineh
+version: 0.1.0
+status: approved
+category: media
+source:
+  purl: pkg:generic/turbineh/media.screen-recording.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Screen and camera recording in the browser (Loom-style video messages): the screen through getDisplayMedia and the camera and microphone through getUserMedia, asked for up to the app's maximum resolution (up to 4K, 3840×2160) with `ideal` constraints, and the resolution each device really delivers shown honestly; layouts composed on a canvas and switchable while recording — camera bubble in any corner over the screen, side by side, screen only, camera only; MediaRecorder to MP4 when the browser supports it, else WebM (VP9/VP8 + Opus); upload to the workspace's private storage (storage.private-uploads.turbineh: local disk outside public/ or a private S3-compatible bucket), size-limited while read and recognised by content; a video library (title, duration, recorded resolution, layout, date), rename and delete; a player served with HTTP Range (seeking); share links with a 256-bit token (only its hash stored), watchable without an account and revocable."
+  does_not: "Does not edit or trim videos, transcribe, caption or summarise (no AI), take comments or reactions, record system audio, stream live, transcode to another format or guarantee 4K: the recording is at most what the screen and camera deliver"
+  use_cases: [saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "No dependency beyond the recipe's stack: browser media APIs and the private storage driver",
+      "Proved end to end on Chromium's fake camera, microphone and screen in the verification gate",
+    ]
+  cons:
+    [
+      "Videos pass through the app server and are held in memory while uploaded and served (bounded by maxBytes)",
+      "The browser decides the codec: Safari and recent Chromium record MP4, Firefox WebM; WebM files from MediaRecorder carry no duration in their header",
+    ]
+  alternatives: [storage.private-uploads.turbineh]
+contract:
+  inputs:
+    [
+      "src/recordings/params.json (maxResolution, frameRate, layouts[], maxMinutes, maxBytes, shareLinks)",
+      "POST /api/recordings?title&durationMs&width&height&requestedWidth&requestedHeight&frameRate&layout with the video bytes as the body (signed-in member)",
+      "env: the storage settings of storage.private-uploads.turbineh (STORAGE_DRIVER, UPLOADS_DIR, S3_*)",
+    ]
+  outputs:
+    [
+      "recordings rows (container, size, duration, recorded and asked resolution, layout, share token hash)",
+      "GET /dashboard/recordings/<id>/media and GET /v/<token>/media (inline video, Range → 206)",
+      "pages /dashboard/recordings, /dashboard/recordings/new, /dashboard/recordings/<id>, /v/<token>",
+    ]
+  errors:
+    [
+      "413 over maxBytes (reading stops at the limit); 422 not WebM/MP4 by content, unknown layout, over maxMinutes; 429 too many uploads",
+      "404 for another workspace's recording, a revoked or unknown share link",
+    ]
+  limits: ["maxBytes up to 2 GB (default 500 MB); maxMinutes up to 120; 200 recordings listed; one share link per recording"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: true
+  db: true
+  external_services: [s3-compatible-storage]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/recordings/{config,params.json,layout,mime,media,rules,service,serve}.ts, src/db/component-recordings.ts, src/security/permissions-sources.ts (allows camera, microphone and screen capture to this origin only), src/app/api/recordings/route.ts, src/app/dashboard/recordings/** (library, recorder, player, share), src/app/v/[token]/** (shared player), tests/unit/recordings.test.ts, tests/e2e/recordings.spec.ts. Requires storage.private-uploads.turbineh (its storage driver)."
+  config: [UPLOADS_DIR, STORAGE_DRIVER, S3_BASE_URL, S3_BUCKET]
+  migrations: true
+params:
+  file: src/recordings/params.json
+  schema: params.schema.json
+  entities: [Recording, VideoRecording, Video, ScreenRecording, LayoutTemplate, Layout, ShareLink, VideoMessage]
+quality:
+  tests:
+    {
+      command: "unit (layout placement in the four corners, side by side and single source, ideal-only constraints, output size never above what devices deliver, MP4/WebM picker, container by content, size limit while reading, Range parsing, share tokens) + E2E on Chromium fake devices (record and switch layouts, 4K asked and delivered, upload, library, seekable player with 206, share link without an account, revoke, other workspace denied, non-video refused); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: camera, microphone and screen capture allowed by Permissions-Policy to this origin only; uploads by signed-in members only, rate-limited, size-limited while read, type by content; storage keys generated by the app; every read scoped to the workspace or to a share token compared by SHA-256; shared links 256-bit, revocable, not indexed; videos served inline with nosniff and no shared caching."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Recording the screen and the camera in each layout, uploading, playing with byte ranges and sharing by link pass the E2E suite on Chromium's fake devices in the full verification gate"
+    origin: tested
+    ref: "verify:recipe saas-crud --with storage.private-uploads.turbineh,media.screen-recording.turbineh"
+relations:
+  requires: [storage.private-uploads.turbineh]
+  provides: [media.screen-recording]
+  conflicts: []
+  tested_with: [recipe.saas-crud]

@@ -73,7 +73,7 @@ import {
 import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
 import type { DeliveryManifest, Plan } from "@turbineh/shared";
 import { componentPlan, flowPlan, type PlanRequest } from "./product.js";
-import { mergeDomains, wireFidelity } from "./fidelity-wiring.js";
+import { mergeDomains, wireFidelity, wireFidelitySync } from "./fidelity-wiring.js";
 import { requireRequirements } from "./required-components.js";
 import {
   fromApproved,
@@ -241,15 +241,16 @@ export function planCriteria(
  * them (the request's words are kept in `criteria_asked`), so the plan, the package and every surface measure the same
  * functions the catalogue advertises and its tests prove. Deterministic; idempotent.
  */
-export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = ""): number {
-  if (spec.recipe === "out_of_scope") return 0;
+export function canonicalizeSpec(
+  spec: BuildSpec,
+  recipesDir: string,
+  prompt = "",
+  components: readonly string[] = gateDomains(spec, prompt, join(recipesDir, "..", "components")),
+): number {
+  const recipe = hostRecipe(spec, recipesDir, components);
+  if (!recipe) return 0;
   if (prompt) spec.request_words = requestWords(prompt);
-  const canon = canonicalForPlan({
-    recipesDir,
-    recipe: spec.recipe,
-    entities: spec.entities,
-    components: gateDomains(spec, prompt),
-  });
+  const canon = canonicalForPlan({ recipesDir, recipe, components, entities: spec.entities });
   const c = canonicalize(
     spec.acceptance_criteria,
     canon,
@@ -273,10 +274,15 @@ export function canonicalizeSpec(spec: BuildSpec, recipesDir: string, prompt = "
 export const gateDomains = (
   spec: Pick<BuildSpec, "recipe" | "app_name">,
   prompt: string,
+  componentsDir?: string,
 ): string[] =>
-  !prompt || spec.recipe === "out_of_scope"
+  !prompt
     ? []
-    : [...new Set(detectDomains(prompt, spec.recipe, spec.app_name).map((d) => d.component))];
+    : componentsDir && "entities" in spec
+      ? gateComponents(prompt, spec as BuildSpec, componentsDir)
+      : spec.recipe === "out_of_scope"
+        ? []
+        : [...new Set(detectDomains(prompt, spec.recipe, spec.app_name).map((d) => d.component))];
 
 /**
  * Separates the request's general requirements (ADR-0069). A request that names the use case and only general
@@ -290,6 +296,82 @@ export function withGeneral(spec: BuildSpec, prompt: string, recipesDir: string)
     .filter((c) => c.from === out.recipe && !c.entity)
     .map((c) => c.criterion);
   return { ...out, acceptance_criteria: own.length ? own : spec.acceptance_criteria };
+}
+
+/**
+ * The recipe a request's criteria are measured on: its own, or — for a request no product family matched but whose
+ * functions catalogue components select by code (ADR-0073) — the closest template those components are built on.
+ */
+function hostRecipe(
+  spec: BuildSpec,
+  recipesDir: string,
+  components: readonly string[],
+): string | null {
+  if (spec.recipe !== "out_of_scope") return spec.recipe;
+  if (components.length === 0) return null;
+  const closest = spec.closest_recipe ?? "saas-crud";
+  return hasRecipe(recipesDir, closest) ? closest : "saas-crud";
+}
+
+/**
+ * Domain components the request selects by code (fidelity patterns and domain detectors, ADR-0042/0033), known
+ * before the scope gate so the functions their canonical criteria prove count as covered (ADR-0073). Deterministic,
+ * no model: the same detection the build runs after the gate. For a request no product family matched they are
+ * detected on the closest template (where ADR-0052 builds a request every requirement of which is covered).
+ */
+export function gateComponents(prompt: string, spec: BuildSpec, componentsDir: string): string[] {
+  const recipesDir = join(componentsDir, "..", "recipes");
+  const host = spec.recipe === "out_of_scope" ? (spec.closest_recipe ?? "saas-crud") : spec.recipe;
+  const recipeId = hasRecipe(recipesDir, host) ? host : "saas-crud";
+  try {
+    const chain = recipeChain(recipesDir, recipeId);
+    const { wired } = wireFidelitySync(
+      prompt,
+      { ...spec, recipe: recipeId as BuildSpec["recipe"] },
+      {
+        recipeId,
+        recipeChain: chain.map((m) => m.id),
+        componentsDir,
+        knownEntities: mergedRecipe(chain).providedEntities,
+      },
+    );
+    return [
+      ...new Set([
+        ...wired.selected.map((s) => s.component),
+        ...detectDomains(prompt, recipeId, spec.app_name).map((d) => d.component),
+      ]),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Requirements a shipped test proves, known at the gate (ADR-0063): the recipe chain's tests and those of the domain
+ * components the request selects by code (ADR-0073). A request no family matched has none unless such components
+ * select it onto the closest template.
+ */
+export function provenAtGate(
+  spec: BuildSpec,
+  recipesDir: string,
+  components: readonly string[],
+): Set<string> {
+  const recipe = hostRecipe(spec, recipesDir, components);
+  if (!recipe) return new Set();
+  return new Set(
+    planCriteria(spec.acceptance_criteria, recipesDir, recipe, [...components], {
+      entities: spec.entities,
+      roles: spec.roles,
+      about: [
+        spec.app_name,
+        spec.summary,
+        ...spec.entities.map((e) => e.name),
+        ...(spec.request_words ?? []),
+      ],
+    })
+      .filter((c) => c.status === "covered")
+      .map((c) => c.criterion),
+  );
 }
 
 export async function runBuild(
@@ -399,11 +481,18 @@ export async function runBuild(
   if (spec.palette === undefined) spec.palette = extractPalette(prompt);
   // The request's criteria in the use case's canonical wording where they map to it (ADR-0063). Approved plans keep
   // the stored spec (canonicalized when planned).
+  const catalogDir = join(deps.repoRoot, "catalog/components");
+  // Domain components the request selects by code: their canonical criteria count before the gate (ADR-0073).
+  const domainIds = options.spec ? [] : gateComponents(prompt, spec, catalogDir);
   if (!options.spec) {
-    const mapped = canonicalizeSpec(spec, join(deps.repoRoot, "catalog/recipes"), prompt);
+    const mapped = canonicalizeSpec(
+      spec,
+      join(deps.repoRoot, "catalog/recipes"),
+      prompt,
+      domainIds,
+    );
     if (mapped > 0) await deps.emit(buildId, "compiling", "canonical_criteria", { mapped });
   }
-  const catalogDir = join(deps.repoRoot, "catalog/components");
   // Scope gate (ADR-0052, supersedes ADR-0050 §4): only covered use cases, or the components the person chose, are
   // operated. Generation from an approved plan was gated when it was planned.
   const explicit = options.plan?.components ?? [];
@@ -428,28 +517,8 @@ export async function runBuild(
       ...(candidate
         ? { componentIds: candidate.components.map((c) => c.id) }
         : {
-            provenByTests: new Set(
-              spec.recipe === "out_of_scope"
-                ? []
-                : planCriteria(
-                    spec.acceptance_criteria,
-                    join(deps.repoRoot, "catalog/recipes"),
-                    spec.recipe,
-                    gateDomains(spec, prompt),
-                    {
-                      entities: spec.entities,
-                      roles: spec.roles,
-                      about: [
-                        spec.app_name,
-                        spec.summary,
-                        ...spec.entities.map((e) => e.name),
-                        ...(spec.request_words ?? []),
-                      ],
-                    },
-                  )
-                    .filter((c) => c.status === "covered")
-                    .map((c) => c.criterion),
-            ),
+            provenByTests: provenAtGate(spec, join(deps.repoRoot, "catalog/recipes"), domainIds),
+            domainComponents: domainIds,
           }),
     });
     lap("scope", t);

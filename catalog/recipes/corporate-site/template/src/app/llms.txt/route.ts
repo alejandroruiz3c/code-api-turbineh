@@ -1,6 +1,4 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { posts } from "@/db/schema";
+import { listPublished } from "@/blog/posts";
 import { line } from "@/lib/geo";
 import { absolute } from "@/lib/seo";
 import { getSite } from "@/server/site";
@@ -10,12 +8,7 @@ export const dynamic = "force-dynamic";
 /** /llms.txt — a concise, factual summary of this company for AI assistants and answer engines. */
 export async function GET(): Promise<Response> {
   const site = await getSite();
-  const latest = await db
-    .select({ slug: posts.slug, title: posts.title, excerpt: posts.excerpt })
-    .from(posts)
-    .where(eq(posts.published, true))
-    .orderBy(desc(posts.publishedAt))
-    .limit(20);
+  const { posts: latest } = await listPublished({ limit: 20 });
   const body = [
     "# __APP_NAME__",
     "",

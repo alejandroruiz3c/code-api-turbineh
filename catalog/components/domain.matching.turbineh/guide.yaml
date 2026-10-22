@@ -1,0 +1,111 @@
+schema: turbineh.guide/v0.1
+component: domain.matching.turbineh
+title: Deterministic matching of opportunities against an organization's profile, with the why of every match
+summary: >-
+  Each organization of a multi-tenant SaaS keeps a profile — sectors, business activities, geographic coverage and
+  interest keywords — and a list of records to watch (opportunities, tenders, grants, leads: the word comes from the
+  request). Fixed rules score every open record against the profile: each profile term found as whole words (case and
+  accents ignored) adds its dimension's weight; records past their deadline, closed or marked "not relevant" are left
+  out. The matches dashboard lists them best first, each with its score and the terms that produced it. Records have a
+  searchable, filterable list and a detail page with the source link; a JSON API serves the same data. Everything is
+  scoped to the caller's active organization. No AI, no external data source, no alert emails.
+keywords:
+  [matching, opportunity matching, opportunities, tenders, grants, leads, organization profile, sectors, business
+   activities, geographic coverage, regions, interests, keywords, relevance, score, ranking, why it matches,
+   explainable, deterministic, feedback, relevant, not relevant, business intelligence, opportunity monitoring,
+   multi-tenant, tenant isolation, API]
+synonyms:
+  opportunity: [tender, call for tenders, grant, subsidy, lead, deal, licitación, oportunidad, convocatoria]
+  organization profile: [company profile, business profile, interests, perfil de organización]
+  matches: [relevant opportunities, recommendations, coincidencias]
+use_cases:
+  - "Business-intelligence SaaS: each subscribed company sees the public tenders that fit its sectors and regions"
+  - "Grant finder: research groups see open calls matching their topics, with the closing date"
+  - "Lead routing: a sales team sees the leads in its territories and industries first"
+use_when:
+  - "The request says records should be matched, recommended or ranked against an organization's (or user's) interests, sectors, activities or regions"
+  - "Every match must be explainable and reproducible (audits, B2B customers asking why something was shown)"
+avoid_when:
+  - "Semantic or AI similarity (use the ai-agents recipe with the TurbineH orchestrator)"
+  - "Collecting records from external sites or feeds (not included: records are added by people or imported by your own code through the service)"
+  - "Personal recommendations from behaviour (clicks, purchases)"
+tradeoffs:
+  - { choice: "Term matching with fixed weights", gain: "Deterministic, explainable, testable; no model or index to run", cost: "Synonyms must be written in the profile (\"PV\" does not match \"photovoltaic\")" }
+  - { choice: "Scored on request (up to 2,000 open records)", gain: "Always current with the profile, no background job", cost: "Very large catalogues need a precomputed table (see extension points)" }
+  - { choice: "Feedback per organization", gain: "One decision hides a record for the whole team", cost: "No per-person views" }
+config:
+  - { name: "src/matching/params.json", default: "opportunity/opportunities, weights 3/2/2/1, minScore 1", description: "The records' word, the points per dimension and the minimum score (validated at start-up)" }
+  - { name: "src/server/role-policy.ts / src/server/permissions.ts", default: "configure: owner (and admin in the base policy); create/update: per role", description: "Who edits the profile (configure), adds (create) and edits (update) records; domain.membership-access.turbineh maps the request's roles" }
+interfaces:
+  - { name: scoreRecord, signature: "scoreRecord(profile, record, weights) → { score, reasons: { dimension, term, points }[] }", where: src/matching/score.ts }
+  - { name: matchRecords, signature: "matchRecords(profile, records, { weights, minScore, today, hidden? }) → Match[] (best first)", where: src/matching/score.ts }
+  - { name: matchesFor, signature: "matchesFor(actor, now?) → Promise<Match<MatchRecord>[]>", where: src/matching/service.ts }
+  - { name: "createRecord / updateRecord", signature: "createRecord(actor, { title, description, sector, activity, region, deadline, sourceUrl, status }) → MatchRecord", where: src/matching/service.ts }
+  - { name: "saveProfile", signature: "saveProfile(actor, { sectors, activities, regions, keywords }: comma/line-separated strings) → MatchingProfile", where: src/matching/service.ts }
+  - { name: "Pages", signature: "/dashboard/matching (matches), /dashboard/matching/profile, /dashboard/matching/records?q=&sector=&region=&status=&before=, /dashboard/matching/records/{id}", where: src/app/dashboard/matching/ }
+  - { name: "JSON API", signature: "GET /api/matching/opportunities[?filters], GET /api/matching/opportunities/{id}, GET /api/matching/matches → { data } (401 without session, 404 outside the organization)", where: src/app/api/matching/ }
+extension_points:
+  - what: "Import records from your own source (a CSV, a feed you are allowed to use)"
+    where: "src/matching/service.ts (createRecord)"
+    how: "Call createRecord(actor, input) per record from a server action or job; input is validated by recordInput (src/matching/rules.ts) and the organization comes from the actor."
+  - what: "Change how much each dimension counts"
+    where: "src/matching/params.json"
+    how: "Edit weights (0 turns a dimension off) and minScore; scores and the order change everywhere at once."
+  - what: "Add a dimension (e.g. company size)"
+    where: "src/matching/score.ts, src/db/component-matching.ts, src/components/matching/forms.tsx"
+    how: "Add the profile field and record column, one check() line in scoreRecord with its weight, and a unit test with the expected reason."
+  - what: "Precompute matches for very large catalogues"
+    where: "src/matching/service.ts (matchesFor)"
+    how: "Store matchRecords() results per organization from a scheduled job (jobs.scheduled.turbineh) and read them in the page; keep scoreRecord as the single rule."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16, drizzle-orm with PostgreSQL, better-auth organizations, zod 4"
+  recipes: [saas-crud]
+  requires: []
+  works_with: [domain.membership-access.turbineh, domain.audit-log.turbineh]
+  notes: "Uses the base template's requireMember(), role matrix and audit() hook; with domain.audit-log.turbineh every profile and record change is logged."
+security:
+  - "Every query filters by the caller's active organization; another organization's ids answer 404 (pages and API)"
+  - "Roles are checked in the service, not only in the screens: configure for the profile, create/update for records"
+  - "The JSON API re-checks session and membership (no redirects), answers 401 without a member session and is never cached"
+  - "Source links accept http(s) only and open with rel=noopener noreferrer nofollow; descriptions render as text"
+guarantees:
+  - { claim: "Profile with sectors, activities, coverage and keywords per organization", test: "tests/e2e/matching.spec.ts › the organization saves its profile with sectors, business activities, geographic coverage and interest keywords" }
+  - { claim: "Search and filters by sector, region, status and deadline", test: "tests/e2e/matching.spec.ts › the owner adds opportunities and finds them by text search and by sector, region, status and deadline filters" }
+  - { claim: "Detail page with description, source link and why", test: "tests/e2e/matching.spec.ts › the detail page shows the full description, the source link and why it matches the organization's profile" }
+  - { claim: "Matches best first with the reasons of each", test: "tests/e2e/matching.spec.ts › the dashboard shows the opportunities that match the organization's interests, best first, with why each one matches" }
+  - { claim: "Not relevant hides a record from the matches", test: "tests/e2e/matching.spec.ts › a member marks an opportunity not relevant and it leaves the matches; interested is recorded" }
+  - { claim: "API scoped to the organization; 401 without a session", test: "tests/e2e/matching.spec.ts › the API answers only the active organization's records and matches, and refuses requests without a session" }
+  - { claim: "Another organization's data is never reachable (404 on pages and API)", test: "tests/e2e/matching.spec.ts › a user cannot access data belonging to another organization: its record ids answer 404 on pages and in every API request, and lists never show them" }
+  - { claim: "Deterministic order", test: "tests/unit/matching.test.ts › orders matches by score, then nearest deadline (none last), then id — the same every time" }
+  - { claim: "Whole words, case and accents ignored", test: "tests/unit/matching.test.ts › matches terms as whole words, ignoring case and accents" }
+  - { claim: "Closed, expired and not-relevant records are never matched", test: "tests/unit/matching.test.ts › leaves out closed records, records past their deadline and records marked not relevant" }
+  - { claim: "Only roles that may configure edit the profile", test: "tests/unit/matching-policy.test.ts › only roles that may configure edit the organization's matching profile; unknown roles may do nothing" }
+limits:
+  - "Term matching only: no synonyms, stemming or semantic similarity; no region hierarchy"
+  - "Records are added by people (or your own import code); nothing is fetched from external sources"
+  - "No alert emails, saved searches or relations between records and other organizations"
+  - "Up to 2,000 open records scored per request"
+example: |-
+  // A server page or action in the app: the active organization's best matches, each with the why of its score.
+  import { reasonText } from "@/matching/score";
+  import { matchesFor, type Actor } from "@/matching/service";
+
+  export async function topMatches(actor: Actor, count = 5): Promise<string[]> {
+    const matches = await matchesFor(actor);
+    return matches
+      .slice(0, count)
+      .map((m) => `${m.record.title} (score ${m.score}): ${m.reasons.map(reasonText).join(", ")}`);
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/matching/params.json
+  schema: params.schema.json
+  fields:
+    - { name: entity.singular / entity.plural, default: "opportunity / opportunities", description: "The app's word for the records (tender, grant, lead…)" }
+    - { name: weights, default: "sectors 3, activities 2, regions 2, keywords 1", description: "Points each profile term found adds (0–10)" }
+    - { name: minScore, default: "1", description: "Minimum score of a match" }
+  example: |
+    { "entity": { "singular": "tender", "plural": "tenders" }, "weights": { "sectors": 3, "activities": 2, "regions": 2, "keywords": 1 }, "minScore": 2 }

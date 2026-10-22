@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- New use cases from real demand (ADR-0073): `content.blog.turbineh` (Markdown posts with frontmatter, drafts,
+  authors, tags, search, reading time, RSS, blog sitemap, Article JSON-LD; required by corporate-site, selectable on
+  any recipe), `media.screen-recording.turbineh` (screen + camera in the browser, asks up to 4K and records what the
+  device delivers, canvas layouts, MediaRecorder, private storage, Range playback, revocable share links) and
+  `domain.matching.turbineh` (organization profile, records matched deterministically with reasons, organization
+  isolation on pages and API). Base SaaS: organization switcher, second organization, account page. Role assignment
+  requests select membership-access. The gate counts the canonical criteria of the domain components code selects
+  before it (`gateComponents`), also for requests no product family matched. Canonical criteria and E2E for all.
 - Contact email for invitation workspaces (ADR-0074): `/access` asks for an email (required, validated, with what it is
   for) and stores it per workspace (`workspace_contacts`, migration 0017); workspaces that entered before are asked
   once per visit by a non-blocking banner (`GET/PUT/DELETE /v1/contact`). New plans and builds carry it as their

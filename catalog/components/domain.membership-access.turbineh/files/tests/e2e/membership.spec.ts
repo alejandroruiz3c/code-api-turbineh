@@ -169,5 +169,10 @@ test.describe.serial("membership and access", () => {
     await row.getByLabel(`Role of ${email}`).selectOption(target!);
     await row.getByRole("button", { name: "Save" }).click();
     await expect(row.getByRole("status")).toHaveText("Role changed.");
+    // The assigned role is stored: after a reload the member has it.
+    await page.reload();
+    await expect(
+      page.getByTestId("member-row").filter({ hasText: email }).getByLabel(`Role of ${email}`),
+    ).toHaveValue(target!);
   });
 });

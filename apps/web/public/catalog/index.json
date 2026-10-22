@@ -2288,6 +2288,253 @@
       "details": "https://software.turbineh.com/v1/capabilities/commerce.cart.zustand"
     },
     {
+      "id": "content.blog.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "content",
+      "package": "pkg:generic/turbineh/content.blog.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "content.blog",
+        "content.rss"
+      ],
+      "does": "The site's blog: Markdown posts with optional frontmatter (title, slug, excerpt, author, tags, status) written in a staff-only editor, drafts that stay private until published, unpublish and delete; authors with a bio and their own page; tags with their own page; a public list newest first, paginated, with keyword search; a post page with author, date, reading time, tags, safe Markdown (no raw HTML), Article JSON-LD and OpenGraph metadata; an RSS 2.0 feed and a blog sitemap (published posts, tag and author pages) where drafts never appear.",
+      "doesNot": "Does not take comments, send newsletters or emails, schedule posts for a future date, upload images (links to public images only), translate posts, or write posts with AI; one blog per app",
+      "title": "Blog with Markdown posts, frontmatter, drafts, authors, tags, search, reading time, RSS, sitemap and structured data",
+      "summary": "The site's blog. Staff (verified ADMIN_EMAILS) write posts in Markdown in /dashboard/blog: the title, slug, author, tags and summary come from the form or from frontmatter at the top of the text (which wins), and the post is saved as a draft — private: absent from the list, the post URL (404), the RSS feed and the sitemap — or published. Staff publish, unpublish and delete posts and manage authors with a bio. Visitors, without an account, read the list (newest first, paginated, with author, date, reading time and tags), search it by keyword, open tag and author pages, and read each post rendered from Markdown without raw HTML, with Article (BlogPosting) JSON-LD and OpenGraph metadata. /blog/rss.xml is an RSS 2.0 feed of the latest published posts and /blog/sitemap.xml lists the published posts and their tag and author pages.",
+      "useCases": [
+        "A company or research group publishes articles on its website with authors, topics and an RSS feed",
+        "A product landing page adds a blog for announcements and guides",
+        "A SaaS keeps a public changelog or knowledge articles next to its app"
+      ],
+      "useWhen": [
+        "The request asks for a blog, articles, posts or news that visitors read and staff write",
+        "Posts need drafts, authors, tags, search, reading time, RSS or SEO metadata"
+      ],
+      "avoidWhen": [
+        "Comments, likes, newsletters or member-only posts (not covered)",
+        "A multi-author platform where any signed-up user publishes (this blog is written by staff)",
+        "Rich media posts with uploaded images or video, or a WYSIWYG editor"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Own Markdown renderer instead of a Markdown library",
+          "gain": "No dependency, raw HTML can never execute (React elements only)",
+          "cost": "A subset of Markdown: no tables, images or footnotes"
+        },
+        {
+          "choice": "Frontmatter parsed by a small reader of key: value lines",
+          "gain": "No YAML library and nothing executable; unknown keys are ignored",
+          "cost": "Only the documented keys (title, slug, excerpt, author, tags, status)"
+        },
+        {
+          "choice": "Substring search with ILIKE",
+          "gain": "Works on any PostgreSQL with no index setup",
+          "cost": "No relevance ranking or stemming; slower beyond many thousands of posts"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/blog/params.json",
+          "default": "postsPerPage 10, wordsPerMinute 200, feedItems 20",
+          "description": "Page size, reading speed and RSS length (from the request)"
+        },
+        {
+          "name": "ADMIN_EMAILS",
+          "description": "Staff emails (verified) who may write, publish and delete posts"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "listPublished",
+          "signature": "listPublished({ page?, q?, tag?, author?, limit? }) → { posts: PostCard[], page, pages, total } — published only, newest first",
+          "where": "src/blog/posts.ts"
+        },
+        {
+          "name": "getPublished",
+          "signature": "getPublished(slug) → PostCard & { body, bio } | null — null for drafts and unknown slugs",
+          "where": "src/blog/posts.ts"
+        },
+        {
+          "name": "savePost",
+          "signature": "savePost({ id, title?, slug?, excerpt?, authorId?, tags?, source, intent: 'draft' | 'publish' }) → { id, slug, status }",
+          "where": "src/blog/posts.ts"
+        },
+        {
+          "name": "Status",
+          "signature": "setStatus(id, 'draft' | 'published'), deletePost(id), saveAuthor({ id, name, bio }), deleteAuthor(id)",
+          "where": "src/blog/posts.ts"
+        },
+        {
+          "name": "Text helpers",
+          "signature": "parseFrontmatter(source), readingMinutes(markdown, wpm), parseTags(input), slugify, xml, jsonLd, likePattern, excerptOf",
+          "where": "src/blog/text.ts"
+        },
+        {
+          "name": "Markdown",
+          "signature": "<Markdown source={markdown} /> — React elements only, safe links",
+          "where": "src/blog/markdown.tsx"
+        },
+        {
+          "name": "BlogShell",
+          "signature": "<BlogShell>{children}</BlogShell> — the public blog frame (the site's own on a corporate site)",
+          "where": "src/blog/shell.tsx"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Show the latest posts elsewhere (home page, footer)",
+          "where": "any server component",
+          "how": "const { posts } = await listPublished({ limit: 3 }) — drafts are never returned."
+        },
+        {
+          "what": "Change the blog's frame or menu",
+          "where": "src/blog/shell.tsx",
+          "how": "Wrap children in your site header/footer; every public blog page uses BlogShell."
+        },
+        {
+          "what": "Let workspace roles write instead of staff",
+          "where": "src/app/dashboard/blog/actions.ts, src/app/dashboard/blog/**/page.tsx",
+          "how": "Replace requireAdmin() with requireMember() and check can(role, \"update\") before each change."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16 app router (server components, server actions, sitemap.ts), drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "corporate-site",
+          "landing-waitlist",
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "site.public-pages.turbineh",
+          "growth.waitlist.turbineh"
+        ],
+        "notes": "Required by corporate-site, whose sitemap, llms.txt and home page read the published posts from src/blog/posts.ts."
+      },
+      "security": [
+        "Editor pages and every write action call requireAdmin(): a verified ADMIN_EMAILS address, deny by default",
+        "Public reads filter status = published in the data layer, so a draft can't reach a page, the feed or the sitemap",
+        "Markdown becomes React elements only: raw HTML is shown as text; links limited to http(s), mailto and site paths",
+        "JSON-LD escapes '<'; RSS and sitemap text is XML-escaped; slugs are validated before any query",
+        "Search input is bounded to 100 characters and LIKE wildcards are escaped"
+      ],
+      "guarantees": [
+        {
+          "claim": "Drafts stay private until published; frontmatter fills the post",
+          "test": "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it"
+        },
+        {
+          "claim": "Post page with author, date, reading time, tags, safe Markdown, JSON-LD and OpenGraph",
+          "test": "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata"
+        },
+        {
+          "claim": "List newest first and paginated",
+          "test": "tests/e2e/blog.spec.ts › a visitor sees the published posts newest first, paginated, each with its author, date, reading time and tags"
+        },
+        {
+          "claim": "Tag pages",
+          "test": "tests/e2e/blog.spec.ts › a visitor opens a tag and sees only the posts with that tag"
+        },
+        {
+          "claim": "Author pages",
+          "test": "tests/e2e/blog.spec.ts › a visitor opens an author page with the author's bio and only that author's posts"
+        },
+        {
+          "claim": "Keyword search",
+          "test": "tests/e2e/blog.spec.ts › a visitor searches posts by keyword and sees only the matching posts"
+        },
+        {
+          "claim": "RSS 2.0 feed",
+          "test": "tests/e2e/blog.spec.ts › the RSS feed lists the published posts newest first with escaped titles, author and tags"
+        },
+        {
+          "claim": "Blog sitemap",
+          "test": "tests/e2e/blog.spec.ts › the blog sitemap lists the published posts, their tag pages and author pages"
+        },
+        {
+          "claim": "Unpublish and delete",
+          "test": "tests/e2e/blog.spec.ts › the admin unpublishes and deletes posts: they disappear from the blog, the RSS feed and the sitemap"
+        },
+        {
+          "claim": "Staff-only editor",
+          "test": "tests/e2e/blog.spec.ts › people who are not staff cannot open the blog editor"
+        },
+        {
+          "claim": "Reading time",
+          "test": "tests/unit/blog.test.ts › reading time is the post's words divided by the words per minute, rounded up, at least one minute"
+        },
+        {
+          "claim": "Frontmatter parsing",
+          "test": "tests/unit/blog.test.ts › parses Markdown frontmatter (title, slug, excerpt, author, tags, status) and keeps the body without it"
+        },
+        {
+          "claim": "Safe Markdown",
+          "test": "tests/unit/blog.test.ts › renders Markdown without executing HTML and only allows safe link targets"
+        }
+      ],
+      "limits": [
+        "One blog per app, written by staff; no comments, newsletters, scheduled publication dates, image uploads or translations",
+        "Markdown subset (headings, paragraphs, lists, bold, italic, inline code, links)",
+        "Search is a case-insensitive substring match over title, summary and text"
+      ],
+      "example": "// Server code in the app (a server component or route): the five latest published posts, newest first, each with\n// its author, tags and reading time (drafts are never returned).\nimport { listPublished } from \"@/blog/posts\";\n\nexport async function latestPosts() {\n  const { posts } = await listPublished({ limit: 5 });\n  return posts.map((p) => ({\n    href: `/blog/${p.slug}`,\n    title: p.title,\n    minutes: p.readingMinutes,\n    tags: p.tags.map((t) => t.name),\n  }));\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "blog",
+        "articles",
+        "posts",
+        "markdown",
+        "frontmatter",
+        "drafts",
+        "publish",
+        "authors",
+        "author page",
+        "tags",
+        "categories",
+        "reading time",
+        "search posts",
+        "rss",
+        "feed",
+        "sitemap",
+        "json-ld",
+        "structured data",
+        "opengraph",
+        "seo",
+        "news",
+        "insights"
+      ],
+      "synonyms": {
+        "post": [
+          "article",
+          "blog post",
+          "entry",
+          "story",
+          "insight",
+          "news item"
+        ],
+        "tag": [
+          "topic",
+          "label",
+          "category"
+        ],
+        "draft": [
+          "unpublished post",
+          "private post"
+        ],
+        "author": [
+          "writer",
+          "contributor",
+          "byline"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/content.blog.turbineh"
+    },
+    {
       "id": "content.frontmatter.gray-matter",
       "version": "0.1.0",
       "status": "approved",
@@ -8023,6 +8270,253 @@
       "details": "https://software.turbineh.com/v1/capabilities/domain.bookings.turbineh"
     },
     {
+      "id": "domain.matching.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "domain",
+      "package": "pkg:generic/turbineh/domain.matching.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "domain.matching"
+      ],
+      "does": "Deterministic matching of records (opportunities, tenders, grants, leads — the word comes from the request) against each organization's profile in a multi-tenant SaaS: a configurable organization profile (sectors, business activities, geographic coverage, interest keywords) edited by roles that may configure; records with title, description, sector, activity, region, deadline, source link and status, added and edited by members who may, listed with text search and sector, region, status and deadline filters; a detail page with the full description, the source link and why it matches; a matches dashboard ordered by a fixed-rule score (each profile term found adds its dimension's weight; whole-word, case- and accent-insensitive; open records not past their deadline) with the reasons of every match; per-organization feedback (relevant, not relevant, interested) where not relevant hides a record from the matches; a session-authenticated JSON API (records, one record, matches); strict isolation: every read and write is scoped to the caller's active organization and another organization's ids answer 404.",
+      "doesNot": "Does not use AI or semantic similarity, fetch or scrape records from external sources, send alert emails or notifications, keep saved searches, or relate records to other organizations; no region hierarchy (Spain does not include Madrid unless written)",
+      "title": "Deterministic matching of opportunities against an organization's profile, with the why of every match",
+      "summary": "Each organization of a multi-tenant SaaS keeps a profile — sectors, business activities, geographic coverage and interest keywords — and a list of records to watch (opportunities, tenders, grants, leads: the word comes from the request). Fixed rules score every open record against the profile: each profile term found as whole words (case and accents ignored) adds its dimension's weight; records past their deadline, closed or marked \"not relevant\" are left out. The matches dashboard lists them best first, each with its score and the terms that produced it. Records have a searchable, filterable list and a detail page with the source link; a JSON API serves the same data. Everything is scoped to the caller's active organization. No AI, no external data source, no alert emails.",
+      "useCases": [
+        "Business-intelligence SaaS: each subscribed company sees the public tenders that fit its sectors and regions",
+        "Grant finder: research groups see open calls matching their topics, with the closing date",
+        "Lead routing: a sales team sees the leads in its territories and industries first"
+      ],
+      "useWhen": [
+        "The request says records should be matched, recommended or ranked against an organization's (or user's) interests, sectors, activities or regions",
+        "Every match must be explainable and reproducible (audits, B2B customers asking why something was shown)"
+      ],
+      "avoidWhen": [
+        "Semantic or AI similarity (use the ai-agents recipe with the TurbineH orchestrator)",
+        "Collecting records from external sites or feeds (not included: records are added by people or imported by your own code through the service)",
+        "Personal recommendations from behaviour (clicks, purchases)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "Term matching with fixed weights",
+          "gain": "Deterministic, explainable, testable; no model or index to run",
+          "cost": "Synonyms must be written in the profile (\"PV\" does not match \"photovoltaic\")"
+        },
+        {
+          "choice": "Scored on request (up to 2,000 open records)",
+          "gain": "Always current with the profile, no background job",
+          "cost": "Very large catalogues need a precomputed table (see extension points)"
+        },
+        {
+          "choice": "Feedback per organization",
+          "gain": "One decision hides a record for the whole team",
+          "cost": "No per-person views"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/matching/params.json",
+          "default": "opportunity/opportunities, weights 3/2/2/1, minScore 1",
+          "description": "The records' word, the points per dimension and the minimum score (validated at start-up)"
+        },
+        {
+          "name": "src/server/role-policy.ts / src/server/permissions.ts",
+          "default": "configure: owner (and admin in the base policy); create/update: per role",
+          "description": "Who edits the profile (configure), adds (create) and edits (update) records; domain.membership-access.turbineh maps the request's roles"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "scoreRecord",
+          "signature": "scoreRecord(profile, record, weights) → { score, reasons: { dimension, term, points }[] }",
+          "where": "src/matching/score.ts"
+        },
+        {
+          "name": "matchRecords",
+          "signature": "matchRecords(profile, records, { weights, minScore, today, hidden? }) → Match[] (best first)",
+          "where": "src/matching/score.ts"
+        },
+        {
+          "name": "matchesFor",
+          "signature": "matchesFor(actor, now?) → Promise<Match<MatchRecord>[]>",
+          "where": "src/matching/service.ts"
+        },
+        {
+          "name": "createRecord / updateRecord",
+          "signature": "createRecord(actor, { title, description, sector, activity, region, deadline, sourceUrl, status }) → MatchRecord",
+          "where": "src/matching/service.ts"
+        },
+        {
+          "name": "saveProfile",
+          "signature": "saveProfile(actor, { sectors, activities, regions, keywords }: comma/line-separated strings) → MatchingProfile",
+          "where": "src/matching/service.ts"
+        },
+        {
+          "name": "Pages",
+          "signature": "/dashboard/matching (matches), /dashboard/matching/profile, /dashboard/matching/records?q=&sector=&region=&status=&before=, /dashboard/matching/records/{id}",
+          "where": "src/app/dashboard/matching/"
+        },
+        {
+          "name": "JSON API",
+          "signature": "GET /api/matching/opportunities[?filters], GET /api/matching/opportunities/{id}, GET /api/matching/matches → { data } (401 without session, 404 outside the organization)",
+          "where": "src/app/api/matching/"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Import records from your own source (a CSV, a feed you are allowed to use)",
+          "where": "src/matching/service.ts (createRecord)",
+          "how": "Call createRecord(actor, input) per record from a server action or job; input is validated by recordInput (src/matching/rules.ts) and the organization comes from the actor."
+        },
+        {
+          "what": "Change how much each dimension counts",
+          "where": "src/matching/params.json",
+          "how": "Edit weights (0 turns a dimension off) and minScore; scores and the order change everywhere at once."
+        },
+        {
+          "what": "Add a dimension (e.g. company size)",
+          "where": "src/matching/score.ts, src/db/component-matching.ts, src/components/matching/forms.tsx",
+          "how": "Add the profile field and record column, one check() line in scoreRecord with its weight, and a unit test with the expected reason."
+        },
+        {
+          "what": "Precompute matches for very large catalogues",
+          "where": "src/matching/service.ts (matchesFor)",
+          "how": "Store matchRecords() results per organization from a scheduled job (jobs.scheduled.turbineh) and read them in the page; keep scoreRecord as the single rule."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20",
+        "framework": "next ^16, drizzle-orm with PostgreSQL, better-auth organizations, zod 4",
+        "recipes": [
+          "saas-crud"
+        ],
+        "requires": [],
+        "works_with": [
+          "domain.membership-access.turbineh",
+          "domain.audit-log.turbineh"
+        ],
+        "notes": "Uses the base template's requireMember(), role matrix and audit() hook; with domain.audit-log.turbineh every profile and record change is logged."
+      },
+      "security": [
+        "Every query filters by the caller's active organization; another organization's ids answer 404 (pages and API)",
+        "Roles are checked in the service, not only in the screens: configure for the profile, create/update for records",
+        "The JSON API re-checks session and membership (no redirects), answers 401 without a member session and is never cached",
+        "Source links accept http(s) only and open with rel=noopener noreferrer nofollow; descriptions render as text"
+      ],
+      "guarantees": [
+        {
+          "claim": "Profile with sectors, activities, coverage and keywords per organization",
+          "test": "tests/e2e/matching.spec.ts › the organization saves its profile with sectors, business activities, geographic coverage and interest keywords"
+        },
+        {
+          "claim": "Search and filters by sector, region, status and deadline",
+          "test": "tests/e2e/matching.spec.ts › the owner adds opportunities and finds them by text search and by sector, region, status and deadline filters"
+        },
+        {
+          "claim": "Detail page with description, source link and why",
+          "test": "tests/e2e/matching.spec.ts › the detail page shows the full description, the source link and why it matches the organization's profile"
+        },
+        {
+          "claim": "Matches best first with the reasons of each",
+          "test": "tests/e2e/matching.spec.ts › the dashboard shows the opportunities that match the organization's interests, best first, with why each one matches"
+        },
+        {
+          "claim": "Not relevant hides a record from the matches",
+          "test": "tests/e2e/matching.spec.ts › a member marks an opportunity not relevant and it leaves the matches; interested is recorded"
+        },
+        {
+          "claim": "API scoped to the organization; 401 without a session",
+          "test": "tests/e2e/matching.spec.ts › the API answers only the active organization's records and matches, and refuses requests without a session"
+        },
+        {
+          "claim": "Another organization's data is never reachable (404 on pages and API)",
+          "test": "tests/e2e/matching.spec.ts › a user cannot access data belonging to another organization: its record ids answer 404 on pages and in every API request, and lists never show them"
+        },
+        {
+          "claim": "Deterministic order",
+          "test": "tests/unit/matching.test.ts › orders matches by score, then nearest deadline (none last), then id — the same every time"
+        },
+        {
+          "claim": "Whole words, case and accents ignored",
+          "test": "tests/unit/matching.test.ts › matches terms as whole words, ignoring case and accents"
+        },
+        {
+          "claim": "Closed, expired and not-relevant records are never matched",
+          "test": "tests/unit/matching.test.ts › leaves out closed records, records past their deadline and records marked not relevant"
+        },
+        {
+          "claim": "Only roles that may configure edit the profile",
+          "test": "tests/unit/matching-policy.test.ts › only roles that may configure edit the organization's matching profile; unknown roles may do nothing"
+        }
+      ],
+      "limits": [
+        "Term matching only: no synonyms, stemming or semantic similarity; no region hierarchy",
+        "Records are added by people (or your own import code); nothing is fetched from external sources",
+        "No alert emails, saved searches or relations between records and other organizations",
+        "Up to 2,000 open records scored per request"
+      ],
+      "example": "// A server page or action in the app: the active organization's best matches, each with the why of its score.\nimport { reasonText } from \"@/matching/score\";\nimport { matchesFor, type Actor } from \"@/matching/service\";\n\nexport async function topMatches(actor: Actor, count = 5): Promise<string[]> {\n  const matches = await matchesFor(actor);\n  return matches\n    .slice(0, count)\n    .map((m) => `${m.record.title} (score ${m.score}): ${m.reasons.map(reasonText).join(\", \")}`);\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "matching",
+        "opportunity matching",
+        "opportunities",
+        "tenders",
+        "grants",
+        "leads",
+        "organization profile",
+        "sectors",
+        "business activities",
+        "geographic coverage",
+        "regions",
+        "interests",
+        "keywords",
+        "relevance",
+        "score",
+        "ranking",
+        "why it matches",
+        "explainable",
+        "deterministic",
+        "feedback",
+        "relevant",
+        "not relevant",
+        "business intelligence",
+        "opportunity monitoring",
+        "multi-tenant",
+        "tenant isolation",
+        "API"
+      ],
+      "synonyms": {
+        "opportunity": [
+          "tender",
+          "call for tenders",
+          "grant",
+          "subsidy",
+          "lead",
+          "deal",
+          "licitación",
+          "oportunidad",
+          "convocatoria"
+        ],
+        "organization profile": [
+          "company profile",
+          "business profile",
+          "interests",
+          "perfil de organización"
+        ],
+        "matches": [
+          "relevant opportunities",
+          "recommendations",
+          "coincidencias"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/domain.matching.turbineh"
+    },
+    {
       "id": "domain.membership-access.turbineh",
       "version": "0.1.0",
       "status": "approved",
@@ -11248,6 +11742,245 @@
         "at": "2026-10-13"
       },
       "details": "https://software.turbineh.com/v1/capabilities/jobs.scheduler.croner"
+    },
+    {
+      "id": "media.screen-recording.turbineh",
+      "version": "0.1.0",
+      "status": "approved",
+      "category": "media",
+      "package": "pkg:generic/turbineh/media.screen-recording.turbineh@0.1.0",
+      "license": "Apache-2.0",
+      "provides": [
+        "media.screen-recording"
+      ],
+      "does": "Screen and camera recording in the browser (Loom-style video messages): the screen through getDisplayMedia and the camera and microphone through getUserMedia, asked for up to the app's maximum resolution (up to 4K, 3840×2160) with `ideal` constraints, and the resolution each device really delivers shown honestly; layouts composed on a canvas and switchable while recording — camera bubble in any corner over the screen, side by side, screen only, camera only; MediaRecorder to MP4 when the browser supports it, else WebM (VP9/VP8 + Opus); upload to the workspace's private storage (storage.private-uploads.turbineh: local disk outside public/ or a private S3-compatible bucket), size-limited while read and recognised by content; a video library (title, duration, recorded resolution, layout, date), rename and delete; a player served with HTTP Range (seeking); share links with a 256-bit token (only its hash stored), watchable without an account and revocable.",
+      "doesNot": "Does not edit or trim videos, transcribe, caption or summarise (no AI), take comments or reactions, record system audio, stream live, transcode to another format or guarantee 4K: the recording is at most what the screen and camera deliver",
+      "title": "Screen and camera recording (Loom-style video messages) with layouts, up to 4K, private storage, a player and share links",
+      "summary": "A recorder page asks the browser for the screen (getDisplayMedia) and the camera and microphone (getUserMedia) at up to the app's maximum resolution — 720p, 1080p, 1440p or 4K (3840×2160) — with `ideal` constraints only, so a device that cannot deliver the asked resolution still records instead of failing. It then shows what each device really delivers (\"asked 3840×2160 · screen delivers 3840×2160 · camera delivers 1280×720\") and records at the highest resolution the sources deliver, never upscaled beyond it. The chosen layout is drawn on a canvas and can be switched while recording: camera bubble in any corner over the screen, side by side, screen only, camera only. The canvas stream and the microphone are recorded with MediaRecorder — MP4 when the browser records it, otherwise WebM with VP9 or VP8 and Opus — and uploaded to the workspace's private storage (storage.private-uploads.turbineh: a directory outside public/ or a private S3-compatible bucket). The upload is limited in size while it is read and recognised by content. Recordings appear in a video library with their title, duration, recorded resolution, layout and date; the player is served with HTTP Range so seeking works; a share link with a 256-bit token (only its SHA-256 stored) lets anyone watch without an account until it is revoked.",
+      "useCases": [
+        "A team records short screen + camera walkthroughs and shares them with a link, like Loom",
+        "Support or sales staff record a 4K screen demo with their face in a corner bubble and send the link to a customer"
+      ],
+      "useWhen": [
+        "The request records the screen, the camera, or both, in the browser, with layouts, and keeps or shares the videos",
+        "Videos must stay private to the workspace unless someone shares a revocable link"
+      ],
+      "avoidWhen": [
+        "Editing, trimming or cutting recordings, adding comments, reactions, transcripts, captions or AI summaries (not covered)",
+        "Live streaming, video calls or recording system audio (not covered)",
+        "A promise that every recording is 4K: the recording is at most what the screen and camera deliver",
+        "Native desktop or mobile recorder apps (TurbineH builds web apps only)"
+      ],
+      "tradeoffs": [
+        {
+          "choice": "`ideal` constraints, never `exact`/`min`",
+          "gain": "Recording always starts; the person sees what the device really gives",
+          "cost": "4K is asked for, not guaranteed"
+        },
+        {
+          "choice": "Compose on a canvas in the browser",
+          "gain": "Layouts switch live while recording, one file, no server video processing",
+          "cost": "The canvas costs CPU at high resolutions; the frame rate may drop on slow machines"
+        },
+        {
+          "choice": "Upload through the app (route handler) into the private storage driver",
+          "gain": "Same private storage, limits and access checks as other files; works on any host",
+          "cost": "The video is held in server memory while uploaded and served (bounded by maxBytes); no direct-to-bucket upload"
+        },
+        {
+          "choice": "Codec chosen by the browser (MP4 preferred, WebM fallback)",
+          "gain": "No transcoding server",
+          "cost": "Some players cannot play WebM (older Safari); WebM files from MediaRecorder carry no duration header (the duration is stored separately)"
+        }
+      ],
+      "config": [
+        {
+          "name": "src/recordings/params.json",
+          "default": "1080p, 30 fps, all four layouts, 30 minutes, 500 MB, share links on",
+          "description": "Highest resolution asked (2160p for 4K requests), frame rate, layouts offered, longest recording, largest upload, sharing (from the request)"
+        },
+        {
+          "name": "UPLOADS_DIR / STORAGE_DRIVER / S3_*",
+          "description": "Where videos are stored (storage.private-uploads.turbineh); use a private S3-compatible bucket on serverless hosts"
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "Upload route",
+          "signature": "POST /api/recordings?title&durationMs&width&height&requestedWidth&requestedHeight&frameRate&layout (body: video bytes) → 201 { id } | 413 | 422 | 429",
+          "where": "src/app/api/recordings/route.ts"
+        },
+        {
+          "name": "Media routes",
+          "signature": "GET /dashboard/recordings/<id>/media (member) and GET /v/<token>/media (share link) → 200 | 206 with Content-Range | 416 | 404",
+          "where": "src/app/dashboard/recordings/[id]/media/route.ts, src/app/v/[token]/media/route.ts"
+        },
+        {
+          "name": "Recording service",
+          "signature": "saveRecording(ctx, bytes, meta), listRecordings(ctx), getRecording(ctx, id), renameRecording, deleteRecording, shareRecording(ctx, id) → token, revokeShare, recordingByToken(token)",
+          "where": "src/recordings/service.ts"
+        },
+        {
+          "name": "Layout math",
+          "signature": "placeSources(layout, canvas, screen, camera, corner) → { screen, camera, cameraShape }; outputSize(resolution, layout, delivered); videoConstraints(resolution, frameRate); deliveredLabel(resolution, delivered)",
+          "where": "src/recordings/layout.ts"
+        },
+        {
+          "name": "Format and media helpers",
+          "signature": "pickMimeType(isTypeSupported); videoContainer(bytes); parseRange(header, size); readLimited(body, max); newShareToken(); hashToken(token)",
+          "where": "src/recordings/mime.ts, src/recordings/media.ts"
+        }
+      ],
+      "extensionPoints": [
+        {
+          "what": "Add a layout (e.g. camera on the left)",
+          "where": "src/recordings/config.ts (LAYOUT_KEYS, LAYOUT_LABELS), src/recordings/layout.ts (placeSources), params.schema.json",
+          "how": "Add the key and its placement, unit-test the rectangles in tests/unit/recordings.test.ts, and list it in params.json."
+        },
+        {
+          "what": "Store videos in a bucket",
+          "where": ".env (STORAGE_DRIVER=s3, S3_BUCKET, S3_BASE_URL, keys)",
+          "how": "The private storage driver of storage.private-uploads.turbineh is used as is; keep the bucket private."
+        },
+        {
+          "what": "Let only some roles record",
+          "where": "src/server/role-policy.ts (create), src/recordings/service.ts",
+          "how": "saveRecording checks can(role, \"create\"); rename, share and delete need the author or can(role, \"update\"/\"delete\")."
+        }
+      ],
+      "compatibility": {
+        "runtime": "node >= 20; browsers with getDisplayMedia, getUserMedia, canvas.captureStream and MediaRecorder (Chromium, Firefox, Safari 14.1+ desktop; screen capture is not available on mobile browsers)",
+        "framework": "next ^16 route handlers, server actions and a client component, drizzle-orm with PostgreSQL, zod 4",
+        "recipes": [
+          "saas-crud"
+        ],
+        "requires": [
+          "storage.private-uploads.turbineh"
+        ],
+        "works_with": [
+          "domain.audit-log.turbineh",
+          "domain.membership-access.turbineh"
+        ],
+        "notes": "Ships src/security/permissions-sources.ts, which makes the Security Pack's Permissions-Policy allow camera, microphone and display-capture to this origin only (\"(self)\"); without this component they stay denied. No CSP change: the live preview is the canvas itself and videos are served from the app's own origin."
+      },
+      "security": [
+        "Camera, microphone and screen capture are allowed to this origin only (Permissions-Policy (self)); the browser still asks the person each time",
+        "Uploads need a signed-in member, are rate-limited (20 per minute per person), refused above maxBytes while they are read, and accepted only when the content is WebM or MP4",
+        "Every read is scoped to the workspace; another workspace's id is a 404; storage keys are generated by the app",
+        "Share links carry 256 random bits; only their SHA-256 is stored; revoking or re-sharing invalidates the old link; shared pages are not indexed; shared media requests are rate-limited per address",
+        "Videos are served inline with X-Content-Type-Options: nosniff and Cache-Control: private, no-store"
+      ],
+      "guarantees": [
+        {
+          "claim": "Screen and camera are recorded, uploaded to private storage and listed in the library",
+          "test": "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+        },
+        {
+          "claim": "Layouts switch while recording and rearrange the feeds",
+          "test": "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+        },
+        {
+          "claim": "Bubble in each corner, side by side, single-source layouts",
+          "test": "tests/unit/recordings.test.ts › camera bubble in each of the four corners over the full screen"
+        },
+        {
+          "claim": "Asks up to 4K and records at what the device delivers",
+          "test": "tests/e2e/recordings.spec.ts › asks for up to 4K and records at the highest resolution the device delivers (camera at 3840x2160 when it supports it)"
+        },
+        {
+          "claim": "Only ideal constraints (no OverconstrainedError)",
+          "test": "tests/unit/recordings.test.ts › asks with ideal constraints only (never exact or min), so a device that cannot deliver 4K still records"
+        },
+        {
+          "claim": "Never upscaled beyond what the devices deliver",
+          "test": "tests/unit/recordings.test.ts › records at the asked resolution when the devices deliver it, and never upscales beyond what they deliver"
+        },
+        {
+          "claim": "MP4 when supported, else WebM",
+          "test": "tests/unit/recordings.test.ts › picks MP4 when the browser records it, else WebM with VP9 or VP8 and Opus"
+        },
+        {
+          "claim": "Seekable player with HTTP Range",
+          "test": "tests/e2e/recordings.spec.ts › the recording plays in the player and seeks with byte ranges (206 Partial Content)"
+        },
+        {
+          "claim": "Share link without an account; revocable",
+          "test": "tests/e2e/recordings.spec.ts › a viewer opens a shared link without an account and watches the video; a revoked link no longer works"
+        },
+        {
+          "claim": "Workspace isolation",
+          "test": "tests/e2e/recordings.spec.ts › a person in another workspace never sees or plays this workspace's recordings"
+        },
+        {
+          "claim": "Non-video uploads refused by content",
+          "test": "tests/e2e/recordings.spec.ts › an upload that is not a WebM or MP4 video is refused, and nothing is stored"
+        },
+        {
+          "claim": "Oversized uploads refused while read",
+          "test": "tests/unit/recordings.test.ts › an upload larger than the limit is refused while it is read: reading stops at the limit"
+        }
+      ],
+      "limits": [
+        "4K is asked for, never guaranteed: the recording is at most what the screen and camera deliver (many webcams top out at 1080p); a 4K canvas needs a fast machine and the frame rate may drop",
+        "Proved on Chromium's fake devices in the verification gate (fake camera and screen deliver the asked resolution, up to 3840×2160); Firefox and Safari use the same standard APIs but are not in the gate",
+        "Videos are held in server memory while uploaded and while served (one object read per request, Range sliced in memory): keep maxBytes in line with the server's memory; large teams should move to direct-to-bucket uploads",
+        "Recording stops at maxMinutes; no pause/resume, trimming, editing, comments, transcripts or system audio",
+        "WebM files written by MediaRecorder have no duration in their header: players show the duration once loaded; the library shows the duration measured while recording",
+        "Screen capture is not available in mobile browsers (desktop browsers only)"
+      ],
+      "example": "// Server code in the app (e.g. a page or a server action): the workspace's recordings with what was really recorded,\n// and a share link for the latest one.\nimport { listRecordings, shareRecording, type Member } from \"@/recordings/service\";\n\nexport async function shareLatestRecording(ctx: Member): Promise<string | null> {\n  const [latest] = await listRecordings(ctx);\n  if (!latest) return null;\n  const token = await shareRecording(ctx, latest.id);\n  return `/v/${token} (${latest.title}, recorded at ${latest.width}×${latest.height})`;\n}",
+      "exampleCheck": {
+        "kind": "app",
+        "from": "snippet.ts"
+      },
+      "keywords": [
+        "screen recording",
+        "screen recorder",
+        "record screen",
+        "webcam recording",
+        "camera recording",
+        "video message",
+        "loom",
+        "loom alternative",
+        "screencast",
+        "4k recording",
+        "picture in picture",
+        "camera bubble",
+        "side by side",
+        "layouts",
+        "mediarecorder",
+        "getdisplaymedia",
+        "getusermedia",
+        "share video link",
+        "video library",
+        "video player"
+      ],
+      "synonyms": {
+        "recording": [
+          "video",
+          "screencast",
+          "clip",
+          "video message",
+          "capture"
+        ],
+        "camera": [
+          "webcam",
+          "face cam",
+          "cam"
+        ],
+        "layout": [
+          "arrangement",
+          "composition",
+          "picture-in-picture",
+          "bubble"
+        ],
+        "share link": [
+          "public link",
+          "shareable link",
+          "watch link"
+        ]
+      },
+      "details": "https://software.turbineh.com/v1/capabilities/media.screen-recording.turbineh"
     },
     {
       "id": "observability.logging.pino",

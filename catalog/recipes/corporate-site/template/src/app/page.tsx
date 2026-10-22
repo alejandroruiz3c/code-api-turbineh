@@ -1,9 +1,7 @@
-import { desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
-import { db } from "@/db/client";
-import { posts } from "@/db/schema";
+import { listPublished } from "@/blog/posts";
 import { faqJsonLd, websiteJsonLd } from "@/lib/geo";
 import { absolute, jsonLd } from "@/lib/seo";
 import { getSite } from "@/server/site";
@@ -28,12 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Public home page: hero, services, steps, FAQ and call to action (copy in src/content/site.ts). */
 export default async function Home() {
   const site = await getSite();
-  const latest = await db
-    .select({ slug: posts.slug, title: posts.title, excerpt: posts.excerpt })
-    .from(posts)
-    .where(eq(posts.published, true))
-    .orderBy(desc(posts.publishedAt))
-    .limit(3);
+  const { posts: latest } = await listPublished({ limit: 3 });
   const org = jsonLd({
     "@context": "https://schema.org",
     "@type": "Organization",

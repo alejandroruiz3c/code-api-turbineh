@@ -41,8 +41,11 @@
   criterion: "The owner changes a member's role"
   advertises: "roles"
   says: ["role", "chang|updat|promot|demot|edit|assign"]
-  terms: change changes changed update updates role roles member members promote demote assign assigns teammate
-  actors: [owner, admin, member, teammate]
+  terms: >-
+    change changes changed update updates role roles member members promote demote assign assigns assigned
+    teammate teammates user users person people within organization organisation workspace team stored give gives
+    grant grants company companies
+  actors: [owner, admin, administrator, member, teammate, editor, viewer, user]
   tests:
     - "tests/e2e/membership.spec.ts › the owner changes a member's role"
 - id: membership.scope

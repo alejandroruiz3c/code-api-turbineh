@@ -24,7 +24,9 @@ test.describe.serial("client requests", () => {
     await expect(link).toBeVisible();
     const res = await page.request.get((await link.getAttribute("href")) ?? "");
     expect(res.status()).toBe(200);
+    // Served as an attachment (the browser saves the file) with exactly the uploaded bytes.
     expect(res.headers()["content-disposition"]).toContain("attachment");
+    expect((await res.body()).toString()).toBe("%PDF-1.4\n% test statement\n");
 
     await page.getByLabel("Move to").selectOption("in_review");
     await page.getByRole("button", { name: "Update status" }).click();

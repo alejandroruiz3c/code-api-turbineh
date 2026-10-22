@@ -24,7 +24,7 @@
   terms: >-
     file files upload uploads uploaded attach attaches attachment attachments document documents pdf pdfs
     image images add adds request requests ticket case submission their own portal download downloads
-    downloaded safe safely stored
+    downloaded safe safely stored save saved local device computer view viewing click clicks
   actors: [client, customer, member, staff, owner, admin]
   tests:
     - "tests/e2e/requests.spec.ts › a client submits a request with a file and follows its status; staff review it and update the status, which the client then sees"

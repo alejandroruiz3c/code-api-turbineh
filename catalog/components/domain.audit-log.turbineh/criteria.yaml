@@ -5,7 +5,8 @@
   says: ["audit|activity log|history|change log"]
   terms: >-
     audit log logs activity history change changes changed record recorded every each who made when time user action
-    see sees view views visible owner export csv download trail
+    see sees view views visible owner export csv download trail write writes written operation operations entry
+    entries generate generates generated contain contains containing timestamp timestamps id identifier database
   actors: [owner, admin, administrator, manager]
   tests:
     - "tests/e2e/audit-log.spec.ts › the owner sees each change in the audit log with who made it and when, and exports it as CSV"

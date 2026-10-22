@@ -1,0 +1,113 @@
+schema: turbineh.guide/v0.1
+component: content.blog.turbineh
+title: Blog with Markdown posts, frontmatter, drafts, authors, tags, search, reading time, RSS, sitemap and structured data
+summary: >-
+  The site's blog. Staff (verified ADMIN_EMAILS) write posts in Markdown in /dashboard/blog: the title, slug, author,
+  tags and summary come from the form or from frontmatter at the top of the text (which wins), and the post is saved
+  as a draft — private: absent from the list, the post URL (404), the RSS feed and the sitemap — or published. Staff
+  publish, unpublish and delete posts and manage authors with a bio. Visitors, without an account, read the list
+  (newest first, paginated, with author, date, reading time and tags), search it by keyword, open tag and author
+  pages, and read each post rendered from Markdown without raw HTML, with Article (BlogPosting) JSON-LD and
+  OpenGraph metadata. /blog/rss.xml is an RSS 2.0 feed of the latest published posts and /blog/sitemap.xml lists the
+  published posts and their tag and author pages.
+keywords:
+  [blog, articles, posts, markdown, frontmatter, drafts, publish, authors, author page, tags, categories, reading
+   time, search posts, rss, feed, sitemap, json-ld, structured data, opengraph, seo, news, insights]
+synonyms:
+  post: [article, blog post, entry, story, insight, news item]
+  tag: [topic, label, category]
+  draft: [unpublished post, private post]
+  author: [writer, contributor, byline]
+use_cases:
+  - "A company or research group publishes articles on its website with authors, topics and an RSS feed"
+  - "A product landing page adds a blog for announcements and guides"
+  - "A SaaS keeps a public changelog or knowledge articles next to its app"
+use_when:
+  - "The request asks for a blog, articles, posts or news that visitors read and staff write"
+  - "Posts need drafts, authors, tags, search, reading time, RSS or SEO metadata"
+avoid_when:
+  - "Comments, likes, newsletters or member-only posts (not covered)"
+  - "A multi-author platform where any signed-up user publishes (this blog is written by staff)"
+  - "Rich media posts with uploaded images or video, or a WYSIWYG editor"
+tradeoffs:
+  - { choice: "Own Markdown renderer instead of a Markdown library", gain: "No dependency, raw HTML can never execute (React elements only)", cost: "A subset of Markdown: no tables, images or footnotes" }
+  - { choice: "Frontmatter parsed by a small reader of key: value lines", gain: "No YAML library and nothing executable; unknown keys are ignored", cost: "Only the documented keys (title, slug, excerpt, author, tags, status)" }
+  - { choice: "Substring search with ILIKE", gain: "Works on any PostgreSQL with no index setup", cost: "No relevance ranking or stemming; slower beyond many thousands of posts" }
+config:
+  - { name: "src/blog/params.json", default: "postsPerPage 10, wordsPerMinute 200, feedItems 20", description: "Page size, reading speed and RSS length (from the request)" }
+  - { name: ADMIN_EMAILS, description: "Staff emails (verified) who may write, publish and delete posts" }
+interfaces:
+  - { name: listPublished, signature: "listPublished({ page?, q?, tag?, author?, limit? }) → { posts: PostCard[], page, pages, total } — published only, newest first", where: src/blog/posts.ts }
+  - { name: getPublished, signature: "getPublished(slug) → PostCard & { body, bio } | null — null for drafts and unknown slugs", where: src/blog/posts.ts }
+  - { name: savePost, signature: "savePost({ id, title?, slug?, excerpt?, authorId?, tags?, source, intent: 'draft' | 'publish' }) → { id, slug, status }", where: src/blog/posts.ts }
+  - { name: "Status", signature: "setStatus(id, 'draft' | 'published'), deletePost(id), saveAuthor({ id, name, bio }), deleteAuthor(id)", where: src/blog/posts.ts }
+  - { name: "Text helpers", signature: "parseFrontmatter(source), readingMinutes(markdown, wpm), parseTags(input), slugify, xml, jsonLd, likePattern, excerptOf", where: src/blog/text.ts }
+  - { name: Markdown, signature: "<Markdown source={markdown} /> — React elements only, safe links", where: src/blog/markdown.tsx }
+  - { name: BlogShell, signature: "<BlogShell>{children}</BlogShell> — the public blog frame (the site's own on a corporate site)", where: src/blog/shell.tsx }
+extension_points:
+  - what: "Show the latest posts elsewhere (home page, footer)"
+    where: "any server component"
+    how: "const { posts } = await listPublished({ limit: 3 }) — drafts are never returned."
+  - what: "Change the blog's frame or menu"
+    where: "src/blog/shell.tsx"
+    how: "Wrap children in your site header/footer; every public blog page uses BlogShell."
+  - what: "Let workspace roles write instead of staff"
+    where: "src/app/dashboard/blog/actions.ts, src/app/dashboard/blog/**/page.tsx"
+    how: "Replace requireAdmin() with requireMember() and check can(role, \"update\") before each change."
+compatibility:
+  runtime: "node >= 20"
+  framework: "next ^16 app router (server components, server actions, sitemap.ts), drizzle-orm with PostgreSQL, zod 4"
+  recipes: [corporate-site, landing-waitlist, saas-crud]
+  requires: []
+  works_with: [site.public-pages.turbineh, growth.waitlist.turbineh]
+  notes: "Required by corporate-site, whose sitemap, llms.txt and home page read the published posts from src/blog/posts.ts."
+security:
+  - "Editor pages and every write action call requireAdmin(): a verified ADMIN_EMAILS address, deny by default"
+  - "Public reads filter status = published in the data layer, so a draft can't reach a page, the feed or the sitemap"
+  - "Markdown becomes React elements only: raw HTML is shown as text; links limited to http(s), mailto and site paths"
+  - "JSON-LD escapes '<'; RSS and sitemap text is XML-escaped; slugs are validated before any query"
+  - "Search input is bounded to 100 characters and LIKE wildcards are escaped"
+guarantees:
+  - { claim: "Drafts stay private until published; frontmatter fills the post", test: "tests/e2e/blog.spec.ts › the admin writes a post in Markdown with frontmatter (title, author, tags, excerpt), saves it as a draft that stays private — not on the blog, the RSS feed or the sitemap — then publishes it" }
+  - { claim: "Post page with author, date, reading time, tags, safe Markdown, JSON-LD and OpenGraph", test: "tests/e2e/blog.spec.ts › a visitor reads a post with its author, date, reading time and tags; the Markdown is rendered without raw HTML and the page has Article JSON-LD and OpenGraph metadata" }
+  - { claim: "List newest first and paginated", test: "tests/e2e/blog.spec.ts › a visitor sees the published posts newest first, paginated, each with its author, date, reading time and tags" }
+  - { claim: "Tag pages", test: "tests/e2e/blog.spec.ts › a visitor opens a tag and sees only the posts with that tag" }
+  - { claim: "Author pages", test: "tests/e2e/blog.spec.ts › a visitor opens an author page with the author's bio and only that author's posts" }
+  - { claim: "Keyword search", test: "tests/e2e/blog.spec.ts › a visitor searches posts by keyword and sees only the matching posts" }
+  - { claim: "RSS 2.0 feed", test: "tests/e2e/blog.spec.ts › the RSS feed lists the published posts newest first with escaped titles, author and tags" }
+  - { claim: "Blog sitemap", test: "tests/e2e/blog.spec.ts › the blog sitemap lists the published posts, their tag pages and author pages" }
+  - { claim: "Unpublish and delete", test: "tests/e2e/blog.spec.ts › the admin unpublishes and deletes posts: they disappear from the blog, the RSS feed and the sitemap" }
+  - { claim: "Staff-only editor", test: "tests/e2e/blog.spec.ts › people who are not staff cannot open the blog editor" }
+  - { claim: "Reading time", test: "tests/unit/blog.test.ts › reading time is the post's words divided by the words per minute, rounded up, at least one minute" }
+  - { claim: "Frontmatter parsing", test: "tests/unit/blog.test.ts › parses Markdown frontmatter (title, slug, excerpt, author, tags, status) and keeps the body without it" }
+  - { claim: "Safe Markdown", test: "tests/unit/blog.test.ts › renders Markdown without executing HTML and only allows safe link targets" }
+limits:
+  - "One blog per app, written by staff; no comments, newsletters, scheduled publication dates, image uploads or translations"
+  - "Markdown subset (headings, paragraphs, lists, bold, italic, inline code, links)"
+  - "Search is a case-insensitive substring match over title, summary and text"
+example: |-
+  // Server code in the app (a server component or route): the five latest published posts, newest first, each with
+  // its author, tags and reading time (drafts are never returned).
+  import { listPublished } from "@/blog/posts";
+
+  export async function latestPosts() {
+    const { posts } = await listPublished({ limit: 5 });
+    return posts.map((p) => ({
+      href: `/blog/${p.slug}`,
+      title: p.title,
+      minutes: p.readingMinutes,
+      tags: p.tags.map((t) => t.name),
+    }));
+  }
+example_check:
+  kind: app
+  from: snippet.ts
+params:
+  file: src/blog/params.json
+  schema: params.schema.json
+  fields:
+    - { name: "postsPerPage", default: "10", description: "Posts per page of the list, tag and author pages" }
+    - { name: "wordsPerMinute", default: "200", description: "Reading speed for the reading time" }
+    - { name: "feedItems", default: "20", description: "Posts in the RSS feed" }
+  example: |
+    { "postsPerPage": 10, "wordsPerMinute": 200, "feedItems": 20 }

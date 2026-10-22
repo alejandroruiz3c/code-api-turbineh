@@ -1,0 +1,85 @@
+schema: turbineh.component/v0.1
+id: content.blog.turbineh
+version: 0.1.0
+status: approved
+category: content
+source:
+  purl: pkg:generic/turbineh/content.blog.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "The site's blog: Markdown posts with optional frontmatter (title, slug, excerpt, author, tags, status) written in a staff-only editor, drafts that stay private until published, unpublish and delete; authors with a bio and their own page; tags with their own page; a public list newest first, paginated, with keyword search; a post page with author, date, reading time, tags, safe Markdown (no raw HTML), Article JSON-LD and OpenGraph metadata; an RSS 2.0 feed and a blog sitemap (published posts, tag and author pages) where drafts never appear."
+  does_not: "Does not take comments, send newsletters or emails, schedule posts for a future date, upload images (links to public images only), translate posts, or write posts with AI; one blog per app"
+  use_cases: [corporate-site, landing-waitlist, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "No dependency beyond the recipe's stack (own Markdown renderer and frontmatter parser, unit-tested)",
+      "Drafts are excluded by the data layer itself: list, post page, RSS and sitemap read published posts only",
+    ]
+  cons:
+    [
+      "Markdown subset: headings, paragraphs, lists, bold, italic, inline code and links (no tables, images or raw HTML)",
+      "Keyword search is a case-insensitive substring match (no ranking, stemming or typo tolerance)",
+    ]
+  alternatives: [content.markdown.react-markdown, content.rss.feed, content.frontmatter.gray-matter]
+contract:
+  inputs:
+    [
+      "src/blog/params.json (postsPerPage, wordsPerMinute, feedItems)",
+      "Editor form: title, slug, author, tags, summary and Markdown text (frontmatter between --- lines wins over the fields); Save draft / Publish",
+      "listPublished({ page?, q?, tag?, author?, limit? }); getPublished(slug); savePost(input); setStatus(id, status); deletePost(id)",
+    ]
+  outputs:
+    [
+      "blog_posts, blog_authors, blog_tags, blog_post_tags rows",
+      "/blog, /blog/[slug], /blog/tag/[tag], /blog/author/[slug], /blog/rss.xml (RSS 2.0), /blog/sitemap.xml",
+      "/dashboard/blog (posts, publish, unpublish, delete), /dashboard/blog/edit, /dashboard/blog/authors (staff)",
+    ]
+  errors:
+    [
+      "UserFacingError (safe to show): title 3–160 characters, text 10–100,000 characters, summary ≤ 300, post not found",
+      "Unknown or draft slugs and malformed slugs are a 404; non-staff are redirected away from the editor",
+    ]
+  limits: ["postsPerPage ≤ 50, feedItems ≤ 100, 10 tags per post, search terms ≤ 100 characters, 200 posts in the staff list"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: false
+  fs: false
+  db: true
+  external_services: []
+integration:
+  strategy: vendored-with-provenance
+  install: "Required by recipe corporate-site and selected by code when a request asks for a blog (recipes landing-waitlist and saas-crud). files/: src/blog/{config,params.json,text,markdown,posts,shell}.ts(x), src/components/blog/post-list.tsx, src/db/component-blog.ts, src/app/blog/** (list, post, tag, author, rss.xml, sitemap.ts), src/app/dashboard/blog/** (posts, editor, authors), tests/unit/blog.test.ts, tests/e2e/blog.spec.ts. files-recipe/corporate-site/ puts the blog inside the corporate site's header and footer. The assembler writes params.json from the request."
+  config: [ADMIN_EMAILS]
+  migrations: true
+params:
+  file: src/blog/params.json
+  schema: params.schema.json
+  entities: [Post, Article, BlogPost, Author, Tag, Category, PostTag, PostTagMapping, PostCategory, PostCategoryMapping, Blog]
+quality:
+  tests:
+    {
+      command: "unit (reading time, frontmatter, tags, safe Markdown, XML/JSON-LD escaping, search patterns, params) + E2E (editor with frontmatter, private drafts, publish, list newest first and paginated, post page with JSON-LD and OpenGraph, tag, author and search pages, RSS, sitemap, unpublish and delete, staff-only editor); full gate via verify:recipe corporate-site",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: editor pages and actions behind requireAdmin (verified ADMIN_EMAILS, deny by default); public reads filter status = published in the data layer; Markdown rendered to React elements only (raw HTML shown as text, links limited to http(s), mailto and site paths); JSON-LD with '<' escaped; RSS and sitemap XML-escaped; slugs validated before any query; search input length-bounded with LIKE wildcards escaped; queries through Drizzle only."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "The blog E2E suite (editor, drafts, list, post, tags, authors, search, RSS, sitemap) passes in the full verification gate of the corporate site"
+    origin: tested
+    ref: "verify:recipe corporate-site (content.blog.turbineh required)"
+relations:
+  requires: []
+  provides: [content.blog, content.rss]
+  conflicts: []
+  tested_with: [recipe.corporate-site, recipe.landing-waitlist, recipe.saas-crud]

@@ -1,0 +1,5 @@
+[
+  { "label": "Matches", "href": "/dashboard/matching" },
+  { "label": "Matching records", "href": "/dashboard/matching/records" },
+  { "label": "Matching profile", "href": "/dashboard/matching/profile" }
+]

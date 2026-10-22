@@ -11,5 +11,3 @@
   covers: ["blog|post|article|news|\\brss\\b|feed"]
 - test: "tests/e2e/site.spec.ts › the owner (admin) edits the website headline and the home page shows it"
   covers: ["edit|updat|chang|manag", "content|text|headline|copy|website|page|section", "admin|owner|staff|cms"]
-- test: "tests/unit/site.test.ts › renders Markdown without executing HTML"
-  covers: ["markdown|rich text|html|xss|sanitiz"]

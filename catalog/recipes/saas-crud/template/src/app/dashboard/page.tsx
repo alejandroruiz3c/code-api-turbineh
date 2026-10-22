@@ -4,14 +4,19 @@ import { entityNav } from "@/entities";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/staff";
 import { requireMember } from "@/server/authz";
+import { myOrganizations } from "@/server/organizations";
 
 /** Dashboard home: the signed-in user's role and sections. */
 export default async function Dashboard() {
-  const { role } = await requireMember();
+  const { role, userId, organizationId } = await requireMember();
+  const active = (await myOrganizations(userId)).find((o) => o.id === organizationId);
   const session = await auth.api.getSession({ headers: await headers() });
   const staff = session ? isStaff(session.user) : false;
   return (
     <Card title="Dashboard">
+      <p className="mb-2 text-sm text-muted">
+        Organization: <span data-testid="organization">{active?.name ?? ""}</span>
+      </p>
       <p className="text-sm text-muted">
         Signed in as <span data-testid="role">{role}</span>. {entityNav.length} sections available.
       </p>

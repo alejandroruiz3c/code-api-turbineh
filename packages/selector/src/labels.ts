@@ -127,6 +127,10 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   "social.oauth": "connecting LinkedIn, Facebook, Instagram or X accounts with OAuth",
   "social.publish": "publishing and scheduling posts on LinkedIn, Facebook, Instagram or X",
   "social.metrics": "likes, comments and other engagement of published social posts",
+  "media.screen-recording":
+    "recording the screen and the camera in the browser, with layouts and share links",
+  "domain.matching":
+    "records ranked against an organization's profile (sectors, activities, regions, keywords)",
 };
 
 export const capabilityLabel = (cap: string) => CAPABILITY_LABELS[cap] ?? cap;

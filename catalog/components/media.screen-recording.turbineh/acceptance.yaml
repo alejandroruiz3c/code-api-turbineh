@@ -1,0 +1,21 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+  covers: ["screen|desktop|display", "record|captur"]
+- test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+  covers: ["camera|webcam", "record|captur|connect"]
+- test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+  covers: ["layout|bubble|side[- ]by[- ]side|arrang"]
+- test: "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+  covers: ["upload|stor|librar|save"]
+- test: "tests/e2e/recordings.spec.ts › asks for up to 4K and records at the highest resolution the device delivers (camera at 3840x2160 when it supports it)"
+  covers: ["4k|2160|3840|resolution"]
+- test: "tests/e2e/recordings.spec.ts › the recording plays in the player and seeks with byte ranges (206 Partial Content)"
+  covers: ["play|watch|player|seek"]
+- test: "tests/e2e/recordings.spec.ts › a viewer opens a shared link without an account and watches the video; a revoked link no longer works"
+  covers: ["shar|link", "video|record|watch"]
+- test: "tests/e2e/recordings.spec.ts › a person in another workspace never sees or plays this workspace's recordings"
+  covers: ["another|other|different", "workspace|organi[sz]ation|tenant"]
+- test: "tests/e2e/recordings.spec.ts › an upload that is not a WebM or MP4 video is refused, and nothing is stored"
+  covers: ["webm|mp4|not a video|format", "refus|reject"]
+- test: "tests/unit/recordings.test.ts › an upload larger than the limit is refused while it is read: reading stops at the limit"
+  covers: ["size|large|limit|\\bmb\\b|\\bgb\\b", "upload|record|video"]

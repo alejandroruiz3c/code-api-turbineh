@@ -1,0 +1,11 @@
+# Criteria aliases (ADR-0047): the words this component's tests use, and which of its params hold this app's word for
+# each. Resolved by the assembler from src/matching/params.json and applied to these tests' proofs only.
+file: src/matching/params.json
+tests:
+  - tests/e2e/matching.spec.ts
+  - tests/unit/matching.test.ts
+aliases:
+  - term: opportunity
+    from: entity.singular
+  - term: opportunities
+    from: entity.plural

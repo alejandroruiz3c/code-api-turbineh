@@ -1,0 +1,5 @@
+{
+  "entity": { "singular": "opportunity", "plural": "opportunities" },
+  "weights": { "sectors": 3, "activities": 2, "regions": 2, "keywords": 1 },
+  "minScore": 1
+}

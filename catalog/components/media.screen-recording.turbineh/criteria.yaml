@@ -1,0 +1,87 @@
+# Canonical acceptance criteria (ADR-0063) of screen and camera recording: what the component proves with its E2E suite
+# on Chromium's fake camera, microphone and screen.
+- vocabulary: >-
+    recording recordings record recorded video videos clip clips loom message messages screen screens camera cameras
+    webcam desktop feed feeds tool software platform app library dashboard workspace member creator user
+
+- id: recording.screen-camera
+  criterion: "A member records the screen with the camera and the video is uploaded to private storage and listed in the video library"
+  advertises: "screen and camera recording"
+  says: ["screen|desktop|display|tab|window|camera|webcam", "record|captur|grab"]
+  terms: >-
+    record records recorded recording recordings capture captures captured screen screens desktop display tab window
+    camera webcam microphone mic audio voice feed feeds select selects choose chooses pick picks start starts stop
+    stops upload uploads uploaded save saves saved store stored storage private library list listed video videos
+    shown appears share sharing
+  actors: [member, owner, admin, creator, user, editor]
+  tests:
+    - "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+
+- id: recording.layouts
+  criterion: "A member switches the layout while recording and the screen and camera feeds are rearranged"
+  advertises: "layouts"
+  says: ["layout|bubble|side[- ]by[- ]side|picture[- ]in[- ]picture|pip|corner|arrang|compos|overlay"]
+  terms: >-
+    layout layouts option options bubble circle corner corners side by picture pip overlay arrange arranges rearrange
+    rearranges rearranged compose composes composed composition configuration visual chosen choose chooses select
+    selects pick picks switch switches change changes while during active recording screen camera feed feeds canvas
+    only position positions
+  actors: [member, owner, admin, creator, user, editor]
+  tests:
+    - "tests/e2e/recordings.spec.ts › a member records the screen with the camera, switches the layout while recording and the feeds are rearranged; the video is uploaded to private storage and listed in the video library"
+
+- id: recording.resolution
+  criterion: "Asks for up to 4K and records at the highest resolution the device delivers"
+  advertises: "up to 4K"
+  says: ["4k|2160|3840|uhd|resolution|hd\\b|1080|quality"]
+  terms: >-
+    4k 2160 3840 3840x2160 uhd ultra hd high definition resolution resolutions quality pixels highest best maximum
+    up to asks ask requested device devices delivers deliver supports support supported compatible camera webcam
+    screen records record recording select selects choose chooses
+  actors: [member, owner, admin, creator, user, editor]
+  tests:
+    - "tests/e2e/recordings.spec.ts › asks for up to 4K and records at the highest resolution the device delivers (camera at 3840x2160 when it supports it)"
+
+- id: recording.player
+  criterion: "The recording plays in the player and seeks with byte ranges"
+  advertises: "player"
+  says: ["play|watch|view|player|seek"]
+  terms: >-
+    play plays playing playback player watch watches view views open opens seek seeks seeking scrub byte bytes range
+    ranges video videos page detail
+  actors: [member, owner, admin, creator, user, viewer, editor]
+  tests:
+    - "tests/e2e/recordings.spec.ts › the recording plays in the player and seeks with byte ranges (206 Partial Content)"
+
+- id: recording.share-link
+  criterion: "A viewer opens a shared link without an account and watches the video; a revoked link no longer works"
+  advertises: "share links"
+  says: ["shar|link|public|anyone"]
+  terms: >-
+    share shares shared sharing link links url public anyone viewer viewers open opens watch watches view views
+    without account sign revoke revokes revoked no longer works anonymous token
+  actors: [viewer, member, owner, admin, creator, user, visitor, guest, anonymous]
+  tests:
+    - "tests/e2e/recordings.spec.ts › a viewer opens a shared link without an account and watches the video; a revoked link no longer works"
+
+- id: recording.isolation
+  criterion: "A person in another workspace never sees or plays this workspace's recordings"
+  advertises: "private storage"
+  says: ["another|other|different|private|isolat|only", "workspace|organi[sz]ation|team|tenant|account|user"]
+  terms: >-
+    another other different workspace workspaces organization organizations team teams tenant tenants never sees see
+    plays play access accessed private isolated isolation only own their
+  actors: [member, owner, admin, user]
+  tests:
+    - "tests/e2e/recordings.spec.ts › a person in another workspace never sees or plays this workspace's recordings"
+
+- id: recording.refuse-non-video
+  criterion: "An upload that is not a WebM or MP4 video is refused"
+  advertises: "MediaRecorder to MP4 when the browser supports it, else WebM"
+  says: ["webm|mp4|format|type|not a video|refus|reject"]
+  terms: >-
+    upload uploads uploaded file files webm mp4 format formats type types not video videos refused refuse rejected
+    reject invalid stored nothing
+  actors: [member, owner, admin, user]
+  tests:
+    - "tests/e2e/recordings.spec.ts › an upload that is not a WebM or MP4 video is refused, and nothing is stored"

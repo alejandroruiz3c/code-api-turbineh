@@ -1,0 +1,8 @@
+{
+  "maxResolution": "1080p",
+  "frameRate": 30,
+  "layouts": ["bubble", "side-by-side", "screen-only", "camera-only"],
+  "maxMinutes": 30,
+  "maxBytes": 524288000,
+  "shareLinks": true
+}
