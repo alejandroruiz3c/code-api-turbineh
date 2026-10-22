@@ -148,6 +148,7 @@
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "\\bbook|appointment|reserv|slot|session"]
   terms: >-
+    present presents presented offer offers list lists
     contact
     verify verifies verified still check checks checked identify identifies find finds query queries search searches
     assistant assistants chat chatbot bot agent ai conversation conversational message messages ask asks book

@@ -1368,6 +1368,12 @@ describe("delivery coverage (ADR-0075)", () => {
       ["bookings.no-double-booking"],
     ],
     [
+      "Given a client asks for a visit, the bot identifies and presents the free 30-minute slots.",
+      "ai-agents",
+      ["domain.bookings.turbineh"],
+      ["bookings.assistant-books"],
+    ],
+    [
       "Given a set of team manuals, when a user asks a question in chat, then the assistant retrieves and references information from the knowledge base.",
       "ai-agents",
       [],
