@@ -1,4 +1,8 @@
 id: saas-crud
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Multi-tenant SaaS"
+tagline: "A multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens."
 description: Multi-tenant SaaS with sign-in, workspaces, roles and CRUD screens
 extends: null
 providedEntities: []

@@ -1,4 +1,8 @@
 id: storefront
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Online store"
+tagline: "An online shop with variants, cart, discount codes and Stripe Checkout payments."
 description: Online shop with product catalog and images, product variants (size, colour…) with own SKU, price and stock, cart, discount codes (percent or fixed amount, minimum order, usage limit, expiry), several currencies with fixed prices per currency, shipping options by country and currency, taxes by country or automatic Stripe Tax, Stripe Checkout payments, orders and stock, and an admin panel
 extends: saas-crud
 providedEntities:

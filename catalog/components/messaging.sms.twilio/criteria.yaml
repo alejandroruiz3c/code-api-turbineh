@@ -6,6 +6,7 @@
 - id: messaging-sms.send
   criterion: "An SMS is sent with Twilio's Messages API to an E.164 number"
   advertises: "Twilio's official Messages REST API"
+  label: "Twilio Messages API"
   # Timing ("24 hours before", "a reminder") is domain.reminders.turbineh's function, not this one's.
   says: ["\\bsms\\b|text messages?", "send|sent|deliver|twilio", "^(?![\\s\\S]*\\b(remind\\w*|before|ahead|prior|in advance)\\b)"]
   terms: >-
@@ -18,6 +19,7 @@
 - id: messaging-sms.consent
   criterion: "An SMS is never sent to a number without consent, nor after a STOP reply"
   advertises: "sent only to numbers that agreed and have not replied STOP"
+  label: "Only with consent; STOP respected"
   says: ["\\bsms\\b|text", "consent|agree|opt|stop|unsubscri|permission"]
   terms: >-
     consent consents agree agreed opt opted in out stop stops reply replies replied unsubscribe unsubscribed
@@ -40,6 +42,7 @@
 - id: messaging-sms.logged
   criterion: "Without Twilio credentials an SMS is logged, not sent"
   advertises: "logged mode"
+  label: "Logged mode without credentials"
   says: ["\\bsms\\b|text", "log|without (credentials|provider|keys?)|not sent|no provider"]
   terms: >-
     log logs logged without credentials provider key keys configured not sent send development test mode
@@ -49,6 +52,7 @@
 - id: messaging-sms.phone
   criterion: "Phone numbers are validated as E.164 with libphonenumber-js"
   advertises: "E.164 with libphonenumber-js"
+  label: "Phone numbers validated (E.164)"
   says: ["phone|mobile|number", "valid|format|e\\.?164|international"]
   terms: >-
     phone phones number numbers mobile validate validates validated validation valid invalid format formats e164

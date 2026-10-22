@@ -6,6 +6,7 @@
 - id: social-publish.adapt-format
   criterion: "Each post is adapted to each network's format and length before it is saved"
   advertises: "per-network length/format rules"
+  label: "Per-network format rules"
   says: ["format|length|limit|characters?|adapt|tailor|fit|version"]
   terms: >-
     adapt adapts adapted adaptation tailor tailored fit fits format formats length lengths limit limits character
@@ -17,6 +18,7 @@
 - id: social-publish.approval-schedule
   criterion: "The owner approves each post before it is published; approved posts are published automatically at the scheduled time"
   advertises: "optional approval, scheduling"
+  label: "Approval and scheduling"
   says: ["approv|schedul|publish|automatic|configured time|at the (set|chosen) time|post(s|ed)? at"]
   terms: >-
     approve approves approved approval human review reviewed before publish publishes published publishing
@@ -49,6 +51,7 @@
 - id: social-publish.calendar
   criterion: "A content calendar shows the scheduled and published posts on their day with their network and status"
   advertises: "calendar"
+  label: "Content calendar"
   says: ["calendar|planner|scheduled posts|published posts|dashboard"]
   terms: >-
     content calendar calendars dashboard planner view views see sees show shows list scheduled published day days

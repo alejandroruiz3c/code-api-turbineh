@@ -6,6 +6,7 @@
 - id: inbox.read-only
   criterion: "The mailbox is read read-only over IMAP: nothing is marked as read, moved or deleted"
   advertises: "read-only by construction"
+  label: "Read-only mailbox access"
   says: ["read|access|connect|fetch|sync", "only|without (chang|modif|delet|mark)|never (chang|modif|delet|mark)|read-only|unchanged"]
   terms: read reads access accesses connect connects fetch fetches sync syncs only read-only nothing never change changes marked mark moved move deleted delete modify unread safe
   actors: [owner, user, admin]
@@ -16,6 +17,7 @@
 - id: inbox.incremental
   criterion: "New emails are synchronised incrementally: each run reads only the messages that arrived after the previous one"
   advertises: "incremental synchronisation by UID"
+  label: "Incremental sync"
   says: ["new|incremental|since|arriv|sync|fetch|poll|check", "e-?mail|mail|message|inbox"]
   terms: new incremental incrementally since last previous arrive arrived arrives sync synchronise synchronize synchronised synchronized fetch fetched poll polls check checks run runs every minutes received receive receives only once twice duplicate duplicates
   actors: [owner, user, admin]
@@ -34,6 +36,7 @@
 - id: inbox.parse
   criterion: "Each email is parsed: sender, subject, date, text and attachment names"
   advertises: "each message parsed with mailparser"
+  label: "Each message parsed"
   says: ["pars|sender|subject|attachment|body|content|header"]
   terms: parse parses parsed parsing sender senders from subject subjects date dates text body bodies content attachment attachments names name header headers
   actors: [owner, user, admin]

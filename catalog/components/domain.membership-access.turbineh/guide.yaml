@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.membership-access.turbineh
 title: Workspace roles from the request, invitations by email and per-record access scopes
+name: "Team access"
+tagline: "Invitations by email, roles and per-record access."
 summary: >-
   Turns the roles a request names (owner/editor/viewer, manager/member, staff/client) into the one role policy every
   page, action and component already calls (can(role, action)); owners and managers invite people by email with a

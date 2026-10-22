@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: messaging.sms.twilio
 title: SMS with Twilio's Messages API, consent and STOP handling, retries and a logged mode
+name: "SMS"
+tagline: "Text messages with Twilio, sent only to numbers that agreed."
 summary: >-
   Sends SMS text messages through Twilio Programmable Messaging with its official REST API — one documented request,
   POST /2010-04-01/Accounts/{AccountSid}/Messages.json with HTTP Basic auth and a form body (To, From or

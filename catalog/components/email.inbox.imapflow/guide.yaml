@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: email.inbox.imapflow
 title: Read one IMAP mailbox read-only and incrementally (Gmail, Microsoft 365, any IMAP server)
+name: "IMAP inbox"
+tagline: "Reads one mailbox read-only and incrementally."
 summary: >-
   Reads the app's mailbox over IMAP with imapflow and parses each message with mailparser, for apps that process
   incoming mail (triage, extraction, digests). Credentials come only from environment variables: an app password, or an

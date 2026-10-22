@@ -40,6 +40,7 @@
 - id: messaging-whatsapp.webhook
   criterion: "WhatsApp webhook calls are checked with X-Hub-Signature-256 and delivery statuses are recorded"
   advertises: "X-Hub-Signature-256"
+  label: "Signed delivery webhooks"
   says: ["whats ?app", "webhook|signature|signed|delivery status|delivered|read receipt"]
   terms: >-
     webhook webhooks signature signed verify verified delivery deliveries status statuses delivered read receipt

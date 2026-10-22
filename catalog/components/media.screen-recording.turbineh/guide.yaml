@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: media.screen-recording.turbineh
 title: Screen and camera recording (Loom-style video messages) with layouts, up to 4K, private storage, a player and share links
+name: "Screen recording"
+tagline: "Loom-style screen and camera videos with share links."
 summary: >-
   A recorder page asks the browser for the screen (getDisplayMedia) and the camera and microphone (getUserMedia) at up
   to the app's maximum resolution — 720p, 1080p, 1440p or 4K (3840×2160) — with `ideal` constraints only, so a device

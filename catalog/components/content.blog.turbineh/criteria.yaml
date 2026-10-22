@@ -7,6 +7,7 @@
 - id: blog.write-publish
   criterion: "The admin writes a post in Markdown, saves it as a draft that stays private (not on the blog), then publishes it"
   advertises: "editor"
+  label: "Staff-only editor"
   says: ["writ|creat|submit|add|compos|draft|publish|edit|markdown|frontmatter|front matter", "post|article|blog|entr|stor|insight|draft|publish"]
   terms: >-
     admin admins administrator author authors editor editors staff owner write writes written writing create creates
@@ -91,6 +92,7 @@
 - id: blog.search
   criterion: "A visitor searches posts by keyword and sees only the matching posts"
   advertises: "search"
+  label: "Post search"
   says: ["search|keyword|query|find|look ?up"]
   terms: >-
     visitor visitors reader readers search searches searching searched bar box keyword keywords query queries term
@@ -137,6 +139,7 @@
 - id: blog.staff-only
   criterion: "People who are not staff cannot open the blog editor"
   advertises: "editor"
+  label: "Staff-only editor"
   says: ["staff|admin|author|editor|sign[ -]?in|log[ -]?in|only", "cannot|can't|\\bnot\\b|only|restrict|protect|deny|denied"]
   terms: >-
     people person visitors visitor readers reader users who not non staff admin admins administrators authors

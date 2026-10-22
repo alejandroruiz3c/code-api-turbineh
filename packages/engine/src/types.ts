@@ -9,6 +9,37 @@ export interface UseCase {
   requiredComponents: string[];
   sections: string[];
   keywords: string[];
+  /** What the area is, in one line: the catalogue text up to its list of functions (ADR-0076). */
+  tagline: string;
+  /**
+   * Verified functions of the area (ADR-0076): readable labels of its canonical criteria and those of the components it
+   * always installs, each linked to the test that proves it (ADR-0063).
+   */
+  functions: string[];
+  /** Approved functional components that extend this area (`capability.use_cases`), with their proved functions. */
+  addOns: UseCaseAddOn[];
+}
+
+/** A verified component that extends a use case (ADR-0076). */
+export interface UseCaseAddOn {
+  /** Catalogue id. */
+  id: string;
+  /** Short display name (guide.yaml `name`). */
+  name: string;
+  /** One line (guide.yaml `tagline`). */
+  tagline: string;
+  /** Its functions proved by tests (criteria.yaml labels). */
+  functions: string[];
+}
+
+/** Catalogue totals computed from the catalogue (ADR-0076), never written by hand. */
+export interface CatalogTotals {
+  /** Approved components. */
+  components: number;
+  /** Complete use cases (recipes). */
+  useCases: number;
+  /** Functions proved by tests: canonical criteria of recipes and approved components with their own linked tests. */
+  functions: number;
 }
 
 /** An approved catalog component as the engine sees it (from the catalog table or the manifests). */

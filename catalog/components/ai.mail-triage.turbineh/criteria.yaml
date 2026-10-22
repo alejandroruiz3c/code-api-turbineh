@@ -8,6 +8,7 @@
 - id: mail-triage.classify-priority
   criterion: "Every new email is classified through the orchestrator with a category and a priority, and the inbox lists the emails most urgent first"
   advertises: "a category from a closed list, a priority"
+  label: "Category and priority for every email"
   says: ["e-?mail|mail|inbox|message", "classif|categor|priorit|triag|sort|order|rank|label|urgent|important"]
   terms: >-
     classify classifies classified classification categorise categorize categorises categorizes categorised
@@ -36,6 +37,7 @@
 - id: mail-triage.finance-extract
   criterion: "Invoices and payments in the mail are recorded in the finance ledger as income, expense or investment with amount, currency, date and issuer"
   advertises: "invoices, receipts and payments are extracted"
+  label: "Invoices, receipts and payments extracted"
   says: ["invoice|payment|receipt|bill|financ|transaction|amount|income|expense|investment|inversion", "extract|record|regist|enter|add|append|ledger|captur|log|stor|save|identif|pars|row|spreadsheet|excel|detect"]
   terms: >-
     invoice invoices payment payments receipt receipts bill bills financial finance finances data information
@@ -77,6 +79,7 @@
 - id: mail-triage.injection-as-data
   criterion: "An email carrying instructions is treated as data: flagged by the AI Safety Pack and never obeyed"
   advertises: "the email passed as data with injection attempts neutralised and flagged"
+  label: "Injection attempts flagged, never obeyed"
   says: ["inject|instruction|manipulat|malicious|phish|suspicious|jailbreak"]
   terms: >-
     injection injections instruction instructions manipulate manipulation malicious phishing suspicious
@@ -90,6 +93,7 @@
 - id: mail-triage.correct-type
   criterion: "A person corrects the type of a ledger entry"
   advertises: "correct a ledger type"
+  label: "Correct a ledger entry's type"
   says: ["correct|change|edit|fix|reclassif|override", "type|kind|categor|entry|ledger|income|expense|investment"]
   terms: correct corrects corrected change changes changed edit edits fix fixes reclassify override type kind entry entries ledger
   actors: [owner, user, admin]

@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: social.publish.turbineh
 title: Social publishing to LinkedIn, Facebook Pages, Instagram and X with approval, scheduling, retries and a publication log
+name: "Social publishing"
+tagline: "Schedule, approve and publish posts to each network."
 summary: >-
   People compose a post once for one or more connected accounts (social.connections.turbineh), with an optional
   version per network; each network's rules are checked live and again on the server — X's weighted 280 characters

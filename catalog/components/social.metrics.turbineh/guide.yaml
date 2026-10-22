@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: social.metrics.turbineh
 title: Engagement metrics of published social posts (likes, comments, shares, impressions) fetched on a schedule
+name: "Social metrics"
+tagline: "Likes, comments, shares and impressions of your published posts."
 summary: >-
   For every post published by social.publish.turbineh in the last windowDays, a protected runner route (called by any
   scheduler with CRON_SECRET) fetches the engagement each network's official read API gives and stores a snapshot:

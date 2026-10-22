@@ -63,6 +63,7 @@
 - id: ai-agents.batch-classify
   criterion: "Classifies records in a batch process"
   advertises: "classify"
+  label: "Batch classification"
   says: ["classif|categori|label|tag|triag|route|sort"]
   terms: >-
     classifications
@@ -78,6 +79,7 @@
 - id: ai-agents.batch-extract-summarise
   criterion: "Summarises and extracts records in batch processes: each item is processed through the orchestrator and its validated structured output is stored"
   advertises: "extract"
+  label: "Batch extraction"
   says: ["summar|extract|pars|pull out|key fields|structured"]
   terms: >-
     summarization summarisation summarizations summarisations
@@ -93,6 +95,7 @@
 - id: ai-agents.batch-summarise
   criterion: "Summarises records in batch processes: each item is processed through the orchestrator and its validated structured output is stored"
   advertises: "summarise"
+  label: "Batch summaries"
   says: ["summar|digest|tl;?dr|short version"]
   terms: >-
     summarization summarisation summarizations summarisations
@@ -106,6 +109,7 @@
 - id: ai-agents.usage-audit
   criterion: "Shows AI usage and the audit trail"
   advertises: "usage and audit"
+  label: "AI usage and audit"
   says: ["usage|audit|log|cost|token|track|monitor|history"]
   terms: >-
     event events
@@ -118,6 +122,7 @@
 - id: ai-agents.safety
   criterion: "Refuses a prompt-injection attempt with a safe message"
   advertises: "TurbineH orchestrator"
+  label: "Prompt injections refused"
   says: ["inject|jailbreak|manipulat|safe|guard|override|system prompt|malicious|abuse"]
   terms: >-
     prompt injection injections jailbreak jailbreaks manipulate manipulation safe safety guard guardrail

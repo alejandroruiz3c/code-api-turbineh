@@ -1,4 +1,8 @@
 id: bookings
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Bookings and appointments"
+tagline: "An online booking site for an appointment business."
 description: Online booking site for an appointment business — public booking page (service, team member or any, real free times, no account), confirmation email with a cancel link and a notice policy, no double bookings, staff calendar per team member (day and week), time off, move and cancel with customer emails
 extends: saas-crud
 providedEntities:

@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.reminders.turbineh
 title: Appointment reminders by email, SMS or WhatsApp — once per appointment, consent first, local time
+name: "Appointment reminders"
+tagline: "Reminders before each appointment by email, SMS or WhatsApp."
 summary: >-
   Reminds each customer of a confirmed appointment a set number of real hours before it starts (24 by default) on the
   channels the request names: email (always available; logged without an email provider), SMS through

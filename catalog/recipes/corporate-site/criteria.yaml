@@ -3,6 +3,7 @@
 - id: corporate-site.browse-pages
   criterion: "A visitor browses the home page, the services page, about and contact"
   advertises: "home"
+  label: "Home, services, about and contact pages"
   says: ["home|services?|about|contact|pages?|navigat|menu|site|website", "visitor|browse|navigat|menu|home|page|see|view|public"]
   terms: >-
     home homepage page pages services service about us team company contact navigation navigate navigates menu
@@ -15,6 +16,7 @@
 - id: corporate-site.services
   criterion: "A visitor browses the services page"
   advertises: "services"
+  label: "Home, services, about and contact pages"
   says: ["services?|offer|what we do|solutions"]
   terms: >-
     services service page pages list lists offer offers offering what we do solutions describe describes
@@ -26,6 +28,7 @@
 - id: corporate-site.about
   criterion: "A visitor browses the about page"
   advertises: "about"
+  label: "Home, services, about and contact pages"
   says: ["about|who we are|our (story|team|company)|company"]
   terms: >-
     about us page who we are our story team company history mission values browse browses visitor visitors
@@ -73,6 +76,7 @@
 - id: corporate-site.messages
   criterion: "The owner (admin) reads the contact message in the dashboard"
   advertises: "messages"
+  label: "Contact messages in the dashboard"
   says: ["messages?|enquir|inquir|submission|contact", "admin|owner|staff|dashboard|panel|read|see|view|list"]
   terms: >-
     message messages contact enquiry enquiries inquiry inquiries submission submissions form read reads see
@@ -84,6 +88,7 @@
 - id: corporate-site.search-ready
   criterion: "It is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)"
   advertises: "Corporate website"
+  label: "Ready for search and AI answer engines"
   says: ["\\bseo\\b|search engine|sitemap|structured data|json-ld|answer engine|schema\\.org|robots|llms"]
   terms: >-
     seo search engines engine sitemap structured data json ld answer ai robots llms txt metadata google indexed

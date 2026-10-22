@@ -1,6 +1,8 @@
+import { CATALOG_TOTALS, USE_CASES } from "@turbineh/engine/use-cases";
 import { KPI_TEXT } from "@turbineh/shared/status-texts";
 import Link from "next/link";
 import { PackageChecks } from "@/components/package-checks";
+import { AreaCard, CatalogTotalsLine } from "@/components/use-case-areas";
 import { StateBadge, Stat, pct, secs } from "@/components/ui";
 import { summarize, workspaceActivity } from "@/server/activity";
 import { getCaller } from "@/server/caller";
@@ -25,12 +27,19 @@ const STEPS = [
   },
 ];
 
+/**
+ * Requests to try, one per area the library extends (ADR-0076). Each passes the scope gate covered with every function
+ * proved by a shipped test (CI: apps/worker/src/example-prompts.test.ts reads this list).
+ */
 const EXAMPLES = [
-  "support agent",
-  "online store",
-  "booking flow",
-  "AI classification",
-  "client portal",
+  "A support assistant that answers from our help centre and escalates to a human",
+  "A simple online store for a sock brand with sizes, cart and card payments",
+  "A booking site for a hair salon with SMS reminders the day before",
+  "A yoga studio booking page where clients pay a deposit by card to book",
+  "An assistant that sorts my inbox by priority and emails me a daily digest",
+  "A design studio blog with tags, drafts and an RSS feed",
+  "Loom-style screen and camera recordings for our team, with share links",
+  "A to-do app with projects, due dates and a kanban board",
 ];
 
 export default async function Home() {
@@ -84,7 +93,7 @@ export default async function Home() {
         {EXAMPLES.map((e) => (
           <Link
             key={e}
-            href={`/discover?q=${encodeURIComponent(e)}`}
+            href={`/flows/new?need=${encodeURIComponent(e)}`}
             className="rounded-full border border-line px-3 py-0.5 hover:border-teal hover:text-ice-2"
           >
             {e}
@@ -108,6 +117,30 @@ export default async function Home() {
         </Link>{" "}
         speaks to humans and returns structured state to your coding agent.
       </p>
+
+      <section aria-labelledby="areas-title" data-testid="areas" className="mt-14">
+        <p className="eyebrow">Library</p>
+        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="areas-title" className="display text-2xl font-semibold text-cream">
+            What you can build
+          </h2>
+          <Link href="/catalog" className="text-sm text-teal">
+            Full catalogue →
+          </Link>
+        </div>
+        <div className="mt-2">
+          <CatalogTotalsLine totals={CATALOG_TOTALS} />
+        </div>
+        <p className="mt-1 max-w-3xl text-sm text-muted">
+          Each area is a complete app with the functions below, every one proved by a test. Extend
+          it with verified components.
+        </p>
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {USE_CASES.map((u) => (
+            <AreaCard key={u.id} u={u} />
+          ))}
+        </ul>
+      </section>
 
       <section
         aria-label="Into your existing repository"

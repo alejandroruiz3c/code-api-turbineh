@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.matching.turbineh
 title: Deterministic matching of opportunities against an organization's profile, with the why of every match
+name: "Opportunity matching"
+tagline: "Opportunities matched to each organization's profile, with the why of every match."
 summary: >-
   Each organization of a multi-tenant SaaS keeps a profile — sectors, business activities, geographic coverage and
   interest keywords — and a list of records to watch (opportunities, tenders, grants, leads: the word comes from the

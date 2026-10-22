@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: payments.booking-deposit.turbineh
 title: Card payment at booking time (deposit or full price) with Stripe Checkout for the public booking page
+name: "Pay to book"
+tagline: "A card deposit or the full price when booking, with Stripe Checkout."
 summary: >-
   Adds a payment step to domain.bookings.turbineh's public booking page. A booking of a service with an amount due is
   created "pending payment": its time is held (no one else is offered it) while the customer pays a deposit (fixed

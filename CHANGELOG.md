@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- The home and the catalogue show what each area builds, from the catalogue (ADR-0076): a "What you can build"
+  section on the home with the 11 use cases, their verified functions (canonical criteria linked to tests), the
+  verified components that extend each one ("Extend with", to Discover) and computed totals (approved components, use
+  cases, functions proved by tests). `/catalog` lists the same functions instead of the incomplete nav sections, and
+  each add-on with its tagline and functions; `GET /v1/capabilities/{id}` returns them. The engine index
+  (`pnpm --filter @turbineh/engine gen`) gains `tagline`, `functions`, `addOns` and `CATALOG_TOTALS`, also exported as
+  `@turbineh/engine/use-cases`; recipes gain `title`/`tagline`, functional components' guides `name`/`tagline`, and
+  criteria an optional `label`. Discover's copy derives from the index. The home's examples are requests guarded by the
+  scope gate in CI.
 - New use cases from real demand (ADR-0073): `content.blog.turbineh` (Markdown posts with frontmatter, drafts,
   authors, tags, search, reading time, RSS, blog sitemap, Article JSON-LD; required by corporate-site, selectable on
   any recipe), `media.screen-recording.turbineh` (screen + camera in the browser, asks up to 4K and records what the

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { readUseCases, renderUseCases } from "../scripts/use-cases-source.js";
+import { readCatalogTotals, readUseCases, renderUseCases } from "../scripts/use-cases-source.js";
 import {
   buildPlan,
   compatibility,
@@ -362,7 +362,10 @@ describe("capability package", () => {
 describe("use-case index", () => {
   it("is in sync with catalog/recipes (run `pnpm --filter @turbineh/engine gen`)", () => {
     expect(readFileSync(join(root, "packages/engine/src/use-cases.generated.ts"), "utf8")).toBe(
-      renderUseCases(readUseCases(join(root, "catalog/recipes"))),
+      renderUseCases(
+        readUseCases(join(root, "catalog/recipes")),
+        readCatalogTotals(join(root, "catalog/recipes")),
+      ),
     );
   });
 });

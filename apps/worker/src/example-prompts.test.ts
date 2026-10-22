@@ -25,7 +25,10 @@ function wizardNeeds(): string[] {
   return [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1] as string);
 }
 
-/** Example prompts in the README and the API page (`"prompt":"…"`, `"need":"…"`) and the home page's "e.g." hint. */
+/**
+ * Example prompts in the README and the API page (`"prompt":"…"`, `"need":"…"`), the home page's "e.g." hint and its
+ * "Try" examples (`const EXAMPLES = [...]`, ADR-0076).
+ */
 function docExamples(): string[] {
   const out: string[] = [];
   for (const file of ["README.md", "apps/web/src/app/use/page.tsx"])
@@ -35,7 +38,15 @@ function docExamples(): string[] {
     read("apps/web/src/app/page.tsx"),
   );
   if (hint?.[1]) out.push(hint[1]);
+  out.push(...homeExamples());
   return out;
+}
+
+/** The home page's "Try" examples (apps/web/src/app/page.tsx, `const EXAMPLES = [...]`). */
+function homeExamples(): string[] {
+  const block =
+    /const EXAMPLES = \[([\s\S]*?)\];/.exec(read("apps/web/src/app/page.tsx"))?.[1] ?? "";
+  return [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1] as string);
 }
 
 const EXAMPLES = [
@@ -65,6 +76,8 @@ const toSpec = (x: ExampleFixture): BuildSpec =>
 describe("every example prompt we show is covered by the scope gate (ADR-0069)", () => {
   it("collects the examples from every surface", () => {
     expect(wizardNeeds().length).toBeGreaterThanOrEqual(3);
+    // The home's examples are requests (built by the flow), one per area extended with verified components.
+    expect(homeExamples().length).toBeGreaterThanOrEqual(6);
     expect(USE_CASES.length).toBeGreaterThanOrEqual(11);
     expect(EXAMPLES.length).toBeGreaterThanOrEqual(15);
   });

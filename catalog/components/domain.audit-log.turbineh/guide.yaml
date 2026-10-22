@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.audit-log.turbineh
 title: Append-only audit log with an owner page, filters and CSV export
+name: "Audit log"
+tagline: "Every change recorded with who and when, append-only."
 summary: >-
   Records every change made in a workspace — who, when, which action, which record and the field-level before/after
   values, with passwords and tokens redacted — through one hook, audit(), that generated entities and domain

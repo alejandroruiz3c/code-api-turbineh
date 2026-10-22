@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./use-cases": {
+      "types": "./dist/use-cases.generated.d.ts",
+      "import": "./dist/use-cases.generated.js"
     }
   },
   "scripts": {

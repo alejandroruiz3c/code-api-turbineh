@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: social.connections.turbineh
 title: Social accounts connected with OAuth 2.0 (LinkedIn, Facebook Pages + Instagram, X) and tokens encrypted at rest
+name: "Social accounts"
+tagline: "Connect LinkedIn, Facebook, Instagram and X accounts with OAuth 2.0."
 summary: >-
   Lets the people who manage a workspace connect its social media accounts with each provider's official OAuth 2.0
   flow: a LinkedIn member (Sign In with LinkedIn + Share on LinkedIn), the Facebook Pages a person manages and the

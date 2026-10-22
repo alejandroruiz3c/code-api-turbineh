@@ -1,4 +1,8 @@
 id: analytics-dashboard
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Analytics dashboard"
+tagline: "Team dashboards from CSV or entered data, with KPIs and charts."
 description: Analytics dashboards for a team — import data from CSV or enter it, KPIs with period comparison, time series and breakdown charts, filters and export
 extends: saas-crud
 providedEntities: [Dataset, DataPoint, Metric, Kpi, Report, Chart, Dashboard, Record, Measurement, Entry]
