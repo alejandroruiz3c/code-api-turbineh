@@ -1,6 +1,7 @@
 # Canonical acceptance criteria (ADR-0063) of screen and camera recording: what the component proves with its E2E suite
 # on Chromium's fake camera, microphone and screen.
 - vocabulary: >-
+    recorder recorders
     recording recordings record recorded video videos clip clips loom message messages screen screens camera cameras
     webcam desktop feed feeds tool software platform app library dashboard workspace member creator user
 
@@ -9,6 +10,7 @@
   advertises: "screen and camera recording"
   says: ["screen|desktop|display|tab|window|camera|webcam", "record|captur|grab"]
   terms: >-
+    simultaneously simultaneous both at once
     record records recorded recording recordings capture captures captured screen screens desktop display tab window
     camera webcam microphone mic audio voice feed feeds select selects choose chooses pick picks start starts stop
     stops upload uploads uploaded save saves saved store stored storage private library list listed video videos
@@ -22,6 +24,7 @@
   advertises: "layouts"
   says: ["layout|bubble|side[- ]by[- ]side|picture[- ]in[- ]picture|pip|corner|arrang|compos|overlay"]
   terms: >-
+    template templates share sharing according
     layout layouts option options bubble circle corner corners side by picture pip overlay arrange arranges rearrange
     rearranges rearranged compose composes composed composition configuration visual chosen choose chooses select
     selects pick picks switch switches change changes while during active recording screen camera feed feeds canvas
@@ -35,6 +38,7 @@
   advertises: "up to 4K"
   says: ["4k|2160|3840|uhd|resolution|hd\\b|1080|quality"]
   terms: >-
+    source sources input inputs
     4k 2160 3840 3840x2160 uhd ultra hd high definition resolution resolutions quality pixels highest best maximum
     up to asks ask requested device devices delivers deliver supports support supported compatible camera webcam
     screen records record recording select selects choose chooses

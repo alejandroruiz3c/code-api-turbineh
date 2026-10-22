@@ -5,6 +5,7 @@
 # package and the gate passed. `advertises`: the words of the catalogue text this criterion proves.
 # The booking domain's nouns (what the functions act on), absorbed by every criterion below.
 - vocabulary: >-
+    agenda agendas
     booking bookings appointment appointments reservation reservations session sessions visit visits class classes
     lesson lessons slot slots time times date dates day days hour hours minute minutes service services treatment
     treatments customer customers client clients patient patients team member members staff resource resources
@@ -56,8 +57,9 @@
 - id: bookings.no-double-booking
   criterion: "A customer cannot book a slot already taken: the same time is never booked twice for one team member (double booking prevented)"
   advertises: "no double bookings"
-  says: ["double|overlap|conflict|clash|same (time|slot)|twice|already (taken|booked|occupied)|occupied"]
+  says: ["double|overlap|conflict|clash|same (time|slot)|twice|already (taken|booked|occupied)|occupied|fully booked|(schedule|calendar|agenda|day) is full|no availability"]
   terms: >-
+    full fully message no availability shows show
     submit submits return returns validation error errors indicate indicates indicating
     not offered offer offers
     double doubles overlapping overlap overlaps conflict conflicting clash clashes slot slots time times staff

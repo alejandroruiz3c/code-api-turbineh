@@ -1362,6 +1362,12 @@ describe("delivery coverage (ADR-0075)", () => {
       ["bookings.no-double-booking"],
     ],
     [
+      "Given a therapist's agenda is fully booked, when a client tries to book a time, then the booking is prevented and a no availability message is shown.",
+      "bookings",
+      [],
+      ["bookings.no-double-booking"],
+    ],
+    [
       "Given a set of team manuals, when a user asks a question in chat, then the assistant retrieves and references information from the knowledge base.",
       "ai-agents",
       [],
@@ -1378,6 +1384,24 @@ describe("delivery coverage (ADR-0075)", () => {
       "projects",
       [],
       ["projects.project-archive"],
+    ],
+    [
+      "Given the member is on the recorder, when they choose the webcam source, then a 4K resolution input can be selected.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.resolution"],
+    ],
+    [
+      "Given a recording is running, when the member chooses another layout, then the screen share and the webcam feed are rearranged according to the template.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.layouts"],
+    ],
+    [
+      "Given a capture is running, when the member presses record, then the desktop screen and the webcam feed are captured simultaneously.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.screen-camera"],
     ],
     [
       "The assistant must recommend at least three homes that match the buyer's budget and location.",
