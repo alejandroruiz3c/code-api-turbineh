@@ -12,6 +12,7 @@ import {
   canonicalForPlan,
   canonicalize,
   mapToCanonical,
+  modulesForTests,
   requestWords,
   resolveCanonical,
 } from "./canonical.js";
@@ -1277,5 +1278,172 @@ describe("canonical criteria · appointment reminders (ADR-0070)", () => {
       expect(proven, c.id).toBe(true);
       expect(mapToCanonical(c.criterion, resolved).map((m) => m.id)).toContain(c.id);
     }
+  });
+});
+
+/**
+ * ADR-0075 · what the plan promises is what the package proves. Synthetic, paraphrased Given/When/Then criteria of the
+ * kind the compiler writes (never customers' words).
+ */
+describe("delivery coverage (ADR-0075)", () => {
+  const canonFor = (recipe: string, components: string[]) =>
+    canonicalForPlan({ recipesDir, recipe, components, entities: [] });
+  const ids = (asked: string, recipe: string, components: string[], context: string[] = []) =>
+    mapToCanonical(asked, canonFor(recipe, components), [], context).map((c) => c.id);
+
+  it("knows which optional module each linked test lives in (tree-shaking must keep it)", () => {
+    const needs = (tests: string[]) =>
+      Object.fromEntries(
+        modulesForTests({ recipesDir, recipe: "ai-agents", components: [], tests }),
+      );
+    const kb =
+      "tests/e2e/ai-agents.spec.ts › creates an assistant that answers from the knowledge base";
+    const faq =
+      "tests/e2e/ai-agents.spec.ts › the assistant answers a customer question from a help-centre FAQ article in the knowledge base and cites that article";
+    const batch = "tests/e2e/ai-agents.spec.ts › classifies records in a batch process";
+    const handoff =
+      "tests/e2e/ai-agents.spec.ts › when the assistant hands a conversation to a person, the team is emailed, the conversation is listed for the team as needing a person and the user is told a person will follow up";
+    expect(needs([kb, faq])).toEqual({ "ai.knowledge-base": [kb, faq] });
+    expect(needs([batch])).toEqual({ "ai.batch-processing": [batch] });
+    expect(needs([handoff])).toEqual({});
+  });
+
+  it("a request's own function words are never absorbed as context: the hand-off criterion maps to the hand-off", () => {
+    const asked =
+      "Given a visitor question the FAQ pages cannot answer, the bot offers an option to escalate to a human.";
+    const context = requestWords(
+      "A helpdesk bot that replies from our FAQ pages and escalates to a human",
+    );
+    expect(context).not.toContain("escalates");
+    expect(ids(asked, "ai-agents", [], context)).toEqual(["ai-agents.escalate-human"]);
+  });
+
+  it.each([
+    [
+      "Given a member of two companies, they can switch between company contexts without seeing data of the other tenant.",
+      "saas-crud",
+      ["domain.membership-access.turbineh"],
+      ["saas-crud.switch-organization"],
+    ],
+    [
+      "Given a member has a specific role, they can only perform actions permitted by the permissions assigned within the organization.",
+      "saas-crud",
+      ["domain.membership-access.turbineh"],
+      ["saas-crud.roles"],
+    ],
+    [
+      "Given a returning member, they can authenticate via a secure login flow to access the platform.",
+      "saas-crud",
+      [],
+      ["saas-crud.sign-in"],
+    ],
+    [
+      "Given the organization profile lists its sectors and geographies, the dashboard shows only the tenders that match those criteria.",
+      "saas-crud",
+      ["domain.matching.turbineh"],
+      ["matching.matches", "matching.profile"],
+    ],
+    [
+      "Given a change is made, an entry is recorded in the audit log with the time, the user and the action type.",
+      "saas-crud",
+      ["domain.audit-log.turbineh"],
+      ["audit.see-changes"],
+    ],
+    [
+      "Given a client picks a free slot, when they confirm the booking, then a new appointment record is created.",
+      "bookings",
+      [],
+      ["bookings.public-booking"],
+    ],
+    [
+      "Given a slot that is already occupied, when the client submits the request, then the system returns a validation error indicating it is unavailable.",
+      "bookings",
+      [],
+      ["bookings.no-double-booking"],
+    ],
+    [
+      "Given a therapist's agenda is fully booked, when a client tries to book a time, then the booking is prevented and a no availability message is shown.",
+      "bookings",
+      [],
+      ["bookings.no-double-booking"],
+    ],
+    [
+      "Given a client asks for a visit, the bot identifies and presents the free 30-minute slots.",
+      "ai-agents",
+      ["domain.bookings.turbineh"],
+      ["bookings.assistant-books"],
+    ],
+    [
+      "Given a set of team manuals, when a user asks a question in chat, then the assistant retrieves and references information from the knowledge base.",
+      "ai-agents",
+      [],
+      ["ai-agents.chat-over-documents"],
+    ],
+    [
+      "Given an AI interaction occurs, then the event is logged in the audit trail for usage tracking.",
+      "ai-agents",
+      [],
+      ["ai-agents.usage-audit"],
+    ],
+    [
+      "Given a project is active, when the owner archives it, then it is hidden from the main list but preserved.",
+      "projects",
+      [],
+      ["projects.project-archive"],
+    ],
+    [
+      "Given the member is on the recorder, when they choose the webcam source, then a 4K resolution input can be selected.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.resolution"],
+    ],
+    [
+      "Given a recording is running, when the member chooses another layout, then the screen share and the webcam feed are rearranged according to the template.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.layouts"],
+    ],
+    [
+      "Given a capture is running, when the member presses record, then the desktop screen and the webcam feed are captured simultaneously.",
+      "saas-crud",
+      ["media.screen-recording.turbineh"],
+      ["recording.screen-camera"],
+    ],
+    [
+      "The assistant must recommend at least three homes that match the buyer's budget and location.",
+      "ai-agents",
+      ["ai.recommendations.turbineh"],
+      ["recommendations.recommend"],
+    ],
+  ])("maps the compiled wording %j", (asked, recipe, components, want) => {
+    expect(ids(asked, recipe, components).sort()).toEqual([...want].sort());
+  });
+
+  it.each([
+    // The cancel function is the link of the confirmation email; a cancellation that only frees the slot is not it.
+    [
+      "Given an existing appointment, when the client asks to cancel it, then the time is marked as available for others.",
+      "bookings",
+      ["domain.reminders.turbineh"],
+    ],
+    // No SMS channel in the app: a text-message reminder is not the email reminder.
+    [
+      "Given a client gave a mobile number, when the visit is 3 hours away, then an SMS reminder is sent.",
+      "bookings",
+      ["domain.reminders.turbineh"],
+    ],
+    // Functions the B2B components do not have stay open.
+    [
+      "Given a member saved a search query, they can reopen that result set from their saved searches list.",
+      "saas-crud",
+      ["domain.matching.turbineh"],
+    ],
+    [
+      "Given the app is running, usage analytics are captured and shown in the administration dashboard.",
+      "saas-crud",
+      ["domain.matching.turbineh"],
+    ],
+  ])("keeps %j open", (asked, recipe, components) => {
+    expect(ids(asked, recipe, components)).toEqual([]);
   });
 });

@@ -32,6 +32,11 @@ describe("general requirements are not functions (ADR-0069)", () => {
       "Given the app is running, when the user performs any CRUD operation, then the data persists after a page refresh.",
       "persistence",
     ],
+    // ADR-0075: where the data lives across a reload, said the other way round.
+    [
+      "Given the app is open, when the user reloads the browser, then every note and folder is retrieved from the local database.",
+      "persistence",
+    ],
   ])("%s → %s", (criterion, kind) => {
     expect(generalKind(criterion)).toBe(kind);
   });
@@ -44,6 +49,7 @@ describe("general requirements are not functions (ADR-0069)", () => {
     "Given a request, the status transitions from pending to approved when staff approve it.",
     "Given a ticket, when the assistant classifies it, then the label is stored.",
     "The user toggles dark mode and the theme is kept.",
+    "When the user refreshes the page, the new comment is still shown under the post.",
   ])("a function stays functional: %s", (criterion) => {
     expect(generalKind(criterion)).toBeNull();
   });

@@ -143,6 +143,7 @@
   advertises: "archiving"
   says: ["archiv", "project"]
   terms: >-
+    preserve preserves preserved hidden hide hides
     archive archives archived archiving restore restores restored unarchive hide hides hidden leave leaves moved
     move state section list main view project projects entire whole back
   actors: [owner, member, admin]

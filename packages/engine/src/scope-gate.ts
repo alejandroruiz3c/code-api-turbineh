@@ -134,6 +134,11 @@ const AI_TOOL_AFTER_TOPIC =
 /** "a blog about AI", "un curso sobre IA". */
 const AI_TOPIC_PREV =
   /\b(about|on|covering|regarding|related to|sobre|acerca de|en torno a)\s+(the\s+|la\s+|el\s+)?((latest|recent|new|modern|practical|responsible)\s+)?$/i;
+/**
+ * "AI answer engines", "AI crawlers" and the llms.txt file (ADR-0075): what reads a site's structured data, never a
+ * function of the app.
+ */
+const AI_READERS_NEXT = /^[\s-]*(answer engines|crawlers)\b/i;
 /** "AI-powered", "AI assistant", "AI drafts", "an AI that answers": the app runs AI. */
 const AI_FUNCTION_NEXT =
   /^[\s-]*(powered|driven|based|assisted|generated|generat\w*|assistants?|agents?|chat\w*|bots?|writ\w*|draft\w*|summar\w*|classif\w*|recommend\w*|suggest\w*|answer\w*|repl\w*|translat\w*|detect\w*|predict\w*|extract\w*|tag(s|ging)?|creat\w*|produc\w*|search|features?|models?|that|which|to|will|should|must|can)\b/i;
@@ -150,6 +155,8 @@ export function asksForAi(text: string): boolean {
     const at = m.index ?? 0;
     const next = text.slice(at + word.length);
     const prev = text.slice(0, at);
+    // "Ready for search and AI answer engines", "AI crawlers": machines that read the site (SEO), not AI the app runs.
+    if (AI_READERS_NEXT.test(next) || (/^llms?$/i.test(word) && /^\.txt\b/i.test(next))) continue;
     if (AI_FUNCTION_NEXT.test(next)) return true;
     const topic = AI_TOPIC_NEXT.exec(next);
     // "AI research assistant" is still an assistant: the topic noun must not name a tool the app runs.

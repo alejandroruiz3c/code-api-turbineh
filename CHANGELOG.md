@@ -57,6 +57,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- The plan promises what the package proves (ADR-0075): an optional template module whose tests prove a criterion the
+  plan links (the AI app's knowledge base) is kept by tree-shaking instead of removed with its proof; a request that
+  only names the use case ("an e-commerce shop") or is its catalogue text gets the use case's canonical criteria, not
+  the compiler's guesses; request words that name a function (escalate, human) are no longer absorbed as context, so
+  the hand-off maps to the hand-off; compiled Given/When/Then wording maps to the canonical criteria it means; "AI
+  answer engines" and llms.txt are not AI generation; a browser refresh that keeps the data is the persistence general
+  requirement; the account-page E2E checks the role by its key (it failed whenever the request named its own roles);
+  an empty environment is a new app, not parts for a project; the plan's scope states the functional coverage it
+  expects (`scope.functional`) and which requirements are delivered open.
 - The AI Safety Pack no longer redacts dates and times ("2026-10-26 09:00") as phone numbers, which broke booking
   dates sent to the assistant (ADR-0072).
 - Scope-gate recall (ADR-0069): requests the library covers are no longer refused at "0 % functional coverage".

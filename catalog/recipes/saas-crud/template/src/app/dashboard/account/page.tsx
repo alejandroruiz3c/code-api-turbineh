@@ -33,14 +33,21 @@ export default async function Account() {
           </thead>
           <tbody>
             {organizations.map((o) => (
-              <tr key={o.id} data-testid="account-organization" className="border-t border-line">
+              <tr
+                key={o.id}
+                data-testid="account-organization"
+                data-active={o.id === organizationId ? "true" : "false"}
+                className="border-t border-line"
+              >
                 <td className="py-1">
                   {o.name}
                   {o.id === organizationId ? (
                     <span className="ml-2 text-xs text-accent">active</span>
                   ) : null}
                 </td>
-                <td className="py-1">{o.roleLabel}</td>
+                <td className="py-1" data-testid="account-role" data-role={o.role}>
+                  {o.roleLabel}
+                </td>
               </tr>
             ))}
           </tbody>

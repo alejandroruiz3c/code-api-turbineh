@@ -459,6 +459,9 @@ describe("AI as the subject of content is not AI generation", () => {
     "un blog sobre IA y ética para estudiantes",
     "A course website on machine learning with lessons and quizzes",
     "a community site with the latest AI news and events",
+    // ADR-0075: machines that read the site (SEO), not AI the app runs.
+    "The site is ready for search and AI answer engines (JSON-LD, llms.txt, robots, sitemap)",
+    "pages readable by AI crawlers",
   ])("topic: %s", (text) => {
     expect(asksForAi(text)).toBe(false);
     expect(uncoveredByCode(text, { catalog: CATALOG, aiIncluded: false })).toBeNull();
@@ -472,6 +475,7 @@ describe("AI as the subject of content is not AI generation", () => {
     "the system uses AI to tag photos",
     "a chatbot for our shop",
     "the app drafts replies with AI for me to review",
+    "an AI answer engine over our product manuals",
   ])("function: %s", (text) => {
     expect(asksForAi(text)).toBe(true);
     expect(uncoveredByCode(text, { catalog: CATALOG, aiIncluded: false })).toMatch(/AI generation/);

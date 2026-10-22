@@ -49,6 +49,7 @@
   advertises: "chat over a knowledge base"
   says: ["chat|ask|answer|question|convers|respond|reply|retriev", "knowledge|document|docs|faq|source|polic|help|manual|base"]
   terms: >-
+    reference references referencing information
     match matches matching
     retrieve retrieves retrieved retrieval relevant article articles display displays shows return returns present
     chat chats ask asks asked answer answers answered question questions conversation conversations respond
@@ -107,6 +108,7 @@
   advertises: "usage and audit"
   says: ["usage|audit|log|cost|token|track|monitor|history"]
   terms: >-
+    event events
     ai usage audit trail trails log logs logged cost costs token tokens track tracks tracked monitor monitors
     history request requests calls call blocked admin owner dashboard see view report reports every each
   actors: [owner, admin, manager]

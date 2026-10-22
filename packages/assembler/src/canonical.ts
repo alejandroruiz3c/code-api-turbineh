@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { proofVerdict, rolesIn, salientStems, statesRefusal } from "@turbineh/shared";
 import { parse } from "yaml";
 import { splitTestRef, testBlocks } from "./acceptance.js";
+import { componentModules } from "./modules.js";
 import { entityNames } from "./naming.js";
 import { readRecipe, recipeChain } from "./recipes.js";
 
@@ -356,7 +357,11 @@ const NARRATIVE = salientStems(
     "reloads reloaded launch launches running state states input inputs field fields editable modification " +
     "modifications element elements interface module modules entry entries container containers request requests " +
     "requested wish wishes organize organise organizes organises open opens opened load loads loaded cover " +
-    "covers give gives",
+    "covers give gives " +
+    // ADR-0075: how compiled Given/When/Then criteria qualify a function ("a secure sign-in flow", "at least one item",
+    // "a dedicated page", "subsequent uses", "a request is made"): never a function of its own.
+    "secure securely flow flows platform context contexts least single currently dedicated subsequent " +
+    "subsequently but made set based initial",
 );
 
 const leftover = (
@@ -399,7 +404,9 @@ const normalize = (text: string): string =>
 
 /** How much of a canonical criterion's own wording the request criterion expresses (0–1). */
 const closeness = (derived: string, c: ResolvedCanonical): number => {
-  const want = salientStems(c.criterion);
+  // Its wording and the catalogue words it proves (ADR-0075): "an option to escalate to a human" expresses the
+  // hand-off to a person ("escalate to a human"), not the tool registry that also lists the escalation tool.
+  const want = salientStems(`${c.criterion}\n${c.advertises}`);
   const have = salientStems(derived);
   return want.size === 0 ? 0 : [...want].filter((s) => have.has(s)).length / want.size;
 };
@@ -706,9 +713,63 @@ export function canonicalForPlan(input: {
   );
 }
 
+/**
+ * Optional modules (ADR-0064) a set of tests needs (ADR-0075): a test that lives in a module's files, or between its
+ * `turbineh:module <id>` markers, is removed with the module. A criterion the plan links to such a test is proved only
+ * when that module ships, so the module's capability is justified by the criterion (tree-shaking never removes the
+ * proof of a function the plan promised). Returns capability → the tests that need it. Deterministic.
+ */
+export function modulesForTests(input: {
+  recipesDir: string;
+  recipe: string;
+  components: readonly string[];
+  tests: readonly string[];
+}): Map<string, string[]> {
+  const componentsDir = join(input.recipesDir, "..", "components");
+  const components = withRequires(componentsDir, [
+    ...requiredComponentsOf(input.recipesDir, input.recipe),
+    ...input.components,
+  ]);
+  const modules = [
+    ...recipeChain(input.recipesDir, input.recipe).flatMap((m) => m.modules ?? []),
+    ...components.flatMap((id) => componentModules(join(componentsDir, id), id)),
+  ].filter((m) => !("when" in m && m.when) && m.capability);
+  const out = new Map<string, string[]>();
+  if (modules.length === 0) return out;
+  const source = catalogSource(input.recipesDir, input.recipe, components);
+  for (const ref of input.tests) {
+    const { file, title } = splitTestRef(ref);
+    const ids = new Set(
+      modules
+        .filter((m) => m.files.some((f) => (f.endsWith("/") ? file.startsWith(f) : file === f)))
+        .map((m) => m.id),
+    );
+    const src = title ? source(file) : null;
+    const at = src ? src.indexOf(title) : -1;
+    if (src && at >= 0) {
+      // The module markers opened before the test's title and not closed yet.
+      const open = new Set<string>();
+      for (const line of src.slice(0, at).split("\n")) {
+        if (/turbineh:(end-)?without-module/.test(line)) continue;
+        const m = /turbineh:(end-)?module ([\w.-]+)/.exec(line);
+        if (!m) continue;
+        if (m[1]) open.delete(m[2] as string);
+        else open.add(m[2] as string);
+      }
+      for (const id of open) ids.add(id);
+    }
+    for (const m of modules.filter((x) => ids.has(x.id))) {
+      const list = out.get(m.capability) ?? [];
+      if (!list.includes(ref)) list.push(ref);
+      out.set(m.capability, list);
+    }
+  }
+  return out;
+}
+
 /** Words that name a capability or an external platform: a request word like these is never absorbed as context. */
 const FEATURE_WORD =
-  /^(sync|publish|post|integrat|import|export|notif|remind|sms|text|whatsapp|telegram|slack|discord|instagram|facebook|linkedin|twitter|tiktok|youtube|google|outlook|calendar|hubspot|salesforce|shopify|quickbooks|xero|mailchimp|zendesk|stripe|paypal|pay|charge|subscri|invoice|ai|chat|bot|assistant|email|mail|report|analytic|api|webhook|map|gps|video|stream|voice|call|phone|sign|login|password|translat|recommend|review|rating|loyalty|gift|refund|deliver|track|auction|bid)/i;
+  /^(sync|publish|post|integrat|import|export|notif|remind|sms|text|whatsapp|telegram|slack|discord|instagram|facebook|linkedin|twitter|tiktok|youtube|google|outlook|calendar|hubspot|salesforce|shopify|quickbooks|xero|mailchimp|zendesk|stripe|paypal|pay|charge|subscri|invoice|ai|chat|bot|assistant|email|mail|report|analytic|api|webhook|map|gps|video|stream|voice|call|phone|sign|login|password|translat|recommend|review|rating|loyalty|gift|refund|deliver|track|auction|bid|escalat|handoff|human)/i;
 
 /**
  * The request's subject words (its app name and summary: "ceramics", "mug", "studio"), absorbed by the residual check
