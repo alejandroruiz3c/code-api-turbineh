@@ -4,7 +4,7 @@ title: SMS with Twilio's Messages API, consent and STOP handling, retries and a 
 summary: >-
   Sends SMS text messages through Twilio Programmable Messaging with its official REST API — one documented request,
   POST /2010-04-01/Accounts/{AccountSid}/Messages.json with HTTP Basic auth and a form body (To, From or
-  MessagingServiceSid, Body, StatusCallback); no SDK. Every number is validated as E.164 with libphonenumber-js (a number
+  MessagingServiceSid, Body, StatusCallback); no SDK. Every number is checked as E.164 with libphonenumber-js (a number
   typed without a country code is read in the app's default country, or refused). Nothing is sent to a number that has
   not agreed: consent is recorded per number (for example from a ticked box on a form) and a STOP reply — or Twilio's
   unsubscribed-recipient error 21610 — opts it out until the person replies START; a form tick never overrides a STOP.
@@ -15,7 +15,7 @@ summary: >-
   Without credentials nothing leaves the app: messages are logged as not sent.
 keywords:
   [sms, text message, twilio, send sms, sms notifications, sms reminders, opt-out, stop, unsubscribe, consent,
-   e164, phone number validation, delivery status, webhook signature, retries, backoff]
+   delivery status, webhook signature, retries, backoff]
 synonyms:
   sms: [text, text message, texting, mobile message]
   opt-out: [STOP, unsubscribe, stop messages]

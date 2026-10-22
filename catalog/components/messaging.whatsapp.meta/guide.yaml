@@ -5,7 +5,7 @@ summary: >-
   Sends WhatsApp notifications with Meta's official WhatsApp Business Cloud API: POST /v26.0/{phone-number-id}/messages
   on the Graph API with the business's access token, no SDK. A business may message a person outside the 24-hour
   customer service window only with a message template approved in WhatsApp Manager, so this component sends templates:
-  name, language code and the body's {{n}} values in order. Numbers are validated as E.164 with libphonenumber-js.
+  name, language code and the body's {{n}} values in order. Numbers are checked as E.164 with libphonenumber-js.
   WhatsApp's Business Messaging Policy requires the person's opt-in: consent is recorded per number (e.g. a ticked box
   on a form) and a STOP message opts it out until the person writes START; a form tick never overrides a STOP.
   Throughput limits (130429, 131056, 80007) and 5xx answers are retried in the call with exponential backoff and
