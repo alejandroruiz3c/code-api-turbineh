@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: ai.recommendations.turbineh
 title: Conversational recommendations over the client's own verified catalogue (preferences, matching, facts, comparison, viewings)
+name: "Recommendation assistant"
+tagline: "Recommends only verified records from your own catalogue and books viewings."
 summary: >-
   A public assistant that helps people choose from the business's own catalogue — new-build homes, cars, courses —
   through plain conversation. It records what each person wants (budget, preferred location and needs such as

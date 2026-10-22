@@ -1,3 +1,4 @@
+import { summarizeUseCase, USE_CASES as CATALOG } from "@turbineh/engine";
 import { describe, expect, it } from "vitest";
 import { stateOfBuild } from "./states";
 import { matchUseCases, USE_CASES } from "./use-cases";
@@ -15,6 +16,18 @@ describe("Discover by need", () => {
   it("returns every use case for an empty need and none for an unrelated one", () => {
     expect(matchUseCases("")).toHaveLength(USE_CASES.length);
     expect(matchUseCases("quantum chromodynamics")).toHaveLength(0);
+  });
+
+  it("names, summaries, functions and examples come from the catalogue (ADR-0076)", () => {
+    expect(USE_CASES.map((u) => u.id).sort()).toEqual(CATALOG.map((u) => u.id).sort());
+    for (const u of USE_CASES) {
+      const c = CATALOG.find((x) => x.id === u.id)!;
+      expect(u.name).toBe(c.name);
+      expect(u.summary).toBe(c.tagline);
+      expect(u.functions).toEqual(c.functions);
+      // The guarded example (apps/worker/src/example-prompts.test.ts), never an unchecked one.
+      expect(u.example).toBe(summarizeUseCase(c).example);
+    }
   });
 
   it("never names a third-party decider in product copy", () => {

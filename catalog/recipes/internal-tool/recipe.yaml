@@ -1,4 +1,8 @@
 id: internal-tool
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Internal back-office tool"
+tagline: "An internal back-office tool with tables, search and CSV import and export."
 description: Internal back-office tool with tables, search, CSV import and export
 extends: saas-crud
 providedEntities: []

@@ -1,4 +1,8 @@
 id: projects
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Projects and tasks"
+tagline: "Project and task management for teams on kanban boards."
 description: Project and task management for teams with kanban boards, assignees, priorities, due dates, comments, a personal task list, editing and deleting projects and tasks, and archiving with restore
 extends: saas-crud
 providedEntities:

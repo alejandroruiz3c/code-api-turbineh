@@ -3,6 +3,8 @@
 # nothing of it is left over once the wording, the tests' titles, `terms`, `actors` and this app's aliases are
 # absorbed) is replaced by the canonical wording in the plan, and is met exactly when the linked tests are in the
 # package and the gate passed. `advertises`: the words of the catalogue text this criterion proves.
+# `label` (optional, ADR-0076): how the home and the catalogue name this function when `advertises` is a fragment of a
+# sentence; criteria with the same label are shown as one function.
 # The booking domain's nouns (what the functions act on), absorbed by every criterion below.
 - vocabulary: >-
     agenda agendas
@@ -42,6 +44,7 @@
 - id: bookings.cancel-notice
   criterion: "A customer cancels the booking with the link of the confirmation email before the notice hours; inside the notice period the link is refused"
   advertises: "notice policy"
+  label: "Cancel link with a notice policy"
   says: ["cancel", "link|notice|\\d+ ?(h|hours?)|before|email|policy|advance"]
   terms: >-
     open opens opened
@@ -133,6 +136,7 @@
 - id: bookings.staff-only
   criterion: "People who are not staff cannot see the bookings"
   advertises: "staff calendar"
+  label: "Staff-only pages"
   says: ["staff|admin|sign[ -]?in|log[ -]?in|only|private|protect", "see|view|access|bookings|appointments|calendar|dashboard"]
   terms: >-
     staff only access accessible protected private sign signed in log logged dashboard calendar see view
@@ -145,6 +149,7 @@
 - id: bookings.assistant-books
   criterion: "A customer books through the assistant only a real free slot, after confirming the date, time and staff member; it triggers the confirmation email"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "\\bbook|appointment|reserv|slot|session"]
   terms: >-
@@ -166,6 +171,7 @@
 - id: bookings.assistant-taken
   criterion: "A customer asks the assistant for a time already taken: it says the time is not available and suggests the free times of that day"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "taken|occupied|already|not available|unavailable|conflict|clash|double"]
   terms: >-
@@ -180,6 +186,7 @@
 - id: bookings.assistant-reschedule
   criterion: "A customer requests to reschedule: the assistant moves an existing booking to a new free slot after the customer confirms"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "reschedul|\\bmove|change (a|the|their|my) (booking|appointment|session|reservation)"]
   terms: >-
@@ -193,6 +200,7 @@
 - id: bookings.assistant-cancel-notice
   criterion: "A customer requests to cancel a booking inside the notice period: the assistant refuses the cancellation"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation", "cancel"]
   terms: >-
@@ -206,6 +214,7 @@
 - id: bookings.assistant-prices
   criterion: "A customer asks about prices: the assistant responds stating each service with its price"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["assistant|chat|agent|bot|ai\\b|conversation|answer", "pric|cost|fee|rate|service"]
   terms: >-
@@ -231,6 +240,7 @@
 - id: bookings.assistant-injection
   criterion: "A malicious prompt injection input is refused with a 400 error: the booking assistant does not process it"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["injection|jailbreak|manipulat|malicious|override"]
   terms: >-
@@ -243,6 +253,7 @@
 - id: bookings.assistant-input-limit
   criterion: "A request to the assistant whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
   advertises: "toolkit for runAgent"
+  label: "Booking tools for AI assistants"
   when: ai
   says: ["abuse|input limit|character limit|too long|oversiz|exceed|length"]
   terms: >-

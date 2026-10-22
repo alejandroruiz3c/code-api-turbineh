@@ -22,6 +22,7 @@
 - id: recording.layouts
   criterion: "A member switches the layout while recording and the screen and camera feeds are rearranged"
   advertises: "layouts"
+  label: "Recording layouts"
   says: ["layout|bubble|side[- ]by[- ]side|picture[- ]in[- ]picture|pip|corner|arrang|compos|overlay"]
   terms: >-
     template templates share sharing according
@@ -49,6 +50,7 @@
 - id: recording.player
   criterion: "The recording plays in the player and seeks with byte ranges"
   advertises: "player"
+  label: "Video player"
   says: ["play|watch|view|player|seek"]
   terms: >-
     play plays playing playback player watch watches view views open opens seek seeks seeking scrub byte bytes range
@@ -82,6 +84,7 @@
 - id: recording.refuse-non-video
   criterion: "An upload that is not a WebM or MP4 video is refused"
   advertises: "MediaRecorder to MP4 when the browser supports it, else WebM"
+  label: "MP4 or WebM only"
   says: ["webm|mp4|format|type|not a video|refus|reject"]
   terms: >-
     upload uploads uploaded file files webm mp4 format formats type types not video videos refused refuse rejected

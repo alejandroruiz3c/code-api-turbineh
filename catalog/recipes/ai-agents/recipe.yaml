@@ -1,4 +1,8 @@
 id: ai-agents
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "AI agents"
+tagline: "AI assistants that chat over a knowledge base, with allowed tools and escalation to a human."
 description: AI assistants with instructions and allowed tools (escalate to a human by email), chat over a knowledge base of the team's documents, batch AI processing of records (classify, extract, summarise), usage and audit — every AI call through the TurbineH orchestrator with its AI Safety Pack (ADR-0028)
 extends: saas-crud
 providedEntities:

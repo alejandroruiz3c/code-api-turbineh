@@ -2,6 +2,7 @@
 - id: workflow.initial-status
   criterion: "A new record starts in the initial status and its history records who created it and when"
   advertises: "workflow"
+  label: "Status workflows"
   says: ["status|state|stage", "initial|start|new|creat|default"]
   terms: >-
     new record records item items start starts started initial default first status state stage created create
@@ -11,6 +12,7 @@
 - id: workflow.transitions
   criterion: "Only the allowed transitions are offered, and each change is recorded with who and when"
   advertises: "workflow"
+  label: "Status workflows"
   says: ["status|state|stage|transition|move|approv|workflow", "chang|move|transition|allow|record|history|log|approv"]
   terms: >-
     status statuses state states stage stages transition transitions move moves moved change changes changed allowed
@@ -21,6 +23,7 @@
 - id: workflow.refused-transition
   criterion: "A status change the workflow does not allow is refused by the server"
   advertises: "workflow"
+  label: "Status workflows"
   says: ["status|state|stage|transition", "not allow|cannot|refus|reject|invalid|skip|only"]
   terms: status state stage transition transitions change changes allowed invalid skip skipped refused rejected server workflow move
   tests:
@@ -28,6 +31,7 @@
 - id: workflow.history-immutable
   criterion: "Status history cannot be changed or deleted, not even directly in the database"
   advertises: "workflow"
+  label: "Status workflows"
   says: ["history|log|trail|event", "cannot|immutable|append|never|\\bnot\\b"]
   terms: status history log trail event events append only immutable changed deleted edit delete database directly
   tests:
@@ -35,6 +39,7 @@
 - id: workflow.stuck
   criterion: "A record that stays in a status longer than its limit is flagged as stuck"
   advertises: "workflow"
+  label: "Status workflows"
   says: ["stuck|longer than|overdue|flag|highlight|limit|too long|sla"]
   terms: record records item items stays stay status state stage longer limit limits hours days flag flagged highlighted stuck overdue sla
   tests:

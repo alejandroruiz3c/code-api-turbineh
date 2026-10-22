@@ -59,6 +59,7 @@
 - id: saas-crud.crud-create
   criterion: "The owner creates a {entity} and sees it in the list"
   advertises: "CRUD screens"
+  label: "Create, list, edit and delete records"
   generated: "creates an? .+ and sees it in the list$"
   says: ["\\b(creat|add|new|record|register|enter|submit|log|save)", "."]
   terms: >-
@@ -70,6 +71,7 @@
 - id: saas-crud.crud-list
   criterion: "The owner sees the {entities} in a list after creating one"
   advertises: "CRUD screens"
+  label: "Create, list, edit and delete records"
   generated: "creates an? .+ and sees it in the list$"
   says: ["\\b(list|table|overview|all (the |their )?|browse|see|view)"]
   terms: >-
@@ -80,6 +82,7 @@
 - id: saas-crud.crud-edit
   criterion: "The owner edits a {entity} and sees the change"
   advertises: "CRUD screens"
+  label: "Create, list, edit and delete records"
   generated: "edits an? .+ and sees the change"
   says: ["\\b(edit|updat|chang|modif|correct|amend)"]
   terms: >-
@@ -90,6 +93,7 @@
 - id: saas-crud.crud-delete
   criterion: "The owner deletes a {entity} and it is no longer in the list"
   advertises: "CRUD screens"
+  label: "Create, list, edit and delete records"
   generated: "deletes an? .+ and it is no longer in the list$"
   says: ["\\b(delet|remov|archiv|discard)"]
   terms: >-
@@ -100,6 +104,7 @@
 - id: saas-crud.csv-export
   criterion: "The owner triggers a download of all {entities} records in CSV format"
   advertises: "CRUD screens"
+  label: "CSV import and export"
   generated: "download of all .+ records in CSV format"
   says: ["\\b(export|download|csv)"]
   terms: >-
@@ -110,6 +115,7 @@
 - id: saas-crud.search
   criterion: "The owner searches {entities} by text and the list shows only the matching {entities}"
   advertises: "CRUD screens"
+  label: "Search"
   generated: "searches .+ by text"
   says: ["\\b(search|find|look ?up|filter)"]
   terms: >-
@@ -120,6 +126,7 @@
 - id: saas-crud.csv-import
   criterion: "{entities} are imported from a CSV file"
   advertises: "CRUD screens"
+  label: "CSV import and export"
   generated: "import from CSV$"
   says: ["\\b(import|upload)", "csv|spreadsheet|file|bulk"]
   terms: >-
@@ -130,6 +137,7 @@
 - id: saas-crud.tag-filter
   criterion: "The owner filters {entities} by tag and the list shows only the {entities} with that tag"
   advertises: "CRUD screens"
+  label: "Tag filter"
   generated: "filters .+ by tag"
   says: ["\\btag"]
   terms: tag tags tagged label labels filter filters filtered only list with that
@@ -138,6 +146,7 @@
 - id: saas-crud.sort
   criterion: "The owner sorts {entities} and the list is reordered, newest or oldest first"
   advertises: "CRUD screens"
+  label: "Sort"
   generated: "sorts .+ by .+ reorders the list"
   says: ["\\b(sort|order(ed)? by|newest|oldest|chronolog)"]
   terms: sort sorts sorted order ordered by newest oldest first last date dates chronological list reorder
@@ -146,6 +155,7 @@
 - id: saas-crud.tenant-isolation
   criterion: "A person in another workspace never sees this workspace's {entities}"
   advertises: "Multi-tenant SaaS"
+  label: "Tenant isolation"
   generated: "another workspace never sees this workspace's"
   when: open-sign-up
   says: ["workspace|tenant|organi[sz]ation|company|team|account|isolat|other user|another user|private", "never|\\bnot\\b|only|isolat|separate|private|cannot|own"]
@@ -158,6 +168,7 @@
 - id: saas-crud.switch-organization
   criterion: "A user who belongs to several organizations switches between them and sees only the selected organization's workspace"
   advertises: "workspaces"
+  label: "Switch between organizations"
   says: ["switch|chang|select|choos|toggl|move between|jump", "organi[sz]ation|workspace|tenant|company|companies|team|account"]
   terms: >-
     without context contexts
@@ -172,6 +183,7 @@
 - id: saas-crud.account-profile
   criterion: "The user views their profile on the account page and updates their display name"
   advertises: "sign-in"
+  label: "Account profile"
   says: ["profile|account (page|details|settings|information|info)|my account|personal (details|information|info)|display name", "view|see|show|navigat|open|updat|edit|chang|display", "^(?!.*\\b(updat|chang|edit|modif)\\w*\\b[^.]{0,40}\\be-?mail)"]
   terms: >-
     profile profiles account page details settings information info personal view views see sees show shows

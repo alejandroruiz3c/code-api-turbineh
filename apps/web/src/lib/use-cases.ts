@@ -1,9 +1,10 @@
+// Data only (no Node modules): this file is imported by client components.
+import { USE_CASES as CATALOG_USE_CASES } from "@turbineh/engine/use-cases";
 import type { CapabilitySummary, Requirement } from "@turbineh/shared";
 
 /**
- * Complete use cases available today (catalog/recipes). Product copy for Discover; the engine search returns the
- * same shape (and real component counts). Requirements are what the flow needs before it runs in a project.
- * No figures here that do not come from bench/: `components: 0` means "not counted here".
+ * Use cases for Discover by need and the wizard's fallback plan; the engine search returns the same shape (and real
+ * component counts). No figures here that do not come from bench/: `components: 0` means "not counted here".
  */
 const base = ["Next.js 16", "TypeScript", "PostgreSQL"];
 const env = (name: string, why: string): Requirement => ({
@@ -17,181 +18,41 @@ const auth = env("BETTER_AUTH_SECRET", "Signs sessions (generated for you when w
 
 export interface UseCase extends CapabilitySummary {
   keywords: string[];
+  /** The area's verified functions (catalogue criteria linked to tests, ADR-0076). */
+  functions: string[];
 }
 
-export const USE_CASES: UseCase[] = [
-  {
-    id: "ai-agents",
-    kind: "use_case",
-    name: "AI agents & inference processes",
-    summary:
-      "Assistants with instructions and allowed tools, chat over your documents with sources, batch classify, extract or summarise — every AI call through the TurbineH orchestrator, with AI safety built in.",
-    components: 0,
-    stacks: base,
-    requirements: [
-      db,
-      auth,
-      env(
-        "TURBINEH_AI_TOKEN",
-        "AI calls through the TurbineH gateway — or leave it empty and use your own provider (AI_BASE_URL, AI_API_KEY, AI_MODEL)",
-      ),
-    ],
-    example:
-      "A support assistant that answers from a help-centre document and refuses a prompt injection",
-    keywords: [
-      "ai",
-      "agent",
-      "assistant",
-      "chatbot",
-      "support",
-      "rag",
-      "knowledge",
-      "classify",
-      "inference",
-      "llm",
-      "summarise",
-      "summarize",
-    ],
-  },
-  {
-    id: "storefront",
-    kind: "use_case",
-    name: "E-commerce store",
-    summary:
-      "Catalog with variants, cart, discount codes, several currencies, shipping and taxes by country, card payments and order emails.",
-    components: 0,
-    stacks: base,
-    requirements: [
-      db,
-      auth,
-      env("STRIPE_SECRET_KEY", "Card payments"),
-      env("STRIPE_WEBHOOK_SECRET", "Confirms paid orders"),
-    ],
-    example: "A sock shop with sizes, EUR + USD and a 10% code, paid through a test checkout",
-    keywords: [
-      "shop",
-      "store",
-      "ecommerce",
-      "e-commerce",
-      "cart",
-      "checkout",
-      "payments",
-      "products",
-      "coupons",
-    ],
-  },
-  {
-    id: "bookings",
-    kind: "use_case",
-    name: "Bookings & appointments",
-    summary: "Weekly availability, conflict-free booking, calendar and email confirmations.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A physiotherapy clinic taking 45-minute appointments without double bookings",
-    keywords: [
-      "booking",
-      "bookings",
-      "reservation",
-      "appointment",
-      "calendar",
-      "schedule",
-      "clinic",
-    ],
-  },
-  {
-    id: "saas-crud",
-    kind: "use_case",
-    name: "Multi-tenant SaaS",
-    summary:
-      "Sign-in, workspaces, roles and data screens with create, edit, search, import and export.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A language-school SaaS with students and courses per workspace",
-    keywords: ["saas", "crud", "workspace", "tenant", "roles", "admin", "subscription"],
-  },
-  {
-    id: "internal-tool",
-    kind: "use_case",
-    name: "Internal back-office tool",
-    summary: "Tables, search, CSV import and export for a team's operations.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A gym's members and membership plans with staff login",
-    keywords: ["internal", "back-office", "backoffice", "operations", "table", "csv"],
-  },
-  {
-    id: "client-portal",
-    kind: "use_case",
-    name: "Client portal",
-    summary:
-      "Clients submit requests with file uploads and follow their status; staff review and update them.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "An agency portal where clients upload briefs and track progress",
-    keywords: ["portal", "client", "requests", "tickets", "uploads"],
-  },
-  {
-    id: "corporate-site",
-    kind: "use_case",
-    name: "Corporate website",
-    summary:
-      "Home, services, about, blog with RSS, contact form and an admin panel — optimised for AI search engines.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "An architecture studio's site with a blog and a contact form",
-    keywords: ["website", "corporate", "blog", "cms", "seo", "contact"],
-  },
-  {
-    id: "landing-waitlist",
-    kind: "use_case",
-    name: "Landing page with waitlist",
-    summary: "Public landing, waitlist form, confirmation email and an admin panel.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A product launch page collecting sign-ups",
-    keywords: ["landing", "waitlist", "launch", "signup", "marketing"],
-  },
-  {
-    id: "projects",
-    kind: "use_case",
-    name: "Projects & tasks",
-    summary: "Kanban boards, assignees, priorities, due dates, comments and a personal task list.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A product team's board with priorities and due dates",
-    keywords: ["project", "task", "kanban", "todo", "team"],
-  },
-  {
-    id: "analytics-dashboard",
-    kind: "use_case",
-    name: "Analytics dashboard",
-    summary: "Import data from CSV, KPIs with period comparison, charts, filters and export.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "Monthly sales KPIs from a CSV with period comparison",
-    keywords: ["analytics", "dashboard", "kpi", "charts", "reports", "metrics"],
-  },
-  {
-    id: "tracker",
-    kind: "use_case",
-    name: "Trackers",
-    summary:
-      "Habits, health, money or any daily quantity — goals, quick logging, streaks and history.",
-    components: 0,
-    stacks: base,
-    requirements: [db, auth],
-    example: "A habit tracker with streaks and weekly totals",
-    keywords: ["tracker", "habit", "health", "streak", "log"],
-  },
+/** What a flow needs before it runs in a project (never values). Everything else comes from the catalogue. */
+const stripe = [
+  env("STRIPE_SECRET_KEY", "Card payments"),
+  env("STRIPE_WEBHOOK_SECRET", "Confirms paid orders"),
 ];
+const ai = env(
+  "TURBINEH_AI_TOKEN",
+  "AI calls through the TurbineH gateway — or leave it empty and use your own provider (AI_BASE_URL, AI_API_KEY, AI_MODEL)",
+);
+const EXTRA_REQUIREMENTS: Record<string, Requirement[]> = { "ai-agents": [ai], storefront: stripe };
+
+/**
+ * Complete use cases (catalog/recipes, through the engine's generated index): name, one-line summary, verified functions,
+ * keywords and the guarded example (CI: apps/worker/src/example-prompts.test.ts) come from the catalogue, so Discover
+ * never promises what no test proves (ADR-0076). AI first: an AI agent/assistant need is an AI flow.
+ */
+export const USE_CASES: UseCase[] = [...CATALOG_USE_CASES]
+  .sort((a, b) => Number(b.id === "ai-agents") - Number(a.id === "ai-agents"))
+  .map((u) => ({
+    id: u.id,
+    kind: "use_case",
+    name: u.name,
+    summary: u.tagline,
+    components: 0,
+    stacks: base,
+    requirements: [db, auth, ...(EXTRA_REQUIREMENTS[u.id] ?? [])],
+    // The use case's catalogue example (the engine's `summarizeUseCase(u).example`).
+    example: u.description,
+    keywords: u.keywords,
+    functions: u.functions,
+  }));
 
 const words = (q: string) =>
   q
@@ -208,7 +69,8 @@ export function matchUseCases(q: string): UseCase[] {
     ["ai", "agent", "agents", "assistant", "chatbot", "llm"].includes(w),
   );
   return USE_CASES.map((u) => {
-    const hay = `${u.keywords.join(" ")} ${u.name} ${u.summary}`.toLowerCase();
+    const hay =
+      `${u.keywords.join(" ")} ${u.name} ${u.summary} ${u.functions.join(" ")}`.toLowerCase();
     const score =
       ws.filter((w) => hay.includes(w)).length + (wantsAi && u.id === "ai-agents" ? 10 : 0);
     return { u, score };

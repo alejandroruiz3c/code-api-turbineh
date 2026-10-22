@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: messaging.whatsapp.meta
 title: WhatsApp notifications with the Cloud API — approved templates, opt-in and STOP, retries, signed webhook
+name: "WhatsApp"
+tagline: "WhatsApp template messages with Meta's Cloud API, only to people who opted in."
 summary: >-
   Sends WhatsApp notifications with Meta's official WhatsApp Business Cloud API: POST /v26.0/{phone-number-id}/messages
   on the Graph API with the business's access token, no SDK. A business may message a person outside the 24-hour

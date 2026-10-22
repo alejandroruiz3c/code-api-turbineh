@@ -1,4 +1,8 @@
 id: tracker
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Trackers"
+tagline: "Personal trackers for habits, health, money or any daily quantity."
 description: Personal trackers (habits, health, money or any daily quantity) — goals, quick logging, streaks, 30-day history and weekly totals
 extends: saas-crud
 providedEntities: [Tracker, Habit, Goal, Log, Entry, Checkin, CheckIn, Streak, Workout, Expense, Measurement]

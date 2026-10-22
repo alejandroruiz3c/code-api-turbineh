@@ -6,6 +6,7 @@
 - id: social-connections.connect
   criterion: "A workspace owner connects LinkedIn, Facebook Pages with their Instagram account, and X through each provider's OAuth consent page"
   advertises: "OAuth 2.0"
+  label: "OAuth 2.0 account connection"
   says: ["connect|link|oauth|authori[sz]|log ?in with|sign ?in with"]
   terms: connect connects connected connection link links linked oauth authorize authorise consent login sign provider providers
   actors: [owner, admin, manager]
@@ -15,6 +16,7 @@
 - id: social-connections.encrypted
   criterion: "Access tokens are stored encrypted (AES-256-GCM) and never appear on a page"
   advertises: "tokens AES-256-GCM-encrypted"
+  label: "Encrypted tokens"
   says: ["token|credential|secret", "encrypt|secure|never|safe|protect"]
   terms: access token tokens credential credentials secret secrets stored store encrypted encryption secure securely never appear shown page pages safe protected
   tests:
@@ -23,6 +25,7 @@
 - id: social-connections.disconnect
   criterion: "Disconnecting an account revokes its tokens at the provider and deletes them here"
   advertises: "revoked on disconnect"
+  label: "Tokens revoked on disconnect"
   says: ["disconnect|revok|unlink|remove"]
   terms: disconnect disconnects disconnecting revoke revokes revoked unlink remove removes tokens token deleted delete provider
   actors: [owner, admin, manager]

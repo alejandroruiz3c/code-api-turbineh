@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: content.blog.turbineh
 title: Blog with Markdown posts, frontmatter, drafts, authors, tags, search, reading time, RSS, sitemap and structured data
+name: "Blog"
+tagline: "A Markdown blog with drafts, authors, tags, RSS and a sitemap."
 summary: >-
   The site's blog. Staff (verified ADMIN_EMAILS) write posts in Markdown in /dashboard/blog: the title, slug, author,
   tags and summary come from the form or from frontmatter at the top of the text (which wins), and the post is saved

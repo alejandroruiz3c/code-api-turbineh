@@ -42,6 +42,7 @@
 - id: landing-waitlist.admin-signups
   criterion: "The owner (admin) sees the list of waitlist signups in the dashboard"
   advertises: "admin panel"
+  label: "Admin panel with sign-ups"
   says: ["admin|owner|staff|dashboard|panel|team", "sign[ -]?ups?|waitlist|entries|list|subscri|regist|lead"]
   terms: >-
     admin admins administrator owner staff team dashboard panel back office backoffice view views see sees list

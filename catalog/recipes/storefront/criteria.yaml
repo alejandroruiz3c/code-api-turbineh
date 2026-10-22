@@ -21,6 +21,7 @@
 - id: storefront.search
   criterion: "Shoppers search the catalogue by product name: the list filters to only the matching products"
   advertises: "product catalog"
+  label: "Product search"
   says: ["search|filter|find|look up"]
   terms: >-
     search searches find finds look lookup filter filters filtered matching match matches name names keyword
@@ -33,6 +34,7 @@
 - id: storefront.images
   criterion: "The admin creates a product with an image"
   advertises: "images"
+  label: "Product images"
   says: ["image|photo|picture|thumbnail"]
   terms: >-
     image images photo photos picture pictures thumbnail thumbnails upload uploads uploaded url link https
@@ -117,6 +119,7 @@
 - id: storefront.currencies
   criterion: "Pays in a second currency: fixed prices, shipping in that currency, order in USD"
   advertises: "several currencies with fixed prices per currency"
+  label: "Several currencies"
   says: ["currenc|usd|eur|gbp|dollar|euro|pound"]
   terms: >-
     currency currencies usd eur gbp dollar dollars euro euros pound pounds second several multiple fixed price
@@ -130,6 +133,7 @@
 - id: storefront.shipping
   criterion: "The admin sets shipping by country and a tax rate"
   advertises: "shipping options by country and currency"
+  label: "Shipping by country and currency"
   says: ["shipping|delivery|ship"]
   terms: >-
     shipping ship ships delivery deliver option options rate rates cost costs fee fees country countries
@@ -240,6 +244,7 @@
 - id: storefront.admin-stock
   criterion: "The owner (admin) updates a product's stock level and the public catalogue reflects it at once"
   advertises: "price and stock"
+  label: "Stock levels from the admin panel"
   says: ["\\b(stock|inventory)\\b", "admin|owner|staff|manag|updat|chang|edit|set|adjust"]
   terms: >-
     stock stocks inventory level levels quantity update updates change changes edit edits set sets adjust

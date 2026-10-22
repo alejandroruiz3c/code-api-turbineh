@@ -11,8 +11,8 @@ import { catalog, productProblem, requireCaller } from "@/server/product";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /v1/capabilities/{id} — inspect a use case (its verified components, sections, requirements) or a component
- * (manifest: what it does and does not, licence, evidence, security scan).
+ * GET /v1/capabilities/{id} — inspect a use case (its verified components, sections, verified functions, add-ons,
+ * requirements) or a component (manifest: what it does and does not, licence, evidence, security scan).
  */
 export async function GET(
   _req: Request,
@@ -28,6 +28,9 @@ export async function GET(
     return Response.json({
       capability: summarizeUseCase(useCase, components.length),
       sections: useCase.sections,
+      // Verified functions (canonical criteria linked to tests) and the components that extend it (ADR-0076).
+      functions: useCase.functions,
+      addOns: useCase.addOns,
       capabilities: useCase.capabilities,
       components: components.map(({ id: cid, version, license, provides, does }) => ({
         id: cid,

@@ -1,4 +1,8 @@
 id: client-portal
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Client portal"
+tagline: "Clients submit requests with file uploads and follow their status."
 description: Client portal where clients submit requests with file uploads and follow their status; staff review and update them
 extends: saas-crud
 providedEntities:

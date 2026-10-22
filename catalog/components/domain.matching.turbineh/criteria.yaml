@@ -33,6 +33,7 @@
 - id: matching.detail
   criterion: "The detail page shows the full description, the source link and why it matches the organization's profile"
   advertises: "detail page"
+  label: "Detail page with why it matches"
   says: ["detail|page|view|open", "description|source|link|url"]
   terms: >-
     detail details individual single page pages view views open opens display displays show shows full
@@ -57,6 +58,7 @@
 - id: matching.feedback
   criterion: "A member marks an opportunity not relevant and it leaves the matches; interested is recorded"
   advertises: "feedback"
+  label: "Relevance feedback"
   says: ["feedback|relevant|irrelevant|interested|important|not interested"]
   terms: >-
     feedback mark marks marked click clicks give gives submit submits relevant irrelevant not interested

@@ -13,6 +13,13 @@ export interface ComponentGuide {
   component: string;
   part?: string;
   title: string;
+  /**
+   * Short display name and one-line tagline for product surfaces (ADR-0076): the home and the catalogue show the
+   * component as an add-on of each use case it extends. Required for a functional component (one with criteria.yaml
+   * and `capability.use_cases`); the tagline names only functions its criteria prove.
+   */
+  name?: string;
+  tagline?: string;
   summary: string;
   keywords: string[];
   synonyms?: Record<string, string[]>;

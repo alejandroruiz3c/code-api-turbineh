@@ -33,6 +33,7 @@
 - id: client-portal.follow-status
   criterion: "A client follows the status of their request and sees the status staff set"
   advertises: "follow their status"
+  label: "Clients follow their status"
   says: ["status|progress|state|track|follow", "client|customer|their|own|see|view|track|follow|portal"]
   terms: >-
     status statuses progress state states track tracks follow follows see sees view views check checks own
@@ -45,6 +46,7 @@
 - id: client-portal.staff-review
   criterion: "Staff review a client's request and update its status, which the client then sees"
   advertises: "staff review and update them"
+  label: "Staff review and update"
   says: ["staff|admin|owner|team|employee|agent", "review|updat|chang|status|move|process|handl|approv|manag"]
   terms: >-
     staff admin admins owner owners team employee employees agent agents review reviews reviewed update
@@ -58,6 +60,7 @@
 - id: client-portal.unsafe-file-rejected
   criterion: "An HTML file disguised as a PDF is rejected"
   advertises: "file uploads"
+  label: "Unsafe files rejected"
   says: ["html|disguis|unsafe|malicious|type|svg|executable|reject|block|only (pdf|image|document)"]
   terms: >-
     html file files disguised disguise pdf type types unsafe malicious svg executable executables binary

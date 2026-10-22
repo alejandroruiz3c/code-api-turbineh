@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.workflow.turbineh
 title: Status workflows with role-gated transitions, immutable history and stuck alerts
+name: "Status workflows"
+tagline: "States, allowed transitions by role and an immutable history."
 summary: >-
   Moves records of any kind — requests, loans, ceramic pieces, tasks — through the states a request describes. Each
   workflow lists its states (with an optional time limit), the initial state, the allowed transitions and which roles

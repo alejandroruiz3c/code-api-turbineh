@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: ai.mail-triage.turbineh
 title: Mailbox triage agent — classify and prioritise every email, daily digest, invoices and payments to a finance ledger with Excel export
+name: "Mailbox triage"
+tagline: "Every new email classified with a category and a priority; invoices recorded in a finance ledger."
 summary: >-
   Every new email of the mailbox (read read-only by email.inbox.imapflow) goes once through the TurbineH orchestrator
   with its AI Safety Pack: the task is written by the app, the email is passed as a document (data, never

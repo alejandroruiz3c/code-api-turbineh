@@ -2,6 +2,7 @@
 - id: social-metrics.dashboard
   criterion: "A dashboard shows likes, comments, shares and impressions of published posts: engagement metrics fetched on a schedule"
   advertises: "likes, comments, shares, impressions"
+  label: "Likes, comments, shares and impressions"
   says: ["metric|engagement|like|comment|share|impression|reach|analytic|stat"]
   terms: >-
     dashboard metrics metric engagement likes like comments comment shares share impressions reach basic

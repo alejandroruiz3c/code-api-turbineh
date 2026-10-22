@@ -11,6 +11,7 @@
 - id: recommendations.preferences
   criterion: "A buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them"
   advertises: "records each person's budget, preferred location and needs"
+  label: "Records budget, location and needs"
   when: ai
   says: ["budget|location|area|town|city|needs?|bedroom|requirement|preference|price range|criteria", "record|captur|identif|store|sav|remember|collect|ask|understand|gather|extract|during|conversation"]
   terms: >-
@@ -28,6 +29,7 @@
 - id: recommendations.recommend
   criterion: "Recommends only verified records from the catalogue that match the budget, the location and the needs"
   advertises: "recommends only verified records from the database that fit them"
+  label: "Recommends only verified records"
   when: ai
   says: ["recommend|suggest|match|fit|find|propos|shortlist|filter"]
   terms: >-
@@ -43,6 +45,7 @@
 - id: recommendations.details
   criterion: "Answers a question about a record with its verified facts"
   advertises: "answers questions with a record's verified facts"
+  label: "Answers with verified facts"
   when: ai
   says: ["answer|question|detail|fact|describ|tell|inform|ask"]
   terms: >-
@@ -70,6 +73,7 @@
 - id: recommendations.never-invents
   criterion: "Never invents a record: an unknown or unverified reference is refused"
   advertises: "never invented"
+  label: "Never invents a record"
   when: ai
   says: ["invent|made[- ]up|hallucinat|unknown|unverified|not exist|only (real|verified|existing)|never"]
   terms: >-
@@ -94,6 +98,7 @@
 - id: recommendations.staff-only
   criterion: "People who are not staff cannot manage the catalogue"
   advertises: "behind an ADMIN_EMAILS allow-list"
+  label: "Staff-only catalogue management"
   says: ["staff|admin|only|private|protect|not", "manage|catalog|listing|access|edit"]
   terms: >-
     people who not staff cannot can only manage access edit catalogue catalog listing listings protected private
@@ -106,6 +111,7 @@
 - id: recommendations.viewing
   criterion: "Books a viewing of a recommended record only on a real free time and after the person confirms"
   advertises: "books a viewing of a record on a real free time after the person confirms"
+  label: "Books viewings on real free times"
   when: ai
   says: ["viewing|visit|tour|showing", "book|schedul|arrang|reserv|facilitat|request|set ?up|organi[sz]"]
   terms: >-

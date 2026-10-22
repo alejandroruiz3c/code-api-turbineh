@@ -1,4 +1,8 @@
 id: corporate-site
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Corporate website"
+tagline: "A corporate website with a blog, a contact form and an admin panel to edit content."
 description: Corporate website with home, services, about, blog with RSS, contact form and an admin panel to edit content, posts and messages
 extends: saas-crud
 providedEntities:

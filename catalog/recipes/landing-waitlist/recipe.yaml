@@ -1,4 +1,8 @@
 id: landing-waitlist
+# Display name and one-line tagline on the home, the catalogue and Discover (ADR-0076): the tagline uses only words
+# of the description and of the functions the criteria prove (CI: packages/engine/src/areas.test.ts).
+title: "Landing page with waitlist"
+tagline: "A public landing page with a waitlist form and a confirmation email."
 description: Public landing page with a waitlist form, confirmation email and an admin panel
 extends: saas-crud
 providedEntities: [WaitlistEntry, Waitlist, Signup, Subscriber, Lead, Registration]

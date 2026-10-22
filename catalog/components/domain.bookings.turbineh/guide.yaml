@@ -1,6 +1,8 @@
 schema: turbineh.guide/v0.1
 component: domain.bookings.turbineh
 title: Booking domain (appointments, availability, policy) with an assistant toolkit
+name: "Bookings"
+tagline: "A public booking page, a staff calendar and a notice policy."
 summary: >-
   Everything an appointment business needs behind its assistant or its staff: team members or rooms, services with
   duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real
