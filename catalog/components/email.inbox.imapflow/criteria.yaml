@@ -1,0 +1,41 @@
+# Canonical acceptance criteria (ADR-0063, ADR-0072) of the mailbox reader. Format: domain.bookings.turbineh/criteria.yaml.
+- vocabulary: >-
+    email emails e-mail mail mails message messages inbox mailbox account imap server gmail outlook microsoft
+    my our their user owner app agent agents
+
+- id: inbox.read-only
+  criterion: "The mailbox is read read-only over IMAP: nothing is marked as read, moved or deleted"
+  advertises: "read-only by construction"
+  says: ["read|access|connect|fetch|sync", "only|without (chang|modif|delet|mark)|never (chang|modif|delet|mark)|read-only|unchanged"]
+  terms: read reads access accesses connect connects fetch fetches sync syncs only read-only nothing never change changes marked mark moved move deleted delete modify unread safe
+  actors: [owner, user, admin]
+  tests:
+    - "tests/unit/mail-inbox.test.ts › reads the mailbox read-only: EXAMINE and BODY.PEEK only, nothing is marked as read, moved or deleted"
+    - "tests/e2e/mail-triage.spec.ts › reads the mailbox read-only and classifies every new email with a category and a priority, most urgent first"
+
+- id: inbox.incremental
+  criterion: "New emails are synchronised incrementally: each run reads only the messages that arrived after the previous one"
+  advertises: "incremental synchronisation by UID"
+  says: ["new|incremental|since|arriv|sync|fetch|poll|check", "e-?mail|mail|message|inbox"]
+  terms: new incremental incrementally since last previous arrive arrived arrives sync synchronise synchronize synchronised synchronized fetch fetched poll polls check checks run runs every minutes received receive receives only once twice duplicate duplicates
+  actors: [owner, user, admin]
+  tests:
+    - "tests/unit/mail-inbox.test.ts › synchronises incrementally by UID: a second run reads only the messages that arrived after the first"
+
+- id: inbox.credentials
+  criterion: "The mailbox is accessed with an app password or an OAuth access token from the environment; wrong credentials are refused"
+  advertises: "credentials only from environment variables"
+  says: ["password|oauth|token|credential|login|log in|sign in|authenticat|connect|access"]
+  terms: app password passwords oauth token tokens access credential credentials login log sign in authenticate authenticates authentication connect connects connected environment variables wrong refused secure securely tls
+  actors: [owner, user, admin]
+  tests:
+    - "tests/unit/mail-inbox.test.ts › signs in with an app password or with an OAuth 2.0 access token (XOAUTH2); wrong credentials are refused"
+
+- id: inbox.parse
+  criterion: "Each email is parsed: sender, subject, date, text and attachment names"
+  advertises: "each message parsed with mailparser"
+  says: ["pars|sender|subject|attachment|body|content|header"]
+  terms: parse parses parsed parsing sender senders from subject subjects date dates text body bodies content attachment attachments names name header headers
+  actors: [owner, user, admin]
+  tests:
+    - "tests/unit/mail-inbox.test.ts › parses each message with mailparser: sender, subject, date, text and attachment names (contents are never kept)"

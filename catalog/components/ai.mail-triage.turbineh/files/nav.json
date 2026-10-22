@@ -1,0 +1,4 @@
+[
+  { "label": "Mail", "href": "/dashboard/mail" },
+  { "label": "Finances", "href": "/dashboard/finance" }
+]

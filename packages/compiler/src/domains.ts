@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { extractMailTriageParams, MAIL_ENTITIES, mailJobs } from "./domains-mail.js";
+import { extractRecommendationParams } from "./domains-recommendations.js";
 
 /**
  * Domain components (ADR-0033): reusable business domains (bookings today; orders, CRM, tickets next) that a
@@ -283,11 +285,18 @@ export function extractBookingParams(
   if (hourly) durations.push({ minutes: 60, noun: (hourly[2] ?? "").toLowerCase() });
   const minutes = durations.find((d) => d.minutes >= 5 && d.minutes <= 480)?.minutes ?? 30;
   if (!durations.length) assumptions.push("Appointment length not stated: 30 minutes.");
-  const sessionNoun = durations.find(
-    (d) =>
-      d.noun &&
-      /^(session|appointment|class|visit|slot|treatment|lesson|consultation)/.test(d.noun),
-  )?.noun;
+  // What is booked: "45-minute sessions", or "book viewings" / "schedule a visit" / "book a tour" (a property, a venue).
+  const sessionNoun =
+    durations.find(
+      (d) =>
+        d.noun &&
+        /^(session|appointment|class|visit|slot|treatment|lesson|consultation|viewing|tour)/.test(
+          d.noun,
+        ),
+    )?.noun ??
+    /\b(?:book|schedul|arrang)\w*\s+(?:an?\s+|the\s+)?(?:[a-z-]+\s+)?(viewings?|visits?|tours?)\b/i
+      .exec(text)?.[1]
+      ?.toLowerCase();
 
   // Team: "three physiotherapists", "4 stylists (Ana, Luis, Marta, Sol)".
   let resource: BookingParams["resource"] | null = null;
@@ -514,6 +523,36 @@ export function detectDomains(prompt: string, recipe: string, appName?: string):
         });
       }
     }
+  }
+  // AI-only domains (ADR-0072): they run every model call through the orchestrator, so only the ai-agents recipe hosts
+  // them.
+  if (recipe === "ai-agents") {
+    const mail = extractMailTriageParams(prompt, { isTimeZone, cities: CITY_ZONES });
+    if (mail) {
+      out.push({
+        id: "mail-triage",
+        capability: "ai.mail-triage",
+        component: "ai.mail-triage.turbineh",
+        recipes: ["ai-agents"],
+        paramsFile: "src/mail/triage/params.json",
+        params: mail.params as unknown as Record<string, unknown>,
+        providedEntities: MAIL_ENTITIES,
+        assumptions: mail.assumptions,
+      });
+      // Its schedule (inbox sync + daily digest) is data of the scheduled-jobs component it requires.
+      out.push({
+        id: "jobs-scheduled",
+        capability: "jobs.scheduled",
+        component: "jobs.scheduled.turbineh",
+        recipes: ["ai-agents"],
+        paramsFile: "src/jobs/params.json",
+        params: mailJobs(mail.params),
+        providedEntities: ["Job", "ScheduledJob", "Cron"],
+        assumptions: [],
+      });
+    }
+    const rec = extractRecommendationParams(prompt, appName);
+    if (rec) out.push(rec);
   }
   return out;
 }

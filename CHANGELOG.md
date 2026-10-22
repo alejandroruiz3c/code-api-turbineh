@@ -27,6 +27,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
   for; SMS/WhatsApp notifications are covered (conversations and bots on them are not); components-only offers for
   SMS and WhatsApp. `libphonenumber-js@1.13.14` is pinned in the saas-crud, ai-agents and storefront templates; new catalogue
   category `messaging`.
+- AI agents over the customer's own data (ADR-0072). `email.inbox.imapflow`: one IMAP mailbox read read-only and
+  incrementally by UID (app password or OAuth XOAUTH2 from the environment, TLS required, mailparser).
+  `ai.mail-triage.turbineh`: every email classified and prioritised through the orchestrator (schema-validated, email
+  as data), inbox most urgent first, daily digest on schedule, invoices and payments to a finance ledger (income,
+  expenses, investments; totals in cents) with Excel export. `ai.recommendations.turbineh`: preferences captured in the
+  conversation, recommendations by code over verified catalogue records only, answers, side-by-side comparison and,
+  with bookings, viewings booked after confirmation. Booking agents: a taken time is refused with the free times
+  suggested. Canonical criteria, offers and CI combinations for all of them; the ai-agents template lockfile pins
+  imapflow 2.2.6, mailparser 3.9.31 and exceljs 4.4.0.
 
 - Contact email for invitation workspaces (ADR-0074): `/access` asks for an email (required, validated, with what it is
   for) and stores it per workspace (`workspace_contacts`, migration 0017); workspaces that entered before are asked
@@ -48,6 +57,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- The AI Safety Pack no longer redacts dates and times ("2026-10-26 09:00") as phone numbers, which broke booking
+  dates sent to the assistant (ADR-0072).
 - Scope-gate recall (ADR-0069): requests the library covers are no longer refused at "0 % functional coverage".
   General requirements (runs, verified, sample data, good practices, look and feel, persistence, another stack) are
   listed in the plan with how each is handled and never measured as functions; the stack asked for is never a refusal

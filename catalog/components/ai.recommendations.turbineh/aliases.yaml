@@ -1,0 +1,17 @@
+# Criteria aliases (ADR-0047): the words this component's tests use, and which of its params hold this app's word for
+# each. "record" in the test titles is this app's catalogue item (property, car…); "buyer" its customer.
+file: src/recommendations/params.json
+tests:
+  - tests/e2e/recommendation-assistant.spec.ts
+  - tests/e2e/recommendations-catalog.spec.ts
+  - tests/e2e/recommendation-viewing.spec.ts
+  - tests/unit/recommendations.test.ts
+aliases:
+  - term: record
+    from: item.singular
+  - term: records
+    from: item.plural
+  - term: buyer
+    from: customer.singular
+  - term: buyers
+    from: customer.plural

@@ -131,6 +131,40 @@ test.describe.serial("booking assistant (public, no sign-in)", () => {
     expect(other).toContain("we have just emailed the list");
   });
 
+  test("a customer asks the assistant for a time already taken: it says the time is not available and suggests the free times of that day; nothing is booked", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const day = openDay(4, 29);
+    const slot = await firstFreeSlot(page, day);
+    const takenBy = `taken-${Date.now()}@example.com`;
+    await say(
+      page,
+      `Please book ${day} ${slot.time} with ${slot.resource} for Luis Pardo, ${takenBy}`,
+    );
+    expect(await say(page, "Yes, please")).toMatch(/Reference [A-Z0-9]{8}/);
+
+    // Another person asks for the same time with the same team member.
+    const other = await page
+      .context()
+      .browser()!
+      .newContext({ storageState: { cookies: [], origins: [] } });
+    const second = await other.newPage();
+    await second.goto("/");
+    const reply = await say(
+      second,
+      `Please book ${day} ${slot.time} with ${slot.resource} for Marta Ruiz, second-${takenBy}`,
+    );
+    expect(reply, "says the time is not available").toContain("That time is not available.");
+    const free = /Free times that day: ([\d:, ]+)\./.exec(reply);
+    expect(free, `suggests the free times of that day: ${reply}`).not.toBeNull();
+    const times = free![1]!.split(",").map((t) => t.trim());
+    expect(times.length).toBeGreaterThan(0);
+    expect(times, "the taken time is never suggested").not.toContain(slot.time);
+    await expect(second.getByRole("button", { name: "Confirm" })).toHaveCount(0);
+    await other.close();
+  });
+
   test("never books an invented time", async ({ page }) => {
     await page.goto("/");
     const day = openDay(3, 13);

@@ -221,6 +221,31 @@ export const OFFER_HINTS: readonly OfferHint[] = [
       "sending WhatsApp template notifications with the Cloud API to people who opted in (STOP honoured), logged without credentials",
   },
   {
+    // ADR-0072: agents over the customer's own mailbox.
+    ask: /\b(classif|categori[sz]|prioriti[sz]|triag|sort|label)\w*\b[^.]{0,60}\b(e-?mails?|mails?|inbox)\b|\b(e-?mails?|mails?|inbox)\b[^.]{0,60}\b(classif\w*|categori[sz]\w*|prioriti[sz]\w*|priority|triag\w*|digest|invoices?|payments?)\b/i,
+    provides: "ai.mail-triage",
+    proof: /\b(classif|priorit|digest|invoice|ledger|excel)/i,
+    gives:
+      "mailbox triage: every email classified and prioritised through the TurbineH orchestrator, a daily digest, and invoices and payments recorded in a finance ledger with an Excel export — it never replies, moves or deletes",
+    supersedes: ["jobs.scheduled", "email.transactional", "email.inbox", "ai.orchestrator"],
+  },
+  {
+    ask: /\b(read\w*|access\w*|connect\w*|sync\w*|fetch\w*|import\w*)\b[^.]{0,30}\b(e-?mails?|mails?|mailbox(es)?|inbox(es)?|imap)\b/i,
+    provides: "email.inbox",
+    actionOnly: true,
+    proof: /\b(read-only|incremental|imap|sync|pars)/i,
+    gives: "reading a mailbox over IMAP (app password or OAuth), read-only and incrementally",
+  },
+  {
+    // ADR-0072: recommendations over the customer's own verified catalogue.
+    ask: /\b(recommend\w*|suggest\w*|match(es|ing)?)\b[^.]{0,60}\b(budget|preferences?|needs|location|propert(y|ies)|homes?|houses?|apartments?|flats?|listings?|catalog(ue)?|products?|cars?|courses?)\b/i,
+    provides: "ai.recommendations",
+    proof: /\b(recommend|verified|compar|preference)/i,
+    gives:
+      "recommendations over your own verified catalogue: preferences captured in the conversation, matching and ranking by code (never invented records), answers from a record's facts and side-by-side comparison",
+    supersedes: ["ai.orchestrator"],
+  },
+  {
     ask: /\bkanban\b/i,
     provides: "ui.kanban",
     proof: /\b(kanban|column|board|card)/i,

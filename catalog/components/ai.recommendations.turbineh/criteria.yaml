@@ -1,0 +1,116 @@
+# Canonical acceptance criteria (ADR-0063) of the recommendation assistant: one per function the component advertises,
+# each linked to the test that proves it. Format: catalog/components/domain.bookings.turbineh/criteria.yaml.
+# The domain's nouns (what the functions act on), absorbed by every criterion below.
+- vocabulary: >-
+    record records item items catalogue catalog listing listings property properties home homes house houses flat
+    flats apartment apartments new build builds car cars product products option options choice choices buyer buyers
+    customer customers user users person people visitor visitors assistant assistants agent agents chat chatbot bot
+    conversation conversational natural language plain message messages ai specific selected recommended database
+    data verified information
+
+- id: recommendations.preferences
+  criterion: "A buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them"
+  advertises: "records each person's budget, preferred location and needs"
+  when: ai
+  says: ["budget|location|area|town|city|needs?|bedroom|requirement|preference|price range|criteria", "record|captur|identif|store|sav|remember|collect|ask|understand|gather|extract|during|conversation"]
+  terms: >-
+    state states stated tell tells say says budget budgets maximum max price range afford location locations
+    preferred prefer prefers area areas town towns city cities region country spain zone neighbourhood need needs
+    requirement requirements preference preferences criteria bedroom bedrooms bathroom bathrooms size number
+    identify identifies identified record records recorded capture captures captured store stores stored save saves
+    saved remember remembers collect collects ask asks understand understands gather gathers during conversation
+    each their own staff see sees e g eg example such as
+  actors: [buyer, customer, client, user, visitor, guest, staff]
+  tests:
+    - "tests/e2e/recommendation-assistant.spec.ts › a buyer states their budget, preferred location and needs in the conversation: the assistant identifies and records them, and staff see them"
+
+- id: recommendations.recommend
+  criterion: "Recommends only verified records from the catalogue that match the budget, the location and the needs"
+  advertises: "recommends only verified records from the database that fit them"
+  when: ai
+  says: ["recommend|suggest|match|fit|find|propos|shortlist|filter"]
+  terms: >-
+    recommend recommends recommended recommendation recommendations suggest suggests suggested find finds propose
+    proposes shortlist match matches matching fit fits filter filters only verified real existing accurate
+    budget location needs preferences criteria within under below cheapest first unverified invented never using
+    use uses based from catalogue database data information listings
+  actors: [buyer, customer, client, user, visitor, guest]
+  tests:
+    - "tests/e2e/recommendation-assistant.spec.ts › recommends only verified records from the catalogue that match the budget, the location and the needs: over-budget, unverified, other-location and too-small ones never appear"
+    - "tests/unit/recommendations.test.ts › recommends only verified, active records that fit the budget, the location and every need, cheapest first, deterministically"
+
+- id: recommendations.details
+  criterion: "Answers a question about a record with its verified facts"
+  advertises: "answers questions with a record's verified facts"
+  when: ai
+  says: ["answer|question|detail|fact|describ|tell|inform|ask"]
+  terms: >-
+    answer answers answered question questions ask asks detail details fact facts feature features describe
+    describes tell tells inform informs information accurate correct verified real provide provides give gives
+    regarding about specific each
+  actors: [buyer, customer, client, user, visitor, guest]
+  tests:
+    - "tests/e2e/recommendation-assistant.spec.ts › answers a question about a record with its verified facts"
+
+- id: recommendations.compare
+  criterion: "Compares two records side by side in the chat and on the comparison page, with the same facts"
+  advertises: "compares 2–4 records side by side"
+  when: ai
+  says: ["compar|side[- ]by[- ]side|versus|\\bvs\\b"]
+  terms: >-
+    compare compares compared comparing comparison comparisons side by two three four more several multiple
+    versus vs same facts chat page allow allows let lets help helps options choose
+  actors: [buyer, customer, client, user, visitor, guest]
+  tests:
+    - "tests/e2e/recommendation-assistant.spec.ts › compares two records side by side in the chat and on the comparison page, with the same facts"
+    - "tests/unit/recommendations.test.ts › compares records side by side with the same facts in the same order"
+
+- id: recommendations.never-invents
+  criterion: "Never invents a record: an unknown or unverified reference is refused"
+  advertises: "never invented"
+  when: ai
+  says: ["invent|made[- ]up|hallucinat|unknown|unverified|not exist|only (real|verified|existing)|never"]
+  terms: >-
+    never invent invents invented made up hallucinate hallucinates hallucination unknown unverified reference
+    references refuse refuses refused exist exists existing real verified only fake
+  actors: [buyer, customer, client, user, visitor, guest]
+  tests:
+    - "tests/e2e/recommendation-assistant.spec.ts › never invents a record: an unknown or unverified reference is refused"
+
+- id: recommendations.staff-catalogue
+  criterion: "Staff add records to the catalogue and mark them verified; only verified records are published"
+  advertises: "Staff manage and verify the catalogue"
+  says: ["staff|admin|agent|team|owner|manage", "add|creat|edit|updat|manage|verif|publish|catalog|listing"]
+  terms: >-
+    staff admin admins team owner manage manages managed add adds added create creates created edit edits update
+    updates mark marks verify verifies verified verification publish publishes published only catalogue catalog
+    listing listings sign signs in
+  actors: [staff, admin, owner, agent, manager]
+  tests:
+    - "tests/e2e/recommendations-catalog.spec.ts › staff add records to the catalogue and mark them verified; only verified records are published"
+
+- id: recommendations.staff-only
+  criterion: "People who are not staff cannot manage the catalogue"
+  advertises: "behind an ADMIN_EMAILS allow-list"
+  says: ["staff|admin|only|private|protect|not", "manage|catalog|listing|access|edit"]
+  terms: >-
+    people who not staff cannot can only manage access edit catalogue catalog listing listings protected private
+    admin non anonymous visitor visitors
+  actors: [staff, admin, owner, visitor, guest, customer, anonymous]
+  tests:
+    - "tests/e2e/recommendations-catalog.spec.ts › people who are not staff cannot manage the catalogue"
+
+# With domain.bookings.turbineh (files-with/): viewings through the booking domain.
+- id: recommendations.viewing
+  criterion: "Books a viewing of a recommended record only on a real free time and after the person confirms"
+  advertises: "books a viewing of a record on a real free time after the person confirms"
+  when: ai
+  says: ["viewing|visit|tour|showing", "book|schedul|arrang|reserv|facilitat|request|set ?up|organi[sz]"]
+  terms: >-
+    book books booked booking bookings schedule schedules scheduled arrange arranges arranged reserve reserves
+    facilitate facilitates request requests set up organise organize viewing viewings visit visits tour tours
+    showing selected chosen recommended real free time times slot slots date confirm confirms confirmed
+    confirmation email after person their staff see which help helps allow allows
+  actors: [buyer, customer, client, user, visitor, guest, staff]
+  tests:
+    - "tests/e2e/recommendation-viewing.spec.ts › books a viewing of a recommended record only on a real free time and after the person confirms; it is a booking with its confirmation email and staff see which record it is for"

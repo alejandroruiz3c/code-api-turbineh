@@ -51,3 +51,5 @@
   covers: ["injection|jailbreak|manipulat"]
 - test: "tests/e2e/booking-assistant.spec.ts › a user who sends the assistant a request whose input exceeds the defined character limit is rejected with a 400 error, to prevent abuse"
   covers: ["abuse|input limit|character limit|too long|oversiz|exceed"]
+- test: "tests/e2e/booking-assistant.spec.ts › a customer asks the assistant for a time already taken: it says the time is not available and suggests the free times of that day; nothing is booked"
+  covers: ["taken|occupied|already|not available|unavailable", "suggest|alternative|free|next|other"]

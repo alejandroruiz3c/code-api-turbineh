@@ -32,6 +32,18 @@ export const DOMAIN_PROBES: Record<string, string> = {
     "colour 90 min (70 €). Opening hours Monday–Saturday 10:00–19:00, Europe/Madrid. Customers pick a service, a " +
     "stylist (or any) and a free time, and pay a 10 € deposit by card to confirm the booking; a booking that is not " +
     "paid in time is released. They receive a confirmation email with a cancel link. Staff sign in to see the calendar.",
+  "ai.mail-triage.turbineh":
+    "Build an AI assistant for my personal mailbox: it reads the emails I receive, classifies each one and orders " +
+    "them by priority, and every morning at 7am sends me a daily summary of the important emails I must answer. When " +
+    "an email is an invoice or a payment, it records the amount in a spreadsheet of my personal finances (income, " +
+    "expenses and investments) that I can download as Excel. Times in Europe/Madrid.",
+  // ADR-0072: recommendations over the client's verified catalogue, with viewings through the booking domain.
+  "ai.recommendations.turbineh":
+    'Build "Casa Brisa Finder", an AI assistant for a developer of new-build homes on the coast near Valencia, prices ' +
+    "in euros. Buyers chat in plain language: the assistant asks for their budget, the town they prefer and how many " +
+    "bedrooms they need, recommends matching homes from our verified listings only, answers questions about a home, " +
+    "compares homes side by side and books a 30-minute viewing with one of our 2 advisers (Lucía, Pau), " +
+    "Monday–Saturday 10:00–19:00, Europe/Madrid. Staff sign in to manage the listings and see the viewings.",
 };
 
 /** The social publishing request of the social.* combination (ADR-0067). */

@@ -78,13 +78,67 @@ function luhn(digits: string): boolean {
   return sum % 10 === 0;
 }
 
+/**
+ * Dates and times ("2026-10-26 09:00", "26.10.2026 9:45", "2026-10-26 to 2026-10-28") are digits too, but never a
+ * phone number: a booking or a statement date must reach the model and the person intact.
+ */
+const DATE_TIME =
+  /\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}(?::\d{2}){0,2})?|\d{1,2}[./]\d{1,2}[./]\d{4}(?: \d{1,2}(?::\d{2})?)?/g;
+/**
+ * Only dates and times in the candidate: nothing left once they are removed but separators. (Candidates never span
+ * lines either: "…with Physiotherapist 1\n- 2026-11-05 09:00" is a name and a date, not a phone number.)
+ */
+const onlyDates = (m: string): boolean =>
+  /\d{4}|\d[./]\d/.test(m) && m.replace(DATE_TIME, "").replace(/[\s().-]|to/g, "") === "";
+
 /** Emails, IBANs, payment cards (Luhn-checked) and phone numbers → placeholders. */
 export function redactPii(text: string): string {
   return text
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
     .replace(/\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b/g, "[iban]")
     .replace(/\b(?:\d[ -]?){13,19}\b/g, (m) => (luhn(m.replace(/\D/g, "")) ? "[card]" : m))
-    .replace(/\+?\d[\d\s().-]{7,}\d/g, (m) => (m.replace(/\D/g, "").length >= 9 ? "[phone]" : m));
+    .replace(/\+?\d[\d \t().-]{7,}\d/g, (m) =>
+      m.replace(/\D/g, "").length >= 9 && !onlyDates(m) ? "[phone]" : m,
+    );
+}
+
+/** Placeholders of a person's own email addresses and phone numbers → their values (kept by the app, never sent). */
+export type Pseudonyms = Record<string, string>;
+
+const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const PHONE = /\+?\d[\d \t().-]{7,}\d/g;
+const PLACEHOLDER = /\[(?:email|phone)-\d+\]/g;
+
+/**
+ * Personal data in a person's own message to a tool-using agent (ADR-0072): each email address and phone number becomes
+ * a numbered placeholder ("[email-1]") the model sees and can pass to a tool; the app puts the value back in the tool's
+ * arguments (restorePseudonyms) and never sends it to the model. Privacy by default stays on, and an agent can still
+ * book "for ana@example.com". The same value keeps its placeholder across the conversation (`vault`).
+ */
+export function pseudonymize(
+  text: string,
+  vault: Pseudonyms = {},
+): { text: string; vault: Pseudonyms } {
+  const out: Pseudonyms = { ...vault };
+  const placeholder = (kind: "email" | "phone", value: string) => {
+    const known = Object.entries(out).find(([, v]) => v === value)?.[0];
+    if (known) return known;
+    const n = Object.keys(out).filter((k) => k.startsWith(`[${kind}-`)).length + 1;
+    const key = `[${kind}-${n}]`;
+    out[key] = value;
+    return key;
+  };
+  const replaced = text
+    .replace(EMAIL, (m) => placeholder("email", m.toLowerCase()))
+    .replace(PHONE, (m) =>
+      m.replace(/\D/g, "").length >= 9 && !onlyDates(m) ? placeholder("phone", m.trim()) : m,
+    );
+  return { text: replaced, vault: out };
+}
+
+/** Puts the values back into a tool call's arguments (JSON text); unknown placeholders stay as they are. */
+export function restorePseudonyms(text: string, vault: Pseudonyms = {}): string {
+  return text.replace(PLACEHOLDER, (m) => (vault[m] ? JSON.stringify(vault[m]).slice(1, -1) : m));
 }
 
 /** Credential formats that must never leave the app in a model's answer. */

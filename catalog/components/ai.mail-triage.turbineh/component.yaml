@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: ai.mail-triage.turbineh
+version: 0.1.0
+status: approved
+category: ai
+source:
+  purl: pkg:generic/turbineh/ai.mail-triage.turbineh@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Mailbox triage for AI apps: every new email of the mailbox (email.inbox.imapflow) is classified through the TurbineH orchestrator with its AI Safety Pack — a category from a closed list, a priority (urgent, high, normal, low) and a reason, as structured output validated against a schema, the email passed as data with injection attempts neutralised and flagged — and the inbox is shown most urgent first with filters and a handled mark; invoices, receipts and payments are extracted (amount, currency, date, issuer, income / expense / investment), checked again by code and recorded in a personal finance ledger with totals per type and currency and an Excel export (exceljs: entries and totals sheets); a daily digest of the emails that need attention is emailed on schedule (jobs.scheduled.turbineh). Owner-only pages (ADMIN_EMAILS)."
+  does_not: "Does not reply to, send, move or delete emails, pay invoices, connect to banks or accounting software, or read attachment contents (only their names); one mailbox per app"
+  use_cases: [ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Every AI call through the orchestrator (AI Safety Pack, usage and audit)",
+      "Amounts, currencies and dates checked by code; totals computed in cents, never by a model",
+    ]
+  cons: ["Categories are a closed list from the request (defaults when it states none)", "The model may misjudge a priority or a type: the person can mark emails handled and correct a ledger type"]
+  alternatives: []
+contract:
+  inputs:
+    [
+      "src/mail/triage/params.json (categories, finance { enabled, kinds, defaultCurrency }, digest { at, timeZone, minPriority, max }, syncEveryMinutes)",
+      "MAIL_DIGEST_TO (else ADMIN_EMAILS); the schedule in src/jobs/params.json (mail-sync, mail-digest) run by /api/cron/run",
+    ]
+  outputs:
+    [
+      "mail_triage rows (category, priority, reason, safety flags, handled); finance_entries rows (kind, amount, currency, date, issuer, document); /dashboard/mail, /dashboard/finance, GET /dashboard/finance/export (.xlsx); the daily digest email",
+    ]
+  errors: ["An answer outside the schema or a failing call leaves the email to be retried (3 attempts); an extracted payment that fails the code checks is not recorded and the reason is kept"]
+  limits: ["20 emails triaged per run; 12,000 characters of each email sent to the model; one ledger entry per email"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: ["TurbineH AI gateway or an OpenAI-compatible endpoint (through ai.orchestrator.turbineh)"]
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code when the request asks to triage a mailbox (compiler domain detector, recipe ai-agents), with email.inbox.imapflow and jobs.scheduled.turbineh (relations.requires; the detector writes their schedule). The ai-agents lockfile pins exceljs 4.4.0. files/: src/mail/triage/{config,params.json,schema,triage,ledger,digest,service}.ts, src/db/component-mail-triage.ts, src/app/dashboard/mail/**, src/app/dashboard/finance/** (incl. the export route), tests/unit/mail-triage.test.ts, tests/e2e/mail-triage.spec.ts, tests/mock-llm/scripts/mail-triage.ts. files-with/jobs.scheduled.turbineh/src/jobs/digests.ts: the scheduled jobs sync, triage and email the digest."
+  config: [MAIL_DIGEST_TO]
+  migrations: true
+params:
+  file: src/mail/triage/params.json
+  schema: params.schema.json
+  entities: [Email, Mail, EmailMessage, Classification, Category, Priority, Digest, DailyDigest, FinancialRecord, FinanceEntry, Transaction, Invoice, Payment, Receipt, Income, Expense, Investment, Ledger, Spreadsheet]
+quality:
+  tests:
+    {
+      command: "unit with the orchestrator simulated (schema-validated classification, email as data, finance checks, priority order, totals in cents, Excel workbook read back, digest) + E2E (IMAP mock → sync → triage → ordered inbox, ledger and totals, Excel export, scheduled digest in the outbox, correction, owner-only); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: email text sent only as a document through orchestrate() (AI Safety Pack neutralises and flags injection; the task is written by the app), schema-validated outputs then code checks before the ledger, pages, actions and export behind verified ADMIN_EMAILS (deny by default, 404 for the export), Drizzle only, no secret in any message."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Triages a mailbox through the orchestrator, records invoices and payments, exports them to Excel and emails the daily digest (E2E against an IMAP mock and the scripted model)"
+    origin: tested
+    ref: "tests/e2e/mail-triage.spec.ts"
+relations:
+  requires: [email.inbox.imapflow, jobs.scheduled.turbineh, ai.orchestrator.turbineh]
+  provides: [ai.mail-triage]
+  conflicts: []
+  tested_with: [recipe.ai-agents]

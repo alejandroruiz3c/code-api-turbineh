@@ -662,21 +662,36 @@ function componentEntities(componentsDir: string, id: string): string[] {
  * `components`) whose tests the package will ship, and the generated CRUD functions of the request's entities (their
  * tests are generated at assembly, so they are linked then).
  */
+/**
+ * Component ids plus what they declare in `relations.requires`, transitively (ADR-0072): a mailbox triage brings the
+ * mailbox reader and the scheduled jobs it runs on, so their canonical criteria and tests count at planning too.
+ */
+export function withRequires(componentsDir: string, ids: readonly string[]): string[] {
+  const out = [...new Set(ids)];
+  for (let i = 0; i < out.length; i++) {
+    const file = join(componentsDir, out[i] as string, "component.yaml");
+    if (!existsSync(file)) continue;
+    const m = parse(readFileSync(file, "utf8")) as { relations?: { requires?: unknown } } | null;
+    const requires = m?.relations?.requires;
+    for (const r of Array.isArray(requires) ? requires.map(String) : [])
+      if (!out.includes(r) && existsSync(join(componentsDir, r))) out.push(r);
+  }
+  return out;
+}
+
 export function canonicalForPlan(input: {
   recipesDir: string;
   recipe: string;
   components?: readonly string[];
   entities?: readonly CanonicalEntity[];
 }): ResolvedCanonical[] {
-  const components = [
-    ...new Set([
-      ...requiredComponentsOf(input.recipesDir, input.recipe),
-      ...(input.components ?? []),
-    ]),
-  ];
+  const componentsDir = join(input.recipesDir, "..", "components");
+  const components = withRequires(componentsDir, [
+    ...requiredComponentsOf(input.recipesDir, input.recipe),
+    ...(input.components ?? []),
+  ]);
   // Entities the recipe or a selected component already implements (Booking in a bookings app, Opportunity with
   // domain.matching) get no generated CRUD screens (ADR-0073: the component's own functions are measured instead).
-  const componentsDir = join(input.recipesDir, "..", "components");
   const provided = new Set(
     [
       ...recipeChain(input.recipesDir, input.recipe).flatMap((m) => m.providedEntities ?? []),

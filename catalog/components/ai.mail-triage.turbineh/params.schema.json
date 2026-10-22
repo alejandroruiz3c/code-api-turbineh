@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ai.mail-triage.turbineh params (src/mail/triage/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["categories", "finance", "digest", "syncEveryMinutes"],
+  "properties": {
+    "categories": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z-]{1,23}$"
+      },
+      "description": "Closed list of categories the classifier may answer (validated)."
+    },
+    "finance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "kinds", "defaultCurrency"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Invoices, receipts and payments go to the finance ledger."
+        },
+        "kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["income", "expense", "investment"]
+          }
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "at", "timeZone", "minPriority", "max"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "at": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "description": "Local time of the daily digest."
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IANA time zone of the digest time."
+        },
+        "minPriority": {
+          "enum": ["urgent", "high", "normal"]
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      }
+    },
+    "syncEveryMinutes": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 1440
+    }
+  }
+}

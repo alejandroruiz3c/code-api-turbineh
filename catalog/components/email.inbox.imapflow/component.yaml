@@ -1,0 +1,74 @@
+schema: turbineh.component/v0.1
+id: email.inbox.imapflow
+version: 0.1.0
+status: approved
+category: email
+source:
+  purl: pkg:generic/turbineh/email.inbox.imapflow@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Reads one IMAP mailbox (Gmail, Microsoft 365, any IMAP server) for inbox-processing apps: credentials only from environment variables (app password, or an OAuth 2.0 access token over SASL XOAUTH2), TLS required for remote servers, read-only by construction (EXAMINE + BODY.PEEK: nothing is marked as read, moved or deleted), incremental synchronisation by UID with UIDVALIDITY handling (the position and the messages are saved in one transaction, each message unique per mailbox, UIDVALIDITY and UID), each message parsed with mailparser (sender, recipients, subject, dates, plain text, attachment names and sizes — attachment contents are never kept). Built on imapflow 2.2.6 and mailparser 3.9.31, pinned in the ai-agents template lockfile; contract-tested against a local IMAP server."
+  does_not: "Does not send email (email.transactional), write to the mailbox, read several mailboxes, refresh OAuth tokens (the access token comes from the environment) or keep attachment contents"
+  use_cases: [ai-agents]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "No credentials in the database or the logs",
+      "Read-only and incremental: safe to run every few minutes",
+    ]
+  cons: ["The first synchronisation imports only the latest MAIL_IMAP_MAX_PER_SYNC messages", "OAuth access tokens expire: the deployment must keep MAIL_IMAP_ACCESS_TOKEN fresh"]
+  alternatives: [email.parsing.mailparser]
+contract:
+  inputs:
+    [
+      "MAIL_IMAP_HOST, MAIL_IMAP_PORT (993), MAIL_IMAP_SECURE (true), MAIL_IMAP_USER, MAIL_IMAP_PASSWORD | MAIL_IMAP_ACCESS_TOKEN, MAIL_IMAP_MAILBOX (INBOX), MAIL_IMAP_MAX_PER_SYNC (50)",
+      "syncMailbox() (src/mail/inbox/store.ts); syncInbox({ store, config?, fetch? }) and fetchNewMessages(config, since) for custom stores",
+    ]
+  outputs:
+    [
+      "inbox_messages rows (mailbox, UIDVALIDITY, UID, Message-ID, sender, subject, dates, text, attachment metadata, seen on server) and inbox_positions (last UID per mailbox); SyncReport { configured, fetched, stored, reset, lastUid }",
+    ]
+  errors:
+    [
+      "InboxConfigError (safe to show): plain connection to a remote server, none or both credentials, invalid settings",
+      "Authentication or connection failures from imapflow (no credentials in the message)",
+    ]
+  limits: ["one mailbox per app", "up to 500 messages per synchronisation (MAIL_IMAP_MAX_PER_SYNC)", "1 MB read per message", "20,000 characters of text kept per message"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: ["IMAP server of the mailbox (MAIL_IMAP_HOST)"]
+integration:
+  strategy: vendored-with-provenance
+  install: "Selected by code with ai.mail-triage.turbineh (relations.requires) for the ai-agents recipe, whose lockfile pins imapflow 2.2.6, mailparser 3.9.31 and @types/mailparser 3.4.6. files/: src/mail/inbox/{config,imap,sync,store}.ts, src/db/component-inbox.ts, tests/unit/mail-inbox.test.ts, tests/e2e/mocks/imap/server.ts (local IMAP server) and tests/e2e/mocks/MAIL_IMAP_MOCK.ts (E2E mailbox started by playwright.config.ts)."
+  config: [MAIL_IMAP_HOST, MAIL_IMAP_USER, MAIL_IMAP_PASSWORD, MAIL_IMAP_ACCESS_TOKEN]
+  migrations: true
+quality:
+  tests:
+    {
+      command: "contract tests against the local IMAP server (read-only EXAMINE/BODY.PEEK, incremental by UID incl. the n:* rule, UIDVALIDITY reset, LOGIN and XOAUTH2, refused credentials, mailparser output, TLS rule) + E2E through ai.mail-triage.turbineh; full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: credentials only from the environment and never logged (imapflow logger off, IMAP commands with credentials never recorded), TLS with certificate verification for remote servers, no write command exists in the code path, attachment contents discarded, bounded reads. imapflow@2.2.6 (MIT) and mailparser@3.9.31 (MIT) licences and advisories are checked with the template lockfile by the verification gate."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Reads a mailbox read-only and incrementally over IMAP (contract tests against a local IMAP server)"
+    origin: tested
+    ref: "tests/unit/mail-inbox.test.ts"
+relations:
+  requires: []
+  provides: [email.inbox]
+  conflicts: []
+  tested_with: [recipe.ai-agents]

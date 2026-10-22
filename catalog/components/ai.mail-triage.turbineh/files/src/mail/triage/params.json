@@ -1,0 +1,19 @@
+{
+  "categories": [
+    "action",
+    "finance",
+    "work",
+    "personal",
+    "newsletter",
+    "promotion",
+    "notification",
+    "other"
+  ],
+  "finance": {
+    "enabled": true,
+    "kinds": ["income", "expense", "investment"],
+    "defaultCurrency": "EUR"
+  },
+  "digest": { "enabled": true, "at": "07:00", "timeZone": "UTC", "minPriority": "high", "max": 15 },
+  "syncEveryMinutes": 15
+}
