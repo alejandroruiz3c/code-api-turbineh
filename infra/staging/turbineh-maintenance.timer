@@ -1,9 +1,9 @@
 [Unit]
-Description=Daily TurbineH worker host disk maintenance
+Description=Hourly TurbineH worker host disk maintenance (age + disk pressure)
 
 [Timer]
-OnCalendar=*-*-* 04:30:00 America/Los_Angeles
-RandomizedDelaySec=600
+OnCalendar=hourly
+RandomizedDelaySec=300
 Persistent=true
 
 [Install]

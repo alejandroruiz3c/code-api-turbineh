@@ -57,6 +57,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Fixed
 
+- Worker hosts: disk maintenance runs hourly and under disk pressure (< 30 GB free) also removes the oldest local build
+  directories (older than 2 hours; packages live in object storage) and the whole Docker build cache, so workers never
+  stop claiming builds for low disk (happened twice on 2026-10-21/22).
+
 - The plan promises what the package proves (ADR-0075): an optional template module whose tests prove a criterion the
   plan links (the AI app's knowledge base) is kept by tree-shaking instead of removed with its proof; a request that
   only names the use case ("an e-commerce shop") or is its catalogue text gets the use case's canonical criteria, not
