@@ -78,7 +78,7 @@ const RULES: { kind: GeneralKind; pattern: RegExp }[] = [
   {
     kind: "persistence",
     pattern:
-      /\b(any|all|every)\b[^.]{0,40}\b(crud|operation|change|data)\w*\b[^.]{0,60}\b(persist\w*|saved|stored|kept|remain\w*)\b|\b(data|changes)\b[^.]{0,30}\b(persist\w*|remain\w*)\b[^.]{0,40}\b(refresh\w*|reload\w*|restart\w*)/i,
+      /\b(any|all|every)\b[^.]{0,40}\b(crud|operation|change|data)\w*\b[^.]{0,60}\b(persist\w*|saved|stored|kept|remain\w*)\b|\b(data|changes)\b[^.]{0,30}\b(persist\w*|remain\w*)\b[^.]{0,40}\b(refresh\w*|reload\w*|restart\w*)|\b(refresh\w*|reload\w*|restart\w*)\b[^.]{0,30}\b(browser|page|app\w*)\b[^.]{0,80}\b(retriev\w*|restor\w*|still (there|shown|listed|visible)|remain\w*|persist\w*)\b/i,
   },
 ];
 

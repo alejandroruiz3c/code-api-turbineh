@@ -278,6 +278,11 @@ export interface PlanScope {
   removed: ScopeRequirement[];
   /** One sentence for people. */
   message: string;
+  /**
+   * Functional coverage the package is expected to prove (ADR-0075): requirements a test shipped with the library
+   * proves, of all the functional requirements. The rest is delivered open with where to implement and prove it.
+   */
+  functional?: { proven: number; total: number };
   /** `components_only` (ADR-0062): what is not covered, the priority notice and the offer. */
   explanation?: NotCoveredExplanation;
 }

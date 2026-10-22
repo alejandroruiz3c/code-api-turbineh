@@ -47,6 +47,7 @@
   advertises: "roles"
   says: ["\\b(roles?|member|admin|owner|permission|privilege|right)s?\\b", "cannot|can't|\\bnot\\b|only|restrict|limit|denied|deny|permission|prevent|block|refus|forbid|non-"]
   terms: >-
+    action actions permit permits permitted assign assigned assigns organization organizations within
     role roles permission permissions privilege privileges right rights restrict restricted limit limited only
     admin admins administrator owner owners member members regular approve export settings setting configure
     manage members audit log read change changes access allowed denied
@@ -159,6 +160,7 @@
   advertises: "workspaces"
   says: ["switch|chang|select|choos|toggl|move between|jump", "organi[sz]ation|workspace|tenant|company|companies|team|account"]
   terms: >-
+    without context contexts
     switch switches switching switcher change changes select selects selected selector choose chooses toggle
     between several multiple many more than one belong belongs member organization organizations organisation
     organisations workspace workspaces tenant tenants company companies team teams account accounts menu

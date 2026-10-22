@@ -9,7 +9,9 @@ import {
   canonicalize,
   coverageRules,
   mapToCanonical,
+  modulesForTests,
   requestWords,
+  requiredComponentsOf,
   roleWords,
   type CanonicalEntity,
   entitiesToGenerate,
@@ -71,6 +73,7 @@ import {
   openCriteriaLeft,
   type RunSample,
   type ScopeVerdict,
+  USE_CASES,
 } from "@turbineh/engine";
 import { coveredPart, explainUncovered, gateRequest, offerPlan, withScope } from "./scope.js";
 import type { DeliveryManifest, Plan } from "@turbineh/shared";
@@ -293,11 +296,59 @@ export const gateDomains = (
  */
 export function withGeneral(spec: BuildSpec, prompt: string, recipesDir: string): BuildSpec {
   const out = separateGeneral(spec, prompt).spec;
-  if (out.acceptance_criteria.length > 0 || out.recipe === "out_of_scope") return out;
-  const own = canonicalForPlan({ recipesDir, recipe: out.recipe })
-    .filter((c) => c.from === out.recipe && !c.entity)
-    .map((c) => c.criterion);
-  return { ...out, acceptance_criteria: own.length ? own : spec.acceptance_criteria };
+  if (out.recipe === "out_of_scope") return out;
+  // A request that only names the use case ("an e-commerce shop") or is its catalogue text asks for the use case as
+  // the catalogue advertises it (ADR-0075): the criteria the compiler wrote for it are its guesses, not the request's.
+  if (out.acceptance_criteria.length > 0 && !asksForTheUseCase(prompt, out.recipe)) return out;
+  // Conditional functions (open sign-up, an SMS channel…) depend on what this app ships: not promised here.
+  const canon = canonicalForPlan({ recipesDir, recipe: out.recipe }).filter(
+    (c) => !c.entity && !c.when,
+  );
+  // The use case's own functions; a use case whose functions are its domain component's (bookings) has those.
+  const required = requiredComponentsOf(recipesDir, out.recipe);
+  const ownOf = (from: (id: string) => boolean) =>
+    canon.filter((c) => from(c.from)).map((c) => c.criterion);
+  const recipeOwn = ownOf((id) => id === out.recipe);
+  const own = recipeOwn.length ? recipeOwn : ownOf((id) => required.includes(id));
+  return { ...out, acceptance_criteria: own.length ? own : out.acceptance_criteria };
+}
+
+/** Words that qualify a request without naming a function ("a simple online app"). */
+const PRODUCT_WORDS = new Set(
+  (
+    "a an the my our your me i we us for of to with and in on new simple basic small quick full complete " +
+    "online web website app apps application applications platform software system tool build create make want " +
+    "need please just like some"
+  ).split(" "),
+);
+const plainWords = (text: string): string[] =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+const singular = (w: string) => w.replace(/(?<=\w{3})s$/, "");
+
+/**
+ * True when the request names only the use case (its name or catalogue keywords, plus words that state no function:
+ * "online store", "a customer portal") or is the use case's catalogue text itself (ADR-0075). Such a request asks for
+ * the use case as the catalogue advertises it; deterministic, no model.
+ */
+export function asksForTheUseCase(prompt: string, recipe: string): boolean {
+  const useCase = USE_CASES.find((u) => u.id === recipe);
+  if (!useCase) return false;
+  const words = plainWords(prompt);
+  if (words.length === 0) return false;
+  const catalogue = plainWords(useCase.description).join(" ");
+  if (words.length >= 8 && catalogue.includes(words.join(" "))) return true;
+  const known = new Set(
+    plainWords([useCase.id, useCase.name, ...useCase.keywords].join(" ")).map(singular),
+  );
+  const named = words.filter((w) => !PRODUCT_WORDS.has(w));
+  return named.length > 0 && named.length <= 4 && named.every((w) => known.has(singular(w)));
 }
 
 /**
@@ -377,6 +428,39 @@ export function provenAtGate(
 }
 
 /**
+ * Optional template modules the plan's proofs need (ADR-0075): a criterion linked to a canonical criterion whose test
+ * lives in a module (the knowledge base of the AI app, its batch processes…) justifies that module, so tree-shaking
+ * never removes the test that proves a function the plan promised. Capability → the criteria that need it.
+ */
+export function proofModules(
+  spec: Pick<
+    BuildSpec,
+    "acceptance_criteria" | "entities" | "roles" | "app_name" | "summary" | "request_words"
+  >,
+  recipesDir: string,
+  recipe: string,
+  components: readonly string[],
+): Record<string, string[]> {
+  const planned = planCriteria(spec.acceptance_criteria, recipesDir, recipe, [...components], {
+    entities: spec.entities,
+    roles: spec.roles,
+    about: [
+      spec.app_name,
+      spec.summary,
+      ...spec.entities.map((e) => e.name),
+      ...(spec.request_words ?? []),
+    ],
+  });
+  const out: Record<string, string[]> = {};
+  for (const c of planned) {
+    if (c.status !== "covered" || !c.canonical?.length) continue;
+    const needs = modulesForTests({ recipesDir, recipe, components, tests: c.tests });
+    for (const cap of needs.keys()) out[cap] = [...new Set([...(out[cap] ?? []), c.criterion])];
+  }
+  return out;
+}
+
+/**
  * Catalogue components a request selects by code from its own words before the scope gate (ADR-0070): appointment
  * reminders and the SMS / WhatsApp channels. Their canonical criteria join the use case's, so "a WhatsApp reminder
  * 24 hours before each appointment" is mapped to the test that proves it instead of being judged outside the library.
@@ -405,6 +489,23 @@ export function requestedComponents(
       }),
     ),
   ];
+}
+
+/**
+ * Whether the plan is for an existing project (a connected repository, or uploaded files that say what the project is).
+ * An empty environment — no repository, no files, no declared stack — is a new app (ADR-0075): a request no family
+ * matched whose functions verified components prove is built on the closest template, as with a declared stack, never
+ * delivered as parts to integrate into a project that was never given.
+ */
+export function hasExistingProject(stack: PlanRequest["stack"]): boolean {
+  if (stack.source === "repo") return true;
+  if (stack.source === "declared") return false;
+  return (
+    stack.language !== "unknown" ||
+    stack.framework !== null ||
+    stack.packageManager !== null ||
+    Object.keys(stack.versions).length > 0
+  );
 }
 
 export async function runBuild(
@@ -533,7 +634,7 @@ export async function runBuild(
     explicit.length > 0 ||
     (spec.recipe === "out_of_scope" &&
       options.plan !== undefined &&
-      options.plan.stack.source !== "declared");
+      hasExistingProject(options.plan.stack));
   let verdict: ScopeVerdict | null = null;
   if (!options.spec) {
     const candidate =
@@ -762,6 +863,22 @@ export async function runBuild(
       { ...relevanceInput, capabilities: [...spec.capabilities, ...moduleCaps] },
       deps.decider,
     );
+  }
+  // A module whose tests prove a criterion the plan links (ADR-0075) ships: justified by that criterion, by code.
+  const needed = proofModules(
+    spec,
+    recipesDir,
+    recipeId,
+    Object.values(recipe.requiredComponents ?? {}),
+  );
+  for (const cap of moduleCaps) {
+    for (const ref of needed[cap] ?? []) {
+      const list = (relevance.justified[cap] ??= []);
+      if (!list.some((j) => j.kind === "criterion" && j.ref === ref))
+        list.push({ kind: "criterion", ref });
+    }
+    if (needed[cap]?.length)
+      relevance.notSelected = relevance.notSelected.filter((n) => n.capability !== cap);
   }
   spec.capabilities = spec.capabilities.filter(
     (c) => (relevance.justified[c]?.length ?? 0) > 0,

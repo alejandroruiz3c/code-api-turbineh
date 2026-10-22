@@ -14,6 +14,7 @@
   when: ai
   says: ["budget|location|area|town|city|needs?|bedroom|requirement|preference|price range|criteria", "record|captur|identif|store|sav|remember|collect|ask|understand|gather|extract|during|conversation"]
   terms: >-
+    extract extracts extracted confirm confirms maximum initial validate validates
     state states stated tell tells say says budget budgets maximum max price range afford location locations
     preferred prefer prefers area areas town towns city cities region country spain zone neighbourhood need needs
     requirement requirements preference preferences criteria bedroom bedrooms bathroom bathrooms size number
@@ -45,6 +46,7 @@
   when: ai
   says: ["answer|question|detail|fact|describ|tell|inform|ask"]
   terms: >-
+    query queries queried accurate
     answer answers answered question questions ask asks detail details fact facts feature features describe
     describes tell tells inform informs information accurate correct verified real provide provides give gives
     regarding about specific each

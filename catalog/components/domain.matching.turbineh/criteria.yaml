@@ -1,6 +1,7 @@
 # Canonical acceptance criteria (ADR-0063) of the matching component: one per function its catalogue text advertises,
 # each linked to the test that proves it. The records' word comes from params (aliases.yaml: opportunity → tender…).
 - vocabulary: >-
+    geography geographies geographic criteria
     opportunity opportunities record records tender tenders grant grants lead leads call calls organization
     organizations organisation organisations company companies business businesses platform app
 

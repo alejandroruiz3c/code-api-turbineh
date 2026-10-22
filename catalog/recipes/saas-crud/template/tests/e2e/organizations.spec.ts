@@ -65,11 +65,17 @@ test("the user views their profile on the account page (name, email, organizatio
   browser,
 }) => {
   const { context, page } = await freshOwner(browser);
+  // The owner's stored role in the active organization; its label is this app's name for it (the request's roles).
+  const role = ((await page.getByTestId("role").textContent()) ?? "").trim();
+  expect(role.length).toBeGreaterThan(0);
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard\/account$/);
   await expect(page.getByTestId("account-email")).toHaveText(OWNER_EMAIL);
   const original = (await page.getByTestId("account-name").textContent()) ?? "";
-  await expect(page.getByTestId("account-organization").first()).toContainText("Owner");
+  const active = page.locator('[data-testid="account-organization"][data-active="true"]');
+  await expect(active).toHaveCount(1);
+  await expect(active.getByTestId("account-role")).toHaveAttribute("data-role", role);
+  await expect(active.getByTestId("account-role")).not.toBeEmpty();
   const renamed = `${original} (renamed)`;
   await page.getByLabel("Display name").fill(renamed);
   await page.getByRole("button", { name: "Save name" }).click();

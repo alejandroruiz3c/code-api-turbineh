@@ -128,6 +128,14 @@ export function coveredPart(spec: BuildSpec, verdict: ScopeVerdict): BuildSpec {
 /** The plan states its scope; a partial plan needs the person's explicit choice before generation. */
 export function withScope(plan: Plan, verdict: ScopeVerdict, appName: string): Plan {
   const { scope, approval } = planScope(verdict, appName);
+  // What the package is expected to prove (ADR-0075): "covered" says the use case, never that every function is proven.
+  const criteria = plan.criteria ?? [];
+  if (criteria.length > 0) {
+    const proven = criteria.filter((c) => c.status === "covered").length;
+    scope.functional = { proven, total: criteria.length };
+    if (proven < criteria.length)
+      scope.message = `${scope.status === "covered" ? "Every requirement of the request is within what the library covers" : scope.message.replace(/\.$/, "")}: ${proven} of ${criteria.length} functional requirement(s) are proved by tests shipped with the library; the other ${criteria.length - proven} are delivered open, each with where to implement and prove it.`;
+  }
   plan.scope = scope;
   if (!approval) return plan;
   plan.needsApproval = [approval, ...plan.needsApproval];
