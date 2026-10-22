@@ -26,16 +26,22 @@ export async function gateOffline(
   const proven = new Set(
     spec.recipe === "out_of_scope"
       ? []
-      : planCriteria(spec.acceptance_criteria, recipesDir, spec.recipe, gateDomains(spec, prompt), {
-          entities: spec.entities,
-          roles: spec.roles,
-          about: [
-            spec.app_name,
-            spec.summary,
-            ...spec.entities.map((e) => e.name),
-            ...(spec.request_words ?? []),
-          ],
-        })
+      : planCriteria(
+          spec.acceptance_criteria,
+          recipesDir,
+          spec.recipe,
+          gateDomains(spec, prompt, join(repoRoot, "catalog/components")),
+          {
+            entities: spec.entities,
+            roles: spec.roles,
+            about: [
+              spec.app_name,
+              spec.summary,
+              ...spec.entities.map((e) => e.name),
+              ...(spec.request_words ?? []),
+            ],
+          },
+        )
           .filter((c) => c.status === "covered")
           .map((c) => c.criterion),
   );

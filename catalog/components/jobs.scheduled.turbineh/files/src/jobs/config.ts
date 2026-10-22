@@ -37,7 +37,8 @@ export const JobDef = z
   });
 
 export const ScheduledParams = z
-  .object({ jobs: z.array(JobDef).min(1).max(20), logWhenNoEmailProvider: z.boolean() })
+  // No job of its own is fine: another component may only hand the route its tasks (src/jobs/tasks.ts).
+  .object({ jobs: z.array(JobDef).max(20), logWhenNoEmailProvider: z.boolean() })
   .superRefine((p, ctx) => {
     const ids = p.jobs.map((j) => j.id);
     if (new Set(ids).size !== ids.length)

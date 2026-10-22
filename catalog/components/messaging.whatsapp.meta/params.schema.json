@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "messaging.whatsapp.meta params (src/messaging/whatsapp/params.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["defaultCountry", "maxAttempts"],
+  "properties": {
+    "defaultCountry": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2 country for numbers typed without a country code (e.g. ES); null = the number must start with +."
+    },
+    "maxAttempts": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Attempts per message for answers that may pass later (429, 5xx, the Cloud API unreachable, throughput limits)."
+    }
+  }
+}

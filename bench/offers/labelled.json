@@ -89,7 +89,8 @@
       "id": "whatsapp-reminders",
       "need": "Send appointment reminders to patients on WhatsApp every day",
       "criteria": ["Patients receive a WhatsApp reminder the day before their appointment"],
-      "acceptable": []
+      "acceptable": ["messaging.whatsapp.meta"],
+      "note": "Since ADR-0070 sending WhatsApp template notifications to people who opted in is a verified, standalone piece of this request (proved by tests/unit/messaging-whatsapp-contract.test.ts); there is no booking app in the request, so the appointment reminders themselves (domain.reminders.turbineh, which needs the booking domain) are not acceptable."
     },
     {
       "id": "youtube-analytics-charts",

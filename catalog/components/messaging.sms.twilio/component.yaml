@@ -1,0 +1,84 @@
+schema: turbineh.component/v0.1
+id: messaging.sms.twilio
+version: 0.1.0
+status: approved
+category: messaging
+source:
+  purl: pkg:generic/turbineh/messaging.sms.twilio@0.1.0
+  repo: https://github.com/alejandroruiz3c/code-api-turbineh
+capability:
+  does: "Sends SMS text messages with Twilio's official Messages REST API (POST /2010-04-01/Accounts/{AccountSid}/Messages.json, HTTP Basic auth, no SDK): numbers checked as E.164 with libphonenumber-js, sent only to numbers that agreed and have not replied STOP (STOP/START replies and Twilio's unsubscribed-recipient error 21610 kept per number), 429/5xx answers retried with exponential backoff and jitter honouring Retry-After, an answer that never arrived marked unknown instead of re-sent, every outcome logged without the text, delivery updates and replies through a webhook checked with X-Twilio-Signature, and a logged mode that sends nothing without credentials."
+  does_not: "Does not decide what to send or when (callers do: domain.reminders.turbineh sends appointment reminders), receive conversations, send MMS or WhatsApp (messaging.whatsapp.meta), buy numbers or register A2P 10DLC / sender IDs for you"
+  use_cases: [bookings, ai-agents, saas-crud]
+  pros:
+    [
+      "Maintained by TurbineH",
+      "Contract-tested against a mock of Twilio's documented request and error shapes",
+      "Consent first: nothing goes to a number that did not agree or replied STOP",
+    ]
+  cons:
+    [
+      "Needs a Twilio account and number; US traffic needs A2P 10DLC registration, other countries their sender rules",
+      "Twilio's Messages API has no idempotency key: an answer lost after sending is reported unknown, never retried",
+    ]
+  alternatives: [messaging.whatsapp.meta, email.transactional.turbineh]
+contract:
+  inputs:
+    [
+      "src/messaging/sms/params.json (defaultCountry, maxAttempts)",
+      "sendSms({ to, body, purpose, reference? }, deps?); recordSmsConsent(phone, source)",
+      "POST /api/messaging/sms/webhook (Twilio replies and status callbacks, X-Twilio-Signature)",
+    ]
+  outputs:
+    [
+      "SmsResult: sent (sid) | logged | skipped (invalid-number, no-consent, opted-out) | failed (code, retryable) | unknown",
+      "sms_consent rows (opted_in | opted_out, source); sms_messages rows (status, Twilio sid, error code; never the text)",
+    ]
+  errors:
+    [
+      "never throws for provider or network errors (results instead); a body over 1,600 characters is a programming error",
+      "webhook: 403 for a missing or wrong signature, 503 without TWILIO_AUTH_TOKEN or the app's public URL, 413 over 64 KB",
+    ]
+  limits: ["1,600 characters per message (Twilio); in-call waits up to 4 s, longer Retry-After ends the call as a retryable failure"]
+compat:
+  runtime: node@>=20
+  framework: next@^16.0.0
+effects:
+  network: true
+  fs: false
+  db: true
+  external_services: [twilio]
+integration:
+  strategy: vendored-with-provenance
+  install: "Copied by the assembler from files/: src/messaging/sms/{config,phone,keywords,twilio,service}.ts + params.json, src/db/component-messaging-sms.ts, src/app/api/messaging/sms/webhook/route.ts, the Twilio mock (tests/e2e/mocks) and unit + contract tests. Uses libphonenumber-js (data.phone.libphonenumber-js, pinned in the template)."
+  config: [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER]
+  migrations: true
+params:
+  file: src/messaging/sms/params.json
+  schema: params.schema.json
+  entities: [SmsMessage, TextMessage, SmsLog, SmsConsent, SmsOptOut]
+quality:
+  tests:
+    {
+      command: "unit (E.164 with libphonenumber-js, STOP/START/HELP keywords, consent rules, logged mode, backoff, X-Twilio-Signature) + contract tests against the Twilio Messages API mock (request shape, MessagingServiceSid, retries, 21211, 20003, 21610, lost answers, signed status callback); E2E through domain.reminders.turbineh (SMS reminders, STOP, retries); full gate via verify:recipe",
+      passed: true,
+      date: 2026-10-21,
+    }
+security:
+  scanned_at: 2026-10-21
+  tools: [gitleaks, semgrep, review]
+  findings: []
+  scope: "First-party source reviewed: credentials only from the environment, webhook signature checked in constant time over the configured public URL, body size capped, message texts never stored or logged, provider messages redacted, consent enforced in the only sending path."
+license:
+  declared: Apache-2.0
+  detected: Apache-2.0
+  obligations: [preserve-notice]
+evidence:
+  - claim: "Sending, retries, opt-out and signed callbacks pass contract tests against a mock of Twilio's documented Messages API; SMS reminders pass the full verification gate with the bookings recipe"
+    origin: tested
+    ref: "verify:recipe bookings+domain.reminders.turbineh+messaging.sms.twilio+messaging.whatsapp.meta (ADR-0070)"
+relations:
+  requires: []
+  provides: [messaging.sms]
+  conflicts: []
+  tested_with: [recipe.bookings]

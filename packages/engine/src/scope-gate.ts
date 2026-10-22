@@ -100,6 +100,11 @@ const PLATFORMS: readonly [label: string, re: RegExp][] = [
 const INTEGRATION_VERB =
   /\b(publish|post|share|sync|connect|integrat|import|export to|send|receiv|notif|alert|remind|schedul|pull|fetch|push|auto-?post|cross-?post|upload to|read from|log ?in with|sign ?in with)\w*/i;
 
+/** Platforms whose verified components only send notifications (ADR-0070). */
+const OUTBOUND_ONLY: ReadonlySet<string> = new Set(["SMS", "WhatsApp"]);
+const CONVERSATION =
+  /\b(chat\w*|conversations?|conversational|bots?|answers?|answering|responds?|responding|two-way|inbound|incoming)\b|\breplies to\b|\breply to (customers?|users?|questions?|messages?|patients?|clients?)\b/i;
+
 /** Links, buttons and icons to a platform are plain web content, not an integration. */
 const LINK_ONLY = /\b(share buttons?|links? to|profile links?|icons?|handles?|usernames?)\b/i;
 
@@ -166,7 +171,12 @@ export function uncoveredByCode(
 ): string | null {
   for (const [label, re] of PLATFORMS) {
     if (!re.test(text) || !INTEGRATION_VERB.test(text) || LINK_ONLY.test(text)) continue;
-    if (ctx.catalog.some((c) => re.test(componentText(c)))) continue;
+    if (ctx.catalog.some((c) => re.test(componentText(c)))) {
+      // ADR-0070: the SMS and WhatsApp components send notifications; a conversation or a bot on them is not covered.
+      if (OUTBOUND_ONLY.has(label) && CONVERSATION.test(text))
+        return `Integration with ${label} conversations: the verified components only send notifications to people who agreed`;
+      continue;
+    }
     return `Integration with ${label}: no verified component connects to it yet`;
   }
   if (AUTONOMOUS.test(text))

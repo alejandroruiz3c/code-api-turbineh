@@ -1,0 +1,19 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/e2e/reminders.spec.ts › a customer gets an email reminder the set number of hours before the appointment, once per appointment, with the local time of the business"
+  covers: ["remind", "e-?mail"]
+- test: "tests/e2e/reminders.spec.ts › a cancelled appointment never gets a reminder"
+  covers: ["cancel", "remind"]
+- test: "tests/e2e/reminders.spec.ts › staff see each appointment's reminders and their status"
+  covers: ["remind", "staff|admin|dashboard"]
+- test: "tests/e2e/reminders-sms.spec.ts › a customer who agreed to SMS reminders gets an SMS reminder the set number of hours before the appointment, once, through Twilio's Messages API; the signed delivery update is recorded"
+  covers: ["remind", "\\bsms\\b|text message"]
+- test: "tests/e2e/reminders-sms.spec.ts › a customer who replies STOP gets no more SMS reminders; an unsigned reply is refused"
+  covers: ["\\bstop\\b|opt[- ]?out|unsubscri", "\\bsms\\b|text"]
+- test: "tests/e2e/reminders-whatsapp.spec.ts › a customer who opted in gets a WhatsApp reminder the set number of hours before the appointment, once, as the approved template with its parameters; Meta's signed statuses are recorded"
+  covers: ["remind", "whats ?app"]
+- test: "tests/e2e/reminders-whatsapp.spec.ts › a customer who writes STOP gets no more WhatsApp reminders; an unsigned webhook call is refused"
+  covers: ["\\bstop\\b|opt[- ]?out|unsubscri", "whats ?app"]
+- test: "tests/unit/reminders.test.ts › a reminder is due the set number of real hours before the appointment, across daylight saving, and shows the local time in the business's time zone"
+  covers: ["remind", "time ?zone|europe/|america/|dst|daylight|local time"]
+- test: "tests/e2e/reminders-sms.spec.ts › a failed SMS reminder is retried with backoff on a later run and then sent; once an appointment is cancelled its pending retry is dropped"
+  covers: ["remind", "retr(y|ies|ied)|fail"]

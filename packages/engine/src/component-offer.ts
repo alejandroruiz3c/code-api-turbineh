@@ -205,6 +205,22 @@ export const OFFER_HINTS: readonly OfferHint[] = [
     gives: "engagement metrics (likes, comments, shares, impressions) of the posts it published",
   },
   {
+    // ADR-0070: SMS through Twilio's Messages API, only to numbers that agreed (STOP honoured).
+    ask: /\bsms\b|\btext messages?\b|\btexting\b/i,
+    provides: "messaging.sms",
+    proof: /\bsms\b/i,
+    gives:
+      "sending SMS with Twilio's Messages API to people who agreed (STOP honoured), retried on temporary failures, logged without credentials",
+  },
+  {
+    // ADR-0070: WhatsApp notifications as approved templates through the Cloud API, only to people who opted in.
+    ask: /\bwhats ?app\b/i,
+    provides: "messaging.whatsapp",
+    proof: /\bwhats ?app\b/i,
+    gives:
+      "sending WhatsApp template notifications with the Cloud API to people who opted in (STOP honoured), logged without credentials",
+  },
+  {
     ask: /\bkanban\b/i,
     provides: "ui.kanban",
     proof: /\b(kanban|column|board|card)/i,

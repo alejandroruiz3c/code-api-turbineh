@@ -3,7 +3,8 @@ import { z } from "zod";
 import { runScheduled } from "@/jobs/runner";
 
 /**
- * GET|POST /api/cron/run[?job=<id>] — runs the scheduled jobs that are due (component jobs.scheduled.turbineh).
+ * GET|POST /api/cron/run[?job=<id>|?task=<id>] — runs the scheduled jobs that are due and the continuous tasks other
+ * components hand over (component jobs.scheduled.turbineh).
  * Protected by a shared secret: header `x-cron-secret: <CRON_SECRET>` or `Authorization: Bearer <CRON_SECRET>` (what
  * Vercel Cron sends). Call it every few minutes from any scheduler; each scheduled occurrence runs at most once.
  */
@@ -30,10 +31,13 @@ async function run(req: Request): Promise<Response> {
       { status: 503 },
     );
   if (!authorized(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
-  const job = new URL(req.url).searchParams.get("job");
-  if (job !== null && !/^[a-z][a-z0-9-]{0,39}$/.test(job))
+  const query = new URL(req.url).searchParams;
+  const job = query.get("job");
+  const task = query.get("task");
+  const id = /^[a-z][a-z0-9-]{0,39}$/;
+  if ((job !== null && !id.test(job)) || (task !== null && !id.test(task)))
     return Response.json({ error: "Unknown job" }, { status: 400 });
-  return Response.json(await runScheduled({ jobId: job ?? undefined }));
+  return Response.json(await runScheduled({ jobId: job ?? undefined, taskId: task ?? undefined }));
 }
 
 export const GET = run;

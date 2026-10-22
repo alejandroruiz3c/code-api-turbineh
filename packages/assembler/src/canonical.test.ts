@@ -568,6 +568,9 @@ describe("domain components' canonical criteria prove their own wording (ADR-006
     "content.blog.turbineh",
     "domain.matching.turbineh",
     "media.screen-recording.turbineh",
+    "messaging.sms.twilio",
+    "messaging.whatsapp.meta",
+    "domain.reminders.turbineh",
   ])("%s", (id) => {
     const list = canonicalCriteria({ recipesDir, recipe: "saas-crud", components: [id] }).filter(
       (c) => c.from === id && !c.when,
@@ -1196,5 +1199,83 @@ describe("canonical criteria · client portal account functions (workstream E)",
     "A client opens Notifications and sees the list of recent alerts",
   ])("keeps %j out", (asked) => {
     expect(mapToCanonical(asked, portal())).toEqual([]);
+  });
+});
+
+// ADR-0070: appointment reminders (email, SMS, WhatsApp) are measured against the tests that prove them. Synthetic
+// paraphrases of production requirements; the components are the ones the request selects by code.
+describe("canonical criteria · appointment reminders (ADR-0070)", () => {
+  const withReminders = (components: string[]) =>
+    canonicalForPlan({
+      recipesDir,
+      recipe: "bookings",
+      components: ["domain.reminders.turbineh", ...components],
+    });
+  const all = () => withReminders(["messaging.sms.twilio", "messaging.whatsapp.meta"]);
+  const aliases = ["patient", "patients", "dentist", "dentists"];
+
+  it.each([
+    [
+      "Given a confirmed visit, when it is 24 hours away, then an automated email reminder is dispatched to the patient.",
+      ["reminders.email"],
+    ],
+    [
+      "The system sends an automated WhatsApp message to the patient exactly 48 hours before their scheduled appointment time.",
+      ["reminders.whatsapp"],
+    ],
+    [
+      "Given a booking exists, when the current time is 24 hours before the appointment, then an SMS reminder is automatically dispatched to the client's registered phone number.",
+      ["reminders.sms"],
+    ],
+    ["Patients who reply STOP receive no more SMS reminders", ["reminders.sms-stop"]],
+    ["A cancelled appointment never gets a reminder", ["reminders.cancelled"]],
+  ])("maps %j to %s", (asked, ids) => {
+    expect(mapToCanonical(asked, all(), aliases).map((c) => c.id)).toEqual(ids);
+  });
+
+  it("an SMS or WhatsApp reminder is not claimed where its channel is not in the app", () => {
+    const emailOnly = withReminders([]);
+    expect(emailOnly.map((c) => c.id)).not.toContain("reminders.sms");
+    expect(
+      mapToCanonical(
+        "The patient receives a WhatsApp reminder 24 hours before the appointment",
+        emailOnly,
+        aliases,
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    // A channel word in the request never lets another function absorb it (SMS stays a feature word).
+    "A patient books a free slot on the public page and gets an SMS confirmation",
+    // Sending a WhatsApp message is not the reminder's timing: the messaging component alone never claims it.
+    "Patients get a WhatsApp message with the clinic's address after each visit",
+  ])("keeps %j out", (asked) => {
+    expect(mapToCanonical(asked, all(), aliases)).toEqual([]);
+  });
+
+  it("the reminder criteria are proven by their own linked tests (files and files-with)", () => {
+    const list = canonicalCriteria({
+      recipesDir,
+      recipe: "bookings",
+      components: ["domain.reminders.turbineh"],
+    }).filter((c) => c.from === "domain.reminders.turbineh");
+    const dir = join(componentsDir, "domain.reminders.turbineh");
+    const source = sourceIn(
+      join(dir, "files"),
+      join(dir, "files-with", "messaging.sms.twilio"),
+      join(dir, "files-with", "messaging.whatsapp.meta"),
+    );
+    const resolved = resolveCanonical(list, source);
+    expect(resolved.map((c) => c.id)).toEqual(list.map((c) => c.id));
+    for (const c of resolved) {
+      const proven = c.tests.some((t) => {
+        const { file, title } = splitTestRef(t);
+        const block = testBlocks(source(file) ?? "").find((b) => b.title === title);
+        return block !== undefined && proofVerdict(c.criterion, block).proven;
+      });
+      expect(proven, c.id).toBe(true);
+      expect(mapToCanonical(c.criterion, resolved).map((m) => m.id)).toContain(c.id);
+    }
   });
 });

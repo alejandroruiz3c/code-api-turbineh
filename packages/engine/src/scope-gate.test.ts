@@ -290,6 +290,43 @@ describe("scope gate (ADR-0052)", () => {
   });
 });
 
+describe("SMS and WhatsApp notifications (ADR-0070)", () => {
+  const MESSAGING: GateComponent[] = [
+    ...CATALOG,
+    {
+      id: "messaging.sms.twilio",
+      provides: ["messaging.sms"],
+      does: "Sends SMS text messages with Twilio",
+    },
+    {
+      id: "messaging.whatsapp.meta",
+      provides: ["messaging.whatsapp"],
+      does: "Sends WhatsApp notifications as approved templates",
+    },
+  ];
+  const ctx = { catalog: MESSAGING, aiIncluded: false };
+
+  it("sending SMS or WhatsApp to people is covered once a verified component sends on that channel", () => {
+    expect(
+      uncoveredByCode("Send a WhatsApp reminder to the patient 24 hours before", ctx),
+    ).toBeNull();
+    expect(uncoveredByCode("Clients get an SMS reminder the day before", ctx)).toBeNull();
+    expect(uncoveredByCode("Patients can reply STOP to stop the reminders by SMS", ctx)).toBeNull();
+  });
+
+  it("a conversation or a bot on WhatsApp or SMS stays not covered: the components only send notifications", () => {
+    expect(
+      uncoveredByCode("The assistant answers customer questions by sending WhatsApp messages", ctx),
+    ).toMatch(/^Integration with WhatsApp conversations/);
+    expect(
+      uncoveredByCode("A chatbot that sends answers to customer questions by SMS", ctx),
+    ).toMatch(/^Integration with SMS conversations/);
+    expect(uncoveredByCode("Customers receive their booking updates on Telegram", ctx)).toMatch(
+      /Telegram/,
+    );
+  });
+});
+
 describe("use_case_not_covered: the same message on the web, the API and the CLI", () => {
   it("the worker's reason maps to the owner's sentence with the requirements listed", () => {
     const raw = notCoveredReason({

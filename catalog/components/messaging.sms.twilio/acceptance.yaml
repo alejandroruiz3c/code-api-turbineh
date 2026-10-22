@@ -1,0 +1,13 @@
+# Acceptance criteria → tests (ADR-0033). Each rule: every regex in `covers` must match the criterion (case-insensitive).
+- test: "tests/unit/messaging-sms-contract.test.ts › an SMS is sent with Twilio's Messages API (POST /2010-04-01/Accounts/{AccountSid}/Messages.json): Basic auth, form-encoded To as an E.164 number, From, Body and a signed StatusCallback"
+  covers: ["\\bsms\\b|text message", "send|sent|twilio"]
+- test: "tests/unit/messaging-sms.test.ts › an SMS is never sent to a number without consent, nor after a STOP reply until the person replies START"
+  covers: ["\\bsms\\b|text", "consent|opt|stop|unsubscri"]
+- test: "tests/unit/messaging-sms-contract.test.ts › an SMS that fails with 429 or 5xx is retried with backoff and then sent; a refused number (21211) is not retried"
+  covers: ["\\bsms\\b|text", "retr|fail"]
+- test: "tests/unit/messaging-sms.test.ts › without Twilio credentials an SMS is logged, not sent, and an invalid number is never tried"
+  covers: ["\\bsms\\b|text", "\\blog"]
+- test: "tests/unit/messaging-sms.test.ts › phone numbers are validated as E.164 with libphonenumber-js: a national number needs the app's default country"
+  covers: ["phone|mobile", "valid|format|e\\.?164"]
+- test: "tests/unit/messaging-sms.test.ts › checks X-Twilio-Signature over the full URL and the sorted POST parameters (HMAC-SHA1, base64)"
+  covers: ["webhook|signature|signed", "twilio|sms"]

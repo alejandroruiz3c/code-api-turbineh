@@ -8,7 +8,7 @@ source:
   repo: https://github.com/alejandroruiz3c/code-api-turbineh
 capability:
   does: "Booking domain for any appointment business (clinic, salon, restaurant, studio): team members or rooms, services with duration and price, opening hours per weekday in an IANA time zone (DST-correct), availability computed from real data, create / move / cancel with a notice policy, find bookings by email, double-booking refused by the database, confirmation emails recorded (logged when no provider), staff pages behind an ADMIN_EMAILS allow-list: list, day/week calendar per team member, time off, move and cancel with customer emails; a public booking page (no account) and a cancel link in the confirmation email that honours the notice policy. In AI apps it exposes these operations as a toolkit for runAgent (irreversible ones need the person's confirmation) with a scripted mock model and an E2E suite."
-  does_not: "Does not take payments, sync external calendars or send reminders; one business per app"
+  does_not: "Does not take payments, sync external calendars or send reminders by itself (domain.reminders.turbineh adds them, with its consent boxes on the booking form); one business per app"
   use_cases: [ai-agents, bookings]
   pros:
     [

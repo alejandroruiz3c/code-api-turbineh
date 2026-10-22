@@ -37,7 +37,10 @@ export type PatternId =
   | "social.metrics"
   | "blog"
   | "screen-recording"
-  | "matching";
+  | "matching"
+  | "reminders"
+  | "messaging.sms"
+  | "messaging.whatsapp";
 
 /** Capabilities that implement each pattern, in order of preference (the component's `relations.provides`). */
 export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
@@ -57,6 +60,9 @@ export const PATTERN_CAPABILITIES: Record<PatternId, string[]> = {
   blog: ["content.blog"],
   "screen-recording": ["media.screen-recording"],
   matching: ["domain.matching"],
+  reminders: ["domain.reminders"],
+  "messaging.sms": ["messaging.sms"],
+  "messaging.whatsapp": ["messaging.whatsapp"],
 };
 
 export interface PatternMatch {
@@ -522,8 +528,10 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
         evidence: said(/\bbook\w*|\bappointments?\b|\breservations?\b/i),
         assumptions,
       });
+      out.push(...detectReminders(all, b.params.timeZone));
     }
   }
+  out.push(...detectMessaging(all, out));
   out.push(...detectSocial(text, all));
   // Use cases added from real demand (ADR-0073): blog, screen + camera recording, matching against a profile.
   out.push(
@@ -531,6 +539,195 @@ export function detectPatterns(input: PatternInput): PatternMatch[] {
     ...detectScreenRecording(text, all),
     ...detectMatching(text, all),
   );
+  return out;
+}
+
+// ─── Reminders and messaging (ADR-0070) ─────────────────────────────────────────────────────────────────────────
+
+/** "SMS", "text message(s)", "by text" — the channel, never the text of a page or a field. */
+const SMS =
+  /\bsms\b|\btext messages?\b|\btexting\b|\b(?:by|via|per) text\b|\btexts? (?:them|customers?|clients?|patients?|users?|people|guests?)\b/i;
+const WHATSAPP = /\bwhats ?app\b/i;
+const EMAIL = /\be-?mails?\b/i;
+const REMINDER = /\bremind(?:er|ers|s|ed|ing)?\b/i;
+/** "24 hours before", "the day before", "2 days in advance": when the reminder goes out. */
+const BEFORE =
+  /\b(\d{1,3}|one|two|three|twenty-?four|forty-?eight)\s*-?\s*(hours?|hrs?|h|days?)\s+(?:before|ahead|prior|in advance|earlier)\b|\b(?:the|a|one)\s+day\s+(?:before|ahead|prior|in advance)\b|\b(\d{1,3})\s*h\b/i;
+/** Sending to people: a channel named as data ("phone number for SMS") or a link is not a message. */
+const SENDS =
+  /\b(send|sends|sent|notif\w*|remind\w*|alert\w*|message\w*|texting|texts?|confirm\w*|receiv\w*|get|gets|dispatch\w*|deliver\w*)\b/i;
+const CONTENT_ONLY =
+  /\b(click[- ]to[- ]chat|whats ?app (link|button|icon)|share (via|on) whats ?app|links? to)\b/i;
+
+const WORD_NUMBERS: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  twentyfour: 24,
+  "twenty-four": 24,
+  fortyeight: 48,
+  "forty-eight": 48,
+};
+
+/** Hours before the appointment a reminder sentence states, or null. */
+export function reminderHours(sentence: string): number | null {
+  const m = BEFORE.exec(sentence);
+  if (!m) return null;
+  if (m[3]) return Number(m[3]);
+  if (!m[1]) return 24;
+  const n = /^\d+$/.test(m[1]) ? Number(m[1]) : (WORD_NUMBERS[m[1].toLowerCase()] ?? NaN);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return /^d/i.test(m[2] ?? "") ? n * 24 : n;
+}
+
+/** ISO country of the most common time zones (for phone numbers typed without a country code); null otherwise. */
+export const ZONE_COUNTRY: Record<string, string> = {
+  "Europe/Madrid": "ES",
+  "Atlantic/Canary": "ES",
+  "Europe/Lisbon": "PT",
+  "Europe/London": "GB",
+  "Europe/Dublin": "IE",
+  "Europe/Paris": "FR",
+  "Europe/Berlin": "DE",
+  "Europe/Rome": "IT",
+  "Europe/Amsterdam": "NL",
+  "Europe/Brussels": "BE",
+  "Europe/Zurich": "CH",
+  "Europe/Vienna": "AT",
+  "America/New_York": "US",
+  "America/Chicago": "US",
+  "America/Denver": "US",
+  "America/Los_Angeles": "US",
+  "America/Mexico_City": "MX",
+  "America/Argentina/Buenos_Aires": "AR",
+  "America/Sao_Paulo": "BR",
+  "Asia/Tokyo": "JP",
+  "Asia/Singapore": "SG",
+  "Australia/Sydney": "AU",
+};
+
+/**
+ * Appointment reminders (domain.reminders) in a booking app: sentences that remind customers before their appointment
+ * ("a WhatsApp reminder 24 hours before each appointment", "with reminders"). Hours and channels are the ones stated;
+ * 24 hours and email when the request does not say. Overdue reminders are scheduled digests (jobs.scheduled), not these.
+ */
+export function detectReminders(all: readonly string[], timeZone: string): PatternMatch[] {
+  const evidence = all.filter(
+    (s) =>
+      !/\boverdue\b/i.test(s) &&
+      (REMINDER.test(s) || ((SMS.test(s) || WHATSAPP.test(s)) && BEFORE.test(s) && SENDS.test(s))),
+  );
+  if (evidence.length === 0) return [];
+  const assumptions: string[] = [];
+  const stated = evidence.map(reminderHours).find((h): h is number => h !== null);
+  let hoursBefore = stated ?? 24;
+  if (stated === undefined)
+    assumptions.push("Reminder time not stated: 24 hours before each appointment.");
+  if (hoursBefore > 168) {
+    hoursBefore = 168;
+    assumptions.push("Reminders go out at most 7 days (168 hours) before the appointment.");
+  }
+  const named = (re: RegExp) => evidence.some((s) => re.test(s) && !CONTENT_ONLY.test(s));
+  const channels = [
+    ...(named(EMAIL) ? ["email"] : []),
+    ...(named(SMS) ? ["sms"] : []),
+    ...(named(WHATSAPP) ? ["whatsapp"] : []),
+  ];
+  if (channels.length === 0) {
+    channels.push("email");
+    assumptions.push("Reminder channel not stated: email.");
+  }
+  if (channels.some((c) => c !== "email"))
+    assumptions.push(
+      "SMS and WhatsApp reminders go only to people who tick that box on the booking form and give a mobile number; a STOP reply stops them.",
+    );
+  if (channels.includes("whatsapp"))
+    assumptions.push(
+      'WhatsApp reminders use the template "appointment_reminder" (en) with four parameters, to be approved in WhatsApp Manager.',
+    );
+  const country = ZONE_COUNTRY[timeZone] ?? null;
+  const out: PatternMatch[] = [
+    {
+      id: "reminders",
+      params: {
+        hoursBefore,
+        channels,
+        whatsappTemplate: { name: "appointment_reminder", language: "en" },
+        maxAttempts: 3,
+      },
+      providedEntities: [],
+      evidence,
+      assumptions,
+    },
+  ];
+  // The channels' components, with the country of the booking time zone for numbers typed without a country code.
+  for (const [id, channel] of [
+    ["messaging.sms", "sms"],
+    ["messaging.whatsapp", "whatsapp"],
+  ] as const) {
+    if (!channels.includes(channel)) continue;
+    out.push({
+      id,
+      params: { defaultCountry: country, maxAttempts: 3 },
+      providedEntities: [],
+      evidence: evidence.filter((s) => (channel === "sms" ? SMS : WHATSAPP).test(s)),
+      assumptions: [
+        country
+          ? `Phone numbers typed without a country code are read as ${country} numbers (time zone ${timeZone}).`
+          : "Phone numbers must be typed with their country code (+…): no default country.",
+      ],
+    });
+  }
+  return out;
+}
+
+/**
+ * The reminder and messaging patterns of a request, from its words alone (no spec needed): what the scope gate and
+ * the plan use before the fidelity wiring runs, and the same detection the wiring uses afterwards.
+ */
+export function messagingPatterns(
+  prompt: string,
+  recipe: string,
+  appName?: string,
+): PatternMatch[] {
+  const all = sentences(prompt.replace(/\s+/g, " "));
+  const found: PatternMatch[] = [];
+  if (recipe === "bookings" || recipe === "ai-agents") {
+    const b = extractBookingParams(prompt, appName);
+    if (b) found.push(...detectReminders(all, b.params.timeZone));
+  }
+  return [...found, ...detectMessaging(all, found)];
+}
+
+/**
+ * Messaging channels (messaging.sms / messaging.whatsapp): a sentence that sends SMS or WhatsApp messages to people, or
+ * reminders on those channels. A channel named as data or a link (a "WhatsApp button", "click to chat") selects nothing.
+ * Keeps the parameters reminders already set (the default country from the booking time zone).
+ */
+export function detectMessaging(
+  all: readonly string[],
+  found: readonly PatternMatch[] = [],
+): PatternMatch[] {
+  const reminder = found.find((p) => p.id === "reminders");
+  const reminderChannels = (reminder?.params.channels as string[] | undefined) ?? [];
+  const out: PatternMatch[] = [];
+  for (const [id, re, channel] of [
+    ["messaging.sms", SMS, "sms"],
+    ["messaging.whatsapp", WHATSAPP, "whatsapp"],
+  ] as const) {
+    if (found.some((p) => p.id === id)) continue;
+    const evidence = all.filter((s) => re.test(s) && SENDS.test(s) && !CONTENT_ONLY.test(s));
+    if (evidence.length === 0 && !reminderChannels.includes(channel)) continue;
+    out.push({
+      id,
+      params: { defaultCountry: null, maxAttempts: 3 },
+      providedEntities: [],
+      evidence,
+      assumptions: [
+        "Phone numbers must be typed with their country code (+…): no default country.",
+      ],
+    });
+  }
   return out;
 }
 
@@ -645,6 +842,9 @@ export function criterionTouches(criterion: string, p: PatternMatch): boolean {
       /\brecord|\bscreen|\bcamera|\bwebcam|\blayout|\b4k|\bresolution|\bvideo|\bshare/i,
     matching:
       /\bmatch|\binterest|\bprofile|\bsector|\bregion|\bterritor|\bkeyword|\brelevan|\bopportunit/i,
+    reminders: /\bremind|\bbefore (the|their|each) (appointment|booking|session)|\bhours? before/i,
+    "messaging.sms": /\bsms\b|\btext message|\bstop\b|\bopt[- ]?out/i,
+    "messaging.whatsapp": /\bwhats ?app|\btemplate/i,
   };
   return words[p.id].test(criterion);
 }

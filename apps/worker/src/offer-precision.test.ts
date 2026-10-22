@@ -47,13 +47,11 @@ describe("offer precision on the labelled set (ADR-0062)", { timeout: 60_000 }, 
     const social = r.cases.find((c) => c.id === "social-publisher");
     // ADR-0067: publishing with a person in the loop is a verified piece of the request; a scheduler never is.
     expect(social?.offered).toEqual(["ai.orchestrator.turbineh", "social.publish.turbineh"]);
-    for (const id of [
-      "slack-standup",
-      "ios-gym",
-      "trading-bot",
-      "whatsapp-reminders",
-      "google-calendar-sync",
-    ])
+    // ADR-0070: WhatsApp notifications to people who opted in are a verified piece of a WhatsApp reminders request.
+    expect(r.cases.find((c) => c.id === "whatsapp-reminders")?.offered).toEqual([
+      "messaging.whatsapp.meta",
+    ]);
+    for (const id of ["slack-standup", "ios-gym", "trading-bot", "google-calendar-sync"])
       expect(r.cases.find((c) => c.id === id)?.offered, id).toEqual([]);
     // The one pair code cannot rule out (a schedule for Bluetooth lights) is exactly what the judgement is for.
     expect(r.cases.flatMap((c) => c.wrong.map((w) => `${c.id}:${w}`))).toEqual([

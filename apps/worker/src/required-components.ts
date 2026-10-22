@@ -86,6 +86,9 @@ function paramsFromPatterns(id: string, patterns: readonly WiredPattern[]) {
     const board = patterns.find((p) => p.id === "kanban");
     return board ? workflowFromBoard(board.params) : null;
   }
+  // Appointment reminders run as a task of the cron route (ADR-0070): no job of its own unless the request has some.
+  if (id === "jobs.scheduled.turbineh" && patterns.some((p) => p.id === "reminders"))
+    return { jobs: [], logWhenNoEmailProvider: true };
   return null;
 }
 
@@ -128,7 +131,9 @@ export function requireRequirements(input: {
             params,
             providedEntities: decl.entities ?? [],
             assumptions: [
-              `${r} is required by ${id}; its states come from the board the request describes.`,
+              r === "jobs.scheduled.turbineh"
+                ? `${r} is required by ${id}: its cron route runs the reminders (call it every 5–15 minutes).`
+                : `${r} is required by ${id}; its states come from the board the request describes.`,
             ],
           });
         } else {

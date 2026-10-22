@@ -56,6 +56,11 @@ export const MATCHING_PROMPT =
   "teammates as admin, editor or viewer, and configures its profile: business activities, sectors, regions and " +
   "keywords of interest. A user may belong to several organizations and switches between them. The dashboard lists " +
   "the tenders relevant to the organization's profile, best first, with why each one matches.";
+/** The appointment reminders request of the reminders + messaging combination (ADR-0070). */
+export const REMINDERS_PROMPT =
+  'Build an online booking site for "Norte Dental", a dental clinic with two dentists and 30-minute check-ups ' +
+  "(Monday–Friday 09:00–18:00, Europe/Madrid). Patients book on a public page, get a confirmation email with a cancel " +
+  "link, and a reminder 24 hours before each appointment by email, and by SMS or WhatsApp when they agree to it.";
 
 export interface Combination {
   /** "ai-agents" or "ai-agents+domain.bookings.turbineh". */
@@ -528,6 +533,29 @@ export const COMPONENT_COMBINATIONS: Omit<Combination, "name">[] = [
         weights: { sectors: 3, activities: 2, regions: 2, keywords: 1 },
         minScore: 1,
       },
+    },
+  },
+  {
+    // Appointment reminders (ADR-0070): a clinic reminds patients 24 hours before each appointment by email, SMS or
+    // WhatsApp — SMS and WhatsApp only to those who tick the box; Twilio and the WhatsApp Cloud API as offline mocks.
+    recipe: "bookings",
+    with: [
+      "domain.bookings.turbineh",
+      "domain.reminders.turbineh",
+      "messaging.sms.twilio",
+      "messaging.whatsapp.meta",
+    ],
+    prompt: REMINDERS_PROMPT,
+    params: {
+      "domain.reminders.turbineh": {
+        hoursBefore: 24,
+        channels: ["email", "sms", "whatsapp"],
+        whatsappTemplate: { name: "appointment_reminder", language: "en" },
+        maxAttempts: 3,
+      },
+      "messaging.sms.twilio": { defaultCountry: "ES", maxAttempts: 3 },
+      "messaging.whatsapp.meta": { defaultCountry: "ES", maxAttempts: 3 },
+      "jobs.scheduled.turbineh": { jobs: [], logWhenNoEmailProvider: true },
     },
   },
 ];

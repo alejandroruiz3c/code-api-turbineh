@@ -1,0 +1,6 @@
+{
+  "hoursBefore": 24,
+  "channels": ["email"],
+  "whatsappTemplate": { "name": "appointment_reminder", "language": "en" },
+  "maxAttempts": 3
+}

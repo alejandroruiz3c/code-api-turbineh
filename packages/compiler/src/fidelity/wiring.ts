@@ -363,6 +363,18 @@ export const PATTERN_GUIDE: Record<PatternId, { where: string[]; how: string }> 
     where: ["src/matching/"],
     how: "Matching records against an organization profile needs the domain.matching component (deterministic scoring with reasons, organization-scoped).",
   },
+  reminders: {
+    where: ["src/reminders/"],
+    how: "Appointment reminders need the domain.reminders component (once per appointment and channel, consent for SMS/WhatsApp, cron task).",
+  },
+  "messaging.sms": {
+    where: ["src/messaging/sms/"],
+    how: "SMS needs the messaging.sms component (Twilio Messages API, E.164, consent and STOP, retries, signed webhook, logged without credentials).",
+  },
+  "messaging.whatsapp": {
+    where: ["src/messaging/whatsapp/"],
+    how: "WhatsApp needs the messaging.whatsapp component (Cloud API templates, opt-in and STOP, retries, signed webhook, logged without credentials).",
+  },
 };
 
 const approved = (c: ComponentCard) => c.status === "approved";
